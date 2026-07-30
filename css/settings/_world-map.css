@@ -1,0 +1,437 @@
+/* ============================================
+ * Map（地图编辑器）· 工具栏 / 坐标系 / pin
+ * ============================================ */
+
+.settings-app .wv-map { display: flex; flex-direction: column; gap: 10px; }
+
+.settings-app .wv-map__toolbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    background: var(--wv-card-bg);
+    border-radius: 10px;
+    padding: 6px 10px;
+    font-size: 11px;
+}
+
+.settings-app .wv-map__toolbar-section {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.settings-app .wv-map__toolbar-label {
+    color: var(--settings-color-tertiary);
+}
+
+.settings-app .wv-map__center-select {
+    min-width: 100px;
+    max-width: 160px;
+}
+
+.settings-app .wv-map__zoom-val {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: var(--settings-color-label);
+}
+
+.settings-app .wv-map__toolbar-section--zoom {
+    flex: 1;
+    min-width: 200px;
+}
+
+.settings-app .wv-map__zoom-slider {
+    flex: 1;
+    min-width: 80px;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: linear-gradient(to right, rgba(0,122,255,0.45) 0%, rgba(0,122,255,0.65) var(--wv-zoom-fill, 25%), rgba(120,120,128,0.22) var(--wv-zoom-fill, 25%), rgba(120,120,128,0.22) 100%);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+    transition: background 0.08s linear;
+}
+
+.settings-app .wv-map__zoom-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid #007AFF;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.settings-app .wv-map__zoom-slider::-webkit-slider-thumb:hover,
+.settings-app .wv-map__zoom-slider:focus::-webkit-slider-thumb {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 6px rgba(0,122,255,0.15), 0 1px 4px rgba(0,0,0,0.2);
+}
+
+.settings-app .wv-map__zoom-slider::-webkit-slider-thumb:active {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 8px rgba(0,122,255,0.2), 0 1px 4px rgba(0,0,0,0.2);
+}
+
+.settings-app .wv-map__zoom-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid #007AFF;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+
+/* 圆球重置按钮 —— 蓝边白底,内嵌一个图标 */
+.settings-app .wv-map__zoom-reset {
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1.5px solid rgba(0,122,255,0.5);
+    background: #fff;
+    color: #007AFF;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.18s ease;
+    -webkit-tap-highlight-color: transparent;
+    box-shadow: 0 1px 2px rgba(0,122,255,0.12);
+    position: relative;
+}
+.settings-app .wv-map__zoom-reset::before {
+    content: '';
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    border: 1.5px solid currentColor;
+    border-top-color: transparent;
+    transform: rotate(45deg);
+    box-sizing: border-box;
+}
+.settings-app .wv-map__zoom-reset:hover {
+    background: rgba(0,122,255,0.08);
+    border-color: #007AFF;
+    transform: scale(1.05);
+}
+.settings-app .wv-map__zoom-reset:active {
+    transform: scale(0.92);
+    background: rgba(0,122,255,0.18);
+}
+
+.settings-app .wv-map__stage {
+    position: relative;
+    aspect-ratio: 16/10;
+    background: linear-gradient(135deg, rgba(52,199,89,0.06) 0%, rgba(0,122,255,0.06) 100%);
+    border: 1px dashed rgba(120,120,128,0.35);
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: default;
+}
+
+/* 内层世界坐标系容器 */
+.settings-app .wv-map__world {
+    position: absolute;
+    inset: 0;
+    transform-origin: center center;
+    transition: transform 0.18s ease;
+}
+
+.settings-app .wv-map__grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(to right, rgba(120,120,128,0.10) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(120,120,128,0.10) 1px, transparent 1px);
+    background-size: 5% 5%;
+    pointer-events: none;
+}
+
+.settings-app .wv-map__bg-image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+    border-radius: 8px;
+}
+
+.settings-app .wv-map__pin.is-dragging {
+    opacity: 0.8;
+    cursor: grabbing;
+    z-index: 100;
+    transform: scale(1.2);
+}
+.settings-app .wv-map__axis {
+    position: absolute;
+    background: rgba(120,120,128,0.35);
+    pointer-events: none;
+}
+.settings-app .wv-map__axis--x {
+    /* x 轴（水平）位于垂直 50% */
+    left: 0; right: 0; top: 50%;
+    height: 1px;
+}
+.settings-app .wv-map__axis--y {
+    /* y 轴（垂直）位于水平 50% */
+    top: 0; bottom: 0; left: 50%;
+    width: 1px;
+}
+.settings-app .wv-map__origin {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(10,132,255,0.65);
+    pointer-events: none;
+}
+.settings-app .wv-map__quadrant {
+    position: absolute;
+    font-size: 9px;
+    color: rgba(120,120,128,0.55);
+    pointer-events: none;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.settings-app .wv-map__quadrant--tl { left: 4px; top: 4px; }
+.settings-app .wv-map__quadrant--tr { right: 4px; top: 4px; text-align: right; }
+.settings-app .wv-map__quadrant--bl { left: 4px; bottom: 4px; }
+.settings-app .wv-map__quadrant--br { right: 4px; bottom: 4px; text-align: right; }
+.settings-app .wv-map__corner {
+    position: absolute;
+    font-size: 8.5px;
+    color: rgba(120,120,128,0.7);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    pointer-events: none;
+}
+.settings-app .wv-map__corner--tl { left: 6px; top: 14px; }
+.settings-app .wv-map__corner--tr { right: 6px; top: 14px; text-align: right; }
+.settings-app .wv-map__corner--bl { left: 6px; bottom: 14px; }
+.settings-app .wv-map__corner--br { right: 6px; bottom: 14px; text-align: right; }
+
+.settings-app .wv-map__pin {
+    position: absolute;
+    transform: translate(-50%, -50%) scale(var(--pin-scale, 1));
+    background: rgba(255,255,255,0.95);
+    border: 1.5px solid var(--wv-blue);
+    border-radius: 14px;
+    padding: 4px 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    font-size: 10px;
+    cursor: pointer;
+    transition: transform 0.12s ease;
+    max-width: 100px;
+    text-align: center;
+    z-index: 2;
+}
+.settings-app .wv-map__pin:active { transform: translate(-50%, -50%) scale(var(--pin-scale, 1)) scale(0.97); }
+.settings-app .wv-map__pin.is-center {
+    background: var(--wv-blue);
+    color: #fff;
+    border-color: #fff;
+    box-shadow: 0 4px 10px rgba(10,132,255,0.45);
+}
+.settings-app .wv-map__pin.is-restricted { border-color: var(--wv-red); }
+.settings-app .wv-map__pin-icon { font-size: 16px; line-height: 1; }
+.settings-app .wv-map__pin-label { font-weight: 600; }
+.settings-app .wv-map__pin-dist { color: var(--settings-color-tertiary); font-size: 9px; }
+.settings-app .wv-map__pin.is-center .wv-map__pin-dist { color: rgba(255,255,255,0.85); }
+
+/* 天气 badge */
+.settings-app .wv-map__pin-weather {
+    font-size: 9px;
+    color: var(--settings-color-secondary);
+    white-space: nowrap;
+    padding: 1px 4px;
+    background: rgba(255,255,255,0.85);
+    border-radius: 4px;
+    max-width: 60px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ============================================
+ * Map 模式切换
+ * 间距统一交给 .wv-map 的 gap 控制
+ * ============================================ */
+
+.settings-app .wv-map__mode-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px;
+    background: transparent;
+    border: none;
+    border-radius: 10px;
+    flex-wrap: nowrap;
+}
+
+/* 分段 tab 容器 —— 仿 case-type-tabs 风格 */
+.settings-app .wv-map__mode-tabs {
+    display: inline-flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    background: var(--settings-color-fill-secondary, rgba(120,120,128,0.12));
+    border-radius: 8px;
+    padding: 2px;
+    line-height: 1.3;
+    color: var(--settings-color-secondary);
+    text-align: center;
+    overflow: hidden;
+}
+
+/* 单个分段 —— 仿 case-type-tab */
+.settings-app .wv-map__mode-tab {
+    flex: 1;
+    padding: 6px 10px;
+    font-size: 12px;
+    line-height: 1.2;
+    font-weight: 500;
+    color: var(--settings-color-secondary);
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    appearance: none;
+    text-align: center;
+    min-width: 0;
+    font-family: inherit;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.settings-app .wv-map__mode-tab:hover {
+    color: var(--settings-color-label);
+}
+.settings-app .wv-map__mode-tab.is-active {
+    color: var(--settings-color-label);
+    background: var(--settings-color-card, #fff);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.settings-app .wv-map__mode-picker {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    min-width: 0;
+}
+.settings-app .wv-map__mode-picker-placeholder {
+    display: none;
+}
+
+/* 右半部分的 select —— 仿 case-type-tab 的轻量灰底胶囊 */
+.settings-app .wv-map__mode-select {
+    appearance: none;
+    background: var(--settings-color-fill-secondary, rgba(120,120,128,0.12));
+    border: none;
+    border-radius: 8px;
+    padding: 6px 26px 6px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--settings-color-label);
+    font-family: inherit;
+    cursor: pointer;
+    line-height: 1.2;
+    max-width: 150px;
+    min-width: 0;
+    text-overflow: ellipsis;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238E8E93' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    transition: all 0.18s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+.settings-app .wv-map__mode-select:hover {
+    background-color: rgba(120,120,128,0.18);
+}
+.settings-app .wv-map__mode-select:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.25);
+}
+
+/* 圆角胶囊按钮 —— 白底蓝字蓝边 */
+.settings-app .wv-map__mode-create {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--wv-blue, #0A84FF);
+    background: #fff;
+    border: 1px solid rgba(10, 132, 255, 0.45);
+    border-radius: 999px;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+    transition: all 0.18s ease;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    box-shadow: 0 1px 2px rgba(10, 132, 255, 0.08);
+}
+.settings-app .wv-map__mode-create:hover {
+    background: rgba(10, 132, 255, 0.06);
+    border-color: var(--wv-blue, #0A84FF);
+}
+.settings-app .wv-map__mode-create:active {
+    background: rgba(10, 132, 255, 0.12);
+    transform: scale(0.97);
+}
+
+.settings-app .wv-map__empty-select {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    color: var(--settings-color-tertiary);
+}
+.settings-app .wv-map__empty-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+    opacity: 0.4;
+}
+.settings-app .wv-map__empty-text {
+    font-size: 14px;
+    text-align: center;
+}
+
+.settings-app .wv-map__custom-bg-tip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: var(--wv-surface);
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--settings-color-secondary);
+    margin-bottom: 8px;
+}
+
+/* presets 顶层（v0.17 后用来 "世界数据库 / 库级切换"） */
+.settings-app .wv-presets { display: flex; flex-direction: column; gap: 10px; }
+.settings-app .wv-preset-group { display: flex; flex-direction: column; gap: 6px; }

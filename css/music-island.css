@@ -1,0 +1,352 @@
+.dynamic-island.has-template .dynamic-island-content {
+    padding: 0;
+}
+
+.dynamic-island.has-template.mini {
+    width: 180px;
+    height: 36px;
+}
+
+.dynamic-island.has-template.medium {
+    width: 240px;
+    height: 135px;
+}
+
+.dynamic-island.has-template.large {
+    width: 280px;
+    height: 320px;
+}
+
+.island-template-music {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    color: #fff;
+}
+
+.island-template-music * {
+    box-sizing: border-box;
+}
+
+.island-template-music-mini {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 0 12px;
+    gap: 8px;
+    flex-direction: row;
+}
+
+.island-template-music-mini-cover {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.island-template-music-mini-wave {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 16px;
+}
+
+.island-template-music-mini-wave span {
+    width: 3px;
+    border-radius: 2px;
+    height: 4px;
+}
+
+.island-template-music-mini-wave.playing span {
+    animation: islandTemplateWave 0.8s ease-in-out infinite;
+}
+
+.island-template-music-mini-wave span:nth-child(1) { animation-delay: 0s; }
+.island-template-music-mini-wave span:nth-child(2) { animation-delay: 0.2s; }
+.island-template-music-mini-wave span:nth-child(3) { animation-delay: 0.4s; }
+
+.island-template-music-mini-label {
+    max-width: 92px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.island-template-music-medium {
+    display: flex;
+    flex-direction: column;
+    padding: 12px 15px;
+    height: 100%;
+}
+
+.island-template-music-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.island-template-music-cover {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.island-template-music-cover img,
+.island-template-music-mini-cover img,
+.island-template-music-large-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.island-template-music-cover-placeholder,
+.island-template-music-large-cover-placeholder,
+.island-template-music-mini-cover-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.island-template-music-cover-placeholder svg,
+.island-template-music-mini-cover-placeholder svg {
+    width: 14px;
+    height: 14px;
+    fill: white;
+}
+
+.island-template-music-large-cover-placeholder svg {
+    width: 22px;
+    height: 22px;
+    fill: white;
+}
+
+.island-template-music-info,
+.island-template-music-large-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.island-template-music-title,
+.island-template-music-large-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 600;
+}
+
+.island-template-music-title {
+    font-size: 13px;
+}
+
+.island-template-music-large-title {
+    font-size: 15px;
+}
+
+.island-template-music-artist,
+.island-template-music-large-artist {
+    color: #aaa;
+}
+
+.island-template-music-artist {
+    font-size: 11px;
+}
+
+.island-template-music-large-artist {
+    font-size: 12px;
+}
+
+.island-template-music-progress {
+    width: 100%;
+    height: 7px;
+    margin: 5px 0;
+}
+
+.island-template-music-progress-bar {
+    width: 100%;
+    height: 100%;
+    background: #404040;
+    border-radius: 3.5px;
+    overflow: hidden;
+}
+
+.island-template-music-progress-fill {
+    height: 100%;
+    border-radius: 3.5px;
+    position: relative;
+    transition: width 0.18s linear;
+}
+
+.island-template-music-progress-fill::after {
+    content: '';
+    position: absolute;
+    right: -5px;
+    top: 50%;
+    transform: translateY(-55%);
+    width: 12px;
+    height: 12px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+}
+
+.island-template-music-controls,
+.island-template-music-large-controls {
+    display: flex;
+    align-items: center;
+}
+
+.island-template-music-controls {
+    justify-content: space-between;
+    margin-top: auto;
+}
+
+.island-template-music-side-btns,
+.island-template-music-main-btns {
+    display: flex;
+    align-items: center;
+}
+
+.island-template-music-side-btns {
+    gap: 10px;
+}
+
+.island-template-music-main-btns {
+    gap: 12px;
+}
+
+.island-template-music-btn,
+.island-template-music-large-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #fff;
+    transition: transform 0.18s ease, opacity 0.18s ease;
+}
+
+.island-template-music-btn {
+    width: 28px;
+    height: 28px;
+}
+
+.island-template-music-large-btn {
+    width: 36px;
+    height: 36px;
+}
+
+.island-template-music-btn:hover,
+.island-template-music-large-btn:hover {
+    transform: scale(1.08);
+    opacity: 0.88;
+}
+
+.island-template-music-btn:active,
+.island-template-music-large-btn:active {
+    transform: scale(0.98);
+}
+
+.island-template-music-btn svg,
+.island-template-music-large-btn svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+    stroke: currentColor;
+}
+
+.island-template-music-btn.is-liked,
+.island-template-music-large-btn.is-liked {
+    color: #fb7299;
+}
+
+.island-template-music-large {
+    display: flex;
+    flex-direction: column;
+    padding: 15px;
+    height: 100%;
+    overflow: hidden;
+}
+
+.island-template-music-large-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.island-template-music-large-cover {
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.island-template-music-large-controls {
+    justify-content: center;
+    gap: 20px;
+    margin: 12px 0;
+}
+
+.island-template-music-large-btn-main {
+    width: 50px;
+    height: 50px;
+    background: #fb7299;
+    border-radius: 50%;
+}
+
+.island-template-music-large-btn-main svg {
+    width: 24px;
+    height: 24px;
+}
+
+.island-template-music-lyrics {
+    flex: 1;
+    overflow-y: auto;
+    margin-top: 10px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    scroll-behavior: smooth;
+}
+
+.island-template-music-lyrics::-webkit-scrollbar {
+    display: none;
+}
+
+.island-template-music-lyric-line {
+    text-align: center;
+    padding: 6px 0;
+    font-size: 12px;
+    color: #777;
+    transition: color 0.25s ease, transform 0.25s ease, font-size 0.25s ease;
+}
+
+.island-template-music-lyric-line.active {
+    color: #fb7299;
+    font-size: 14px;
+    font-weight: 600;
+    transform: scale(1.02);
+}
+
+.island-template-music-time {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    font-size: 11px;
+    color: #8d8d8d;
+}
+
+@keyframes islandTemplateWave {
+    0%, 100% { height: 4px; }
+    50% { height: 16px; }
+}

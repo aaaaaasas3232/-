@@ -1,0 +1,326 @@
+/* ============================================
+ * 屏幕墙纸模块 · 左右结构布局
+ *
+ * 复用现有 .case-palette / .case-color-* / .case-gradient-preset 等
+ * 通用样式，只补「屏幕墙纸」独有的部分：
+ *   - 左：屏幕墙纸预览（mini 屏幕比例）
+ *   - 右：图片选择器（上传 / URL / 预设）
+ *   - 右下：模糊度控制
+ * ============================================ */
+.settings-app .sw-diy {
+    padding: 6px 0 4px;
+}
+
+/* 左右结构：左预览，右调整 */
+.settings-app .sw-diy__layout {
+    display: flex;
+    gap: 12px;
+    align-items: center; /* 上下居中：左边预览与右边控件视觉对齐 */
+}
+
+.settings-app .sw-diy__preview {
+    flex-shrink: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    margin-left: 10px; /* 左边留 6px 距离 */
+}
+
+.settings-app .sw-diy__controls {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* 预览屏幕 */
+.settings-app .sw-preview {
+    position: relative;
+    overflow: hidden;
+    box-shadow: none;
+    background-color: #ffe2ef;
+    transition: background-color 0.25s ease, background-image 0.25s ease;
+}
+
+.settings-app .sw-preview__screen {
+    position: absolute;
+    inset: 0;
+    background-color: inherit;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    transition: filter 0.2s ease;
+}
+
+.settings-app .sw-preview__overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 30%);
+    pointer-events: none;
+}
+
+
+.settings-app .sw-preview__dots {
+    position: absolute;
+    bottom: 8px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    z-index: 2;
+}
+
+.settings-app .sw-preview__dots span {
+    width: 5px;
+    height: 5px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.6);
+}
+
+.settings-app .sw-preview__dots span.is-active {
+    background: rgba(255, 255, 255, 1);
+}
+
+/* 控件通用（blur） */
+.settings-app .sw-control {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width:95%;
+}
+
+.settings-app .sw-control.is-disabled {
+    opacity: 0.45;
+}
+
+.settings-app .sw-control__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.settings-app .sw-control__label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--settings-color-label);
+}
+
+.settings-app .sw-control__value {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--settings-color-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+.settings-app .sw-control__hint {
+    font-size: 10px;
+    color: var(--settings-color-tertiary);
+    line-height: 1.3;
+}
+
+/* 滑块：复用 settings-range 风格 */
+.settings-app .sw-slider {
+    appearance: none;
+    width: 100%;
+    height: 18px;
+    background: transparent;
+    cursor: pointer;
+}
+
+.settings-app .sw-slider::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--settings-color-blue) 0%, var(--settings-color-blue) var(--sw-pct, 0%), rgba(120,120,128,0.18) var(--sw-pct, 0%), rgba(120,120,128,0.18) 100%);
+}
+
+.settings-app .sw-slider::-moz-range-track {
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(120,120,128,0.18);
+}
+
+.settings-app .sw-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    background: #fff;
+    margin-top: -6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.25), 0 0 0 0.5px rgba(0,0,0,0.05);
+    cursor: grab;
+    transition: transform 0.1s ease;
+}
+
+.settings-app .sw-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border: 0;
+    border-radius: 999px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+}
+
+.settings-app .sw-slider:active::-webkit-slider-thumb {
+    transform: scale(1.15);
+}
+
+/* 图片上传 / URL */
+.settings-app .sw-picker-section .sw-image-actions {
+    display: flex;
+    gap: 8px;
+    padding-bottom: 4px;
+}
+
+.settings-app .sw-upload-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    background: var(--settings-color-fill-tertiary);
+    color: var(--settings-color-label);
+    border: 0;
+    border-radius: 8px;
+    padding: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    width: 95%;
+    margin-top: 6px;
+    margin-bottom: 4px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+    position: relative;
+    box-shadow:
+        inset 0 2px 4px rgba(0, 0, 0, 0.10),
+        inset 0 -1px 2px rgba(255, 255, 255, 0.6);
+}
+
+.settings-app .sw-upload-btn:hover {
+    background: var(--settings-color-fill-secondary);
+    color: var(--settings-color-blue);
+}
+
+.settings-app .sw-file-input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+
+.settings-app .sw-image-url-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    width: 95%;
+    margin-top: 3px;
+    padding: 4px;
+    background: var(--settings-color-fill-tertiary);
+    border-radius: 8px;
+    box-shadow:
+        inset 0 2px 4px rgba(0, 0, 0, 0.10),
+        inset 0 -1px 2px rgba(255, 255, 255, 0.6);
+}
+
+.settings-app .sw-image-url-input {
+    flex: 1;
+    appearance: none;
+    border: 0;
+    background: transparent;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 11px;
+    color: var(--settings-color-label);
+    min-width: 0;
+    transition: background-color 0.15s ease;
+}
+
+.settings-app .sw-image-url-input:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.55);
+}
+
+.settings-app .sw-image-url-input::placeholder {
+    color: var(--settings-color-quaternary);
+}
+
+.settings-app .sw-image-url-apply {
+    appearance: none;
+    border: 0;
+    background: var(--settings-color-blue);
+    color: #fff;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s ease, transform 0.12s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.settings-app .sw-image-url-apply:hover {
+    opacity: 0.88;
+}
+
+.settings-app .sw-image-url-apply:active {
+    transform: scale(0.97);
+}
+
+/* 图片预设网格 */
+.settings-app .sw-image-presets-title {
+    font-size: 11px;
+    color: var(--settings-color-tertiary);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 6px 0 4px;
+}
+
+.settings-app .sw-image-presets {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    height: 60px;
+    margin-top: 6px;
+
+}
+
+.settings-app .sw-image-preset {
+    appearance: none;
+    border: 1px solid var(--settings-color-separator);
+    border-radius: 10px;
+    padding: 0;
+    background: transparent;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.15s ease, transform 0.12s ease, opacity 0.15s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.settings-app .sw-image-preset img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+
+.settings-app .sw-image-preset:hover {
+    transform: translateY(-1px);
+    border-color: var(--settings-color-blue);
+}
+
+.settings-app .sw-image-preset.is-active {
+    border-color: var(--settings-color-blue);
+    box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.18);
+}
+
+/* 容器 padding，弱化 sw-diy 内控件的边距重叠（colors/sliders 自身已有边距） */
+.settings-app .sw-diy__extras {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}

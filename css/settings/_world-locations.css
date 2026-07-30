@@ -1,0 +1,70 @@
+/* ============================================
+ * 地点 (Locations)
+ * ============================================ */
+
+.settings-app .wv-locations {
+    padding: 0 2px;
+}
+
+.settings-app .wv-location {
+    margin-bottom: 12px;
+}
+
+.settings-app .wv-location__card {
+    background: var(--settings-color-card);
+    border-radius: var(--settings-radius-group);
+    padding: 14px 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    transition: transform 0.12s ease;
+}
+
+.settings-app .wv-location__card:active {
+    transform: scale(0.99);
+}
+
+.settings-app .wv-location__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.settings-app .wv-location__name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--settings-color-label);
+}
+
+.settings-app .wv-location__actions {
+    display: flex;
+    gap: 6px;
+}
+
+.settings-app .wv-location__summary {
+    font-size: 13px;
+    color: var(--settings-color-secondary);
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+.settings-app .wv-location__meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.settings-app .wv-location__badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 500;
+    background: var(--settings-color-orange);
+    color: #fff;
+}
+
+.settings-app .wv-location__real {
+    font-size: 11px;
+    color: var(--settings-color-tertiary);
+}

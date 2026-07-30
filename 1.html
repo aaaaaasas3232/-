@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Muji Piano Fold - 右侧粘滞版</title>
+    <style>
+        :root {
+            --fold-deg: 65deg;
+            --page-w: 160px;
+            --move-x: 0px;
+        }
+
+        body {
+            margin: 0;
+            background-color: #f2f2f2;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end; /* 关键：靠右对齐 */
+            overflow: hidden;
+            touch-action: none;
+            font-family: sans-serif;
+        }
+
+        .viewport {
+            perspective: 2500px;
+            height: 400px;
+            /* 初始：05页右边对齐屏幕右边缘，通过 translateX 露出封面 */
+            transform: translateX(var(--move-x));
+            will-change: transform;
+            /* 移除 padding-right，让它真正“黏”住边框 */
+        }
+
+        .fold {
+            position: relative;
+            width: var(--page-w);
+            height: 350px;
+            background: #ffffff;
+            border: 1px solid #ddd;
+            transform-style: preserve-3d;
+            transform-origin: right center;
+        }
+
+        /* 旋转逻辑保持你最满意的那个“之字形” */
+        .level-5 { transform: rotateY(calc(var(--fold-deg) * -1)); }
+        .level-4 { transform: rotateY(calc(var(--fold-deg) * 2)); }
+        .level-3 { transform: rotateY(calc(var(--fold-deg) * -2)); }
+        .level-2 { transform: rotateY(calc(var(--fold-deg) * 2)); }
+        .level-1 { 
+            --offset: 12deg;
+            transform: rotateY(calc((var(--fold-deg) * -2) + var(--offset)));
+            box-shadow: 10px 0 20px rgba(0,0,0,0.06);
+        }
+
+        .fold .fold { position: absolute; top: -1px; right: 100%; }
+        .even-shadow { background: #fafafa !important; box-shadow: inset -15px 0 30px rgba(0,0,0,0.04); }
+        .handle { position: absolute; inset: 0; z-index: 1000; cursor: grab; }
+        .content { pointer-events: none; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: center; transform: translateZ(1px); }
+        .content h2 { font-size: 24px; color: #ddd; margin: 0; font-weight: 100; }
+        .level-1 .content h2 { color: #555; }
+    </style>
+</head>
+<body>
+
+    <div class="viewport" id="viewport">
+        <div class="fold level-5" id="rootFold">
+            <div class="content"><h2>05</h2></div>
+            <div class="fold level-4 even-shadow">
+                <div class="content"><h2>04</h2></div>
+                <div class="fold level-3">
+                    <div class="content"><h2>03</h2></div>
+                    <div class="fold level-2 even-shadow">
+                        <div class="content"><h2>02</h2></div>
+                        <div class="fold level-1" id="cover">
+                            <div class="handle" id="dragTarget"></div>
+                            <div class="content"><h2>01</h2><p>PULL</p></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const target = document.getElementById('dragTarget');
+        const rootFold = document.getElementById('rootFold');
+        const root = document.documentElement;
+
+        let isDragging = false;
+        let startX = 0;
+        
+        // --- 核心物理常量 ---
+        const pageW = 160; 
+        const baseDeg = 65;
+        
+        // 计算初始偏移：为了让 05 页黏在右边，同时露出封面
+        // 初始状态下 05 页旋转了 65 度，其投影宽度约为 pageW * cos(65deg)
+        const getInitialOffset = () => {
+            const rad = baseDeg * Math.PI / 180;
+            return pageW * Math.cos(rad);
+        };
+
+        let currentBaseOffset = getInitialOffset();
+
+        // 初始化位置
+        root.style.setProperty('--move-x', currentBaseOffset + 'px');
+
+        const update = (diff) => {
+            // diff 为负数表示向左拉
+            
+            // 1. 计算角度：向左拉，角度变小（变平）
+            let newDeg = baseDeg + (diff * 0.15); 
+            newDeg = Math.max(0, Math.min(85, newDeg));
+            
+            // 2. 关键：计算“黏住”逻辑
+            // 随着角度变平，05页在屏幕内占用的宽度会变大 (pageW * cos(deg))
+            // 如果我们要让 05 页的右边缘死死黏在屏幕最右侧
+            // 我们的 translateX 必须实时补偿这个宽度的变化
+            const newRad = newDeg * Math.PI / 180;
+            const compensationX = pageW * Math.cos(newRad);
+            
+            // 整体位移 = 补偿宽度 + 手势距离
+            let finalX = compensationX + diff;
+
+            // 3. 边界限制：不允许 05 页离开右边缘 (即 finalX 不能小于 0)
+            if (finalX < 0) finalX = 0;
+
+            root.style.setProperty('--move-x', finalX + 'px');
+            root.style.setProperty('--fold-deg', newDeg + 'deg');
+        }
+
+        const start = (x) => { isDragging = true; startX = x; };
+        const move = (x) => { if(isDragging) update(x - startX); };
+        const end = () => { isDragging = false; };
+
+        target.addEventListener('mousedown', e => start(e.clientX));
+        window.addEventListener('mousemove', e => move(e.clientX));
+        window.addEventListener('mouseup', end);
+        target.addEventListener('touchstart', e => start(e.touches[0].clientX), {passive:true});
+        window.addEventListener('touchmove', e => {
+            if(isDragging) { move(e.touches[0].clientX); e.preventDefault(); }
+        }, {passive:false});
+        window.addEventListener('touchend', end);
+    </script>
+</body>
+</html>

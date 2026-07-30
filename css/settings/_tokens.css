@@ -1,0 +1,49 @@
+/* ============================================
+ * Settings App · 主题 Tokens
+ * 后续若要换肤，只改 tokens.js 或本文件即可。
+ * ============================================ */
+
+.settings-app {
+    --settings-color-page: #F2F2F7;
+    --settings-color-card: #FFFFFF;
+    --settings-color-nested: #F8F8FA;
+    --settings-color-label: #000000;
+    --settings-color-secondary: rgba(60, 60, 67, 0.72);
+    --settings-color-tertiary: rgba(60, 60, 67, 0.5);
+    --settings-color-quaternary: rgba(60, 60, 67, 0.32);
+    --settings-color-separator: rgba(60, 60, 67, 0.18);
+    --settings-color-blue: #0A84FF;
+    --settings-color-green: #34C759;
+    --settings-color-orange: #FF9F0A;
+    --settings-color-red: #FF3B30;
+    --settings-color-purple: #AF52DE;
+    --settings-color-gray: #8E8E93;
+    --settings-color-fill-secondary: rgba(120, 120, 128, 0.12);
+    --settings-color-fill-tertiary: rgba(118, 118, 128, 0.08);
+    --settings-color-fill-quaternary: #FFFFFF;
+    --settings-radius-card: 14px;
+    --settings-radius-group: 12px;
+    --settings-radius-field: 10px;
+    --settings-radius-chip: 999px;
+    --settings-row-min-height: 40px;
+    --settings-page-padding-x: 14px;
+    --settings-group-gap: 16px;
+
+    /* wv-* 主题色变量（fallback：任何子页面不需要套 .wv 也能拿到） */
+    --wv-blue: #0A84FF;
+    --wv-green: #34C759;
+    --wv-orange: #FF9F0A;
+    --wv-purple: #AF52DE;
+    --wv-pink: #EC4899;
+    --wv-red: #FF3B30;
+    --wv-gray: #8E8E93;
+    --wv-card-bg: #FFFFFF;
+    --wv-nested-bg: #F8F8FA;
+    --wv-tag-r: #FF3B30;
+    --wv-tag-o: #34C759;
+    --wv-tag-a: #AF52DE;
+
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+    color: var(--settings-color-label);
+    padding: 0 var(--settings-page-padding-x) 22px;
+}

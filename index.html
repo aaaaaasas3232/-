@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <title>小听启动</title>
+        <script type="module" src="/src/index.js"></script>
+        <script src="/js/vendor/vue.global.prod.js"></script>
+        <link rel="stylesheet" href="/css/main.css?v=2" />
+        <link rel="stylesheet" href="/css/settings.css?v=2" />
+        <link rel="stylesheet" href="/css/gallery.css?v=1" />
+        <link rel="stylesheet" href="/css/color-picker.css?v=1" />
+        <link rel="stylesheet" href="/css/survey.css?v=1" />
+    </head>
+
+    <body>
+        <div id="phone">
+            <div class="phone-case rounded-[50px] shadow-[0_20px_45px_rgba(0,0,0,0.25)]">
+                <div class="phone-screen" @pointerup="onScreenPointerUp" @pointercancel="cancelAllPresses">
+                    <div class="desktop-wallpaper"></div>
+                    <div class="statusBarContainer absolute top-0 left-0 z-[999] flex justify-between items-center w-full h-[50px] px-5 py-[5px] font-semibold" :style="statusBarStyle" v-if="statusBarVisible">
+                        <div class="statusBarLeft text-black leading-none tracking-[0.01em]" :style="{ color: currentTimeColor }">{{systemTime}}</div>
+
+                        <div class="statusBarRight flex items-center gap-[6px]">
+                            <div class="signal flex items-end h-3 gap-[2px]">
+                                <div class="signal-bar w-[3px] rounded-[1px] h-1" :style="{ background: currentSignalColor }"></div>
+                                <div class="signal-bar w-[3px] rounded-[1px] h-[7px]" :style="{ background: currentSignalColor }"></div>
+                                <div class="signal-bar w-[3px] rounded-[1px] h-[10px]" :style="{ background: currentSignalColor }"></div>
+                                <div class="signal-bar w-[3px] rounded-[1px] h-3" :style="{ background: currentSignalColor }"></div>
+                            </div>
+
+                            <div class="ml-[2px] text-[12px] font-bold leading-none" :style="{ color: currentFiveGColor }">{{ currentFiveGLabel }}</div>
+
+                            <div class="status-battery relative w-[26px] h-3 rounded-[4px] bg-[#BDBDBD]">
+                                <div class="status-battery-cap absolute top-1/2 -right-[3px] -translate-y-1/2 w-[2px] h-[5px] bg-[#BDBDBD]"></div>
+                                <div class="status-battery-fill absolute top-[1px] left-[1px] bottom-[1px] w-[15px] rounded-l-[4px] bg-[#73AE52]"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-if="islandMode === 'info' && ['medium', 'large'].includes(islandSize)" class="fixed inset-0 z-[900]" @click="handleOutsideClick"></div>
+                    <div class="dynamic-island" :class="[
+                        islandMode !== 'idle' ? islandSize : '',
+                        islandActive ? 'active' : '',
+                        islandMode === 'notification' ? 'notification' : '',
+                        islandMode === 'info' ? 'info' : '',
+                        hasIslandTemplate ? 'has-template' : ''
+                    ]"
+                    @pointerdown.stop="onIslandPointerDown($event)"
+                    @pointerup.stop="onIslandPointerUp($event)"
+                    @pointercancel.stop="onIslandPointerCancel($event)"
+                    @click.stop="handleIslandClick">
+                        <div
+                            v-if="islandMode === 'info' && hasIslandTemplate"
+                            :key="`island-template-${islandSize}-${islandTemplateVersion}`"
+                            class="dynamic-island-content !opacity-100 !pointer-events-auto"
+                            ref="islandTemplateRef"
+                            v-html="renderedIslandTemplate"
+                        ></div>
+
+                        <div v-else-if="islandMode === 'info' && islandSize === 'mini' && Array.isArray(islandContent.widgetSlots) && islandContent.widgetSlots.length > 0"
+                             class="dynamic-island-mini-variant dynamic-island-mini-widgets dynamic-island-content flex items-center !opacity-100">
+                            <div class="dynamic-island-mini-widgets-icons">
+                                <div v-for="(slot, idx) in islandContent.widgetSlots" :key="`island-widget-${idx}`"
+                                     class="dynamic-island-mini-widgets-icon"
+                                     :style="{ background: slot.iconBg || currentState.bg, color: slot.color || currentState.color }"
+                                     v-html="slot.icon || currentIcon"></div>
+                            </div>
+                            <div class="dynamic-island-mini-text text-[14px] font-semibold text-white overflow-hidden text-ellipsis whitespace-nowrap">{{ islandContent.title }}</div>
+                        </div>
+
+                        <div v-else-if="islandMode === 'info' && islandSize === 'mini'" class="dynamic-island-mini-variant dynamic-island-mini-split dynamic-island-content flex items-center !opacity-100">
+                            <div class="dynamic-island-mini-icon-box"
+                                :style="{ background: currentState.bg, color: currentState.color, borderColor: currentState.color }"
+                                v-html="currentIcon"></div>
+                            <div class="dynamic-island-mini-text text-[14px] font-semibold text-white overflow-hidden text-ellipsis whitespace-nowrap">{{ islandContent.title }}</div>
+                        </div>
+
+                        <div v-if="islandMode === 'info' && islandSize === 'medium'"
+                             class="dynamic-island-content dynamic-island-medium-info !opacity-100">
+                            <div class="dynamic-island-medium-icon"
+                                :style="{ background: currentState.bg, color: currentState.color }"
+                                v-html="currentIcon"></div>
+                            <div class="dynamic-island-medium-text">
+                                <div class="dynamic-island-medium-title">{{ islandContent.title }}</div>
+                                <div class="dynamic-island-medium-message">{{ islandContent.message }}</div>
+                            </div>
+                        </div>
+
+                        <div v-if="islandMode === 'info' && islandSize === 'large'" class="dynamic-island-content !opacity-100 !pointer-events-auto">
+                            <div class="pt-1">
+                                <div class="flex items-center mb-3">
+                                    <div class="w-11 h-11 rounded-[14px] flex items-center justify-center mr-4 shrink-0 text-[20px]"
+                                        :style="{ background: currentState.bg, color: currentState.color }"
+                                        v-html="currentIcon"></div>
+                                    <div class="flex-1 overflow-hidden">
+                                        <div class="text-[17px] font-semibold text-white mb-1">{{ islandContent.title }}</div>
+                                        <div class="text-sm text-[#aaa]">{{ islandContent.message }}</div>
+                                    </div>
+                                </div>
+
+                                <div v-if="islandContent.detail" class="text-[13px] text-[#888] leading-[1.5] pt-3 border-t border-[#333]">
+                                    {{ islandContent.detail }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-if="islandMode === 'notification'" class="dynamic-island-content !opacity-100">
+                            <div class="dynamic-island-notif">
+                                <div class="dynamic-island-notif-avatar"
+                                    :style="islandContent.avatarBg ? { background: islandContent.avatarBg } : { background: currentState.bg }">
+                                    <span class="dynamic-island-notif-avatar-text">{{ islandContent.senderAvatar || currentIcon }}</span>
+                                </div>
+                                <div class="dynamic-island-notif-body">
+                                    <div class="dynamic-island-notif-line1">
+                                        <span class="dynamic-island-notif-name">{{ islandContent.senderName || islandContent.title || '消息' }}</span>
+                                        <span v-if="islandContent.senderId" class="dynamic-island-notif-id">#{{ islandContent.senderId }}</span>
+                                    </div>
+                                    <div class="dynamic-island-notif-msg">{{ islandContent.message || islandContent.detail || '' }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                        <div class="desktop-layer" :style="desktopLayerStyle" ref="cardDesktopElement">
+                            <div class="desktopPages"
+                                @pointerdown="onDesktopPointerDown($event)"
+                                @pointermove="onDesktopPointerMove($event)"
+                                @pointerup="onDesktopPointerUp($event)"
+                                @pointercancel="onDesktopPointerCancel"
+                            >
+                                <div v-for="(pageItems, pageIndex) in desktopPages" :key="`desktop-page-${pageIndex}`" class="currentPage" :data-page-index="pageIndex">
+                                    <div class="desktop-grid">
+                                        <template v-for="(item, index) in pageItems" :key="item.id">
+                                            <!-- App -->
+                                            <div
+                                                v-if="item.kind === 'app'"
+                                                class="appContainer"
+                                                :class="{ editing: isEditMode, dragging: draggingIconId === item.id }"
+                                                :style="{
+                                                    ...getDesktopAppStyle(item),
+                                                    ...getDesktopGridItemStyle(item),
+                                                }"
+                                            >
+                                                <div class="unreadBadge" v-if="item.app.badge">{{ item.app.badge }}</div>
+                                                <div
+                                                    class="appTouch"
+                                                    :data-item-id="item.id"
+                                                    :data-app-id="item.app.id"
+                                                    @pointerdown="onAppPointerDown(item, $event)"
+                                                    @pointermove="onAppPointerMove($event)"
+                                                    @pointerup="onAppPointerUp(item, $event)"
+                                                    @pointercancel="cancelAllPresses"
+                                                >
+                                                    <div class="appIcon" :style="{ background: item.app.iconBg }" v-html="item.app.icon"></div>
+                                                    <div class="appName">{{ item.app.name }}</div>
+                                                </div>
+                                                <div
+                                                    v-if="isEditMode"
+                                                    class="edit-remove-button"
+                                                    @pointerdown.stop
+                                                    @pointerup.stop
+                                                    @pointercancel.stop
+                                                    @click.stop="removeAppFromBoard(item.app.id)"
+                                                >×</div>
+                                            </div>
+                                            <!-- Widget -->
+                                            <div
+                                                v-else
+                                                class="appContainer widgetContainer"
+                                                :class="[item.footprint.cssClass, { editing: isEditMode, dragging: draggingIconId === item.id }]"
+                                                :style="{
+                                                    ...getDesktopAppStyle(item),
+                                                    ...getDesktopGridItemStyle(item),
+                                                }"
+                                            >
+                                                <div
+                                                    class="appTouch widgetTouch"
+                                                    :data-item-id="item.id"
+                                                    :data-widget-qualified-id="item.widget.qualifiedId"
+                                                    :data-widget-size="item.footprint.size"
+                                                    :data-widget-orientation="item.footprint.orientation || ''"
+                                                    @pointerdown="onAppPointerDown(item, $event)"
+                                                    @pointermove="onAppPointerMove($event)"
+                                                    @pointerup="onAppPointerUp(item, $event)"
+                                                    @pointercancel="cancelAllPresses"
+                                                >
+                                                    <div class="widgetMini"
+                                                         :style="{ background: item.widget.iconBg || item.widget.appIconBg || '#222' }">
+                                                        <template v-if="false">
+                                                            <!-- 此分支保留作为扩展位 -->
+                                                        </template>
+                                                        <template v-if="item.footprint.size === 'S' && item.footprint.orientation === 'v'">
+                                                            <!-- S 竖 (1x2): 图标在上, label 在下, 纵向紧凑 -->
+                                                            <span class="widgetMini-icon" v-html="item.widget.icon || item.widget.appIcon || ''"></span>
+                                                            <span class="widgetMini-label widgetMini-label--vertical">{{ item.widget.label }}</span>
+                                                        </template>
+                                                        <template v-else>
+                                                            <!-- S 横 / M / L: 全部走 widget 自己 render(size, payload) -->
+                                                            <div class="widgetMini-body" v-html="renderWidgetBody(item.widget, item.footprint)"></div>
+                                                        </template>
+                                                    </div>
+                                                    <!-- 所有 size 都显示底部 widgetName(跟 app 图标的 appName 视觉一致) -->
+                                                    <div class="widgetName">{{ item.widget.label }}</div>
+                                                </div>
+                                                <div
+                                                    v-if="isEditMode"
+                                                    class="edit-remove-button"
+                                                    @pointerdown.stop
+                                                    @pointerup.stop
+                                                    @pointercancel.stop
+                                                    @click.stop="removeWidgetFromBoard(item.widget.instanceId)"
+                                                >×</div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+
+                                <div class="pageDots" v-if="desktopPageDots.length > 1">
+                                    <span
+                                        v-for="dot in desktopPageDots"
+                                        :key="`page-dot-${dot.page}`"
+                                        class="page-dot"
+                                        :class="{ active: dot.page === activeDesktopPage }"
+                                        @click="goToDesktopPage(dot.page)"
+                                    ></span>
+                                </div>
+                            </div>
+
+                        <div v-if="dockApps.length" class="app-dock">
+                            <div
+                                v-for="dockApp in dockApps"
+                                :key="dockApp.id"
+                                class="dock-item"
+                                @click.stop="openAppFromDock(dockApp.id)"
+                            >
+                                <div class="dock-icon" :style="dockApp.dockIconStyle" v-html="dockApp.dockIconHtml"></div>
+                                <div v-if="dockApp.badge" class="dock-badge">{{ dockApp.badge }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="app-window" :class="{ active: !!activeApp, 'card-blur': appViewMode === 'card' || indicatorGesture.active }">
+                        <div v-if="activeApp" class="app-overlay" @click="handleWindowOverlayClick"></div>
+
+                        <div
+                            v-show="activeApp"
+                            class="app-shell"
+                            ref="cardShellElement"
+                            :class="{ card: appViewMode === 'card', 'dragging-card': isDraggingCard }"
+                            :style="activeAppShellStyle"
+                            @click.stop="handleAppShellClick"
+                            @mousedown="onCardMouseDown"
+                            @pointerdown="onCardPointerDown"
+                            @pointermove="onCardPointerMove"
+                            @pointerup="onCardPointerUp"
+                            @pointercancel="cancelCardDrag"
+                        >
+                            <div class="app-background-layer" :style="activeAppBackgroundStyle"></div>
+
+                            <div class="app-chrome">
+                                <div v-if="showAppTopbar" class="app-topbar">
+                                    <div>
+                                        <div class="app-topbar-title">{{ activeAppTitle }}</div>
+                                        <div v-if="activeAppSubtitle" class="app-topbar-subtitle">{{ activeAppSubtitle }}</div>
+                                    </div>
+                                    <div class="app-topbar-pill">{{ activeApp?.name }}</div>
+                                </div>
+
+                                <div class="app-content" :class="{ 'detail-active': !!currentDetailView }" @click="handleAppContentClick">
+                                    <div class="app-page-stack" :class="{ 'detail-active': !!currentDetailView }">
+                                        <div class="app-page" :class="{ 'page-hidden': !!currentDetailView }">
+                                            <div v-if="currentPageView" class="app-screen-panel" v-html="currentPageView"></div>
+                                        </div>
+
+                                        <div v-if="currentDetailView" class="app-detail-page">
+                                            <div class="app-detail-surface">
+                                                <div class="app-detail-header">
+                                                    <button class="detail-back-button" @click.stop="closeDetailPage">
+                                                        <span class="detail-back-icon">‹</span>
+                                                        <span>返回</span>
+                                                    </button>
+                                                    <div class="app-detail-header-copy">
+                                                        <div class="app-detail-title">{{ currentDetailTitle || activeAppTitle }}</div>
+                                                        <div v-if="currentDetailSubtitle" class="app-detail-subtitle">{{ currentDetailSubtitle }}</div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="app-detail-body">
+                                                    <div class="app-detail-panel" v-html="currentDetailView"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div v-if="showAppNav" class="app-nav">
+                                    <div v-if="activeAppNavType === 'tab'" class="app-tab-bar">
+                                        <div
+                                            v-for="tab in navigationPages"
+                                            :key="tab.id"
+                                            class="app-tab-item"
+                                            :class="{ active: activeRootPageId === tab.id }"
+                                            @click.stop="switchRootPage(tab.id)"
+                                        >
+                                            <div class="app-tab-icon">{{ tab.icon || '•' }}</div>
+                                            <div>{{ tab.label }}</div>
+                                        </div>
+                                    </div>
+
+                                    <div v-else-if="activeAppNavType === 'orb'" class="app-orb-nav">
+                                        <div
+                                            v-for="tab in navigationPages"
+                                            :key="tab.id"
+                                            class="app-orb-item"
+                                            :class="{ active: activeRootPageId === tab.id }"
+                                            @click.stop="switchRootPage(tab.id)"
+                                        ></div>
+                                    </div>
+                                </div>
+
+                                <div class="app-bottom">
+                                    <div
+                                        class="home-indicator-area"
+                                        @mousedown.stop="onHomeIndicatorMouseDown"
+                                        @pointerdown.stop="onHomeIndicatorDown"
+                                        @pointermove.stop="onHomeIndicatorMove"
+                                        @pointerup.stop="onHomeIndicatorUp"
+                                        @pointercancel.stop="cancelIndicatorGesture"
+                                    >
+                                        <div class="home-indicator" :style="{ background: (activeApp && activeApp.homeIndicatorColor) || 'rgba(17,24,39,0.28)' }"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div v-if="appModal.visible" class="app-modal-layer">
+                                <div class="app-modal-backdrop" @click.stop="closeModal"></div>
+                                <div class="app-modal" :class="appModal.type" @click.stop>
+                                    <div class="text-[18px] font-bold tracking-tight">{{ appModal.title }}</div>
+                                    <div class="mt-3 text-sm leading-6 text-slate-600">{{ appModal.text }}</div>
+                                    <template v-if="appModal.type === 'confirm'">
+                                        <div class="app-modal-divider"></div>
+                                        <div class="app-modal-actions">
+                                            <button class="app-modal-action app-modal-action--cancel" @click="closeModal">取消</button>
+                                            <button
+                                                class="app-modal-action"
+                                                :class="{ 'app-modal-action--danger': appModal.danger }"
+                                                @click="confirmAppModal"
+                                            >{{ appModal.confirmLabel || '确定' }}</button>
+                                        </div>
+                                    </template>
+                                    <template v-else-if="appModal.type === 'prompt'">
+                                        <textarea
+                                            class="app-modal-prompt-input"
+                                            :placeholder="appModal.placeholder || ''"
+                                            rows="3"
+                                            @keydown.ctrl.enter="confirmAppModal"
+                                            @keydown.meta.enter="confirmAppModal"
+                                        ></textarea>
+                                        <div class="app-modal-divider"></div>
+                                        <div class="app-modal-actions">
+                                            <button class="app-modal-action app-modal-action--cancel" @click="closeModal">{{ appModal.cancelLabel || '取消' }}</button>
+                                            <button class="app-modal-action" @click="confirmAppModal">{{ appModal.confirmLabel || '确定' }}</button>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 顶层确认弹窗（独立于 activeApp，用于桌面红叉删除等不在 App 内触发的二次确认） -->
+                    <div v-if="confirmRequest.visible" class="app-confirm-layer">
+                        <div class="app-modal-backdrop" @click="onConfirmCancel"></div>
+                        <div class="app-modal app-modal-confirm" @click.stop>
+                            <div class="text-[18px] font-bold tracking-tight">{{ confirmRequest.title }}</div>
+                            <div class="mt-3 text-sm leading-6 text-slate-600 whitespace-pre-line">{{ confirmRequest.text }}</div>
+                            <div class="app-modal-divider"></div>
+                            <div class="app-modal-actions">
+                                <button class="app-modal-action app-modal-action--cancel" @click="onConfirmCancel">取消</button>
+                                <button
+                                    class="app-modal-action"
+                                    :class="{ 'app-modal-action--danger': confirmRequest.danger }"
+                                    @click="onConfirmOk"
+                                >{{ confirmRequest.confirmLabel || '确定' }}</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 小组件选择面板（widget picker） -->
+                    <div v-if="isWidgetPickerOpen" class="widget-picker-overlay" @pointerdown.stop @click.stop>
+                        <div class="widget-picker-backdrop" @click="pickerOnClose"></div>
+                        <div class="widget-picker-panel">
+                            <div class="widget-picker-header">
+                                <div class="widget-picker-title">添加小组件</div>
+                                <div class="widget-picker-subtitle">点击已注册的 app 提供的小组件，加入桌面</div>
+                            </div>
+                            <div class="widget-picker-list">
+                                <div v-if="widgetPickerItems.length === 0" class="widget-picker-empty">
+                                    暂无任何小组件。<br/>App 暂时还没注册 widget。
+                                </div>
+                                <div
+                                    v-for="w in widgetPickerItems"
+                                    :key="w.qualifiedId"
+                                    class="widget-picker-card"
+                                    :class="{ 'is-added': w.alreadyAdded }"
+                                    @click="pickerOnPickWidget(w.qualifiedId)"
+                                >
+                                    <div class="widget-picker-card-icon"
+                                         :style="{ background: w.iconBg || w.appIconBg || '#222' }"
+                                         v-html="w.icon || w.appIcon || ''"></div>
+                                    <div class="widget-picker-card-label">{{ w.label || w.widgetId }}</div>
+                                    <div class="widget-picker-card-size">{{ widgetSizeLabel(w) }}</div>
+                                    <div class="widget-picker-card-app">来自 {{ w.appName || w.appId }}</div>
+                                    <div v-if="w.alreadyAdded" class="widget-picker-card-added">已添加</div>
+                                </div>
+                            </div>
+                            <div class="widget-picker-footer">
+                                <button class="widget-picker-close" @click="pickerOnClose">完成</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script type="module" src="/src/index.js"></script>
+    </body>
+</html>

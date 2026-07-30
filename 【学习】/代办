@@ -1,0 +1,971 @@
+# Vue 3 从零动手学 — 小听桌面实战
+
+> 跟着这个文件一步一步做，每一节都是"先讲原理 → 再看代码 → 再做练习"
+> 学会标准：你能用自己的话讲出来，不只是抄代码
+
+---
+
+## 第一章：最小 Vue 程序
+
+### 原理
+
+Vue 的本质：**把 JS 里的"数据"自动同步到 HTML 上**。你改 JS 里的变量，HTML 自动变，不用手动操作 DOM。
+
+### 代码
+
+```html
+<!-- step1.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>第一步：Hello Vue</title>
+</head>
+<body>
+    <div id="app">
+        <h1>你好，{{ name }}！</h1>
+        <button @click="sayHi">打招呼</button>
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script>
+        createApp({
+            data() {
+                return {
+                    name: '小明'
+                }
+            },
+            methods: {
+                sayHi() {
+                    this.name = '小红'
+                }
+            }
+        }).mount('#app')
+    </script>
+</body>
+</html>
+```
+
+### 拆解
+
+| 写法 | 含义 |
+|------|------|
+| `{{ name }}` | 模板里插值，name 的值会显示在这里 |
+| `data() { return { name: '小明' } }` | 定义"响应式数据"，name 变了，页面自动变 |
+| `methods: { sayHi() { ... } }` | 定义方法，类似普通 JS 函数 |
+| `@click="sayHi"` | 点击按钮时调用 sayHi |
+| `this.name = '小红'` | 改了 data 里的 name，HTML 自动更新 |
+
+### 练习 1
+
+打开这个文件，浏览器里双击 step1.html 运行：
+
+1. 页面显示什么？
+2. 点按钮后页面显示什么？
+3. 把 `name: '小明'` 改成 `name: '你的名字'`，刷新看效果
+4. 再加一个按钮叫"改回来"，点一下把名字改回小明
+
+---
+
+## 第二章：v-for 循环
+
+### 原理
+
+`v-for` 就像 JavaScript 里的 `for...of`。数组里有几个东西，就生成几个 HTML 元素。
+
+### 代码
+
+```html
+<!-- step2.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>第二步：循环渲染</title>
+</head>
+<body>
+    <div id="app">
+        <h2>我的收藏</h2>
+        <div
+            v-for="item in apps"
+            :key="item.id"
+            class="app-item"
+        >
+            <span>{{ item.icon }}</span>
+            <span>{{ item.name }}</span>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script>
+        createApp({
+            data() {
+                return {
+                    apps: [
+                        { id: 1, name: '音乐', icon: '🎵' },
+                        { id: 2, name: '聊天', icon: '💬' },
+                        { id: 3, name: '天气', icon: '☀️' },
+                    ]
+                }
+            }
+        }).mount('#app')
+    </script>
+
+    <style>
+        .app-item {
+            padding: 10px;
+            border: 1px solid #ccc;
+            margin: 5px 0;
+        }
+    </style>
+</body>
+</html>
+```
+
+### 拆解
+
+| 写法 | 含义 |
+|------|------|
+| `v-for="item in apps"` | 遍历 apps 数组，每次拿出一个 item |
+| `:key="item.id"` | 给每个元素唯一标识，Vue 内部用它来高效更新列表 |
+| `{{ item.name }}` | 显示 item 里的 name 属性 |
+
+### 练习 2
+
+1. 在 `apps` 数组里再加一个：`{ id: 4, name: '相机', icon: '📷' }`，看页面多了什么
+2. 把 `v-for="item in apps"` 改成 `v-for="(item, index) in apps"`，然后在 HTML 里加一行显示 `{{ index + 1 }}.`
+3. 用 `@click` 给每个 item 加一个"删除"按钮，点击后从数组里移除那一项
+
+---
+
+## 第三章：v-bind 动态属性
+
+### 原理
+
+`:属性名` 是 `v-bind:属性名` 的简写。意思是"这个属性的值不是固定字符串，而是从 JS 里读取"。
+
+### 代码
+
+```html
+<!-- step3.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>第三步：动态属性</title>
+</head>
+<body>
+    <div id="app">
+        <!-- 普通属性：值固定 -->
+        <div class="box">普通盒子</div>
+
+        <!-- 动态属性：值从 data 里读 -->
+        <div :class="boxClass" :style="{ fontSize: fontSize + 'px' }">
+            动态盒子
+        </div>
+
+        <!-- data-app-id 这种自定义属性，用 :data-xxx -->
+        <div
+            v-for="app in apps"
+            :key="app.id"
+            :data-id="app.id"
+        >
+            {{ app.name }}
+        </div>
+
+        <button @click="changeStyle">换个样式</button>
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script>
+        createApp({
+            data() {
+                return {
+                    boxClass: 'red-box',
+                    fontSize: 20,
+                    apps: [
+                        { id: 'chat', name: '聊天' },
+                        { id: 'music', name: '音乐' },
+                    ]
+                }
+            },
+            methods: {
+                changeStyle() {
+                    this.boxClass = this.boxClass === 'red-box' ? 'blue-box' : 'red-box'
+                }
+            }
+        }).mount('#app')
+    </script>
+
+    <style>
+        .red-box { background: #ff6b6b; padding: 20px; color: white; }
+        .blue-box { background: #4dabf7; padding: 20px; color: white; }
+    </style>
+</body>
+</html>
+```
+
+### 拆解
+
+| 写法 | 含义 |
+|------|------|
+| `class="box"` | 普通固定 class |
+| `:class="boxClass"` | class 的值从 JS 变量 `boxClass` 读取 |
+| `:style="{ fontSize: fontSize + 'px' }"` | style 对象语法，`fontSize` 是个 JS 变量 |
+| `:data-id="app.id"` | 动态设置 `data-id` 属性，和你项目里 `:data-app-id="app.id"` 一样 |
+
+### 练习 3
+
+1. 加一个 `color: 'red'` 到 data 里，然后 `:style="{ color: color }"` 用它
+2. 点按钮时顺便把 `fontSize` 改成 30
+3. 给 apps 里的每个 div 加 `:data-app-id="app.id"`，然后用 Chrome 开发者工具的 Elements 面板检查属性是否正确
+
+---
+
+## 第四章：:class 对象和三元语法
+
+### 原理
+
+`:class` 不只能绑定一个字符串，还能：
+- 绑定一个对象：`{ 类名: 条件 }`，条件为 true 时这个类生效
+- 绑定三元表达式：`条件 ? '类A' : '类B'`
+
+### 代码
+
+```html
+<!-- step4.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>第四步：动态 class</title>
+</head>
+<body>
+    <div id="app">
+        <!-- 对象语法：isActive 为 true 时，这个 div 同时有 page-dot 和 active 两个类 -->
+        <div
+            class="page-dot"
+            :class="{ active: isActive }"
+        >
+            点我切换
+        </div>
+
+        <!-- 三元语法：currentPage 是数字，1 就亮，0 就暗 -->
+        <div :class="currentPage === 1 ? 'page-dot active' : 'page-dot'">
+            固定在第1页时亮
+        </div>
+
+        <!-- 或者用 || 语法：优先用 size，没有就用默认的 '1x1' -->
+        <div :class="appSize || '1x1'">
+            {{ appSize || '1x1' }}
+        </div>
+
+        <button @click="isActive = !isActive">切换 active</button>
+        <button @click="currentPage = currentPage === 0 ? 1 : 0">切换页码</button>
+        <button @click="appSize = appSize ? '' : '2x1'">切换大小</button>
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script>
+        createApp({
+            data() {
+                return {
+                    isActive: false,
+                    currentPage: 0,
+                    appSize: '1x1',
+                }
+            }
+        }).mount('#app')
+    </script>
+
+    <style>
+        .page-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #ccc;
+            margin: 5px;
+        }
+        .page-dot.active {
+            width: 20px;
+            border-radius: 5px;
+            background: #fff;
+        }
+        .1x1 { background: #ddd; }
+        .2x1 { background: #aad; width: 200px; }
+    </style>
+</body>
+</html>
+```
+
+### 拆解
+
+这一节就是你在 index.html 里看到的所有 `:class` 用法：
+
+```html
+<!-- 项目里：固定字符串 'page-dot' + 动态 active -->
+:class="{ active: currentPage === i }"
+
+<!-- 项目里：app.size 有就用，没有就默认 '1x1' -->
+:class="app.size || '1x1'"
+```
+
+### 练习 4
+
+1. 在 index.html 里找到 `:class="{ active: currentPage === i }"`，手抄到 step4.html 里验证
+2. 把 page-dots 那段 HTML 完整复制过来，让它根据 `desktopPages` 长度自动生成对应数量的小圆点
+3. 思考：如果你有 3 页，`currentPage = 0` 时，哪几个圆点应该有 `active` 类？
+
+---
+
+## 第五章：computed 计算属性
+
+### 原理
+
+`computed` 是**自动计算的属性**。当它依赖的 data 变了，computed 会自动重新算一遍。你不需要手动调用，它像一个"智能变量"。
+
+### 代码
+
+```html
+<!-- step5.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>第五步：计算属性</title>
+</head>
+<body>
+    <div id="app">
+        <p>我的应用（原始数据）：</p>
+        <div v-for="(apps, page) in appPositions" :key="page">
+            <strong>第 {{ page }} 页：</strong>
+            <span v-for="app in apps" :key="app.id">
+                {{ app.name }}
+            </span>
+        </div>
+
+        <hr>
+
+        <!-- 直接用计算属性，不用管怎么算的 -->
+        <p>分好页之后：</p>
+        <div
+            v-for="(page, pageIndex) in desktopPages"
+            :key="pageIndex"
+            class="page"
+        >
+            <strong>页 {{ pageIndex + 1 }}：</strong>
+            <span v-for="app in page" :key="app.id">{{ app.name }} </span>
+        </div>
+
+        <p>共 {{ pageCount }} 页</p>
+        <button @click="nextPage">下一页</button>
+        <button @click="prevPage">上一页</button>
+        <p>当前在第 {{ currentPage + 1 }} 页</p>
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script>
+        createApp({
+            data() {
+                return {
+                    currentPage: 0,
+                    // 每个 app 的位置信息（和你的 appPositions 完全一样）
+                    appPositions: {
+                        'music': { page: 0, index: 0, size: '1x1' },
+                        'chat':  { page: 0, index: 1, size: '1x1' },
+                        'weather': { page: 0, index: 2, size: '1x1' },
+                        'camera':   { page: 1, index: 0, size: '1x1' },
+                        'photos':   { page: 1, index: 1, size: '1x1' },
+                        'setting':  { page: 2, index: 0, size: '1x1' },
+                    }
+                }
+            },
+
+            computed: {
+                // 这就是你在 core.js 里写的 desktopPages computed
+                // 它自动把 appPositions { appId: {page, index} }
+                // 转换成 [[music, chat, weather], [camera, photos], [setting]]
+                desktopPages() {
+                    const pageMap = {}
+
+                    Object.entries(this.appPositions).forEach(([appId, pos]) => {
+                        // 初始化这一页（如果还没见过这页）
+                        if (!pageMap[pos.page]) pageMap[pos.page] = []
+
+                        // 查 app 的名字（模拟 window.apps 查表）
+                        const nameMap = {
+                            'music': '🎵音乐', 'chat': '💬聊天',
+                            'weather': '☀️天气', 'camera': '📷相机',
+                            'photos': '📸相册', 'setting': '⚙️设置'
+                        }
+                        const iconMap = {
+                            'music': '🎵', 'chat': '💬',
+                            'weather': '☀️', 'camera': '📷',
+                            'photos': '📸', 'setting': '⚙️'
+                        }
+
+                        pageMap[pos.page].push({
+                            id: appId,
+                            name: nameMap[appId] || appId,
+                            icon: iconMap[appId] || '📱',
+                            size: pos.size,
+                            index: pos.index,
+                        })
+                    })
+
+                    // 每页内的 App 按 index 排序
+                    Object.values(pageMap).forEach(arr =>
+                        arr.sort((a, b) => a.index - b.index)
+                    )
+
+                    // 转成连续的数组 [[第0页], [第1页], [第2页]]
+                    const maxPage = Object.keys(pageMap).length
+                    return Array.from({ length: maxPage }, (_, i) => pageMap[i] || [])
+                },
+
+                pageCount() {
+                    return this.desktopPages.length
+                }
+            },
+
+            methods: {
+                nextPage() {
+                    if (this.currentPage < this.pageCount - 1) this.currentPage++
+                },
+                prevPage() {
+                    if (this.currentPage > 0) this.currentPage--
+                }
+            }
+        }).mount('#app')
+    </script>
+
+    <style>
+        .page { padding: 10px; background: #f0f0f0; margin: 5px 0; }
+    </style>
+</body>
+</html>
+```
+
+### 拆解
+
+整个计算过程就是：
+
+```
+appPositions（原始数据）
+  music → { page: 0, index: 0 }
+  chat  → { page: 0, index: 1 }
+  weather → { page: 0, index: 2 }
+  camera → { page: 1, index: 0 }
+  ...
+
+    ↓ computed 自动分组排序
+
+desktopPages（最终结果）
+  [0] → [🎵音乐, 💬聊天, ☀️天气]     ← 第0页
+  [1] → [📷相机, 📸相册]             ← 第1页
+  [2] → [⚙️设置]                    ← 第2页
+```
+
+**computed 的精髓**：你不用手动维护 `desktopPages`，只要 `appPositions` 变了，Vue 自动重新算一遍。
+
+### 练习 5
+
+1. 打开 Chrome 开发者工具 → Console，输入 `app.appPositions.weather = { page: 1, index: 0, size: '1x1' }` 回车，看"第0页"和"第1页"的内容怎么变的
+2. 把一个新的 app 加到 `appPositions`：`'game': { page: 2, index: 1, size: '1x1' }`，在 `nameMap` 里加 `'game': '🎮游戏'`，看多了什么
+3. （思考）如果有两个 app 的 `index` 都是 0 会怎样？`sort` 怎么处理的？
+
+---
+
+## 第六章：v-if 条件渲染 + mounted 生命周期
+
+### 原理
+
+- `v-if="条件"`：条件为 true 时才渲染这个元素，false 时元素不存在于 DOM
+- `mounted()`：Vue 把组件挂到 DOM 上之后自动调用的函数，**只调一次**
+
+### 代码
+
+```html
+<!-- step6.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>第六步：v-if 和 mounted</title>
+</head>
+<body>
+    <div id="app">
+        <!-- ready 为 false 时，这个 div 完全不存在 -->
+        <div v-if="ready" class="ready-content">
+            <h1>桌面加载完成！</h1>
+            <p>当前应用：{{ currentApp || '无' }}</p>
+        </div>
+
+        <!-- 不管 ready 是什么，这个始终存在 -->
+        <div class="always-here">
+            <p>状态栏始终显示：{{ status }}</p>
+        </div>
+
+        <!-- 点击打开 app -->
+        <button @click="currentApp = 'music'">打开音乐</button>
+        <button @click="currentApp = 'chat'">打开聊天</button>
+        <button @click="currentApp = null">关闭</button>
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script>
+        createApp({
+            data() {
+                return {
+                    ready: false,
+                    currentApp: null,
+                    status: '18:30'
+                }
+            },
+
+            mounted() {
+                // 模拟异步加载（等 2 秒）
+                console.log('mounted 触发了，ready 马上变 true')
+                setTimeout(() => {
+                    this.ready = true
+                    console.log('数据加载完了，桌面出现了')
+                }, 2000)
+            }
+        }).mount('#app')
+    </script>
+
+    <style>
+        .ready-content { background: #d0f0c0; padding: 20px; }
+        .always-here { background: #eee; padding: 10px; }
+    </style>
+</body>
+</html>
+```
+
+### 拆解
+
+这就是你项目里的逻辑：
+
+```javascript
+mounted() {
+    // mounted 触发时，ready 还是 false
+    // 所以 v-if="ready" 里的元素根本不存在于 DOM
+
+    this.init()  // init 里 await 加载数据，然后 this.ready = true
+}
+```
+
+**一个常见坑**：如果 mounted 里直接 `document.querySelector('.xxx')`，而 `.xxx` 在 `v-if="ready"` 里，此时 ready=false，元素不存在，`querySelector` 返回 null。
+
+### 练习 6
+
+1. 刷新页面，观察 2 秒内页面显示什么，2 秒后显示什么
+2. 在 `mounted` 里加一行 `console.log(document.querySelector('.ready-content'))`，看 2 秒前后分别是 null 还是元素
+3. 把 `ready-content` 的 div 改到 `v-if` 外面，刷新看 2 秒前后的变化
+
+---
+
+## 综合练习：拼出小听的桌面层
+
+### 目标
+
+用学过的所有知识，把小听桌面的核心结构拼出来。
+
+```html
+<!-- 综合练习.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>综合：拼出小听桌面</title>
+    <style>
+        /* 基础样式（来自 main.css 的简化版） */
+        body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .phone-case {
+            width: 375px; height: 812px;
+            background: #111;
+            border-radius: 40px;
+            overflow: hidden;
+            position: relative;
+        }
+        .screen {
+            width: 100%; height: 100%;
+            position: relative;
+            overflow: hidden;
+            color: white;
+        }
+        .wallpaper {
+            position: absolute; inset: 0;
+            /* 渐变壁纸 */
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        }
+
+        /* 桌面层（根据 ready 显示） */
+        .main-desktop {
+            position: absolute; inset: 0;
+        }
+        .desktop-pages {
+            display: flex;
+            width: 300%;
+            transition: transform 0.3s;
+        }
+        .desktop-page {
+            width: 100%; flex-shrink: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            align-content: start;
+        }
+
+        /* App 图标 */
+        .app-icon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        .app-icon-img {
+            width: 54px; height: 54px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 28px;
+        }
+        .app-icon-label {
+            font-size: 11px;
+            color: rgba(255,255,255,0.9);
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+            text-align: center;
+            max-width: 70px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* 抖动效果（编辑模式） */
+        @keyframes wiggle {
+            0%,100% { transform: rotate(-3deg); }
+            50% { transform: rotate(3deg); }
+        }
+        .app-icon.wiggle .app-icon-img {
+            animation: wiggle 0.3s infinite;
+        }
+
+        /* 分页小圆点 */
+        .page-dots {
+            position: absolute;
+            bottom: 80px;
+            left: 50%; transform: translateX(-50%);
+            display: flex; gap: 6px;
+        }
+        .page-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            transition: all 0.2s;
+        }
+        .page-dot.active {
+            background: #fff;
+            width: 20px;
+            border-radius: 4px;
+        }
+
+        /* Dock 栏 */
+        .dock-bar {
+            position: absolute;
+            bottom: 20px;
+            left: 50%; transform: translateX(-50%);
+            display: flex; gap: 8px;
+            background: rgba(255,255,255,0.15);
+            padding: 8px 16px;
+            border-radius: 24px;
+            backdrop-filter: blur(10px);
+        }
+        .dock-app {
+            width: 44px; height: 44px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .dock-divider {
+            width: 1px; height: 36px;
+            background: rgba(255,255,255,0.3);
+            align-self: center;
+        }
+
+        /* 状态栏 */
+        .status-bar {
+            position: absolute; top: 0; left: 0; right: 0;
+            padding: 10px 20px;
+            display: flex; justify-content: space-between;
+            font-size: 14px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="phone-case">
+            <div class="screen">
+                <div class="wallpaper"></div>
+
+                <!-- 主桌面层（等 ready 才出现） -->
+                <div class="main-desktop" v-if="ready">
+
+                    <!-- 滑动层 -->
+                    <div
+                        class="desktop-pages"
+                        :style="{ transform: `translateX(${-currentPage * (100/1)}%)` }"
+                    >
+                        <!-- 每一页 -->
+                        <div
+                            class="desktop-page"
+                            v-for="(page, pi) in desktopPages"
+                            :key="pi"
+                        >
+                            <!-- 每一个 App 图标 -->
+                            <div
+                                class="app-icon"
+                                v-for="app in page"
+                                :key="app.id"
+                                :class="{ wiggle: isEditMode && app.id !== 'home' }"
+                                @click="openApp(app)"
+                            >
+                                <div class="app-icon-img">{{ app.icon }}</div>
+                                <div class="app-icon-label">{{ app.name }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 小圆点 -->
+                    <div class="page-dots">
+                        <div
+                            v-for="(_, i) in desktopPages"
+                            :key="i"
+                            class="page-dot"
+                            :class="{ active: currentPage === i }"
+                        ></div>
+                    </div>
+
+                    <!-- Dock 栏 -->
+                    <div class="dock-bar">
+                        <template v-for="app in dockApps" :key="app.id">
+                            <div v-if="app.divider" class="dock-divider"></div>
+                            <div v-else class="dock-app" @click="openApp(app)">
+                                {{ app.icon }}
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- 状态栏（始终显示） -->
+                <div class="status-bar">
+                    <span>{{ currentTime }}</span>
+                    <span>信号 电量</span>
+                </div>
+
+                <!-- 加载封面 -->
+                <div v-if="!ready" class="status-bar">
+                    <span>加载中...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script>
+        createApp({
+            data() {
+                return {
+                    currentPage: 0,
+                    currentApp: null,
+                    currentTime: '',
+                    ready: false,
+                    isEditMode: false,
+
+                    // 每个 App 在哪一页、第几个
+                    appPositions: {
+                        'music':   { page: 0, index: 0, size: '1x1' },
+                        'chat':    { page: 0, index: 1, size: '1x1' },
+                        'weather': { page: 0, index: 2, size: '1x1' },
+                        'camera':  { page: 0, index: 3, size: '1x1' },
+                        'photos':  { page: 1, index: 0, size: '1x1' },
+                        'setting': { page: 1, index: 1, size: '1x1' },
+                    },
+
+                    // App 名称和图标（类似 window.apps）
+                    apps: {
+                        'music':   { name: '音乐',   icon: '🎵' },
+                        'chat':    { name: '聊天',   icon: '💬' },
+                        'weather': { name: '天气',   icon: '☀️' },
+                        'camera':  { name: '相机',   icon: '📷' },
+                        'photos':  { name: '相册',   icon: '📸' },
+                        'setting': { name: '设置',   icon: '⚙️' },
+                        'home':    { name: '首页',   icon: '🏠' },
+                    },
+
+                    dockApps: [
+                        { id: 'music', icon: '🎵' },
+                        { id: 'chat',  icon: '💬' },
+                        { divider: true },
+                        { id: 'home',  icon: '🏠' },
+                    ],
+                }
+            },
+
+            computed: {
+                desktopPages() {
+                    const pageMap = {}
+                    Object.entries(this.appPositions).forEach(([appId, pos]) => {
+                        if (!pageMap[pos.page]) pageMap[pos.page] = []
+                        const appInfo = this.apps[appId]
+                        if (appInfo) {
+                            pageMap[pos.page].push({
+                                id: appId,
+                                name: appInfo.name,
+                                icon: appInfo.icon,
+                                index: pos.index,
+                            })
+                        }
+                    })
+                    Object.values(pageMap).forEach(arr => arr.sort((a, b) => a.index - b.index))
+                    const maxPage = Object.keys(pageMap).length || 1
+                    return Array.from({ length: maxPage }, (_, i) => pageMap[i] || [])
+                },
+
+                pageCount() {
+                    return this.desktopPages.length
+                }
+            },
+
+            methods: {
+                openApp(app) {
+                    if (app.id === 'home') {
+                        this.isEditMode = !this.isEditMode
+                        return
+                    }
+                    console.log('打开应用：', app.name)
+                },
+
+                updateTime() {
+                    const now = new Date()
+                    this.currentTime = now.getHours().toString().padStart(2,'0') + ':' +
+                                       now.getMinutes().toString().padStart(2,'0')
+                },
+            },
+
+            mounted() {
+                this.updateTime()
+                setInterval(() => this.updateTime(), 1000)
+
+                // 模拟异步加载
+                setTimeout(() => {
+                    this.ready = true
+                }, 1000)
+            }
+        }).mount('#app')
+    </script>
+</body>
+</html>
+```
+
+### 验证清单
+
+打开"综合练习.html"后，检查以下几点：
+
+- [ ] 1秒后桌面出现，壁纸和 App 图标正常显示
+- [ ] 点击 Dock 栏的 🏠 图标，所有 App 图标抖动（wiggle）
+- [ ] 再点一次 🏠，抖动停止
+- [ ] 点击"音乐"图标，控制台打印了"打开应用：音乐"
+- [ ] 状态栏显示当前时间，每秒更新
+
+---
+
+## 动态岛屿（Dynamic Island）
+
+### 原理
+
+通过 `:class` 动态切换尺寸 class，CSS transition 控制过渡动画。
+
+### 尺寸规划（4种状态）
+
+| 状态 | 尺寸 | 圆角 | 备注 |
+|------|------|------|------|
+| 默认/基础 | 100px × 36px | 25px | 黑色胶囊，最初始状态 |
+| mini | 180px × 46px | 23px | 播放提示模式 |
+| medium | 240px × 135px | 32px | 中等大小 |
+| large | 280px × 320px | 38px | 大尺寸，完整内容展示 |
+
+### 设计思路
+
+- 本质就是一个 **黑色胶囊**，带 `border-radius`
+- 通过切换不同 class 改变尺寸、圆角，配合 CSS `transition` 做平滑动画
+- 点击灵动岛切换状态：基础 → mini → medium → large → 收起回基础
+- 内容区 `.dynamic-island-content` 用 `v-if` / `v-show` 按需显示不同层级的信息
+
+### 练习目标
+
+- [ ] 基础状态：黑色胶囊居中显示
+- [ ] 点击后展开为 mini 尺寸，带文字提示
+- [ ] 再点击展开为 medium，显示更多内容
+- [ ] 再点击展开为 large，显示完整信息
+- [ ] 再点击收起回基础胶囊
+
+### 验证清单
+
+打开"综合练习.html"后，检查以下几点：
+
+- [ ] 灵动岛以基础胶囊形态居中显示
+- [ ] 点击灵动岛依次切换：基础 → mini → medium → large → 基础
+- [ ] 每次切换尺寸有平滑过渡动画
+- [ ] 大尺寸下显示完整信息内容
+
+---
+
+## 桌面壁纸模糊度调节
+
+### 原理
+
+用 `:style` 绑定行内样式，通过 `filter: blur()` 动态控制壁纸的模糊程度。
+
+### 核心代码
+
+```html
+<!-- 动态绑定模糊度 -->
+<div class="desktop-wallpaper" :style="{ filter: `blur(${wallpaperBlur}px)` }">
+</div>
+```
+
+```javascript
+// data 里定义模糊度变量
+data() {
+    return {
+        wallpaperBlur: 0,  // 默认不模糊
+    }
+}
+```
+
+### 调节方式
+
+- **滑块调节**：加一个 `<input type="range" min="0" max="20" v-model="wallpaperBlur">`
+- **固定值**：直接写 `wallpaperBlur: 10`，根据需要调整范围
+
+### 练习目标
+
+- [ ] 壁纸默认无模糊（0px）
+- [ ] 拖动滑块可实时改变模糊度
+- [ ] 模糊度变化时壁纸过渡平滑（可加 transition）
+
+---
+
+## 附录：常见报错速查
+
+| 报错 | 原因 | 解决 |
+|------|------|------|
+| `Cannot read properties of null (reading 'addEventListener')` | `v-if="ready"` 块里的元素，在 ready=false 时不存在，`querySelector` 找不到 | 把 `querySelector` 和事件绑定放进 `$nextTick` 里，等 Vue 渲染完再执行 |
+| `Identifier 'xxx' has already been declared` | 同一个 `<script>` 被执行了两次，或 devtools 里重复粘贴执行 | 刷新页面，在干净的页面里测试 |
+| `app.name` 不显示 | `computed` 里的数据格式和预期不一致 | 在 Console 里 `console.log(this.appPositions)` 检查原始数据 |
+| 点击 App 没反应 | 事件冒泡被 `stopPropagation` 或有遮罩层挡住了 | 检查 DOM 层级和 `pointer-events: none` 的 CSS |

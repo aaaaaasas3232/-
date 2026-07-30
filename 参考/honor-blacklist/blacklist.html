@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>黑ID一览 - 王者曝光台</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="bg-layer"><div class="bg-particles" id="particles"></div></div>
+
+<!-- 导航 -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="20" cy="20" r="16" fill="#FFE6F0"/>
+        <path d="M20 30 C12 24 8 18 12 13 C16 9 20 14 20 14 C20 14 24 9 28 13 C32 18 28 24 20 30Z" fill="#FFBED5"/>
+        <circle cx="15" cy="14" r="2" fill="#FFFAFD" opacity="0.8"/>
+      </svg>
+      王者曝光台
+    </a>
+    <ul class="nav-links">
+      <a href="index.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <span>查询</span>
+      </a>
+      <a href="submit.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        <span>曝光</span>
+      </a>
+      <a href="blacklist.html" class="active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span>黑ID</span>
+      </a>
+      <a href="messages.html" id="navMsgLink">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span>私信</span>
+        <span class="nav-badge" id="navMsgBadge" style="display:none;">0</span>
+      </a>
+      <div class="nav-user-pill" id="navUserPill">
+        <button class="nav-user-btn" id="navUserBtn" onclick="handleUserPill()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+          <span id="navUserText">登录</span>
+        </button>
+      </div>
+      <div class="nav-admin-pill" id="navAdminPill" style="display:none;">
+        <button class="nav-admin-btn" id="navAdminBtn" onclick="window.location.href='admin.html'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          <span>管理后台</span>
+        </button>
+      </div>
+    </ul>
+  </div>
+</nav>
+
+<!-- page-content -->
+<main class="page">
+  <div class="page-content">
+    <div class="container">
+
+      <!-- 英雄区 -->
+      <section class="hero">
+        <div class="hero-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="fill:rgba(255,210,231,0.2);stroke:#FFBED5;">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="rgba(255,214,231,0.2)"/>
+          </svg>
+          全部曝光记录一览
+        </div>
+        <h1 class="hero-title">黑ID一览<br><span class="highlight">已被曝光的违规账号</span></h1>
+        <p class="hero-subtitle">以下是所有已被平台审核通过的曝光记录，请谨慎交友，谨防被骗</p>
+      </section>
+
+      <!-- 统计卡片 -->
+      <div class="stats-grid" id="statsGrid" style="margin-top:0;margin-bottom:24px;">
+        <div class="stat-card glass-card">
+          <div class="stat-number" id="statTotal">0</div>
+          <div class="stat-label">曝光总数</div>
+        </div>
+        <div class="stat-card glass-card">
+          <div class="stat-number" id="statApproved">0</div>
+          <div class="stat-label">已通过</div>
+        </div>
+        <div class="stat-card glass-card">
+          <div class="stat-number" id="statRejected">0</div>
+          <div class="stat-label">已拒绝</div>
+        </div>
+      </div>
+
+      <!-- 筛选区域 -->
+      <div class="blacklist-filters">
+        <div class="search-wrap" style="flex:1;max-width:320px;">
+          <input type="text" class="input input-search" id="searchInput" placeholder="搜索游戏ID或昵称..." autocomplete="off" maxlength="30" style="padding:14px 18px 14px 50px;font-size:0.92rem;border-radius:var(--radius-lg);">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="#E88AAA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="7"/>
+            <path d="m17 17-3-3"/>
+          </svg>
+        </div>
+
+        <div class="blacklist-filter-group">
+          <select class="blacklist-filter-select" id="filterCategory" onchange="applyFilters()">
+            <option value="">全部类型</option>
+            <option>正常交易被蹲</option>
+            <option>卖家是骗子</option>
+            <option>情感诈骗</option>
+            <option>骗钱骗物</option>
+            <option>恶意放鸽子</option>
+            <option>恶意陪玩</option>
+            <option>争议举报</option>
+            <option>其他</option>
+          </select>
+        </div>
+
+        <div class="blacklist-filter-group">
+          <select class="blacklist-filter-select" id="filterServer" onchange="applyFilters()">
+            <option value="">全部服务器</option>
+            <option>王者荣耀世界</option>
+          </select>
+        </div>
+
+        <div class="blacklist-filter-group">
+          <select class="blacklist-filter-select" id="filterStatus" onchange="applyFilters()">
+            <option value="">全部状态</option>
+            <option value="approved">已通过</option>
+            <option value="rejected">已拒绝</option>
+          </select>
+        </div>
+
+        <button class="btn btn-ghost btn-sm" onclick="resetFilters()" style="padding:8px 14px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.6"/></svg>
+          重置
+        </button>
+      </div>
+
+      <!-- 结果列表 -->
+      <section class="result-section" id="listSection">
+        <div class="result-list" id="resultList"></div>
+        <div class="empty-state" id="emptyState" style="display:none;">
+          <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="40" cy="40" r="32" stroke="#FFD6E7" stroke-width="2"/>
+            <path d="M32 36 L48 36 M32 44 L48 44" stroke="#FFD6E7" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+          <h3>暂无符合条件的记录</h3>
+          <p>尝试调整筛选条件或搜索关键词</p>
+        </div>
+      </section>
+
+      <!-- 分页 -->
+      <div class="pagination" id="pagination" style="display:none;justify-content:center;align-items:center;gap:8px;margin-top:24px;">
+        <button class="btn btn-ghost btn-sm" id="prevBtn" onclick="changePage(-1)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><polyline points="15 18 9 12 15 6"/></svg>
+          上一页
+        </button>
+        <span id="pageInfo" style="font-size:0.85rem;color:var(--gray-500);">第 1 页</span>
+        <button class="btn btn-ghost btn-sm" id="nextBtn" onclick="changePage(1)">
+          下一页
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 页脚 -->
+  <footer class="footer">
+    王者曝光台 &middot; 仅供曝光参考 &middot; 曝光需真实性 &middot; 王者荣耀世界
+  </footer>
+</main>
+<!-- /page-content -->
+
+<script src="common.js"></script>
+<script>
+  let currentPage = 1;
+  const pageSize = 20;
+  let filteredData = [];
+  let allBlacklist = [];
+
+  function initStats() {
+    const stats = DB.getStats();
+    document.getElementById('statTotal').textContent = stats.total;
+    document.getElementById('statApproved').textContent = stats.approved;
+    document.getElementById('statRejected').textContent = stats.rejected;
+  }
+
+  function loadData() {
+    allBlacklist = DB.getAllBlacklist();
+    applyFilters();
+  }
+
+  function applyFilters() {
+    const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
+    const category = document.getElementById('filterCategory').value;
+    const server = document.getElementById('filterServer').value;
+    const status = document.getElementById('filterStatus').value;
+
+    filteredData = allBlacklist.filter(record => {
+      // 关键词搜索
+      if (keyword) {
+        const matchKeyword =
+          (record.gameId || '').toLowerCase().includes(keyword) ||
+          (record.name || '').toLowerCase().includes(keyword) ||
+          (record.server || '').toLowerCase().includes(keyword) ||
+          (record.reason || '').toLowerCase().includes(keyword);
+        if (!matchKeyword) return false;
+      }
+
+      // 类型筛选
+      if (category && record.category !== category) return false;
+
+      // 服务器筛选
+      if (server && record.server !== server) return false;
+
+      // 状态筛选
+      if (status && record.status !== status) return false;
+
+      return true;
+    });
+
+    currentPage = 1;
+    renderList();
+  }
+
+  function resetFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('filterCategory').value = '';
+    document.getElementById('filterServer').value = '';
+    document.getElementById('filterStatus').value = '';
+    applyFilters();
+  }
+
+  function renderList() {
+    const container = document.getElementById('resultList');
+    const empty = document.getElementById('emptyState');
+    const pagination = document.getElementById('pagination');
+
+    if (filteredData.length === 0) {
+      container.innerHTML = '';
+      empty.style.display = 'block';
+      pagination.style.display = 'none';
+      return;
+    }
+
+    empty.style.display = 'none';
+
+    // 计算分页
+    const totalPages = Math.ceil(filteredData.length / pageSize);
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, filteredData.length);
+    const pageData = filteredData.slice(startIndex, endIndex);
+
+    container.innerHTML = pageData.map(renderBlacklistCard).join('');
+
+    // 更新分页信息
+    pagination.style.display = filteredData.length > pageSize ? 'flex' : 'none';
+    document.getElementById('pageInfo').textContent = `第 ${currentPage} / ${totalPages} 页，共 ${filteredData.length} 条`;
+    document.getElementById('prevBtn').disabled = currentPage <= 1;
+    document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+  }
+
+  function changePage(delta) {
+    const totalPages = Math.ceil(filteredData.length / pageSize);
+    const newPage = currentPage + delta;
+    if (newPage >= 1 && newPage <= totalPages) {
+      currentPage = newPage;
+      renderList();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
+  function renderBlacklistCard(record) {
+    const cat = CATEGORY_TAG[record.category] || CATEGORY_TAG['其他'];
+    const statusClass = record.status === 'approved' ? 'tag-green' : 'tag-red';
+    const statusLabel = record.status === 'approved' ? '已通过' : '已拒绝';
+    const statusBg = record.status === 'approved'
+      ? 'rgba(74,222,128,0.12)'
+      : 'rgba(252,165,165,0.12)';
+    const statusColor = record.status === 'approved'
+      ? '#15803d'
+      : '#DC2626';
+    const statusBorder = record.status === 'approved'
+      ? 'rgba(74,222,128,0.2)'
+      : 'rgba(252,165,165,0.2)';
+
+    return `
+      <div class="result-card glass-card" data-id="${record.id}" style="animation:fadeInUp 0.4s var(--ease-spring);">
+        <div class="result-card-header">
+          <div>
+            <div class="result-card-id">${escapeHtml(record.gameId)}</div>
+            <div class="result-card-name">
+              ${escapeHtml(record.server || '未知服务器')}
+              ${record.name ? ' · ' + escapeHtml(record.name) : ''}
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+            <span class="result-card-tag ${cat.cls}">${cat.label}</span>
+            <span class="result-card-tag" style="background:${statusBg};color:${statusColor};border-color:${statusBorder};">${statusLabel}</span>
+          </div>
+        </div>
+        <div class="result-card-desc" style="font-weight:500;color:var(--gray-700);margin-bottom:6px;">
+          ${escapeHtml(record.reason || '')}
+        </div>
+        <div class="result-card-desc">
+          ${escapeHtml(record.description || '')}
+        </div>
+        <div class="result-card-footer">
+          <span class="result-card-meta">
+            曝光时间：${timeAgo(record.createdAt)}
+            ${record.reviewedAt ? ` · 审核时间：${timeAgo(record.reviewedAt)}` : ''}
+          </span>
+        </div>
+      </div>
+    `;
+  }
+
+  // 搜索框回车事件
+  document.getElementById('searchInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') applyFilters();
+  });
+
+  // 防抖搜索
+  let searchTimer;
+  document.getElementById('searchInput').addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(applyFilters, 300);
+  });
+
+  updateNavBadge();
+  updateNavUser();
+
+  function createParticles() {
+    const container = document.getElementById('particles');
+    if (!container) return;
+    for (let i = 0; i < 15; i++) {
+      const dot = document.createElement('span');
+      dot.className = 'particle';
+      dot.style.left = Math.random() * 100 + '%';
+      dot.style.animationDelay = Math.random() * 12 + 's';
+      dot.style.animationDuration = (12 + Math.random() * 10) + 's';
+      dot.style.width = dot.style.height = (2 + Math.random() * 3) + 'px';
+      dot.style.opacity = 0.08 + Math.random() * 0.15;
+      container.appendChild(dot);
+    }
+  }
+
+  function updateNavUser() {
+    const userPill = document.getElementById('navUserPill');
+    const adminPill = document.getElementById('navAdminPill');
+    const userBtn = document.getElementById('navUserBtn');
+    const userText = document.getElementById('navUserText');
+    if (SESSION.isAdmin()) {
+      userPill.style.display = 'none';
+      adminPill.style.display = 'block';
+    } else if (SESSION.isLoggedIn()) {
+      userPill.style.display = 'block';
+      adminPill.style.display = 'none';
+      if (userBtn) userBtn.classList.add('logged-in');
+      if (userText) userText.textContent = SESSION.getCurrent().username;
+    } else {
+      userPill.style.display = 'block';
+      adminPill.style.display = 'none';
+      if (userBtn) userBtn.classList.remove('logged-in');
+      if (userText) userText.textContent = '登录';
+    }
+  }
+
+  function handleUserPill() {
+    if (SESSION.isLoggedIn()) {
+      if (confirm('确定要退出登录吗？')) {
+        SESSION.logout();
+        updateNavUser();
+        updateNavBadge();
+        showToast('已退出登录', 'info');
+      }
+    } else {
+      alert('请前往首页登录');
+    }
+  }
+
+  function openUserModal() { alert('请前往首页登录'); }
+  function switchAuthTab(tab) {}
+
+  function updateNavBadge() {
+    const unread = DB.getUnreadCount();
+    const badge = document.getElementById('navMsgBadge');
+    if (unread > 0) {
+      badge.textContent = unread > 99 ? '99+' : unread;
+      badge.style.display = 'inline-flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+
+  initStats();
+  loadData();
+  createParticles();
+  setActiveNav('blacklist.html');
+  updateNavUser();
+  updateNavBadge();
+</script>
+</body>
+</html>

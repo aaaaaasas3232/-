@@ -1,0 +1,61 @@
+﻿/* ============================================
+ * Settings App · CSS 入口
+ *
+ * 这个文件只是「拼装」入口，所有真实样式都被
+ * 拆到 css/settings/ 子目录里按主题分文件：
+ *   _tokens              主题 tokens（颜色 / 圆角 / 间距）
+ *   _layout              通用布局（group / row / switch / chip / slider /
+ *                         colorpicker / gradient / field / stack / savebar /
+ *                         warning / 主页 5 入口卡）
+ *   _case-diy-old        手机壳 DIY · 初代 UI
+ *   _case-diy-new        手机壳 DIY · 新版 UI
+ *   _wallpaper           屏幕墙纸模块
+ *   _world-overview      世界观库 · 容器 / tab / 按钮 / 空状态 / 设置面板 /
+ *                         纪时 / 时间轴 / 时间表
+ *   _world-cards         世界观库 · 资产 / 入口卡 / 概览卡 / 编辑头部 /
+ *                         profile / callout / 上传 / 库列表 / 标签库 /
+ *                         快照
+ *   _world-accordion     世界观库 · 手风琴横幅
+ *   _world-locations     世界观库 · 地点 (Locations)
+ *   _world-editor        世界观库 · 编辑表单 / 标签组增强 / 按钮 /
+ *                         列表项增强 / 统计 / 表单头 / 标签显示 / 辅助文本 /
+ *                         世界观卡片 / 预设组
+ *   _world-topology      世界观库 · 组 / 阶段 / 时间线 / 世界编辑器专项样式
+ *   _world-editor-supplement  世界观库 · editor 紧凑版 + sub-phase +
+ *                              transitions + timelines + coord
+ *   _world-map           世界观库 · 地图编辑器
+ *   _world-hours         纪时 · 小时维度编辑器
+ *   _world-date          纪时 · 日期编辑器
+ *   _world-color-row     状态栏颜色行（phone-statusbar）
+ *   _world-flow          票根 / 流动数据 UI
+ *   _persona             人设编辑 · 初代 UI
+ *   _persona-v2          人设编辑 · v2 风格（与编辑器一致）
+ *   _persona-home        人设主页（心情 / 资产 / 阶段 / 日程）
+ *   _persona-circle      人设圈子 section（拉取世界观下其他人设）
+ *
+ * 加一个新主题：建一个新文件，再在这里 @import 即可。
+ * ============================================ */
+
+@import url("./settings/_tokens.css");
+@import url("./settings/_layout.css");
+@import url("./settings/_persona.css");
+@import url("./settings/_persona-v2.css");
+@import url("./settings/_persona-home.css"); /* ★ v0.18 人设主页 */
+@import url("./settings/_persona-circle.css"); /* ★ v0.21 人设圈子 section */
+@import url("./settings/_case-diy-old.css");
+@import url("./settings/_case-diy-new.css");
+@import url("./settings/_wallpaper.css");
+@import url("./settings/_world-overview.css");
+@import url("./settings/_world-cards.css");
+@import url("./settings/_world-accordion.css");
+@import url("./settings/_world-locations.css");
+@import url("./settings/_world-editor.css");
+@import url("./settings/_world-topology.css");
+@import url("./settings/_world-editor-supplement.css");
+@import url("./settings/_world-map.css");
+@import url("./settings/_world-hours.css");
+@import url("./settings/_world-date.css");
+@import url("./settings/_world-color-row.css");
+@import url("./settings/_world-flow.css");
+@import url("./settings/_api-manager.css");
+@import url("./settings/_prompt.css");

@@ -1,0 +1,284 @@
+# 错误记录
+
+## 语法错误
+
+### 第1条 - DOCTYPE 大小写
+- 错误写法：`<html Docty>` / `<Doctype html!>`
+- 正确写法：`<!DOCTYPE html>`
+- 注意：
+  1. 第一位是 `!`
+  2. 然后是 `DOCTYPE`，全大写
+  3. 再空格
+  4. 最后是 `html`，全小写
+  5. 不要有感叹号在末尾
+- 记忆法：想象成 `!` + `DOCTYPE` + `空格` + `html`
+
+### 第2条 - 模板字符串引号用错
+- 错误写法：
+  ```js
+  console.log("应用名称${appName},未读消息${messageCount}");
+  ```
+  双引号里的 `${}` 不会被解析，原样输出 `应用名称${appName}...`
+- 正确写法：
+  ```js
+  console.log(`应用名称${appName},未读消息${messageCount}`);
+  ```
+  用 **反引号** `` ` `` 包住，里面 `${变量名}` 会被替换成值
+- 记忆口诀：**"变量进字符串，反引号反引号"**
+- 错误写法：
+  ```js
+  const appName = "小听";
+  let messageCount = 99;
+  ```
+  虽然语法上没错，但缩进很重要，不缩进在以后复杂代码里会很难读
+- 正确写法：
+  ```js
+  <script>
+      const appName = "小听";
+      let messageCount = 99;
+  </script>
+  ```
+- 原则：script 标签内的代码要缩进 4 个空格或 1 个 Tab
+
+### 第3条 - style 标签里的 CSS 没有写内容
+- 错误：`<style></style>` 是空的
+- 正确：`<style></style>` 里面要有 CSS 规则
+- 以后会学到
+
+## 知识点
+- DOCTYPE 不是 ES6，是 HTML 的文档类型声明，用于告诉浏览器用什么版本来解析这个文件
+- `<!DOCTYPE html>` 告诉浏览器用 HTML5 标准来解析
+
+## Vue 3 知识点
+
+### 第1条 - function 不能省略
+- 错误写法：`getTime() { return 1; }` ← 缺少 `function` 关键字
+- 正确写法：`function getTime() { return 1; }` 或 `const getTime = () => { return 1; }`
+- 只有**箭头函数**赋值给变量时，`function` 才能省略
+
+### 第2条 - Vue.createApp 的返回值要赋值给变量
+- `Vue.createApp({...})` 会**返回一个 app 对象**
+- 必须用 `const xxx = Vue.createApp({...})` 存起来，否则后面无法调用 `mount()`
+- 变量名随便起，`app`、`systemData` 都行，但改了名字后**后面所有用到的地方都要一起改**
+
+### 第3条 - Vue 3 的两种写法：data() 和 setup()
+- `data()`：只能写数据，函数和逻辑不能放里面（Vue 2 / 3 都支持）
+- `setup()`：数据、函数、逻辑都可以写（**仅 Vue 3**）
+- 简单记：小项目用 `data()`，大项目用 `setup()`
+- `setup()` 里的变量必须 `return` 才能在模板里用
+
+### 第4条 - app.mount('#phone') 的意思
+- 把 Vue 应用"挂载"到 HTML 的某个标签上
+- `'#phone'` 是 CSS 选择器语法，`#` 代表 `id="phone"`
+- 这行代码执行后，`<div id="phone">` 里的 `{{xxx}}` 才会生效
+
+### 第5条 - Vue.ref() 和 .value
+- `Vue.ref(值)` 把普通值变成"响应式变量"——Vue 能追踪它并自动更新页面
+- 读取/修改时要用 `.value`
+  ```js
+  const systemTime = Vue.ref("08:30");  // 创建
+  systemTime.value = "09:00";            // 修改（必须加 .value）
+  console.log(systemTime.value);          // 读取（必须加 .value）
+  ```
+- `{{systemTime}}` 在模板里**不用** `.value`，Vue 自动处理
+
+## IndexedDB 知识点
+
+### 第1条 - async/await 什么时候才需要？
+
+**目前用不到，先跳过。等遇到"嵌套查询"再加。**
+
+- `add()`、`delete()`、`put()`：写入后不需要结果，够用
+- `get()`：返回的是 request 对象，需要自己写 `onsuccess`
+
+```js
+// 够用，不需要 async/await
+let req = myDb.get('Userinfo', 1);
+req.onsuccess = () => {
+    let data = req.result;  // 这时候才拿到数据
+    console.log(data);
+};
+```
+
+### 第2条 - async/await 的价值：消除回调嵌套
+
+当多个查询有依赖关系时，`async/await` 才能体现价值：
+
+```js
+// 回调地狱（不用 async/await）
+myDb.get('Userinfo', 1).onsuccess = () => {
+    let user = req.result;
+    myDb.get('charInfo', user.charId).onsuccess = () => {
+        myDb.get('worldInfo', char.worldId).onsuccess = () => {
+            // 嵌套3层，晕了
+        }
+    }
+}
+
+// async/await（清爽）
+(async () => {
+    let user = await myDb.get('Userinfo', 1);
+    let char = await myDb.get('charInfo', user.charId);
+    let world = await myDb.get('worldInfo', char.worldId);
+})();
+```
+
+### 第6条 - Dock 图标不能直接硬缩 CSS
+- 这次问题：桌面大图标正常，但放进 Dock 后，自定义 SVG 图标没有同比缩小，或者缩了以后桌面图标又消失
+- 原因：
+  1. 桌面图标是 `60x60` 的完整结构
+  2. Dock 图标只有 `40x40`
+  3. 有些图标不是“只有一个 SVG”，而是 `高光层 div + SVG` 组合
+  4. 如果只用简单 CSS 去缩 `svg`，就会出现“只缩一部分”
+  5. 如果直接乱改外层 `width/height`，桌面里的绝对定位图形又可能找不到参照尺寸
+- 错误理解：
+  ```js
+  // 以为只缩 svg 就等于整枚图标缩小
+  .dock-icon > * > svg {
+      transform: scale(0.66);
+  }
+  ```
+  这样只会缩 `svg`，不会缩高光层 `div`
+- 正确思路：
+  1. 桌面图标保持原本完整尺寸
+  2. Dock 不直接复用原始显示方式
+  3. 要额外包一层 `dock-icon-scaler`
+  4. 按图标内容真实尺寸计算缩放比例
+  5. 再整体缩小整枚图标
+- 记住一句话：**桌面图标看结构，Dock 图标看缩放容器**
+
+### 第7条 - 绝对定位元素需要参照盒子
+- 这次设置图标里，白色图形是这样放的：
+  ```js
+  <svg style="position: absolute; bottom: -14px; right: -14px; ..."></svg>
+  ```
+- 这种写法依赖外层盒子提供稳定尺寸
+- 如果外层没有 `width: 100%; height: 100%`，那么绝对定位图形可能位置不对，甚至像“消失了一样”
+- 正确理解：
+  - `position: absolute` 的子元素，不是凭空定位
+  - 它必须参考外层容器
+  - 所以外层 `div` 不能随便删掉尺寸
+- 记忆法：**绝对定位想站稳，外层盒子要给坑位**
+### 第8条 - 遇到显示问题，先看原版怎么做
+- 这次一开始是“猜 CSS”
+- 但原版项目其实早就有自己的 Dock 处理方式
+- 原版不是简单写：
+  ```html
+  <div class="dock-icon" v-html="app.icon"></div>
+- 原版真正思路是：
+  1. 先拿桌面图标内容
+  2. 读取第一个 SVG 的尺寸
+  3. 算出缩放比例
+  4. 用 `dock-icon-scaler` 包起来
+  5. 再放进 Dock
+- 经验：
+  - 如果项目里已经有“原版实现”
+  - 优先看原版逻辑
+  - 不要一上来只靠猜测改 CSS
+- 记忆口诀：**先看原版，再动样式；先懂结构，再改表现**
+### 第9条 - IndexedDB 版本不能倒退
+- 这次错误：
+  ```js
+  DOMException: The requested version (1) is less than the existing version (2)
+  ```
+- 原因：
+  1. 浏览器里已经有一个旧数据库，而且它的版本是 `2`
+  2. 代码这次却又写成 `indexedDB.open('listen_db', 1)`
+  3. IndexedDB 不允许“降版本打开”
+  4. 所以浏览器直接报错，不会自动帮你回退
+- 错误理解：
+  ```js
+  // 以为每次都能随便写回 1
+  indexedDB.open('listen_db', 1);
+  ```
+- 正确思路：
+  1. 如果你知道要升级，版本号只能越来越大
+  2. 如果你不知道用户本地现在是什么版本，就直接用：
+     ```js
+     indexedDB.open('listen_db');
+     ```
+  3. 这样浏览器会自动打开“当前已有的最新版本”
+- 记忆法：**数据库版本只许升，不许降**
+
+### 第10条 - renderPage 里要分清同步函数和异步函数
+- 这次错误现象：
+  ```js
+  TypeError: Cannot read properties of undefined (reading 'undefined')
+  ```
+  最后定位到 `renderPage()` 里拿到的不是状态对象，而是一个 Promise
+- 原因：
+  1. `renderPage()` 是同步渲染流程
+  2. 里面如果直接写：
+     ```js
+     const state = methods.syncState();
+     ```
+  3. 那么 `syncState()` 就必须同步返回一个普通对象
+  4. 如果框架把它包装成 `async`，那返回值就变成 Promise
+  5. 后面再写 `state.currentStepIndex` 就会出问题
+- 错误理解：
+  ```js
+  // 以为“加 async 更高级”
+  async function syncState() {
+      return { currentStepIndex: 0 };
+  }
+  ```
+- 正确思路：
+  - **给页面渲染立即要用的数据，就保持同步**
+  - 只有真的要等待数据库、网络、文件时，才写 `async/await`
+- 记忆口诀：**渲染马上要的数据，别偷偷变异步**
+
+### 第11条 - methods 之间互相调用，不能假设 this 上一定有同级方法
+- 这次错误：
+  ```js
+  TypeError: this.getState is not a function
+  ```
+- 原因：
+  1. 外部 app 的 `methods` 不是原样直接执行
+  2. 宿主框架可能会重新包装这些方法
+  3. 包装以后，`this` 上不一定自动带着别的同级方法
+  4. 所以在一个方法里直接写 `this.getState()` 可能会失效
+- 错误理解：
+  ```js
+  syncState() {
+      const state = this.getState();
+      return state;
+  }
+  ```
+- 正确思路：
+  1. 先看宿主框架怎么绑定 `this`
+  2. 如果框架有统一的 `methods` 容器，就通过 `this.methods.xxx()` 调
+  3. 或者在框架层统一把方法上下文补齐后，再允许互调
+- 记忆口诀：**别想当然信 this，先看框架怎么绑**
+
+### 第12条 - setup 返回了数据，不等于页面一定能直接用
+- 这次问题：问卷 app 的初始答案、步骤配置都写在 `setup()` 返回值里，但宿主框架一开始并没有真正把这些值接到 `app.state`
+- 原因：
+  1. `setup()` 只是一个函数
+  2. 只有宿主框架主动去接收它的返回值，并保存起来，这些数据才会生效
+  3. 如果宿主框架没接，页面第一次渲染时拿到的状态就是空的
+- 错误理解：
+  ```js
+  setup() {
+      return {
+          steps: [...],
+          answers: {...}
+      };
+  }
+  // 以为这样写完就一定能用
+  ```
+- 正确思路：
+  1. 先确认当前项目的宿主框架有没有消费 `setup()`
+  2. 如果没有，就要自己把初始状态灌进 `app.state`
+  3. 或者在框架层统一处理 `setup()` 返回值
+- 记忆口诀：**setup 只是交卷，老师收了才算数**
+- 原版真正思路是：
+  1. 先拿桌面图标内容
+  2. 读取第一个 SVG 的尺寸
+  3. 算出缩放比例
+  4. 用 `dock-icon-scaler` 包起来
+  5. 再放进 Dock
+- 经验：
+  - 如果项目里已经有“原版实现”
+  - 优先看原版逻辑
+  - 不要一上来只靠猜测改 CSS
+- 记忆口诀：**先看原版，再动样式；先懂结构，再改表现**

@@ -1,0 +1,274 @@
+/* ============================================
+ * Settings App · 人设 (Persona) · 圈子 section 样式
+ *
+ * 视觉语言与 .persona-phase / .persona-paro 一致：
+ *   - 圆角 12px 卡片
+ *   - #F8F8FA 浅灰底 / 1px 细边
+ *   - 蓝色 #0A84FF 选中态
+ *   - 无 emoji，无渐变
+ *   - 阵营标签区分 AI vs 用户
+ *
+ * 选择器：
+ *   .persona-circle / .persona-circle-grid        成员卡片
+ *   .persona-circle__head / __avatar / __main     头部
+ *   .persona-circle__name / __meta / __kind        名字 + 阵营
+ *   .persona-circle__note                          备注
+ *   .persona-circle__actions                       操作按钮行
+ *   .persona-circle-picker                         拉取面板
+ * ============================================ */
+
+/* ---------- 卡片网格 ---------- */
+.persona-circle-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+    padding: 4px 16px 12px;
+}
+
+.persona-circle {
+    background: #F8F8FA;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 12px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.persona-circle.is-missing {
+    opacity: 0.75;
+    border-style: dashed;
+}
+
+/* ---------- 头部（头像 + 名字 + 阵营） ---------- */
+.persona-circle__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.persona-circle__avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #FFFFFF;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--settings-color-label, #000);
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.persona-circle__main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.persona-circle__name {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--settings-color-label, #000);
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.persona-circle__meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--settings-color-tertiary, rgba(60, 60, 67, 0.5));
+}
+
+.persona-circle__kind {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    border: 1px solid transparent;
+    letter-spacing: 0.01em;
+}
+
+.persona-circle__kind.is-user {
+    background: rgba(124, 58, 237, 0.08);
+    color: #6d28d9;
+    border-color: rgba(124, 58, 237, 0.18);
+}
+
+.persona-circle__kind.is-ai {
+    background: rgba(10, 132, 255, 0.08);
+    color: #0A84FF;
+    border-color: rgba(10, 132, 255, 0.18);
+}
+
+.persona-circle__missing {
+    color: var(--settings-color-red, #FF3B30);
+    font-size: 11px;
+}
+
+/* ---------- 备注块 ---------- */
+.persona-circle__note {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--settings-color-secondary, rgba(60, 60, 67, 0.72));
+    background: #FFFFFF;
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    border-radius: 8px;
+    padding: 8px 10px;
+    min-height: 36px;
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+.persona-circle__note.is-empty {
+    color: var(--settings-color-tertiary, rgba(60, 60, 67, 0.5));
+    font-style: italic;
+    background: transparent;
+    border-style: dashed;
+}
+
+.persona-circle__note-hint {
+    font-size: 11.5px;
+}
+
+/* ---------- 动作行 ---------- */
+.persona-circle__actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 2px;
+}
+
+/* ---------- 拉取面板 ---------- */
+.persona-circle-picker {
+    padding: 12px 16px 16px;
+}
+
+.persona-circle-picker__head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.persona-circle-picker__world {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--settings-color-secondary, rgba(60, 60, 67, 0.72));
+    padding: 2px 10px;
+    background: #FFFFFF;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 999px;
+}
+
+.persona-circle-picker__list {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.persona-circle-picker__option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: #FFFFFF;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    cursor: pointer;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.persona-circle-picker__option:hover {
+    border-color: rgba(10, 132, 255, 0.35);
+}
+
+.persona-circle-picker__option:has(input:checked) {
+    border-color: #0A84FF;
+    box-shadow: 0 0 0 1px #0A84FF inset;
+    background: rgba(10, 132, 255, 0.04);
+}
+
+.persona-circle-picker__option input[type="radio"] {
+    margin: 0;
+    accent-color: #0A84FF;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.persona-circle-picker__avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #F8F8FA;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--settings-color-label, #000);
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.persona-circle-picker__name {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--settings-color-label, #000);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.persona-circle-picker__kind {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    border: 1px solid transparent;
+    flex-shrink: 0;
+}
+
+.persona-circle-picker__kind.is-user {
+    background: rgba(124, 58, 237, 0.08);
+    color: #6d28d9;
+    border-color: rgba(124, 58, 237, 0.18);
+}
+
+.persona-circle-picker__kind.is-ai {
+    background: rgba(10, 132, 255, 0.08);
+    color: #0A84FF;
+    border-color: rgba(10, 132, 255, 0.18);
+}
+
+.persona-circle-picker__compose {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.persona-circle-picker__actions {
+    display: flex;
+    gap: 8px;
+}

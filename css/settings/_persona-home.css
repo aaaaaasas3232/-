@@ -1,0 +1,2062 @@
+﻿/* ============================================
+ * Settings App · 人设主页 (Persona Home) 样式 v0.18
+ *
+ * 设计延续 iOS Settings 风格：
+ *   - 白底卡片 + 圆角 14px + 细边
+ *   - 蓝色 #0A84FF 主辅
+ *   - 不使用 emoji，不使用渐变色
+ *   - 段落强调靠 1px 边框 + 圆角 + 排版层次
+ *
+ * 选择器（按人设主页区块）：
+ *   .phome-page                      容器
+ *   .phome-hero                      顶部头像 + 名字
+ *   .phome-card                      单个分组卡片
+ *   .phome-card__head                卡片头
+ *   .phome-card__title / __sub       标题副标题
+ *   .phome-card__body                内容
+ *
+ *   .phome-mood                      心情面板
+ *   .phome-mood__big                 大字心情
+ *   .phome-mood__presets             心情预设列表
+ *   .phome-mood__preset              单个预设（可点）
+ *
+ *   .phome-week                      周历容器
+ *   .phome-week__day                 单天
+ *
+ *   .phome-social                    社媒占位
+ *   .phome-phase                     人生阶段卡片
+ *   .phome-chip                      通用 chip 标签
+ * ============================================ */
+
+/* ---------- 可点的 persona-overview ---------- */
+.persona-overview--clickable {
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.1s ease, border-color 0.15s ease;
+}
+
+.persona-overview--clickable:active {
+    transform: scale(0.99);
+}
+
+.persona-overview__chevron {
+    color: var(--settings-color-quaternary, rgba(60, 60, 67, 0.4));
+    font-size: 20px;
+    font-weight: 500;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+/* ---------- 容器 ---------- */
+.phome-page {
+    padding: 4px 0 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.phome-empty {
+    text-align: center;
+    padding: 60px 20px;
+    background: #FFFFFF;
+    border: 1px dashed rgba(0, 0, 0, 0.1);
+    border-radius: 14px;
+}
+
+.phome-empty__text {
+    font-size: 14px;
+    color: var(--settings-color-secondary, rgba(60, 60, 67, 0.72));
+    margin-bottom: 14px;
+}
+
+/* ---------- 顶部 hero ---------- */
+.phome-hero {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 16px;
+    background: #FFFFFF;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.phome-hero__avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: #0A84FF;
+    color: #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    font-weight: 700;
+    flex-shrink: 0;
+    letter-spacing: -0.01em;
+}
+
+.phome-hero__body {
+    flex: 1;
+    min-width: 0;
+}
+
+.phome-hero__name {
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--settings-color-label, #000);
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    word-break: break-word;
+}
+
+.phome-hero__meta {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--settings-color-secondary, rgba(60, 60, 67, 0.72));
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.phome-hero__chips {
+    margin-top: 8px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+/* ---------- 通用 chip ---------- */
+.phome-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: #0A84FF;
+    background: rgba(10, 132, 255, 0.1);
+    border-radius: 999px;
+    letter-spacing: 0.02em;
+    line-height: 1.4;
+}
+
+.phome-chip--world {
+    color: var(--settings-color-secondary, rgba(60, 60, 67, 0.72));
+    background: rgba(120, 120, 128, 0.12);
+}
+
+/* ---------- 卡片 ---------- */
+.phome-card {
+    background: #FFFFFF;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.phome-card__head {
+    padding: 12px 16px 10px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    background: #F8F8FA;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.phome-card__title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--settings-color-label, #000);
+    letter-spacing: 0.005em;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.phome-card__count {
+    font-size: 11px;
+    font-weight: 600;
+    color: #0A84FF;
+    background: rgba(10, 132, 255, 0.1);
+    border-radius: 999px;
+    padding: 1px 7px;
+}
+
+.phome-card__sub {
+    font-size: 11px;
+    color: var(--settings-color-tertiary, rgba(60, 60, 67, 0.5));
+    line-height: 1.4;
+}
+
+.phome-card__body {
+    padding: 12px 16px 14px;
+}
+
+/* ---------- 心情面板 ---------- */
+.phome-mood__big {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--settings-color-label, #000);
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+}
+
+.phome-mood__hint {
+    margin-top: 4px;
+    font-size: 11.5px;
+    color: var(--settings-color-tertiary, rgba(60, 60, 67, 0.5));
+    line-height: 1.4;
+}
+
+.phome-mood__actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+}
+
+.phome-mood__presets {
+    margin-top: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.phome-mood__preset {
+    appearance: none;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: #FFFFFF;
+    color: var(--settings-color-label, #000);
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    transition: border-color 0.15s, background-color 0.15s, color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.phome-mood__preset.is-active {
+    background: #0A84FF;
+    color: #FFFFFF;
+    border-color: #0A84FF;
+}
+
+.phome-mood__preset:active {
+    transform: scale(0.96);
+}
+
+/* ---------- 周历 ---------- */
+.phome-week {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+}
+
+.phome-week__day {
+    aspect-ratio: 0.85 / 1;
+    background: #F8F8FA;
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: border-color 0.15s, background-color 0.15s;
+    gap: 2px;
+}
+
+.phome-week__day.is-today {
+    border-color: #0A84FF;
+    background: rgba(10, 132, 255, 0.08);
+}
+
+.phome-week__day.has-events {
+    border-color: rgba(10, 132, 255, 0.4);
+    background: rgba(10, 132, 255, 0.05);
+}
+
+.phome-week__day.is-open {
+    border-color: #0A84FF;
+    background: rgba(10, 132, 255, 0.12);
+    box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.10);
+}
+
+.phome-week__badge {
+    position: absolute;
+    right: 4px;
+    bottom: 4px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 5px;
+    background: #0A84FF;
+    color: #FFFFFF;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 16px;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.phome-week__day {
+    position: relative;
+}
+
+.phome-week__num {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--settings-color-label, #000);
+    line-height: 1;
+}
+
+.phome-week__day.is-today .phome-week__num {
+    color: #0A84FF;
+}
+
+.phome-week__wd {
+    font-size: 10.5px;
+    color: var(--settings-color-tertiary, rgba(60, 60, 67, 0.5));
+    line-height: 1;
+}
+
+.phome-week__day.is-today .phome-week__wd {
+    color: #0A84FF;
+}
+
+/* ---------- 作息卡片 ---------- */
+.phome-card--rhythm .phome-card__head {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.phome-rhythm {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px 16px 14px;
+}
+
+.phome-rhythm__list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.phome-rhythm__item {
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.phome-rhythm__head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.phome-rhythm__time {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: #1c1c1e;
+    font-variant-numeric: tabular-nums;
+}
+
+.phome-rhythm__chrono {
+    font-size: 11px;
+    color: rgba(60, 60, 67, 0.5);
+    padding-left: 2px;
+}
+
+.phome-rhythm__remove {
+    margin-left: auto;
+    width: 20px;
+    height: 20px;
+    border-radius: 999px;
+    border: none;
+    background: transparent;
+    color: rgba(60, 60, 67, 0.45);
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.phome-rhythm__remove:hover {
+    background: rgba(255, 59, 48, 0.1);
+    color: #d93b30;
+}
+
+.phome-rhythm__text {
+    font-size: 13px;
+    color: #1c1c1e;
+    line-height: 1.35;
+}
+
+.phome-rhythm__days {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+}
+
+.phome-rhythm__day {
+    font-size: 10px;
+    font-weight: 500;
+    color: rgba(60, 60, 67, 0.55);
+    letter-spacing: 0.02em;
+}
+
+.phome-rhythm__day + .phome-rhythm__day::before {
+    content: '·';
+    margin-right: 3px;
+    color: rgba(60, 60, 67, 0.3);
+}
+
+.phome-rhythm__day--all {
+    color: rgba(60, 60, 67, 0.55);
+}
+
+.phome-rhythm__muted {
+    color: rgba(60, 60, 67, 0.45);
+    font-size: 12.5px;
+}
+
+.phome-rhythm__empty {
+    font-size: 12.5px;
+    color: var(--settings-color-tertiary, rgba(60, 60, 67, 0.55));
+    padding: 8px 4px;
+}
+
+.phome-rhythm__actions {
+    display: flex;
+    gap: 8px;
+    padding-top: 4px;
+    border-top: 1px dashed rgba(0, 0, 0, 0.06);
+    padding-top: 10px;
+}
+
+.phome-rhythm__hint {
+    font-size: 11.5px;
+    color: var(--settings-color-tertiary, rgba(60, 60, 67, 0.5));
+    line-height: 1.5;
+    padding: 0 2px;
+}
+
+.phome-rhythm__draft {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    background: #F8F8FA;
+    border: 1px dashed rgba(10, 132, 255, 0.4);
+    border-radius: 12px;
+}
+
+.phome-rhythm__textarea {
+    width: 100%;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+    padding: 8px 10px;
+    background: #fff;
+    font: inherit;
+    font-size: 13px;
+    line-height: 1.5;
+    resize: vertical;
+    min-height: 88px;
+    box-sizing: border-box;
+}
+
+.phome-rhythm__textarea:focus {
+    outline: none;
+    border-color: #0A84FF;
+    box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.12);
+}
+
+.phome-rhythm__draft-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+/* 作息 v2 */
+.phome-rhythm__inject-btn {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 8px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(10, 132, 255, 0.08);
+    cursor: pointer;
+    font-size: 11px;
+    color: #0A84FF;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: background 0.15s;
+}
+.phome-rhythm__inject-btn:hover { background: rgba(10, 132, 255, 0.16); }
+.phome-rhythm__inject-dot { font-size: 10px; }
+.phome-rhythm__inject-label { font-size: 11px; font-weight: 500; }
+
+.phome-rhythm__current {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 12px;
+    background: rgba(10, 132, 255, 0.06);
+    border: 1px solid rgba(10, 132, 255, 0.2);
+    border-radius: 10px;
+    margin-bottom: 8px;
+}
+.phome-rhythm__current-label {
+    font-size: 10.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #0A84FF;
+}
+.phome-rhythm__current-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1c1c1e;
+    line-height: 1.4;
+}
+
+/* 作息 v2 表单 */
+.phome-rhythm__draft {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    background: #F8F8FA;
+    border: 1px solid rgba(0, 0, 0, 0.07);
+    border-radius: 12px;
+}
+.phome-rhythm__draft-row {
+    display: flex;
+    gap: 8px;
+}
+.phome-rhythm__draft-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+.phome-rhythm__draft-field label {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: rgba(60, 60, 67, 0.7);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.phome-rhythm__select,
+.phome-rhythm__input {
+    box-sizing: border-box;
+    padding: 7px 10px;
+    border: 1px solid rgba(0, 0, 0, 0.10);
+    border-radius: 8px;
+    background: #fff;
+    font-size: 13px;
+    color: #1c1c1e;
+    width: 100%;
+}
+.phome-rhythm__select:focus,
+.phome-rhythm__input:focus {
+    outline: none;
+    border-color: #0A84FF;
+    box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.12);
+}
+.phome-rhythm__day-cbs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+.phome-rhythm__day-cb {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 12px;
+    color: #1c1c1e;
+    cursor: pointer;
+    user-select: none;
+}
+.phome-rhythm__day-cb input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    accent-color: #0A84FF;
+    cursor: pointer;
+}
+
+/* ---------- 社媒占位 ---------- */
+.phome-social {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.phome-social__item {
+    background: #F8F8FA;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 10px;
+    padding: 10px 12px;
+}
+
+.phome-social__src {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #0A84FF;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.phome-social__msg {
+    font-size: 12.5px;
+    color: var(--settings-color-secondary, rgba(60, 60, 67, 0.72));
+    line-height: 1.5;
+}
+
+.phome-social__empty {
+    margin-top: 4px;
+    padding: 10px 12px;
+    background: transparent;
+    border: 1px dashed rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    font-size: 11px;
+    color: var(--settings-color-tertiary, rgba(60, 60, 67, 0.5));
+    line-height: 1.5;
+    text-align: center;
+}
+
+/* ---------- 人生阶段 ---------- */
+.phome-phase__active {
+    background: #F8F8FA;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 10px;
+    padding: 12px;
+}
+
+.phome-phase__name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--settings-color-label, #000);
+    line-height: 1.3;
+}
+
+.phome-phase__desc {
+    margin-top: 6px;
+    font-size: 12.5px;
+    color: var(--settings-color-secondary, rgba(60, 60, 67, 0.72));
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.phome-phase__chips {
+    margin-top: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+/* ============================================
+ * 人设主页 · 当日日程面板（v0.19）
+ *   视觉延续 phome-card 风格：白底 + 圆角 + 细边 + 蓝色 #0A84FF 辅
+ *   不使用 emoji / 渐变 / 阴影堆叠
+ * ============================================ */
+
+.phome-schedule {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.phome-schedule__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 0 2px;
+}
+
+.phome-schedule__date {
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(60, 60, 67, 0.7);
+    letter-spacing: 0.01em;
+}
+
+.phome-schedule__close {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--settings-color-tertiary, rgba(60, 60, 67, 0.5));
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background-color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.phome-schedule__close:hover {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.phome-schedule__list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.phome-schedule__empty {
+    padding: 14px 12px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--settings-color-tertiary, rgba(60, 60, 67, 0.5));
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
+    line-height: 1.5;
+}
+
+.phome-schedule__item {
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
+    padding: 8px 10px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    transition: border-color 0.15s, background-color 0.15s;
+    position: relative;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    cursor: pointer;
+}
+
+.phome-schedule__item:hover {
+    background-color: rgba(255, 255, 255, 0.85);
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+.phome-schedule__item:active {
+    background-color: rgba(255, 255, 255, 0.95);
+}
+
+.phome-schedule__item.is-pressed .phome-schedule__item-main {
+    filter: blur(6px);
+    opacity: 0.35;
+}
+
+.phome-schedule__item-main {
+    flex: 1;
+    min-width: 0;
+    transition: filter 0.18s, opacity 0.18s;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.phome-schedule__head-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.phome-schedule__time {
+    font-size: 12px;
+    font-weight: 600;
+    color: #1c1c1e;
+    letter-spacing: 0.01em;
+    font-variant-numeric: tabular-nums;
+}
+
+.phome-schedule__chrono {
+    font-size: 11px;
+    color: rgba(60, 60, 67, 0.5);
+}
+
+.phome-schedule__title {
+    font-size: 13px;
+    font-weight: 500;
+    color: #1c1c1e;
+    line-height: 1.35;
+    word-break: break-word;
+}
+
+.phome-schedule__note {
+    font-size: 12px;
+    color: rgba(60, 60, 67, 0.72);
+    line-height: 1.5;
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+.phome-schedule__item-actions {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    flex-direction: row;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.40);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    pointer-events: none; /* 让主内容接住点击；按钮单独再打开 */
+    z-index: 2;
+}
+
+.phome-schedule__item.is-pressed .phome-schedule__item-actions {
+    display: flex;
+}
+
+/* 只有按钮本身可以接收事件 */
+.phome-schedule__item-actions .phome-schedule__item-btn {
+    pointer-events: auto;
+}
+
+/* 编辑面板默认收起来：用 [hidden] 强制 display:none，避免 CSS class 覆盖 HTML attribute */
+.phome-schedule__edit-panel[hidden],
+.phome-schedule__item-actions[hidden] {
+    display: none !important;
+}
+
+.phome-schedule__item-btn {
+    appearance: none;
+    border: 0;
+    background: rgba(10, 132, 255, 0.10);
+    color: #0A84FF;
+    padding: 6px 16px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background-color 0.15s, transform 0.1s;
+    -webkit-tap-highlight-color: transparent;
+    white-space: nowrap;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.phome-schedule__item-btn:active {
+    transform: scale(0.96);
+}
+
+.phome-schedule__item-btn--danger {
+    background: rgba(255, 59, 48, 0.10);
+    color: #FF3B30;
+}
+
+.phome-schedule__edit-panel {
+    flex-basis: 100%;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed rgba(0, 0, 0, 0.10);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.phome-schedule__compose {
+    margin-top: 4px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.phome-schedule__compose-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.phome-schedule__compose-title,
+.phome-schedule__compose-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.phome-schedule__compose-row {
+    flex-wrap: nowrap;
+}
+
+.phome-schedule__dash {
+    font-size: 11px;
+    color: var(--settings-color-tertiary, rgba(60, 60, 67, 0.5));
+    flex: 0 0 auto;
+}
+
+.phome-time-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--settings-color-tertiary, rgba(60, 60, 67, 0.5));
+    flex: 0 0 auto;
+    letter-spacing: 0.04em;
+}
+
+.phome-schedule__time-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    color: var(--settings-color-secondary, rgba(60, 60, 67, 0.7));
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: pointer;
+    padding: 2px 0;
+}
+
+.phome-schedule__time-toggle input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    accent-color: #0A84FF;
+    cursor: pointer;
+}
+
+.phome-schedule__compose-row.is-disabled {
+    opacity: 0.55;
+    filter: grayscale(0.3);
+}
+
+.phome-schedule__compose-row.is-disabled select {
+    background-color: rgba(120, 120, 128, 0.08) !important;
+    color: rgba(60, 60, 67, 0.6) !important;
+}
+
+.phome-time {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.phome-time__select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    box-sizing: border-box;
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 6px 4px;
+    border: 1px solid rgba(0, 0, 0, 0.10);
+    border-radius: 8px;
+    background: #FFFFFF;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+    color: var(--settings-color-label, #000);
+    cursor: pointer;
+}
+
+/* 去掉 IE/Edge 的下拉箭头 */
+.phome-time__select::-ms-expand {
+    display: none;
+}
+
+/* Firefox: 隐藏滚动按钮 */
+.phome-time__select {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(60, 60, 67, 0.35) transparent;
+}
+
+/* WebKit 滚动条：更细、不要横向滚动 */
+.phome-time__select::-webkit-scrollbar {
+    width: 4px;
+    height: 0;
+}
+
+.phome-time__select::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.phome-time__select::-webkit-scrollbar-thumb {
+    background: rgba(60, 60, 67, 0.35);
+    border-radius: 999px;
+}
+
+.phome-time__select:focus {
+    border-color: #0A84FF;
+    box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.12);
+    outline: none;
+}
+
+.phome-time__colon {
+    flex: 0 0 auto;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--settings-color-label, #000);
+    padding: 0 1px;
+}
+
+.phome-schedule__input,
+.phome-schedule__select,
+.phome-schedule__textarea {
+    box-sizing: border-box;
+    padding: 6px 10px;
+    border: 1px solid rgba(0, 0, 0, 0.10);
+    border-radius: 8px;
+    background: #FFFFFF;
+    font-size: 12.5px;
+    font-family: inherit;
+    color: var(--settings-color-label, #000);
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    -webkit-appearance: none;
+    appearance: none;
+    flex: 1;
+    min-width: 0;
+}
+
+.phome-schedule__title-input {
+    flex: 1;
+}
+
+.phome-schedule__textarea {
+    width: 100%;
+    resize: vertical;
+    min-height: 48px;
+    line-height: 1.5;
+}
+
+.phome-schedule__input:focus,
+.phome-schedule__textarea:focus {
+    border-color: #0A84FF;
+    box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.12);
+}
+
+.phome-schedule__compose-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+/* ============================================
+ * 人设主页 · 资产卡片（v2：单 balance + income events，无 emoji 无固定标签）
+ * ============================================ */
+.phome-asset__hint {
+    font-size: 12px;
+    color: var(--settings-color-tertiary, rgba(60, 60, 67, 0.5));
+    line-height: 1.5;
+}
+
+.phome-asset__balance {
+    background: linear-gradient(135deg, rgba(10, 132, 255, 0.08), rgba(10, 132, 255, 0.02));
+    border: 1px solid rgba(10, 132, 255, 0.16);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+}
+
+.phome-asset__balance-label {
+    font-size: 11px;
+    color: var(--settings-color-secondary, rgba(60, 60, 67, 0.72));
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+}
+
+.phome-asset__balance-row {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.phome-asset__balance-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #0A84FF;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+}
+
+.phome-asset__balance-unit {
+    font-size: 14px;
+    color: var(--settings-color-secondary, rgba(60, 60, 67, 0.72));
+    font-weight: 500;
+}
+
+.phome-asset__accrued {
+    display: inline-block;
+    margin-top: 6px;
+    padding: 2px 8px;
+    background: rgba(52, 199, 89, 0.15);
+    color: #1f8a3a;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 999px;
+}
+
+.phome-asset__balance-meta {
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--settings-color-tertiary, rgba(60, 60, 67, 0.5));
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.phome-asset__actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+/* 收入事件列表 */
+.phome-income__list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.phome-income__empty {
+    padding: 14px 12px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--settings-color-tertiary, rgba(60, 60, 67, 0.5));
+    background: #F8F8FA;
+    border-radius: 10px;
+    line-height: 1.5;
+    margin-bottom: 10px;
+}
+
+.phome-income__item {
+    background: #FFFFFF;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 10px;
+    padding: 12px;
+}
+
+.phome-income__item-main {
+    min-width: 0;
+}
+
+.phome-income__item-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--settings-color-label, #000);
+    line-height: 1.4;
+}
+
+.phome-income__item-meta {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-top: 4px;
+    font-size: 11.5px;
+    color: var(--settings-color-secondary, rgba(60, 60, 67, 0.72));
+}
+
+.phome-income__item-amount {
+    font-weight: 600;
+    color: #0A84FF;
+    font-variant-numeric: tabular-nums;
+}
+
+.phome-income__item-next {
+    color: var(--settings-color-tertiary, rgba(60, 60, 67, 0.5));
+    font-variant-numeric: tabular-nums;
+}
+
+.phome-income__item-source {
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--settings-color-tertiary, rgba(60, 60, 67, 0.5));
+}
+
+.phome-income__item-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
+.phome-income__switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--settings-color-secondary, rgba(60, 60, 67, 0.72));
+    cursor: pointer;
+    user-select: none;
+}
+
+.phome-income__switch input {
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+}
+
+.phome-income__btn {
+    appearance: none;
+    border: 0;
+    background: rgba(10, 132, 255, 0.1);
+    color: #0A84FF;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background-color 0.15s, transform 0.1s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.phome-income__btn:active {
+    transform: scale(0.96);
+}
+
+.phome-income__btn--danger {
+    background: rgba(255, 59, 48, 0.1);
+    color: #FF3B30;
+}
+
+/* 表单（添加 / 编辑事件、设置余额共用） */
+.phome-income__compose[hidden],
+.phome-asset__balance-compose[hidden] {
+    display: none !important;
+}
+
+.phome-income__form,
+.phome-asset__balance-form {
+    background: #FFFFFF;
+    border: 1px solid rgba(10, 132, 255, 0.3);
+    border-radius: 12px;
+    padding: 14px;
+    margin-top: 10px;
+}
+
+.phome-income__form-row {
+    margin-bottom: 10px;
+}
+
+.phome-income__form-row label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--settings-color-secondary, rgba(60, 60, 67, 0.72));
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.phome-income__input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--settings-color-label, #000);
+    background: #F8F8FA;
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.phome-income__input:focus {
+    border-color: #0A84FF;
+    background: #FFFFFF;
+}
+
+.phome-income__input[type="number"] {
+    font-variant-numeric: tabular-nums;
+}
+
+.phome-income__form-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 10px;
+}
+
+.phome-asset__hint-sm {
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--settings-color-tertiary, rgba(60, 60, 67, 0.5));
+    line-height: 1.4;
+}
+
+/* ============================================
+ * 人设主页 · 当前人设上下文（v0.19）
+ *   显示将发送给 AI 的完整上下文
+ * ============================================ */
+
+.phome-context {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.phome-context__controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.phome-context__app-select {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+}
+
+.phome-context__select-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--settings-color-secondary, rgba(60, 60, 67, 0.72));
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    flex-shrink: 0;
+}
+
+.phome-context__select {
+    flex: 1;
+    min-width: 0;
+    padding: 6px 10px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 8px;
+    background: #F8F8FA;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--settings-color-label, #000);
+    cursor: pointer;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236c6c70' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 30px;
+}
+
+.phome-context__select:focus {
+    border-color: #0A84FF;
+    box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.12);
+}
+
+.phome-context__refresh {
+    flex-shrink: 0;
+}
+
+.phome-context__target {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: rgba(10, 132, 255, 0.08);
+    border: 1px solid rgba(10, 132, 255, 0.15);
+    border-radius: 8px;
+    font-size: 12px;
+    color: var(--settings-color-secondary, rgba(60, 60, 67, 0.72));
+}
+
+.phome-context__target strong {
+    color: #0A84FF;
+    font-weight: 600;
+}
+
+.phome-context__target-icon {
+    display: flex;
+    align-items: center;
+    color: #0A84FF;
+    flex-shrink: 0;
+}
+
+.phome-context__preview {
+    background: #F8F8FA;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 10px;
+    padding: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.phome-context__raw {
+    margin: 0;
+    padding: 12px;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--settings-color-label, #000);
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    overflow-wrap: break-word;
+    background: #f5f5f7;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.15s;
+    user-select: none;
+}
+
+.phome-context__raw:hover {
+    background: #e8e8ed;
+}
+
+.phome-context__empty {
+    padding: 24px 16px;
+    text-align: center;
+    font-size: 12.5px;
+    color: var(--settings-color-tertiary, rgba(60, 60, 67, 0.5));
+}
+
+/* 提示文字 */
+.phome-context__hint {
+    margin-top: 8px;
+    font-size: 11px;
+    color: #8e8e93;
+    text-align: center;
+}
+
+.phome-context__footer {
+    padding-top: 4px;
+    border-top: 1px dashed rgba(0, 0, 0, 0.06);
+}
+
+/* 编辑模式 */
+.phome-context__edit-area {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.phome-context__textarea {
+    width: 100%;
+    min-height: 200px;
+    max-height: 400px;
+    padding: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 10px;
+    background: #F8F8FA;
+    font-size: 12px;
+    line-height: 1.7;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    color: var(--settings-color-label, #000);
+    resize: vertical;
+    outline: none;
+    box-sizing: border-box;
+    overflow-y: auto;
+}
+
+.phome-context__textarea:focus {
+    border-color: #0A84FF;
+    box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.12);
+}
+
+.phome-context__edit-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.phome-context__edit-btn {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.phome-context__edit-btn--primary {
+    background: #0A84FF;
+    color: white;
+}
+
+.phome-context__edit-btn--primary:hover {
+    background: #0070E0;
+}
+
+.phome-context__edit-btn--secondary {
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--settings-color-label, #000);
+}
+
+.phome-context__edit-btn--secondary:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.phome-context__edit-btn--danger {
+    background: #FF3B30;
+    color: white;
+}
+
+.phome-context__edit-btn--danger:hover {
+    background: #D32F2F;
+}
+
+.phome-context__info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--settings-color-tertiary, rgba(60, 60, 67, 0.5));
+}
+
+.phome-context__info svg {
+    flex-shrink: 0;
+    opacity: 0.6;
+}
+
+/* 操作按钮（新样式） */
+.phome-context__action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--settings-color-label, #000);
+}
+
+.phome-context__action-btn:hover {
+    background: rgba(0, 0, 0, 0.12);
+}
+
+.phome-context__action-btn svg {
+    flex-shrink: 0;
+}
+
+.phome-context__action-btn--primary {
+    background: #0A84FF;
+    color: white;
+}
+
+.phome-context__action-btn--primary:hover {
+    background: #0070E0;
+}
+
+.phome-context__action-btn--ghost {
+    background: transparent;
+    color: #8e8e93;
+}
+
+.phome-context__action-btn--ghost:hover {
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--settings-color-label, #000);
+}
+
+.phome-context__action-btn--danger {
+    background: #FF3B30;
+    color: white;
+}
+
+.phome-context__action-btn--danger:hover {
+    background: #D32F2F;
+}
+
+/* 编辑工具栏 */
+.phome-context__edit-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+}
+
+.phome-context__edit-toolbar-spacer {
+    flex: 1;
+}
+
+/* 操作按钮区域 */
+.phome-context__actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* 恢复默认链接按钮 */
+.phome-context__restore-wrap {
+    display: flex;
+    justify-content: center;
+    margin-top: 8px;
+}
+
+/* 恢复默认链接按钮 */
+.phome-context__restore-wrap {
+    display: flex;
+    justify-content: center;
+    margin-top: 8px;
+}
+
+.phome-context__restore-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: #8e8e93;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.15s;
+}
+
+.phome-context__restore-link:hover {
+    color: #0A84FF;
+}
+
+.phome-context__restore-link svg {
+    flex-shrink: 0;
+}
+
+/* ============================================
+ * 人设主页 · 心情面板 v2（含月历）
+ * ============================================ */
+
+/* 心情显示区域 */
+.phome-mood__display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 14px;
+    margin-bottom: 12px;
+}
+
+.phome-mood__mood-name {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    transition: color 0.3s ease;
+}
+
+.phome-mood__diary {
+    font-size: 13px;
+    color: var(--settings-color-secondary, rgba(60, 60, 67, 0.72));
+    text-align: center;
+    line-height: 1.5;
+    max-width: 280px;
+}
+
+.phome-mood__intensity-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 240px;
+}
+
+.phome-mood__intensity-track {
+    flex: 1;
+    height: 6px;
+    background: rgba(0, 0, 0, 0.06);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.phome-mood__intensity-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.4s ease, background 0.3s ease;
+}
+
+.phome-mood__intensity-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--settings-color-tertiary, rgba(60, 60, 67, 0.5));
+    min-width: 32px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* 心情按钮组 */
+.phome-mood__actions {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 12px;
+}
+
+.phome-mood__actions .persona-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* 心情预设 */
+.phome-mood__presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+}
+
+.phome-mood__preset {
+    appearance: none;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: #FFFFFF;
+    color: var(--settings-color-label, #000);
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.phome-mood__preset.is-active {
+    background: #0A84FF;
+    color: #FFFFFF;
+    border-color: #0A84FF;
+    box-shadow: 0 2px 8px rgba(10, 132, 255, 0.25);
+}
+
+.phome-mood__preset:active {
+    transform: scale(0.96);
+}
+
+.phome-mood__preset:hover:not(.is-active) {
+    background: #F8F8FA;
+    border-color: rgba(0, 0, 0, 0.12);
+}
+
+/* ============================================
+ * 心情日历
+ * ============================================ */
+
+.phome-card--calendar {
+    border-radius: 14px;
+}
+
+.phome-calendar {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.phome-calendar__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 4px;
+}
+
+.phome-calendar__title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--settings-color-label, #000);
+    letter-spacing: -0.01em;
+}
+
+.phome-calendar__nav {
+    appearance: none;
+    border: none;
+    background: rgba(0, 0, 0, 0.04);
+    color: var(--settings-color-secondary, rgba(60, 60, 67, 0.72));
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.phome-calendar__nav:hover {
+    background: rgba(0, 0, 0, 0.08);
+    color: var(--settings-color-label, #000);
+}
+
+.phome-calendar__nav:active {
+    transform: scale(0.92);
+}
+
+.phome-calendar__weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    padding: 0 2px;
+}
+
+.phome-calendar__weekday {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--settings-color-tertiary, rgba(60, 60, 67, 0.5));
+    letter-spacing: 0.02em;
+    padding: 4px 0;
+}
+
+.phome-calendar__grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    padding: 0 2px;
+}
+
+.phome-calendar__cell {
+    aspect-ratio: 1 / 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    background: #FFFFFF;
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    position: relative;
+    -webkit-tap-highlight-color: transparent;
+    min-height: 36px;
+}
+
+.phome-calendar__cell--empty {
+    background: transparent;
+    border: none;
+    cursor: default;
+}
+
+.phome-calendar__cell:not(.phome-calendar__cell--empty):hover {
+    background: #F8F8FA;
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+.phome-calendar__cell.is-today {
+    border-color: #0A84FF;
+    background: rgba(10, 132, 255, 0.06);
+}
+
+.phome-calendar__cell.is-today.is-today .phome-calendar__day {
+    color: #0A84FF;
+    font-weight: 700;
+}
+
+.phome-calendar__cell.is-selected {
+    border-color: #0A84FF;
+    background: rgba(10, 132, 255, 0.12);
+    box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.15);
+}
+
+.phome-calendar__cell.is-selected .phome-calendar__day {
+    color: #0A84FF;
+    font-weight: 700;
+}
+
+.phome-calendar__cell.has-mood {
+    /* 使用 JS 内联样式设置颜色 */
+}
+
+.phome-calendar__day {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--settings-color-label, #000);
+    line-height: 1;
+    transition: color 0.15s ease;
+}
+
+/* ============================================
+ * 心情详情面板
+ * ============================================ */
+
+.phome-mood-detail {
+    background: #FFFFFF;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 14px;
+    padding: 14px 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.phome-mood-detail__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.phome-mood-detail__date {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--settings-color-secondary, rgba(60, 60, 67, 0.72));
+}
+
+.phome-mood-detail__close {
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: var(--settings-color-tertiary, rgba(60, 60, 67, 0.5));
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+}
+
+.phome-mood-detail__close:hover {
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--settings-color-label, #000);
+}
+
+.phome-mood-detail__mood {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.phome-mood-detail__mood-name {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    transition: color 0.3s ease;
+}
+
+.phome-mood-detail__intensity {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.phome-mood-detail__intensity-track {
+    flex: 1;
+    height: 8px;
+    background: rgba(0, 0, 0, 0.06);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.phome-mood-detail__intensity-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.4s ease, background 0.3s ease;
+}
+
+.phome-mood-detail__intensity-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--settings-color-tertiary, rgba(60, 60, 67, 0.5));
+    min-width: 36px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.phome-mood-detail__diary {
+    font-size: 13px;
+    color: var(--settings-color-secondary, rgba(60, 60, 67, 0.72));
+    line-height: 1.6;
+    padding: 10px 12px;
+    background: #F8F8FA;
+    border-radius: 10px;
+    margin-bottom: 10px;
+}
+
+.phome-mood-detail__actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.phome-mood-detail__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 0;
+}
+
+.phome-mood-detail__no-mood {
+    font-size: 13px;
+    color: var(--settings-color-tertiary, rgba(60, 60, 67, 0.5));
+}
+
+/* 心情卡片变体 */
+.phome-card--mood .phome-card__body {
+    padding: 12px 14px 14px;
+}
+
+/* 内联编辑模式 */
+.phome-mood-edit-inline {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.phome-mood-edit-inline .prompt-form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.phome-mood-edit-inline .prompt-form-field span {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--settings-color-label, #3c3c43);
+}
+
+.phome-mood-edit-inline .prompt-form-field input[type="text"],
+.phome-mood-edit-inline .prompt-form-field textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    background: #f8f8fa;
+    font-size: 14px;
+    font-family: inherit;
+    color: #1c1c1e;
+    resize: vertical;
+}
+
+.phome-mood-edit-inline .prompt-form-field input[type="text"]:focus,
+.phome-mood-edit-inline .prompt-form-field textarea:focus {
+    outline: none;
+    border-color: rgba(10, 132, 255, 0.5);
+    box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.1);
+}
+
+.phome-mood-edit-inline input[type="range"] {
+    width: 100%;
+    accent-color: #007aff;
+}
+
+

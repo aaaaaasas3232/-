@@ -1,0 +1,670 @@
+/* ============================================
+ * 手机壳 DIY · 精致小巧 iOS 风格（初代 UI）
+ * ============================================ */
+
+/* 容器 - 紧凑 */
+.case-diy {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 4px 0;
+}
+
+.case-diy__top {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+
+.case-diy__tabs {
+    margin-bottom: 2px;
+}
+
+.case-diy__colors {
+    flex: 1;
+}
+
+/* 预览区域 - 紧凑 */
+.case-diy__preview {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.case-preview-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 选择器区域 */
+.case-diy__picker {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+/* 模式标签切换 - 紧凑圆角胶囊 */
+.case-mode-tabs {
+    display: flex;
+    gap: 2px;
+    background: var(--settings-color-fill-secondary);
+    border-radius: 7px;
+    padding: 2px;
+}
+
+.case-mode-tab {
+    flex: 1;
+    padding: 4px 8px;
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--settings-color-secondary);
+    background: transparent;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    appearance: none;
+    font: inherit;
+    text-align: center;
+}
+
+.case-mode-tab:hover { color: var(--settings-color-label); }
+.case-mode-tab.is-active {
+    color: var(--settings-color-label);
+    background: var(--settings-color-bg);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+/* 颜色面板 */
+.case-color-panel { display: flex; flex-direction: column; gap: 4px; }
+
+/* 单色预设网格 - 紧凑 4 列 */
+.case-dots-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; justify-items: center; }
+
+/* 单色圆点 - 精致小巧 */
+.case-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--dot-bg);
+    border: 1.5px solid rgba(255,255,255,0.6);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12), inset 0 1px 1px rgba(255,255,255,0.3);
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+    appearance: none;
+    padding: 0;
+}
+
+.case-dot:hover { transform: scale(1.15); box-shadow: 0 2px 6px rgba(0,0,0,0.18); }
+.case-dot.is-active {
+    border-color: var(--settings-color-blue);
+    box-shadow: 0 0 0 1.5px var(--settings-color-bg), 0 0 0 3px var(--settings-color-blue);
+    transform: scale(1.1);
+}
+
+/* 自定义行 */
+.case-custom-row { display: flex; justify-content: flex-end; }
+
+.case-custom-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 5px;
+    background: var(--settings-color-fill-secondary);
+    color: var(--settings-color-secondary);
+    cursor: pointer;
+    transition: all 0.12s ease;
+}
+
+.case-custom-btn:hover { background: var(--settings-color-fill-tertiary); color: var(--settings-color-label); }
+.case-custom-btn input { display: none; }
+
+/* 渐变预览 - 紧凑条 */
+.case-grad-preview-mini { width: 100%; height: 16px; border-radius: 4px; }
+
+/* 渐变行 */
+.case-grad-row { display: flex; align-items: center; gap: 5px; }
+
+.case-color-pair { display: flex; gap: 3px; }
+
+.case-color-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.case-color-swatch {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255,255,255,0.5);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    transition: transform 0.1s ease;
+}
+
+.case-color-btn:hover .case-color-swatch { transform: scale(1.12); }
+.case-color-btn input { position: absolute; width: 0; height: 0; opacity: 0; }
+
+/* 角度滑块 */
+.case-angle-slider {
+    flex: 1;
+    height: 16px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    cursor: pointer;
+}
+
+.case-angle-slider::-webkit-slider-runnable-track {
+    height: 3px;
+    border-radius: 2px;
+    background: var(--settings-color-fill-secondary);
+}
+
+.case-angle-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--settings-color-bg);
+    border: 1.5px solid var(--settings-color-blue);
+    margin-top: -4.5px;
+}
+
+/* 渐变预设 - 紧凑药丸 */
+.case-grad-presets-mini { display: flex; flex-wrap: wrap; gap: 3px; }
+
+.case-grad-chip {
+    width: 24px;
+    height: 10px;
+    border-radius: 5px;
+    border: 1px solid rgba(255,255,255,0.4);
+    cursor: pointer;
+    transition: transform 0.1s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+}
+
+.case-grad-chip:hover { transform: scale(1.08); }
+.case-grad-chip.is-active {
+    border-color: var(--settings-color-blue);
+    box-shadow: 0 0 0 1px var(--settings-color-bg), 0 0 0 2px var(--settings-color-blue);
+    transform: scale(1.05);
+}
+
+/* 多色行 */
+.case-multi-row { display: flex; align-items: center; gap: 5px; }
+.case-multi-dots { display: flex; gap: 3px; flex: 1; }
+
+/* 移除按钮 */
+.case-dot-remove {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--settings-color-red);
+    color: white;
+    border: none;
+    font-size: 7px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.1s ease;
+}
+
+.case-color-btn:hover .case-dot-remove { opacity: 1; }
+
+/* 添加按钮 */
+.case-add-btn {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--settings-color-fill-secondary);
+    color: var(--settings-color-secondary);
+    border: 1px dashed var(--settings-color-tertiary);
+    font-size: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.12s ease;
+    flex-shrink: 0;
+}
+
+.case-add-btn:hover { background: var(--settings-color-fill-tertiary); color: var(--settings-color-blue); border-color: var(--settings-color-blue); }
+
+/* 角度行 */
+.case-angle-row { display: flex; align-items: center; gap: 5px; }
+.case-angle-lbl { font-size: 9px; color: var(--settings-color-tertiary); min-width: 18px; }
+.case-angle-val { font-size: 9px; font-weight: 600; color: var(--settings-color-secondary); min-width: 24px; text-align: right; }
+
+/* 隐藏原生 color input */
+.case-native-color { position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none; }
+
+/* 兼容旧版 */
+.case-grad-preview { display: none; }
+.case-pick-row, .case-pick-row--gap-sm { display: none; }
+.case-dots, .case-dots--two { display: none; }
+.case-dot--lg { display: none; }
+.case-custom-color { display: none; }
+.case-angle { display: none; }
+
+/* 控制器区域（旧版兼容） */
+.case-diy__controls {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.case-diy__section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.case-diy__label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--settings-color-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+/* 类型切换按钮（旧版兼容） */
+.case-type-toggle {
+    display: flex;
+    gap: 6px;
+    background: var(--settings-color-fill-tertiary);
+    padding: 4px;
+    border-radius: 10px;
+}
+
+.case-type-btn {
+    flex: 1;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--settings-color-secondary);
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    appearance: none;
+    font: inherit;
+}
+
+.case-type-btn:hover {
+    color: var(--settings-color-label);
+}
+
+.case-type-btn.is-active {
+    background: var(--settings-color-card);
+    color: var(--settings-color-label);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.case-type-btn:active {
+    transform: scale(0.97);
+}
+
+/* 颜色选择器通用 */
+.case-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* 预设色块网格 */
+.case-picker__swatches {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
+.case-swatch-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 4px;
+    background: var(--settings-color-card);
+    border: 2px solid transparent;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    appearance: none;
+    font: inherit;
+}
+
+.case-swatch-btn:hover {
+    border-color: var(--settings-color-quaternary);
+}
+
+.case-swatch-btn.is-active {
+    border-color: var(--settings-color-blue);
+    background: rgba(10, 132, 255, 0.06);
+}
+
+.case-swatch-btn:active {
+    transform: scale(0.95);
+}
+
+.case-swatch-btn__inner {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--swatch-color);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+}
+
+.case-swatch-btn__label {
+    font-size: 10px;
+    color: var(--settings-color-secondary);
+}
+
+/* 自定义颜色输入 */
+.case-picker__custom {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--settings-color-card);
+    border-radius: 10px;
+}
+
+.case-picker__custom-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    cursor: pointer;
+}
+
+.case-picker__custom-swatch {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    border: 2px solid rgba(255,255,255,0.8);
+}
+
+.case-picker__native-color {
+    position: absolute;
+    width: 0;
+    height: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.case-picker__hex {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--settings-color-label);
+    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+}
+
+/* 渐变选择器 */
+.case-picker--gradient,
+.case-picker--multi {
+    gap: 14px;
+}
+
+.case-picker__preview-large {
+    width: 100%;
+    height: 60px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transition: background 0.2s ease;
+}
+
+.case-picker__presets {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.case-gradient-preset {
+    width: 20px;
+    height: 20px;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.case-gradient-preset:hover {
+    transform: scale(1.08);
+    border-color: rgba(255,255,255,0.8);
+}
+
+.case-gradient-preset.is-active {
+    border-color: var(--settings-color-blue);
+    box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.3);
+}
+
+.case-picker__custom--gradient {
+    background: var(--settings-color-card);
+    padding: 12px;
+    border-radius: 10px;
+}
+
+.case-picker__color-pair {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.case-picker__color-input {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.case-picker__color-label {
+    font-size: 11px;
+    color: var(--settings-color-secondary);
+}
+
+.case-picker__swatch {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+    border: 2px solid rgba(255,255,255,0.8);
+}
+
+.case-picker__angle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.case-picker__angle-label {
+    font-size: 12px;
+    color: var(--settings-color-secondary);
+    min-width: 32px;
+}
+
+.case-picker__angle-slider {
+    flex: 1;
+    height: 4px;
+    appearance: none;
+    background: var(--settings-color-fill-secondary);
+    border-radius: 2px;
+    outline: none;
+}
+
+.case-picker__angle-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--settings-color-card);
+    border: 2px solid var(--settings-color-blue);
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.case-picker__angle-value {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--settings-color-label);
+    min-width: 36px;
+    text-align: right;
+}
+
+/* 多色选择器 */
+.case-picker__multi-colors {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.case-picker__multi-color {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+}
+
+.case-picker__remove-color {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--settings-color-red);
+    color: white;
+    border: none;
+    font-size: 10px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.case-picker__multi-color:hover .case-picker__remove-color {
+    opacity: 1;
+}
+
+.case-picker__add-color {
+    padding: 8px 16px;
+    font-size: 12px;
+    color: var(--settings-color-blue);
+    background: rgba(10, 132, 255, 0.08);
+    border: 1px dashed var(--settings-color-blue);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.case-picker__add-color:hover {
+    background: rgba(10, 132, 255, 0.15);
+}
+
+.case-picker__add-color:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* 圆角预设组 */
+.case-radius-presets {
+    display: flex;
+    gap: 8px;
+}
+
+.case-radius-preset {
+    flex: 1;
+    padding: 10px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--settings-color-secondary);
+    background: var(--settings-color-card);
+    border: 2px solid transparent;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.case-radius-preset:hover {
+    border-color: var(--settings-color-quaternary);
+}
+
+.case-radius-preset.is-active {
+    border-color: var(--settings-color-blue);
+    color: var(--settings-color-blue);
+    background: rgba(10, 132, 255, 0.06);
+}
+
+/* 阴影预设 */
+.case-shadow-presets {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+}
+
+.case-shadow-preset {
+    padding: 8px 4px;
+    font-size: 11px;
+    color: var(--settings-color-secondary);
+    background: var(--settings-color-card);
+    border: 2px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: center;
+}
+
+.case-shadow-preset:hover {
+    border-color: var(--settings-color-quaternary);
+}
+
+.case-shadow-preset.is-active {
+    border-color: var(--settings-color-blue);
+    color: var(--settings-color-blue);
+}
+
+/* 保存状态指示 */
+.case-saved-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--settings-color-green);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.case-saved-indicator.is-visible {
+    opacity: 1;
+}
+
+.case-saved-indicator__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--settings-color-green);
+}

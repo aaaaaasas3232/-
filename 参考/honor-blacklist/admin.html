@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>审核管理 - 王者曝光台</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="bg-layer"><div class="bg-particles" id="particles"></div></div>
+
+<!-- 导航 -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="20" cy="20" r="16" fill="#FFE6F0"/>
+        <path d="M20 30 C12 24 8 18 12 13 C16 9 20 14 20 14 C20 14 24 9 28 13 C32 18 28 24 20 30Z" fill="#FFBED5"/>
+        <circle cx="15" cy="14" r="2" fill="#FFFAFD" opacity="0.8"/>
+      </svg>
+      王者曝光台
+    </a>
+    <ul class="nav-links">
+      <a href="index.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <span>查询</span>
+      </a>
+      <a href="submit.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        <span>曝光</span>
+      </a>
+      <div class="nav-admin-pill">
+        <button class="nav-admin-btn logged-in" onclick="logout()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          <span>管理后台</span>
+        </button>
+      </div>
+    </ul>
+  </div>
+</nav>
+
+<!-- page-content -->
+<main class="page">
+  <div class="page-content">
+    <div class="container container-md">
+
+      <!-- 管理员头部 -->
+      <div class="admin-header">
+        <div>
+          <h1 class="admin-title">审核管理后台</h1>
+          <p style="font-size:0.82rem;color:var(--gray-400);margin-top:4px;">
+            欢迎回来，<span id="adminName">管理员</span>
+          </p>
+        </div>
+        <div class="flex gap-sm">
+          <button class="btn btn-ghost btn-sm" onclick="logout()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            退出登录
+          </button>
+        </div>
+      </div>
+
+      <!-- 统计卡片 -->
+      <div class="stats-grid" style="margin-bottom:32px;">
+        <div class="stat-card glass-card">
+          <div class="stat-number" id="dashPending">0</div>
+          <div class="stat-label">待审核</div>
+        </div>
+        <div class="stat-card glass-card">
+          <div class="stat-number" id="dashApproved">0</div>
+          <div class="stat-label">已通过</div>
+        </div>
+        <div class="stat-card glass-card">
+          <div class="stat-number" id="dashRejected">0</div>
+          <div class="stat-label">已拒绝</div>
+        </div>
+      </div>
+
+      <!-- 标签页 -->
+      <div class="admin-tabs">
+        <button class="admin-tab active" onclick="switchTab('pending', this)" id="tabPending" data-label="待审核">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span class="tab-label">待审核</span>
+        </button>
+        <button class="admin-tab" onclick="switchTab('approved', this)" id="tabApproved" data-label="已通过">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          <span class="tab-label">已通过</span>
+        </button>
+        <button class="admin-tab" onclick="switchTab('rejected', this)" id="tabRejected" data-label="已拒绝">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+          <span class="tab-label">已拒绝</span>
+        </button>
+        <button class="admin-tab" onclick="switchTab('controversy', this)" id="tabControversy" data-label="争议公投">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8"/><path d="M8 13h6"/></svg>
+          <span class="tab-label">争议公投</span>
+        </button>
+        <button class="admin-tab" onclick="switchTab('announcement', this)" id="tabAnnouncement" data-label="公告管理">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3zm-8.27 4a2 2 0 0 1-3.46 0"/></svg>
+          <span class="tab-label">公告管理</span>
+        </button>
+        <button class="admin-tab" onclick="switchTab('blacklist', this)" id="tabBlacklist" data-label="黑ID一览">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span class="tab-label">黑ID一览</span>
+        </button>
+        <button class="admin-tab" onclick="switchTab('messages', this)" id="tabMessages" data-label="私信记录">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span class="tab-label">私信记录</span>
+        </button>
+        <button class="admin-tab" onclick="switchTab('users', this)" id="tabUsers" data-label="用户管理">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span class="tab-label">用户管理</span>
+        </button>
+      </div>
+
+      <!-- 列表容器 -->
+      <div id="listContainer"></div>
+
+      <!-- 公告管理区域 -->
+      <div id="announcementPanel" style="display:none;flex-direction:column;align-items:center;">
+        <div class="form-card glass-card" style="margin-bottom:20px;">
+          <h3 style="font-size:1.1rem;font-weight:700;color:var(--gray-800);margin-bottom:4px;">发布公告 / 更新日志</h3>
+          <p style="font-size:0.82rem;color:var(--gray-500);margin-bottom:20px;">填写下方内容后点击发布，即可在平台首页展示</p>
+
+          <form id="annForm" onsubmit="handleAnnSubmit(event)">
+            <div class="form-group">
+              <label class="input-label">类型 *</label>
+              <select class="select" id="annType" required>
+                <option value="">请选择类型</option>
+                <option value="announcement">公告</option>
+                <option value="update">更新日志</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="input-label">标题 *</label>
+              <input type="text" class="input" id="annTitle" placeholder="输入公告/更新日志标题" required maxlength="50" autocomplete="off">
+            </div>
+
+            <div class="form-group">
+              <label class="input-label">内容 *</label>
+              <textarea class="textarea" id="annContent" placeholder="输入详细内容，支持多行，换行将自动格式化显示"
+                required minlength="5" maxlength="500" style="min-height:120px;"></textarea>
+              <p class="form-hint" id="annCount">0 / 500</p>
+            </div>
+
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="input-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                <input type="checkbox" id="annPinned" style="width:16px;height:16px;accent-color:var(--yellow-500);cursor:pointer;">
+                <span>设为置顶公告</span>
+                <span style="font-size:0.72rem;color:var(--gray-400);font-weight:400;margin-left:2px;">（将在首页置顶展示，发布新置顶会自动替换旧的）</span>
+              </label>
+            </div>
+
+            <button type="submit" class="btn btn-submit-full" id="annSubmitBtn" style="margin-top:4px;">
+              立即发布
+            </button>
+          </form>
+        </div>
+
+        <!-- 已发布列表 -->
+        <h4 style="font-size:0.95rem;font-weight:600;color:var(--gray-600);margin-bottom:12px;display:flex;align-items:center;gap:6px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          已发布内容
+        </h4>
+        <div class="ann-list" id="annList"></div>
+      </div>
+
+      <!-- 私信管理区域 -->
+      <div id="messagesPanel" style="display:none;">
+        <div style="margin-bottom:16px;padding:14px 18px;background:rgba(255,255,255,0.7);border-radius:var(--radius-lg);border:1px solid var(--gray-200);">
+          <p style="font-size:0.85rem;color:var(--gray-500);line-height:1.6;">
+            以下展示所有已发送的私信通知，包括审核打回通知等。删除后用户将无法查看。
+          </p>
+        </div>
+        <div class="admin-msg-list" id="adminMsgList"></div>
+      </div>
+
+      <!-- 争议公投管理区域 -->
+      <div id="controversyPanel" style="display:none;">
+        <div style="margin-bottom:16px;padding:14px 18px;background:rgba(255,255,255,0.7);border-radius:var(--radius-lg);border:1px solid var(--gray-200);">
+          <p style="font-size:0.85rem;color:var(--gray-500);line-height:1.6;">
+            争议举报将交由社区公投决定，管理员可在此查看公投进度并进行最终裁决。
+          </p>
+        </div>
+        <div class="controversy-list" id="controversyList"></div>
+      </div>
+
+      <!-- 用户管理区域 -->
+      <div id="usersPanel" style="display:none;">
+        <div style="margin-bottom:16px;padding:14px 18px;background:rgba(255,255,255,0.7);border-radius:var(--radius-lg);border:1px solid var(--gray-200);">
+          <p style="font-size:0.85rem;color:var(--gray-500);line-height:1.6;">
+            管理所有注册用户，包括封禁恶意注册他人账号的用户、解封账号、删除账号等操作。
+          </p>
+        </div>
+        <div class="user-list" id="userList"></div>
+      </div>
+
+      <!-- 全选批量操作 -->
+      <div id="batchActions" class="flex items-center justify-between" style="margin-top:16px;display:none;">
+        <label style="font-size:0.85rem;color:var(--gray-500);display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" style="width:16px;height:16px;accent-color:var(--yellow-400);cursor:pointer;">
+          全选
+        </label>
+        <div class="flex gap-sm">
+          <button class="btn btn-approve btn-sm" onclick="batchApprove()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            批量通过
+          </button>
+          <button class="btn btn-reject btn-sm" onclick="batchReject()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            批量拒绝
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+<!-- /page-content -->
+
+<!-- 图片查看器（管理员重排版） -->
+<div class="img-modal-overlay" id="imgModal">
+  <div class="img-modal-wrap">
+    <div class="img-modal-toolbar">
+      <span class="img-modal-seq" id="imgModalSeq">1 / 3</span>
+      <div class="img-modal-tools">
+        <button class="img-tool-btn" onclick="imgModalPrev()" id="imgPrevBtn" title="上一张">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <button class="img-tool-btn" onclick="imgModalNext()" id="imgNextBtn" title="下一张">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+        <div class="img-tool-divider"></div>
+        <button class="img-tool-btn" onclick="imgMoveLeft()" title="左移">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/><polyline points="15 18 9 12 15 6" transform="translate(3,0)"/></svg>
+        </button>
+        <button class="img-tool-btn" onclick="imgMoveRight()" title="右移">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/><polyline points="9 18 15 12 9 6" transform="translate(-3,0)"/></svg>
+        </button>
+        <div class="img-tool-divider"></div>
+        <button class="img-tool-btn img-tool-danger" onclick="imgModalDeleteAdmin()" title="删除">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        </button>
+      </div>
+      <button class="img-modal-close" onclick="closeImgModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="img-modal-body">
+      <img id="imgModalMain" src="" alt="" class="img-modal-main">
+    </div>
+    <div class="img-modal-thumbs" id="imgModalThumbs"></div>
+    <div class="img-modal-footer">
+      <span id="imgNoteHint" style="font-size:0.78rem;color:rgba(255,255,255,0.4);"></span>
+      <span style="font-size:0.74rem;color:rgba(255,255,255,0.25);">管理员可调整图片顺序</span>
+    </div>
+  </div>
+</div>
+
+<!-- 编辑公告/更新日志模态框 -->
+<div class="modal-overlay" id="editAnnModal" onclick="closeEditAnnModal()">
+  <div class="modal glass-card" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <span class="modal-title" id="editAnnModalTitle">编辑公告</span>
+      <button class="modal-close" onclick="closeEditAnnModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <form id="editAnnForm" onsubmit="handleEditAnnSubmit(event)">
+      <input type="hidden" id="editAnnId">
+
+      <div class="form-group">
+        <label class="input-label">类型 *</label>
+        <select class="select" id="editAnnType" required>
+          <option value="">请选择类型</option>
+          <option value="announcement">公告</option>
+          <option value="update">更新日志</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="input-label">标题 *</label>
+        <input type="text" class="input" id="editAnnTitle" placeholder="输入公告/更新日志标题" required maxlength="50" autocomplete="off">
+      </div>
+
+      <div class="form-group">
+        <label class="input-label">内容 *</label>
+        <textarea class="textarea" id="editAnnContent" placeholder="输入详细内容，支持多行，换行将自动格式化显示"
+          required minlength="5" maxlength="500" style="min-height:120px;"></textarea>
+        <p class="form-hint" id="editAnnCount">0 / 500</p>
+      </div>
+
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="input-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" id="editAnnPinned" style="width:16px;height:16px;accent-color:var(--yellow-500);cursor:pointer;">
+          <span>设为置顶公告</span>
+          <span style="font-size:0.72rem;color:var(--gray-400);font-weight:400;margin-left:2px;">（将在首页置顶展示）</span>
+        </label>
+      </div>
+
+      <div class="modal-actions" style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end;">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="closeEditAnnModal()">取消</button>
+        <button type="submit" class="btn btn-submit" id="editAnnSubmitBtn">
+          保存修改
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="common.js"></script>
+<script>
+  if (!SESSION.isAdmin()) {
+    window.location.href = 'index.html';
+  }
+
+  document.getElementById('adminName').textContent = SESSION.getCurrent() ? SESSION.getCurrent().username : '管理员';
+
+  function logout() {
+    SESSION.logout();
+    window.location.href = 'index.html';
+  }
+
+  function refreshStats() {
+    const stats = DB.getStats();
+    document.getElementById('dashPending').textContent = stats.pending;
+    document.getElementById('dashApproved').textContent = stats.approved;
+    document.getElementById('dashRejected').textContent = stats.rejected;
+  }
+
+  function getCurrentRecords() {
+    if (window.currentTab === 'pending')   return DB.getPending();
+    if (window.currentTab === 'approved')   return DB.getApproved();
+    if (window.currentTab === 'rejected')   return DB.getRejected();
+    if (window.currentTab === 'blacklist')  return DB.getAllBlacklist();
+    if (window.currentTab === 'controversy') {
+      return DB.getRecords().filter(r => r.isControversy && r.status !== 'controversy_approved' && r.status !== 'controversy_rejected');
+    }
+    return [];
+  }
+
+  // 全局：当前卡片是否展开打回理由
+  let openRejectCardId = null;
+
+  function toggleRejectReason(cardId) {
+    if (openRejectCardId === cardId) {
+      openRejectCardId = null;
+    } else {
+      openRejectCardId = cardId;
+    }
+    // 关闭其他卡片的输入框
+    document.querySelectorAll('.reject-reason-area').forEach(el => {
+      el.classList.remove('show');
+    });
+    const target = document.getElementById('reject-area-' + cardId);
+    if (target && openRejectCardId === cardId) {
+      target.classList.add('show');
+    }
+    // 重置输入
+    const textarea = document.getElementById('reject-reason-input-' + cardId);
+    if (textarea) textarea.value = '';
+  }
+
+  function renderReviewCard(record, showActions, showStatusTag = false) {
+    const cat = CATEGORY_TAG[record.category] || CATEGORY_TAG['其他'];
+    const evidenceHTML = (() => {
+      const imgs = record.evidence || [];
+      if (!imgs.length) return '';
+      return `<div class="review-card-evidence" style="margin-top:12px;display:flex;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;gap:6px;padding-bottom:2px;">
+        ${imgs.map((e, i) => {
+          const src = typeof e === 'string' ? e : e.src;
+          const note = typeof e === 'string' ? '' : (e.note || '');
+          return `<div style="position:relative;flex-shrink:0;">
+            <img src="${src}" alt="证据${i+1}" onclick="showImg('${src}','${record.id}')" style="cursor:pointer;width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--gray-200);transition:transform 0.2s ease;display:block;"
+                 onmouseover="this.style.transform='scale(1.06)'" onmouseout="this.style.transform='scale(1)'">
+            ${note ? `<div style="position:absolute;bottom:2px;right:2px;width:8px;height:8px;border-radius:50%;background:var(--yellow-400);border:1px solid rgba(0,0,0,0.2);"></div>` : ''}
+          </div>`;
+        }).join('')}
+      </div>`;
+    })();
+
+    const checkboxHTML = showActions
+      ? `<input type="checkbox" value="${record.id}" class="record-check" onchange="toggleSelect('${record.id}')" style="width:18px;height:18px;accent-color:var(--yellow-400);cursor:pointer;flex-shrink:0;">`
+      : '';
+
+    const actionsHTML = showActions ? `
+      <div class="review-card-actions">
+        <button class="btn btn-approve btn-sm" onclick="approveRecord('${record.id}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          通过
+        </button>
+        <button class="btn btn-reject btn-sm" onclick="toggleRejectReason('${record.id}')" id="reject-btn-${record.id}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          拒绝
+        </button>
+      </div>
+      <div class="reject-reason-area" id="reject-area-${record.id}">
+        <label class="input-label">填写打回理由（将通知用户）</label>
+        <textarea class="textarea" id="reject-reason-input-${record.id}" placeholder="请说明拒绝原因，例如：证据不足、描述不清等，方便用户修改后重新提交"
+          maxlength="300" style="min-height:72px;font-size:0.88rem;"></textarea>
+        <p class="reject-reason-hint">打回后用户可在私信中查看理由，并一键重新编辑提交</p>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button class="btn btn-ghost btn-sm" onclick="toggleRejectReason('${record.id}')" type="button" style="flex:1;">取消</button>
+          <button class="btn btn-reject btn-sm" onclick="rejectRecordWithReason('${record.id}')" type="button" style="flex:2;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            确认拒绝并发送通知
+          </button>
+        </div>
+      </div>` : `<div class="review-card-actions">
+        <button class="btn btn-danger btn-sm" onclick="deleteRecord('${record.id}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          删除
+        </button>
+      </div>`;
+
+    const statusTag = showStatusTag ? (() => {
+      if (record.status === 'approved')
+        return `<span class="result-card-tag tag-green" style="background:rgba(74,222,128,0.12);color:#15803d;border-color:rgba(74,222,128,0.2);">已通过</span>`;
+      if (record.status === 'rejected')
+        return `<span class="result-card-tag tag-red" style="background:rgba(252,165,165,0.12);color:#DC2626;border-color:rgba(252,165,165,0.2);">已拒绝</span>`;
+      return '';
+    })() : '';
+
+    const rejectReasonDisplay = record.rejectReason ? `
+      <div class="msg-card-reason-box" style="margin-top:12px;">
+        <div class="msg-card-reason-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          打回理由
+        </div>
+        <div class="msg-card-reason-content">${escapeHtml(record.rejectReason)}</div>
+      </div>` : '';
+
+    const submitterInfo = record.name
+      ? `<span>${escapeHtml(record.name)}（${escapeHtml(record.server || '未知')}）</span>`
+      : `<span>匿名（${escapeHtml(record.server || '未知')}）</span>`;
+
+    // 管理员可见：真实用户名 + userId
+    let reporterInfo = '';
+    if (record.name) {
+      reporterInfo = `<span>举报人：${escapeHtml(record.name)}</span>`;
+      if (record.userId) reporterInfo += `<span>ID：${escapeHtml(record.userId)}</span>`;
+      if (record.honorWorldId) reporterInfo += `<span>王者荣耀ID：${escapeHtml(record.honorWorldId)}</span>`;
+    } else if (record.userId) {
+      reporterInfo = `<span>举报人：匿名</span><span>用户ID：${escapeHtml(record.userId)}</span>`;
+    } else {
+      reporterInfo = `<span>举报人：匿名（游客）</span>`;
+    }
+    const anonLabel = record.isAnonymous ? `<span style="color:var(--yellow-500);font-size:0.72rem;">[匿名举报]</span>` : '';
+
+    return `
+    <div class="review-card glass-card" id="card-${record.id}">
+      <div class="review-card-header">
+        <div style="display:flex;align-items:center;gap:12px;flex:1;">
+          ${checkboxHTML}
+          <div class="review-card-info">
+            <div class="review-card-id">${escapeHtml(record.gameId)}</div>
+            <div class="review-card-reason">${escapeHtml(record.category || '')} · ${submitterInfo} ${anonLabel}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+          <span class="result-card-tag ${cat.cls}">${cat.label}</span>
+          ${statusTag}
+        </div>
+      </div>
+
+      <div class="review-card-body">
+        <div style="font-size:0.75rem;color:var(--gray-400);margin-bottom:8px;display:flex;gap:12px;flex-wrap:wrap;">${reporterInfo}</div>
+        <div class="review-card-desc" style="font-weight:500;color:var(--gray-700);margin-bottom:8px;">
+          ${escapeHtml(record.reason || '')}
+        </div>
+        <div class="review-card-desc">
+          ${escapeHtml(record.description || '')}
+        </div>
+        ${evidenceHTML ? `<div class="review-card-evidence" style="margin-top:12px;">${evidenceHTML}</div>` : ''}
+        ${rejectReasonDisplay}
+      </div>
+
+      <div class="review-card-footer" style="margin-top:0;">
+        <div class="review-card-meta">
+          <span>提交时间：${timeAgo(record.createdAt)}</span>
+          ${record.reviewedAt ? `<span>审核时间：${timeAgo(record.reviewedAt)}</span>` : ''}
+          ${record.reviewedBy ? `<span>审核人：${escapeHtml(record.reviewedBy)}</span>` : ''}
+        </div>
+        ${actionsHTML}
+      </div>
+    </div>`;
+  }
+
+  function renderList() {
+    const container = document.getElementById('listContainer');
+    const records = getCurrentRecords();
+
+    if (records.length === 0) {
+      const emptyTexts = {
+        pending:   '暂无待审核的曝光',
+        approved:  '暂无已曝光的记录',
+        rejected:  '暂无已拒绝的记录',
+        blacklist: '暂无黑ID记录',
+      };
+      container.innerHTML = `
+        <div class="empty-state">
+          <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="40" cy="40" r="36" fill="rgba(255,210,231,0.15)" stroke="#FFE6F0" stroke-width="2" stroke-dasharray="5 4"/>
+            ${window.currentTab === 'pending'
+              ? '<path d="M30 40 L38 48 L50 32" stroke="#E88AAA" stroke-width="2.5" stroke-linecap="round"/>'
+              : '<path d="M36 32 L44 32 M36 40 L44 40 M36 48 L44 48" stroke="#FFD6E7" stroke-width="2" stroke-linecap="round"/>'}
+            <circle cx="28" cy="28" r="4" fill="rgba(255,214,231,0.4)" stroke="#FFD6E7" stroke-width="1.5"/>
+            <circle cx="52" cy="28" r="4" fill="rgba(255,214,231,0.4)" stroke="#FFD6E7" stroke-width="1.5"/>
+          </svg>
+          <h3>${emptyTexts[window.currentTab]}</h3>
+          <p>${window.currentTab === 'pending' ? '有新举报时会显示在这里' : '处理后会显示在这里'}</p>
+        </div>`;
+      return;
+    }
+
+    const showCheckbox = window.currentTab !== 'approved';
+    const showStatusTag = window.currentTab === 'blacklist' || window.currentTab === 'approved' || window.currentTab === 'rejected';
+    container.innerHTML = records.map(r => renderReviewCard(r, showCheckbox, showStatusTag)).join('');
+  }
+
+  function approveRecord(id) {
+    DB.updateStatus(id, 'approved');
+    refreshStats();
+    renderList();
+    showToast('已通过该曝光', 'success');
+  }
+
+  function rejectRecord(id) {
+    DB.updateStatus(id, 'rejected');
+    refreshStats();
+    renderList();
+    showToast('已拒绝该曝光', 'info');
+  }
+
+  function rejectRecordWithReason(id) {
+    const reason = (document.getElementById('reject-reason-input-' + id) || { value: '' }).value.trim();
+    const record = DB.getRecord(id);
+    if (!record) return;
+
+    // 更新记录状态
+    DB.updateRecord(id, {
+      status: 'rejected',
+      rejectReason: reason || null,
+      reviewedBy: localStorage.getItem('admin_user') || '审核员',
+    });
+
+    // 给用户发私信通知
+    if (record.name || record.gameId) {
+      DB.addMessage({
+        type: 'reject',
+        title: '您的曝光被退回，请查看原因',
+        body: `您曝光的「${record.gameId}」因以下原因被退回：\n${reason || '（未填写具体原因）'}\n\n请根据原因修改后重新提交，感谢您的配合。`,
+        recordId: id,
+        gameId: record.gameId,
+        category: record.category,
+        submittedBy: record.name || '匿名用户',
+        reviewer: localStorage.getItem('admin_user') || '审核员',
+      });
+    }
+
+    openRejectCardId = null;
+    refreshStats();
+    renderList();
+    showToast('已拒绝并发送通知', 'info');
+  }
+
+  function deleteRecord(id) {
+    if (!confirm('确定要删除这条曝光记录吗？')) return;
+    DB.deleteRecord(id);
+    refreshStats();
+    renderList();
+    showToast('记录已删除', 'info');
+  }
+
+  function toggleSelect(id) {
+    if (window.selectedIds.has(id)) window.selectedIds.delete(id);
+    else window.selectedIds.add(id);
+    updateSelectAll();
+  }
+
+  function toggleSelectAll() {
+    const checked = document.getElementById('selectAll').checked;
+    document.querySelectorAll('.record-check').forEach(cb => {
+      cb.checked = checked;
+      const id = cb.value;
+      if (checked) window.selectedIds.add(id);
+      else window.selectedIds.delete(id);
+    });
+  }
+
+  function updateSelectAll() {
+    const selectAllEl = document.getElementById('selectAll');
+    if (!selectAllEl) return;
+    const checks = document.querySelectorAll('.record-check');
+    const allChecked = checks.length > 0 && Array.from(checks).every(cb => cb.checked);
+    selectAllEl.checked = allChecked;
+  }
+
+  function batchApprove() {
+    if (window.selectedIds.size === 0) { showToast('请先选择要通过的曝光', 'error'); return; }
+    window.selectedIds.forEach(id => DB.updateStatus(id, 'approved'));
+    window.selectedIds.clear();
+    refreshStats();
+    renderList();
+    showToast('已批量通过', 'success');
+  }
+
+  function batchReject() {
+    if (window.selectedIds.size === 0) { showToast('请先选择要拒绝的曝光', 'error'); return; }
+    if (!confirm(`确定要拒绝选中的 ${window.selectedIds.size} 条曝光吗？\n（将发送通用通知）`)) return;
+    window.selectedIds.forEach(id => {
+      const record = DB.getRecord(id);
+      DB.updateStatus(id, 'rejected');
+      if (record && (record.name || record.gameId)) {
+        DB.addMessage({
+          type: 'reject',
+          title: '您的曝光未通过审核',
+          body: `您曝光的「${record.gameId}」未能通过审核。\n如有疑问可在私信中联系管理员，感谢您的配合。`,
+          recordId: id,
+          gameId: record.gameId,
+          category: record.category,
+          submittedBy: record.name || '匿名用户',
+          reviewer: localStorage.getItem('admin_user') || '审核员',
+        });
+      }
+    });
+    window.selectedIds.clear();
+    refreshStats();
+    renderList();
+    showToast('已批量拒绝', 'info');
+  }
+
+  let adminCurrentRecordId = null;
+  let adminCurrentImgIdx = 0;
+
+  function showImg(src, recordId) {
+    const record = DB.getRecord(recordId);
+    if (!record) return;
+    const imgs = record.evidence || [];
+    adminCurrentRecordId = recordId;
+    adminCurrentImgIdx = imgs.findIndex(e => (typeof e === 'string' ? e : e.src) === src);
+    if (adminCurrentImgIdx < 0) adminCurrentImgIdx = 0;
+    refreshAdminImgModal();
+    document.getElementById('imgModal').classList.add('show');
+  }
+
+  function refreshAdminImgModal() {
+    const record = DB.getRecord(adminCurrentRecordId);
+    if (!record) return;
+    const imgs = record.evidence || [];
+    const item = imgs[adminCurrentImgIdx];
+    if (!item) return;
+    const src = typeof item === 'string' ? item : item.src;
+    const note = typeof item === 'string' ? '' : (item.note || '');
+    document.getElementById('imgModalMain').src = src;
+    document.getElementById('imgModalSeq').textContent = `${adminCurrentImgIdx + 1} / ${imgs.length}`;
+    document.getElementById('imgPrevBtn').style.visibility = imgs.length > 1 ? 'visible' : 'hidden';
+    document.getElementById('imgNextBtn').style.visibility = imgs.length > 1 ? 'visible' : 'hidden';
+    document.getElementById('imgNoteHint').textContent = note ? '备注：' + note : '';
+    const thumbs = document.getElementById('imgModalThumbs');
+    thumbs.innerHTML = imgs.map((e, i) => {
+      const s = typeof e === 'string' ? e : e.src;
+      const n = typeof e === 'string' ? '' : (e.note || '');
+      return `<div class="img-thumb ${i === adminCurrentImgIdx ? 'active' : ''}" onclick="jumpToAdminImg(${i})">
+        <img src="${s}" alt="">
+        ${n ? '<div class="img-thumb-note"></div>' : ''}
+      </div>`;
+    }).join('');
+    setTimeout(() => {
+      const active = thumbs.querySelector('.img-thumb.active');
+      if (active) active.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }, 50);
+  }
+
+  function jumpToAdminImg(idx) { adminCurrentImgIdx = idx; refreshAdminImgModal(); }
+  function imgModalPrev() { const r = DB.getRecord(adminCurrentRecordId); const len = (r?.evidence || []).length; adminCurrentImgIdx = (adminCurrentImgIdx - 1 + len) % len; refreshAdminImgModal(); }
+  function imgModalNext() { const r = DB.getRecord(adminCurrentRecordId); const len = (r?.evidence || []).length; adminCurrentImgIdx = (adminCurrentImgIdx + 1) % len; refreshAdminImgModal(); }
+
+  function imgMoveLeft() {
+    const record = DB.getRecord(adminCurrentRecordId);
+    if (!record || !record.evidence || record.evidence.length <= 1) return;
+    if (adminCurrentImgIdx === 0) return;
+    const imgs = record.evidence;
+    const tmp = imgs[adminCurrentImgIdx];
+    imgs[adminCurrentImgIdx] = imgs[adminCurrentImgIdx - 1];
+    imgs[adminCurrentImgIdx - 1] = tmp;
+    DB.updateRecord(adminCurrentRecordId, { evidence: imgs });
+    adminCurrentImgIdx--;
+    refreshAdminImgModal();
+    renderList();
+    showToast('图片已左移', 'success', 1200);
+  }
+
+  function imgMoveRight() {
+    const record = DB.getRecord(adminCurrentRecordId);
+    if (!record || !record.evidence || record.evidence.length <= 1) return;
+    const imgs = record.evidence;
+    if (adminCurrentImgIdx >= imgs.length - 1) return;
+    const tmp = imgs[adminCurrentImgIdx];
+    imgs[adminCurrentImgIdx] = imgs[adminCurrentImgIdx + 1];
+    imgs[adminCurrentImgIdx + 1] = tmp;
+    DB.updateRecord(adminCurrentRecordId, { evidence: imgs });
+    adminCurrentImgIdx++;
+    refreshAdminImgModal();
+    renderList();
+    showToast('图片已右移', 'success', 1200);
+  }
+
+  function imgModalDeleteAdmin() {
+    if (!confirm('确定删除这张图片？')) return;
+    const record = DB.getRecord(adminCurrentRecordId);
+    if (!record) return;
+    record.evidence.splice(adminCurrentImgIdx, 1);
+    if (record.evidence.length === 0) record.evidence = [];
+    DB.updateRecord(adminCurrentRecordId, { evidence: record.evidence });
+    if (record.evidence.length === 0) {
+      closeImgModal();
+    } else {
+      adminCurrentImgIdx = Math.min(adminCurrentImgIdx, record.evidence.length - 1);
+      refreshAdminImgModal();
+    }
+    renderList();
+    showToast('图片已删除', 'info', 1200);
+  }
+
+  function closeImgModal() {
+    document.getElementById('imgModal').classList.remove('show');
+    adminCurrentRecordId = null;
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeImgModal();
+    if (document.getElementById('imgModal').classList.contains('show')) {
+      const r = DB.getRecord(adminCurrentRecordId);
+      if (r && r.evidence && r.evidence.length > 1) {
+        if (e.key === 'ArrowLeft') imgModalPrev();
+        if (e.key === 'ArrowRight') imgModalNext();
+      }
+    }
+  });
+
+  /* ---- 公告管理 ---- */
+  document.getElementById('annContent').addEventListener('input', e => {
+    document.getElementById('annCount').textContent = `${e.target.value.length} / 500`;
+  });
+
+  function renderAnnCard(item) {
+    const tag = ANNOUNCEMENT_TAG[item.type] || ANNOUNCEMENT_TAG['announcement'];
+    const pinnedBadge = item.isPinned ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:var(--radius-full);font-size:0.70rem;font-weight:700;background:rgba(232,138,170,0.18);color:#E88AAA;border:1px solid rgba(232,138,170,0.35);margin-left:8px;">📌 置顶</span>' : '';
+    const itemId = escapeHtml(item.id);
+    const itemTitle = escapeHtml(item.title);
+    const itemContent = escapeHtml(item.content).replace(/\n/g, '<br>');
+    const itemAuthor = escapeHtml(item.author);
+    const itemCreated = timeAgo(item.createdAt);
+    const itemEdited = item.updatedAt ? ' · 已编辑' : '';
+    const tagCls = tag.cls;
+    const tagIcon = tag.icon;
+    const tagLabel = tag.label;
+    return '<div class="ann-card glass-card" data-id="' + itemId + '">' +
+      '<div class="ann-card-header">' +
+        '<span class="announcement-tag ' + tagCls + '">' + tagIcon + tagLabel + '</span>' +
+        pinnedBadge +
+        '<span style="font-size:0.73rem;color:var(--gray-400);margin-left:auto;">' + itemCreated + itemEdited + ' · ' + itemAuthor + '</span>' +
+      '</div>' +
+      '<div class="ann-card-title">' + itemTitle + '</div>' +
+      '<div class="ann-card-content">' + itemContent + '</div>' +
+      '<div class="ann-card-actions">' +
+        '<button class="btn btn-edit btn-sm" onclick="editAnnouncement(\'' + itemId + '\')">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>编辑</button>' +
+        '<button class="btn btn-danger btn-sm" onclick="deleteAnnouncement(\'' + itemId + '\')">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>删除</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderAnnList() {
+    const container = document.getElementById('annList');
+    const items = DB.getAnnouncements();
+    if (items.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state" style="padding:32px 16px;">
+          <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="40" cy="40" r="36" fill="rgba(255,210,231,0.15)" stroke="#FFE6F0" stroke-width="2" stroke-dasharray="5 4"/>
+            <path d="M36 32 L44 32 M36 40 L44 40 M36 48 L44 48" stroke="#FFD6E7" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="28" cy="25" r="3" fill="rgba(255,214,231,0.35)"/>
+            <circle cx="50" cy="28" r="2.5" fill="rgba(255,214,231,0.3)"/>
+          </svg>
+          <h3>暂无已发布内容</h3>
+          <p>使用上方表单发布公告或更新日志</p>
+        </div>`;
+      return;
+    }
+    container.innerHTML = items.map(renderAnnCard).join('');
+  }
+
+  function renderAdminPinnedState() { /* placeholder - pinned state handled by renderAnnList */ }
+
+  function handleAnnSubmit(e) {
+    e.preventDefault();
+    const btn = document.getElementById('annSubmitBtn');
+    btn.disabled = true;
+    btn.innerHTML = `<span class="loading-dots"><span></span><span></span><span></span></span> 发布中...`;
+
+    setTimeout(() => {
+      const isPinned = document.getElementById('annPinned').checked;
+      if (isPinned) {
+        const all = DB.getAnnouncements();
+        all.forEach(a => { a.isPinned = false; });
+        DB.saveAnnouncements(all);
+      }
+
+      DB.addAnnouncement({
+        type: document.getElementById('annType').value,
+        title: document.getElementById('annTitle').value.trim(),
+        content: document.getElementById('annContent').value.trim(),
+        isPinned: isPinned,
+      });
+
+      btn.disabled = false;
+      btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> 立即发布`;
+
+      showToast(isPinned ? '置顶公告发布成功，已在首页置顶展示' : '发布成功，已在平台首页展示', 'success', 3000);
+      document.getElementById('annForm').reset();
+      document.getElementById('annCount').textContent = '0 / 500';
+      renderAnnList();
+    }, 800);
+  }
+
+  function deleteAnnouncement(id) {
+    if (!confirm('确定要删除这条公告/更新日志吗？')) return;
+    DB.deleteAnnouncement(id);
+    renderAnnList();
+    showToast('已删除', 'info');
+  }
+
+  function editAnnouncement(id) {
+    const items = DB.getAnnouncements();
+    const item = items.find(i => i.id === id);
+    if (!item) {
+      showToast('未找到该公告', 'error');
+      return;
+    }
+
+    document.getElementById('editAnnId').value = id;
+    document.getElementById('editAnnType').value = item.type;
+    document.getElementById('editAnnTitle').value = item.title;
+    document.getElementById('editAnnContent').value = item.content;
+    document.getElementById('editAnnCount').textContent = `${item.content.length} / 500`;
+    document.getElementById('editAnnPinned').checked = !!item.isPinned;
+
+    const modal = document.getElementById('editAnnModal');
+    const titleEl = document.getElementById('editAnnModalTitle');
+    titleEl.textContent = item.type === 'update' ? '编辑更新日志' : '编辑公告';
+
+    modal.classList.add('show');
+  }
+
+  function closeEditAnnModal() {
+    document.getElementById('editAnnModal').classList.remove('show');
+    document.getElementById('editAnnForm').reset();
+  }
+
+  document.getElementById('editAnnContent').addEventListener('input', e => {
+    document.getElementById('editAnnCount').textContent = `${e.target.value.length} / 500`;
+  });
+
+  function handleEditAnnSubmit(e) {
+    e.preventDefault();
+    const id = document.getElementById('editAnnId').value;
+    const btn = document.getElementById('editAnnSubmitBtn');
+    btn.disabled = true;
+    btn.innerHTML = `<span class="loading-dots"><span></span><span></span><span></span></span> 保存中...`;
+
+    setTimeout(() => {
+      const isPinned = document.getElementById('editAnnPinned').checked;
+      if (isPinned) {
+        const all = DB.getAnnouncements();
+        all.forEach(a => { a.isPinned = false; });
+        DB.saveAnnouncements(all);
+      }
+
+      DB.updateAnnouncement(id, {
+        type: document.getElementById('editAnnType').value,
+        title: document.getElementById('editAnnTitle').value.trim(),
+        content: document.getElementById('editAnnContent').value.trim(),
+        isPinned: isPinned,
+      });
+
+      btn.disabled = false;
+      btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> 保存修改`;
+
+      showToast('修改成功', 'success', 2500);
+      closeEditAnnModal();
+      renderAnnList();
+      renderAdminPinnedState();
+    }, 600);
+  }
+
+  /* ---- 私信管理 ---- */
+  function renderAdminMsgList() {
+    const container = document.getElementById('adminMsgList');
+    const msgs = DB.getMessages();
+
+    if (msgs.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state" style="padding:48px 24px;">
+          <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="40" cy="40" r="36" fill="rgba(255,210,231,0.15)" stroke="#FFE6F0" stroke-width="2" stroke-dasharray="5 4"/>
+            <path d="M28 42 L36 50 L52 34" stroke="#E88AAA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <h3>暂无私信记录</h3>
+          <p>拒绝曝光时会自动发送私信通知</p>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = msgs.map(msg => {
+      const iconType = msg.type === 'reject' ? 'reject-icon' : 'info-icon';
+      const iconSvg = msg.type === 'reject'
+        ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`
+        : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+
+      return `
+        <div class="admin-msg-card glass-card">
+          <div class="admin-msg-meta">
+            <span style="color:var(--yellow-500);font-weight:600;">${escapeHtml(msg.title || '')}</span>
+            <span style="margin-left:12px;">发送对象：${escapeHtml(msg.submittedBy || '匿名')} · ${timeAgo(msg.createdAt)}</span>
+          </div>
+          <div style="font-size:0.88rem;color:var(--gray-600);line-height:1.7;margin-bottom:12px;white-space:pre-line;">${escapeHtml(msg.body || '')}</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--gray-200);gap:8px;">
+            <span style="font-size:0.76rem;color:var(--gray-400);">
+              关联曝光：${escapeHtml(msg.gameId || '')} · ${escapeHtml(msg.category || '')} · 审核员：${escapeHtml(msg.reviewer || '')}
+            </span>
+            <button class="btn btn-danger btn-sm" onclick="deleteAdminMessage('${msg.id}')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+              删除
+            </button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function deleteAdminMessage(id) {
+    if (!confirm('确定要删除这条私信记录吗？')) return;
+    DB.deleteMessage(id);
+    renderAdminMsgList();
+    showToast('已删除', 'info');
+  }
+
+  /* ---- 争议公投管理 ---- */
+  function renderControversyList() {
+    const container = document.getElementById('controversyList');
+    const records = DB.getRecords().filter(r => r.isControversy && r.status !== 'controversy_approved' && r.status !== 'controversy_rejected');
+    if (records.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state" style="padding:48px 24px;">
+          <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="40" cy="40" r="36" fill="rgba(255,210,231,0.15)" stroke="#FFE6F0" stroke-width="2" stroke-dasharray="5 4"/>
+            <path d="M26 44 C26 36 32 30 40 30 C48 30 54 36 54 44 C54 48 52 51 49 53 L48 54 L46 52 C45 51 44 50 40 50 C36 50 35 51 34 52 L32 54 L31 53 C28 51 26 48 26 44Z" stroke="#FFD6E7" stroke-width="2" fill="rgba(255,214,231,0.1)"/>
+            <path d="M34 44 L38 48 L46 40" stroke="#E88AAA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <h3>暂无待公投的争议举报</h3>
+          <p>有用户提交争议举报时会显示在这里</p>
+        </div>`;
+      return;
+    }
+    container.innerHTML = records.map(r => renderControversyCard(r)).join('');
+  }
+
+  function renderControversyCard(record) {
+    const cat = CATEGORY_TAG[record.category] || CATEGORY_TAG['其他'];
+    const total = record.controversyVotes + record.controversyOpposes;
+    const supportPct = total > 0 ? Math.round((record.controversyVotes / total) * 100) : 50;
+    const submitterInfo = record.name ? escapeHtml(record.name) : '匿名';
+    return `
+      <div class="controversy-card glass-card" id="card-${record.id}">
+        <div class="controversy-card-header">
+          <div>
+            <div class="review-card-id">${escapeHtml(record.gameId)}</div>
+            <div class="review-card-reason">${escapeHtml(record.category || '')} · ${submitterInfo}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="result-card-tag ${cat.cls}">${cat.label}</span>
+          </div>
+        </div>
+        <div class="review-card-body">
+          <div style="font-size:0.75rem;color:var(--gray-400);margin-bottom:8px;">
+            ${record.userId ? '用户ID：' + escapeHtml(record.userId) : ''} ${record.honorWorldId ? ' · 王者荣耀ID：' + escapeHtml(record.honorWorldId) : ''}
+          </div>
+          <div class="review-card-desc" style="font-weight:500;color:var(--gray-700);margin-bottom:8px;">${escapeHtml(record.reason || '')}</div>
+          <div class="review-card-desc">${escapeHtml(record.description || '')}</div>
+        </div>
+        <div style="padding-top:12px;border-top:1px solid var(--gray-200);">
+          <div style="font-size:0.82rem;font-weight:600;color:var(--gray-700);margin-bottom:10px;">
+            社区公投 · ${total} 人已投票
+          </div>
+          <div class="controversy-vote-bar">
+            <span style="font-size:0.78rem;color:#15803d;font-weight:600;min-width:40px;">支持 ${supportPct}%</span>
+            <div class="controversy-vote-track">
+              <div class="controversy-vote-fill" style="width:${supportPct}%;"></div>
+            </div>
+            <span style="font-size:0.78rem;color:#DC2626;font-weight:600;min-width:40px;text-align:right;">反对 ${100 - supportPct}%</span>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px;">
+            <button class="btn btn-approve btn-sm" onclick="controversyApprove('${record.id}')" style="flex:1;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              裁定通过
+            </button>
+            <button class="btn btn-reject btn-sm" onclick="controversyReject('${record.id}')" style="flex:1;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              裁定不通过
+            </button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function controversyApprove(id) {
+    if (!confirm('确定要裁定该争议举报通过曝光吗？')) return;
+    DB.updateRecord(id, { status: 'controversy_approved' });
+    refreshStats();
+    renderControversyList();
+    showToast('已裁定通过曝光', 'success');
+  }
+
+  function controversyReject(id) {
+    if (!confirm('确定要裁定该争议举报不通过吗？')) return;
+    DB.updateRecord(id, { status: 'controversy_rejected' });
+    refreshStats();
+    renderControversyList();
+    showToast('已裁定不通过', 'info');
+  }
+
+  /* ---- 用户管理 ---- */
+  function renderUserList() {
+    const container = document.getElementById('userList');
+    const users = DB_USERS.getAll();
+    if (users.length === 0) {
+      container.innerHTML = '<div class="empty-state"><h3>暂无注册用户</h3></div>';
+      return;
+    }
+    container.innerHTML = users.map(u => renderUserCard(u)).join('');
+  }
+
+  function renderUserCard(user) {
+    const isBanned = user.isBanned;
+    const isAdmin = user.role === 'admin';
+    const bannedText = isBanned ? '<span style="color:#DC2626;font-weight:600;">已封禁</span>' : '';
+    const adminBadge = isAdmin ? '<span style="font-size:0.70rem;color:#E88AAA;font-weight:600;background:rgba(232,138,170,0.15);padding:2px 8px;border-radius:99px;margin-left:6px;">管理员</span>' : '';
+    const userId = escapeHtml(user.id);
+    const username = escapeHtml(user.username);
+    const honorWorldId = user.honorWorldId ? escapeHtml(user.honorWorldId) : '';
+    const bannedReason = (isBanned && user.bannedReason) ? escapeHtml(user.bannedReason) : '';
+    const bannedAt = isBanned && user.bannedAt ? timeAgo(user.bannedAt) : '';
+
+    let actionBtns = '';
+    if (!isAdmin) {
+      if (isBanned) {
+        actionBtns = '<button class="btn btn-approve btn-sm" onclick="unbanUser(\'' + user.id + '\')">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>解封</button>';
+      } else {
+        actionBtns = '<button class="btn btn-danger btn-sm" onclick="showBanUserModal(\'' + user.id + '\')">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>封禁</button>';
+      }
+      actionBtns += '<button class="btn btn-ghost btn-sm" onclick="deleteUserByAdmin(\'' + user.id + '\')">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>删除</button>';
+    }
+
+    return '<div class="user-card glass-card' + (isBanned ? ' banned' : '') + '" id="user-card-' + user.id + '">' +
+      '<div class="user-card-header">' +
+        '<div class="user-card-info">' +
+          '<div class="user-card-username">' + username + ' ' + adminBadge + ' ' + bannedText + '</div>' +
+          '<div class="user-card-meta">' +
+            '<span>用户ID：' + userId + '</span>' +
+            (honorWorldId ? '<span>王者荣耀ID：' + honorWorldId + '</span>' : '') +
+            '<span>注册时间：' + timeAgo(user.createdAt) + '</span>' +
+            (bannedReason ? '<span style="color:#DC2626;">封禁原因：' + bannedReason + '</span>' : '') +
+            (bannedAt ? '<span>封禁时间：' + bannedAt + '</span>' : '') +
+          '</div>' +
+        '</div>' +
+        '<div class="user-card-actions">' + actionBtns + '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  let currentBanUserId = null;
+
+  function showBanUserModal(userId) {
+    currentBanUserId = userId;
+    const reason = prompt('请输入封禁原因（将通知用户）：');
+    if (reason === null) return;
+    banUserByAdmin(userId, reason);
+  }
+
+  function banUserByAdmin(id, reason) {
+    DB_USERS.banUser(id, reason);
+    renderUserList();
+    // 通知用户
+    const user = DB_USERS.getAll().find(u => u.id === id);
+    if (user) {
+      DB.addMessage({
+        type: 'ban',
+        title: '您的账号已被管理员封禁',
+        body: `您的账号「${user.username}」因以下原因被管理员封禁：\n${reason}\n\n如有异议请联系管理员申诉。`,
+        submittedBy: user.username,
+        reviewer: SESSION.getCurrent() ? SESSION.getCurrent().username : '管理员',
+      });
+    }
+    showToast('已封禁该用户并发送通知', 'info');
+  }
+
+  function unbanUser(id) {
+    if (!confirm('确定要解封该用户吗？')) return;
+    DB_USERS.unbanUser(id);
+    renderUserList();
+    showToast('已解封该用户', 'success');
+  }
+
+  function deleteUserByAdmin(id) {
+    if (!confirm('确定要删除该用户吗？此操作不可恢复！')) return;
+    DB_USERS.deleteUser(id);
+    renderUserList();
+    showToast('已删除该用户', 'info');
+  }
+
+  function createParticles() {
+    const container = document.getElementById('particles');
+    if (!container) return;
+    for (let i = 0; i < 12; i++) {
+      const dot = document.createElement('span');
+      dot.className = 'particle';
+      dot.style.left = Math.random() * 100 + '%';
+      dot.style.animationDelay = Math.random() * 12 + 's';
+      dot.style.animationDuration = (10 + Math.random() * 10) + 's';
+      dot.style.width = dot.style.height = (2 + Math.random() * 3) + 'px';
+      dot.style.opacity = 0.08 + Math.random() * 0.15;
+      container.appendChild(dot);
+    }
+  }
+
+  refreshStats();
+  renderList();
+  createParticles();
+  setActiveNav('admin.html');
+</script>
+</body>
+</html>

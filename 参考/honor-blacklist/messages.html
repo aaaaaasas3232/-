@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>私信 - 王者曝光台</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="bg-layer"><div class="bg-particles" id="particles"></div></div>
+
+<!-- 导航 -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="20" cy="20" r="16" fill="#FFE6F0"/>
+        <path d="M20 30 C12 24 8 18 12 13 C16 9 20 14 20 14 C20 14 24 9 28 13 C32 18 28 24 20 30Z" fill="#FFBED5"/>
+        <circle cx="15" cy="14" r="2" fill="#FFFAFD" opacity="0.8"/>
+      </svg>
+      王者曝光台
+    </a>
+    <div class="nav-links-wrap">
+      <ul class="nav-links" id="navLinks">
+        <a href="index.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <span>查询</span>
+        </a>
+        <a href="submit.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          <span>曝光</span>
+        </a>
+        <a href="blacklist.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span>黑ID</span>
+        </a>
+        <a href="messages.html" class="active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span>私信</span>
+          <span class="nav-badge" id="navMsgBadge" style="display:none;">0</span>
+        </a>
+        <div class="nav-user-pill" id="navUserPill">
+          <button class="nav-user-btn" id="navUserBtn" onclick="handleUserPill()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+            <span id="navUserText">登录</span>
+          </button>
+        </div>
+        <div class="nav-admin-pill" id="navAdminPill" style="display:none;">
+          <button class="nav-admin-btn" id="navAdminBtn" onclick="window.location.href='admin.html'">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            <span>管理后台</span>
+          </button>
+        </div>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- page-content -->
+<main class="page">
+  <div class="page-content">
+    <div class="container">
+
+      <!-- 英雄区 -->
+      <section class="hero" style="padding-bottom:20px;">
+        <div class="hero-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="fill:rgba(255,210,231,0.2);stroke:#FFBED5;">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          审核通知中心
+        </div>
+        <h1 class="hero-title">私信通知</h1>
+        <p class="hero-subtitle">查看审核结果通知，如有打回内容可一键重新编辑提交</p>
+      </section>
+
+      <!-- 统计 -->
+      <div class="stats-grid" style="margin-bottom:24px;">
+        <div class="stat-card glass-card">
+          <div class="stat-number" id="statTotal">0</div>
+          <div class="stat-label">通知总数</div>
+        </div>
+        <div class="stat-card glass-card">
+          <div class="stat-number" id="statReject">0</div>
+          <div class="stat-label">被退回</div>
+        </div>
+        <div class="stat-card glass-card">
+          <div class="stat-number" id="statPending">0</div>
+          <div class="stat-label">待审核</div>
+        </div>
+      </div>
+
+      <!-- 提示 -->
+      <div style="margin-bottom:16px;padding:12px 16px;background:rgba(255,255,255,0.7);border-radius:var(--radius-lg);border:1px solid var(--gray-200);display:flex;align-items:flex-start;gap:10px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;color:var(--yellow-500);flex-shrink:0;margin-top:2px;">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <p style="font-size:0.82rem;color:var(--gray-500);line-height:1.6;">
+          曝光被退回后，查看打回理由，点击「重新编辑」即可一键将内容填充到曝光表单，修改后再次提交即可。
+        </p>
+      </div>
+
+      <!-- 私信列表 -->
+      <div class="msg-list" id="msgList"></div>
+
+      <!-- 空状态 -->
+      <div class="msg-empty-state" id="msgEmpty" style="display:none;">
+        <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="40" cy="40" r="36" fill="rgba(255,210,231,0.12)" stroke="#FFE6F0" stroke-width="2" stroke-dasharray="5 4"/>
+          <path d="M26 44 C26 36 32 30 40 30 C48 30 54 36 54 44 C54 48 52 51 49 53 L48 54 L46 52 C45 51 44 50 40 50 C36 50 35 51 34 52 L32 54 L31 53 C28 51 26 48 26 44Z" stroke="#FFD6E7" stroke-width="2" fill="rgba(255,214,231,0.1)"/>
+          <path d="M34 44 L38 48 L46 40" stroke="#E88AAA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <h3>暂无私信通知</h3>
+        <p>提交曝光后，审核结果将在这里通知您</p>
+        <a href="submit.html" class="btn btn-submit" style="margin-top:16px;display:inline-flex;">前往曝光</a>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 页脚 -->
+  <footer class="footer">
+    王者曝光台 &middot; 仅供曝光参考 &middot; 曝光需真实性 &middot; 王者荣耀世界
+  </footer>
+</main>
+<!-- /page-content -->
+
+<!-- 图片预览模态框 -->
+<div class="modal-overlay" id="imgModal" onclick="closeModal()">
+  <div class="modal glass-card" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <span class="modal-title">证据截图</span>
+      <button class="modal-close" onclick="closeModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <img id="modalImg" src="" alt="证据截图" style="width:100%;border-radius:var(--radius-md);">
+  </div>
+</div>
+
+<script src="common.js"></script>
+<script>
+  function initStats() {
+    const stats = DB.getStats();
+    const msgs = DB.getMessages();
+    const rejects = msgs.filter(m => m.type === 'reject').length;
+    document.getElementById('statTotal').textContent = msgs.length;
+    document.getElementById('statReject').textContent = rejects;
+    document.getElementById('statPending').textContent = stats.pending;
+  }
+
+  function renderMsgList() {
+    const container = document.getElementById('msgList');
+    const empty = document.getElementById('msgEmpty');
+    const msgs = DB.getMessages();
+
+    if (msgs.length === 0) {
+      container.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+
+    empty.style.display = 'none';
+    container.innerHTML = msgs.map(msg => {
+      const isReject = msg.type === 'reject';
+      const iconType = isReject ? 'reject-icon' : 'info-icon';
+      const iconSvg = isReject
+        ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`
+        : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+
+      const actionsHTML = isReject
+        ? `<div class="msg-card-actions">
+             <button class="btn btn-reject btn-sm" onclick="reEditRecord('${msg.recordId}')">
+               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+               重新编辑
+             </button>
+             <button class="btn btn-ghost btn-sm" onclick="deleteMessage('${msg.id}')">
+               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+               删除
+             </button>
+           </div>`
+        : `<div class="msg-card-actions">
+             <button class="btn btn-ghost btn-sm" onclick="deleteMessage('${msg.id}')">
+               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+               删除
+             </button>
+           </div>`;
+
+      // 显示关联曝光的证据截图
+      const record = msg.recordId ? DB.getRecord(msg.recordId) : null;
+      let evidenceHTML = '';
+      if (record && record.evidence && record.evidence.length > 0) {
+        const imgs = record.evidence.map((img, i) => {
+          const src = typeof img === 'string' ? img : img.src;
+          return `<img src="${src}" alt="证据${i + 1}" onclick="window.showImgModal('${src}')" style="cursor:pointer;" title="点击查看大图">`;
+        }).join('');
+        evidenceHTML = `<div class="review-card-evidence" style="margin-top:12px;">${imgs}</div>`;
+      }
+
+      return `
+        <div class="msg-card glass-card ${msg.isRead ? 'read' : 'unread'}" data-id="${msg.id}">
+          <div class="msg-card-header">
+            <div class="msg-card-icon ${iconType}">${iconSvg}</div>
+            <div class="msg-card-content">
+              <div class="msg-card-title ${msg.isRead ? '' : 'unread-title'}">
+                ${escapeHtml(msg.title || '')}
+              </div>
+            </div>
+            ${!msg.isRead ? '<div class="msg-unread-dot" title="未读"></div>' : ''}
+          </div>
+          <div class="msg-card-body">${escapeHtml(msg.body || '')}</div>
+          ${evidenceHTML}
+          ${isReject && msg.recordId ? `
+          <div class="msg-card-footer">
+            <div class="msg-card-meta">
+              关联曝光：${escapeHtml(msg.gameId || '')} · ${escapeHtml(msg.category || '')} · ${timeAgo(msg.createdAt)}
+            </div>
+            ${actionsHTML}
+          </div>` : `
+          <div class="msg-card-footer">
+            <div class="msg-card-meta">${timeAgo(msg.createdAt)}</div>
+            ${actionsHTML}
+          </div>`}
+        </div>`;
+    }).join('');
+  }
+
+  // 一键重新编辑：从消息中提取内容填充到草稿
+  function reEditRecord(recordId) {
+    const record = DB.getRecord(recordId);
+    if (!record) {
+      showToast('未找到原始记录，无法重新编辑', 'error');
+      return;
+    }
+
+    // 保存为草稿
+    DB.saveDraft({
+      gameId: record.gameId || '',
+      server: record.server || '',
+      name: record.name || '',
+      category: record.category || '',
+      reason: record.reason || '',
+      description: record.description || '',
+      evidence: record.evidence || [],
+      reEditFromId: recordId, // 标记是从哪个记录重新编辑的
+    });
+
+    showToast('已填充到曝光表单，正在跳转...', 'success', 1500);
+    setTimeout(() => {
+      window.location.href = 'submit.html';
+    }, 800);
+  }
+
+  function deleteMessage(id) {
+    if (!confirm('确定要删除这条私信吗？')) return;
+    DB.deleteMessage(id);
+    renderMsgList();
+    initStats();
+    updateNavBadge();
+    showToast('已删除', 'info');
+  }
+
+  // 标记所有已读
+  function markAllRead() {
+    DB.markAllMessagesRead();
+    renderMsgList();
+    initStats();
+    updateNavBadge();
+  }
+
+  // 图片预览
+  window.showImgModal = function(src) {
+    document.getElementById('modalImg').src = src;
+    document.getElementById('imgModal').classList.add('show');
+  };
+
+  function closeModal() {
+    document.getElementById('imgModal').classList.remove('show');
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeModal();
+  });
+
+  // 导航未读数
+  function updateNavBadge() {
+    const unread = DB.getUnreadCount();
+    const badge = document.getElementById('navMsgBadge');
+    if (unread > 0) {
+      badge.textContent = unread > 99 ? '99+' : unread;
+      badge.style.display = 'inline-flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+
+  updateNavBadge();
+  updateNavUser();
+
+  function createParticles() {
+    const container = document.getElementById('particles');
+    if (!container) return;
+    for (let i = 0; i < 12; i++) {
+      const dot = document.createElement('span');
+      dot.className = 'particle';
+      dot.style.left = Math.random() * 100 + '%';
+      dot.style.animationDelay = Math.random() * 15 + 's';
+      dot.style.animationDuration = (10 + Math.random() * 10) + 's';
+      dot.style.width = dot.style.height = (2 + Math.random() * 3) + 'px';
+      dot.style.opacity = 0.08 + Math.random() * 0.15;
+      container.appendChild(dot);
+    }
+  }
+
+  /* ==================== 导航胶囊 ==================== */
+  function updateNavUser() {
+    const userPill = document.getElementById('navUserPill');
+    const adminPill = document.getElementById('navAdminPill');
+    const userBtn = document.getElementById('navUserBtn');
+    const userText = document.getElementById('navUserText');
+    if (SESSION.isAdmin()) {
+      userPill.style.display = 'none';
+      adminPill.style.display = 'block';
+    } else if (SESSION.isLoggedIn()) {
+      userPill.style.display = 'block';
+      adminPill.style.display = 'none';
+      if (userBtn) userBtn.classList.add('logged-in');
+      if (userText) userText.textContent = SESSION.getCurrent().username;
+    } else {
+      userPill.style.display = 'block';
+      adminPill.style.display = 'none';
+      if (userBtn) userBtn.classList.remove('logged-in');
+      if (userText) userText.textContent = '登录';
+    }
+  }
+
+  function handleUserPill() {
+    if (SESSION.isLoggedIn()) {
+      if (confirm('确定要退出登录吗？')) {
+        SESSION.logout();
+        updateNavUser();
+        updateNavBadge();
+        showToast('已退出登录', 'info');
+      }
+    } else {
+      openUserModal();
+    }
+  }
+
+  function openUserModal() {
+    window.location.href = 'index.html';
+  }
+
+  function switchAuthTab(tab) {}
+
+  updateNavUser();
+
+  initStats();
+  renderMsgList();
+  updateNavBadge();
+  createParticles();
+  setActiveNav('messages.html');
+</script>
+</body>
+</html>

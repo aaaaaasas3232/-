@@ -1,0 +1,378 @@
+# 灵动岛扩展方案
+
+## 现状
+
+### 5 个方法（`island-helper.js` 统一包装 `window.myDynamicIsland`）
+
+| 方法 | 行为 |
+|------|------|
+| `island.show(size, payload)` / `island.info(...)` | 直接显示 `info` 形态、设置 size + 内容 |
+| `island.toggle(size, payload)` | 智能开关：当前已是相同 size+title+message+template → `dismiss`；否则 `show` |
+| `island.notify(type, title, message, options)` | 触发 `notification` 形态（强制走 `compact`） |
+| `island.setSize(size)` | 切 size（前提是非 idle） |
+| `island.dismiss()` | 立刻关闭 |
+
+### 生命周期现状：纯手动
+
+- 没有任何自动消失计时器 —— 显示多久完全由 app 决定
+- 没有 mode/size 升级限制 —— 任何 app 都能调任何 size
+- medium→large 是框架自动的（`handleIslandClick → expandInfo`），但没有"app 是否允许 large"的开关
+
+### 编辑模式联动（`use-desktop-edit.js` line 565）
+
+只在 `enterEditMode()` 自己执行的那个 dismiss —— **没有任何 watch**。
+
+---
+
+## 新需求
+
+| 需求 | 现状 | 痛点 |
+|------|------|------|
+| 1. `duration` 自动消失 | ❌ 没有 | 聊天 app 调 `notify` 后岛一直挂着，不像 iOS |
+| 2. `lifecycle` 模式 | ❌ 没有 | 编辑模式期间岛不退出，退出时也不主动 dismiss |
+| 3. `size` 升级链约束 | ⚠️ 半有 | 任何 app 误调 `toggle('large', ...)` 都会生效 |
+| 4. 点击行为规则 | ❌ 缺 | 见下方"点击行为规则"节 |
+
+---
+
+## 点击行为规则（必须遵守）
+
+> 取消方式：长按取消 **或** 点击灵动岛外部都可以。
+
+### 大型灵动岛（large）
+- 点击外部 → 中型（medium）
+- 中型再点击外部 → 小型（mini）
+- 挂着小型状态
+- 小型点击 → 中型
+- 中型点击 → 大型
+
+### 中型灵动岛（medium）—— "顶格就是中型"
+- app 调用 `show('medium', ...)` 时，**顶格就是中型**
+- 点击外部 → 小型
+- 小型点击 → 中型
+- 循环：**不允许升级到 large**
+
+### 小型灵动岛（mini）
+- 一般用于"进入编辑态"
+- 点小型 → 中型
+- 中型点外部 → 小型
+- 循环
+- **不能升到 large**
+
+> 也就是说：升级链路必须受 `maxSize` 限制，并且**点岛外部是降级，点岛内部是升级**。
+
+---
+
+## 实现方案
+
+### 新增字段（`createEmptyIslandContent`）
+
+| 字段 | 类型 | 默认 | 作用 |
+|------|------|------|------|
+| `lifecycle` | `'time' \| 'manual'` | `'manual'` | `'time'` 按 `duration` 自动 dismiss；`'manual'` 永不自动退 |
+| `duration` | number (ms) | `3500`（notification）/ `0`（info，永不超时） | `lifecycle === 'time'` 时到期自动 dismiss |
+| `maxSize` | `'mini' \| 'compact' \| 'medium' \| 'large' \| null` | `null` | `null` = 允许任何 size；其它 = 不允许升级超过此 size |
+
+### 改 `island-helper.js`
+
+```js
+show(size = 'mini', payload = {}) {
+    window.myDynamicIsland?.showInfo?.(size, normalize(payload));
+}
+
+toggle(size = 'mini', payload = {}) {
+    // compareSameView 时把 lifecycle / duration / maxSize 也纳入比较
+    // 避免同 app 反复 toggle 因 duration 变化被判成"不同"
+}
+```
+
+### 改 `use-dynamic-island.js`
+
+```js
+function startLifecycleTimer() {
+    clearLifecycleTimer();
+    if (islandMode.value === 'idle') return;
+    const content = islandContent.value;
+    if (content.lifecycle !== 'time') return;
+    if (!content.duration || content.duration <= 0) return;
+    lifecycleTimer = setTimeout(() => setIdle(), content.duration);
+}
+
+function clearLifecycleTimer() {
+    if (lifecycleTimer) {
+        clearTimeout(lifecycleTimer);
+        lifecycleTimer = null;
+    }
+}
+
+function expandInfo() {
+    if (islandMode.value !== 'info') return;
+    const order = ['mini', 'medium', 'large'];
+    const idx = order.indexOf(islandSize.value);
+    const cap = islandContent.value.maxSize;
+    const capIdx = cap ? order.indexOf(cap) : order.length - 1;
+    if (idx === -1 || idx >= capIdx) return; // 已达上限
+    islandSize.value = order[idx + 1];
+}
+```
+
+### 改 `use-desktop-edit.js`（推荐方式 1）
+
+desktop-edit 自己持有"接管岛"的 ref：
+- `enterEditMode()` 前调 `island.show('mini', { lifecycle: 'manual', maxSize: 'mini' })`
+- `exitEditMode()` 时调 `island.dismiss()`
+
+**框架不需要 `bindHoldToken`**，因为方式 2（framework 维护外部状态集合）比方式 1 复杂得多。
+
+---
+
+## 关键设计决策点（待你拍板）
+
+1. **duration 默认值**
+   - notification（聊天通知）：默认 3500ms 自动消失
+   - info（app 状态）：默认永不超时，需要主动 dismiss
+
+2. **点击行为规则的边界 case**
+   - 点岛内部 → 升级一档（受 `maxSize` 约束）
+   - 点岛外部 → 降级一档，直到 mini；mini 再点外部 → dismiss（？）
+   - 长按 → cancel（？）
+   - 通知形态（notification/compact）走同一套规则还是单独处理？
+
+---
+
+## 模板 app demo
+
+加 6 个 actions：
+
+| 卡片 | 调用 | 用途 |
+|------|------|------|
+| Mini（time） | `island.show('mini', { duration: 3000, lifecycle: 'time' })` | 3 秒后自动退 |
+| Mini（manual） | `island.show('mini', { lifecycle: 'manual' })` | 必须手动 dismiss |
+| Medium（maxSize=medium） | `island.show('medium', { maxSize: 'medium' })` | 点岛不会升 large |
+| Compact 通知（duration） | `island.notify(...)` 默认就 3 秒 | 演示聊天通知自动消失 |
+| Large 受限 | `island.show('medium', { maxSize: 'mini' })` | 演示点岛完全无反应 |
+| 编辑接管 demo | 进编辑模式后 `island.show('mini', { lifecycle: 'manual' })`，退出时 `island.dismiss()` | 演示 lifecycle 模式 |
+
+---
+
+## 涉及文件
+
+- `use-dynamic-island.js`
+- `island-helper.js`
+- `utils.js`
+- `template-app.js`
+
+---
+
+## 工程约定（已写进 `AGENTS.md`，这里是简版）
+
+框架脚本加载有两套清单，**新增文件必须双更新**：
+
+| 模式 | 入口 | 清单位置 |
+|------|------|---------|
+| dev / 多文件 build | `js/framework/index.js` 的 `frameworkScripts` | 普通 `<script>` 同步加载 |
+| 单文件 build | `vite.config.single.js` 的 `frameworkScripts` | 内联进 HTML，按顺序执行 |
+
+**硬规则**：`js/framework/`、`js/apps/`、`js/db/` 目录里 **禁 ESM**（无 `export` / `import`），模块间共享走 `window.xxx`。
+
+---
+
+## 待修 bug 备忘（2026-07-12 发现，未修）
+
+### 1. IndexedDB Proxy 克隆失败
+
+**症状：**
+```
+[core-shim] 保存 widget 桌面记录失败：
+DataCloneError: Failed to execute 'put' on 'IDBObjectStore':
+[object Array] could not be cloned.
+```
+
+**根因：** `core-shim.js:156-158` 把 `Vue.watch(widgetBoard, items => saveWidgetBoard(items))` 的 items（原数组是从 Vue ref 来的 Proxy）直接传给 `IDBObjectStore.put`，结构化克隆不接受 Proxy。
+
+**当前状态：** 已知 1 处（widget 桌面持久化）。**风险：** 整个仓库所有 "把 Vue ref / reactive 数据写入 IndexedDB" 的位置都可能中招（apps、settings、dock 等持久化）。修前应先 grep 所有 `myDb.put(`, `ListenDb.put(`, `localStorage.setItem(` 调用并审一遍。
+
+**建议修法（待定）：**
+- 通用方案：`saveWidgetBoard(items) { items = structuredClone(toRaw(items)) ... }` —— Vue 3 的 `toRaw` 剥 Proxy，但剥了之后仍是同一个对象，里面的值还是 ref 包装的；仍可能克隆失败
+- 实战稳定：`JSON.parse(JSON.stringify(items))` 暴力 deep-clone，接受会丢 Date/Map/Set 的代价
+- 最干净的：所有持久化入口加一个 `toPlain(data)` helper 统一脱壳
+
+### 2. `music-island-app.js` 404（已处理）
+
+**症状：** 清单里有这个 app 文件名但磁盘上没有，404。
+
+**状态：** ✅ 已从 `js/apps/index.js` 的 `window.LISTEN_APPS` 清单删除。若未来要做这个 app，新建文件后再加回清单。
+
+---
+
+## 状态栏设置页 UI 精简（2026-07-15 记录）
+
+> 目标：让「设置 → 外观 → 状态栏」详情页的 UI 更克制、更 iPhone 风。
+> 业务逻辑（颜色字段持久化、跟随 App 默认色、整体开关、恢复默认）一律保留。
+> 只动这一个文件：`js/apps/setting/appearance-general/phone-statusbar/renderer.js`
+> 加上一个可选 CSS 微调：`css/main.css`（仅在觉得视觉还不够"精致小巧凹陷"时再动）。
+
+### ✅ 任务清单（做完一项打一个勾）
+
+#### 1️⃣ 去掉「显示状态栏」那行的 description
+
+- [ ] 打开 `js/apps/setting/appearance-general/phone-statusbar/renderer.js`
+- [ ] 定位到第 67-71 行的 `overallRow` 块
+- [ ] 删掉 `description: '关闭后顶部时间 / 信号 / 5G / 电池全部隐藏；不影响灵动岛。',` 这一行
+- [ ] 改完效果：那一行只剩 label「显示状态栏」+ 右侧的显示/隐藏分段控件
+
+参考改前 → 改后：
+
+```js
+// 改前
+const overallRow = renderRow({
+    label: '显示状态栏',
+    description: '关闭后顶部时间 / 信号 / 5G / 电池全部隐藏；不影响灵动岛。',
+    trailing: renderStatusBarSegmentedTabs(ui.showStatusBar),
+});
+
+// 改后
+const overallRow = renderRow({
+    label: '显示状态栏',
+    trailing: renderStatusBarSegmentedTabs(ui.showStatusBar),
+});
+```
+
+---
+
+#### 2️⃣ 决定 3 个颜色 row 的处理方案（选一个）
+
+**方案 A（最小改动 · 推荐先试）**
+
+只去掉 description，↺ 按钮暂时保留，看看视觉效果再决定要不要走方案 B。
+
+- [ ] 改 73-92 行的三段 `renderRowColorPicker({...})`，全部删掉 `description: '...'`
+- [ ] 保留 `label / value / field` 三个字段
+- [ ] 改完效果：每个颜色 row 仍带 ↺，但没了那行灰色说明文字
+
+**方案 B（彻底精简 · 最初想要的）**
+
+description + ↺ 按钮都不要，所有重置交给 detail 页底部「恢复默认」。
+
+- [ ] 先完成方案 A 的 description 删掉
+- [ ] 再到 `renderRowColorPicker` 函数（第 121-170 行）：
+  - [ ] 删掉第 142-143 行的 `resetAction` / `escapedResetAction` 两行
+  - [ ] 删掉第 162-166 行整个 `<button class="settings-row__color-reset">...↺</button>` 按钮
+- [ ] 改完效果：颜色 row 完全只剩 label + 凹陷小色块（见任务 5 的 CSS）
+
+---
+
+#### 3️⃣ 顺手精简 group footer
+
+- [ ] 改第 108 行 `footer: '整体开关不影响灵动岛。颜色字段留空 = 跟随当前 App 状态栏颜色。'`
+- [ ] 改成 `footer: '整体开关不影响灵动岛。'`
+
+理由：颜色说明在 description 已经删掉 + 颜色 input 一眼就懂的情况下，已经多余了。「不影响灵动岛」这一条还有信息量，保留。
+
+---
+
+#### 4️⃣ （可选）让 label 字体和整体 iPhone 风格一致
+
+如果做完后觉得「显示状态栏 / 时间颜色 / 信号颜色 / 5G 颜色」这几个 label 还是太大/太粗：
+
+- [ ] 打开 `css/main.css`
+- [ ] 搜 `.settings-row__label`
+- [ ] 把 `font-size` 调到 `13px` 左右、`font-weight` 调到 `400`（iOS 副标题默认就是 13/400）
+- [ ] 颜色已经是半透明黑的话就不用动
+
+> ⚠️ 注意：这个类可能被其他 row 复用，改了会影响所有 settings-row。改之前先全局看看其他地方有没有用 `.settings-row__label`。
+
+---
+
+#### 5️⃣ （可选）把右侧色块做成「精致小巧凹陷」
+
+参考 case-diy 那种风格，给 `.settings-row__color` 加 inset shadow + 药丸形。
+
+- [ ] 打开 `css/main.css`
+- [ ] 追加或修改：
+
+```css
+.settings-row__color {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;            /* 药丸形 */
+    background: rgba(0, 0, 0, 0.04); /* 浅灰底 */
+    box-shadow:
+        inset 0 1px 2px rgba(0, 0, 0, 0.08),    /* 凹陷上沿阴影 */
+        inset 0 -1px 1px rgba(255, 255, 255, 0.6); /* 凹陷下沿高光 */
+}
+
+.settings-row__color-swatch {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;              /* 圆形色块 */
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+.settings-row__color-input {
+    width: 18px;
+    height: 18px;
+    border: none;
+    padding: 0;
+    background: transparent;
+    opacity: 0;                       /* 隐藏原生 input，靠点 swatch 触发 */
+    cursor: pointer;
+}
+```
+
+> 如果走方案 B（删了 ↺），上面这段里就不需要再给 ↺ 留位，整体会更小巧。
+> 如果以后想给颜色输入加个 🎨 之类的图标提示，可以加 `::after` 伪元素。
+
+---
+
+#### 6️⃣ 验证清单（做完 1-3 之后必跑）
+
+- [ ] 打开设置 App → 外观 → 状态栏详情页
+- [ ] 「显示状态栏」一行 → 只剩 label + 右侧分段开关，**没有**那行灰色 description
+- [ ] 「时间颜色 / 信号颜色 / 5G 颜色」3 行：
+  - [ ] 选方案 A → 每行右侧还有 ↺
+  - [ ] 选方案 B → 完全没有 ↺
+  - [ ] 都没有灰色 description
+- [ ] 改一个颜色 → 状态栏实际颜色应该变（业务逻辑没动，正常）
+- [ ] 点 detail 页底部「恢复默认」 → 3 个颜色应该全清空回默认（这条路径没动，正常）
+- [ ] 把 3 个颜色手动调成空（或用恢复默认）→ 状态栏应该跟随当前 App 的 `statusBarColor`（这条 fallback 逻辑也没动，正常）
+
+---
+
+### 📁 涉及的文件
+
+| 文件 | 是否必动 | 说明 |
+|---|---|---|
+| `js/apps/setting/appearance-general/phone-statusbar/renderer.js` | **必** | 唯一需要改的文件 |
+| `css/main.css` | 可选 | 只在任务 4 / 5 时才碰 |
+| `methods.js` / `state.js` / `events.js` / `defaults.js` | **不** | 业务逻辑一概不动 |
+| 状态栏实际渲染层（如 `use-system-clock.js`） | **不** | 读 `ui.statusBarTimeColor` 等字段，照样走 fallback |
+
+---
+
+### 🧠 为什么这样改是安全的
+
+- `ui.statusBarTimeColor / statusBarSignalColor / statusBarFiveGColor` 三个字段照样存到 IndexedDB。
+- 状态栏渲染时读这三个字段，空字符串 → 走 "跟随当前 App 状态栏颜色" 的 fallback（这个逻辑**完全没动**）。
+- detail 页底部的「恢复默认」按钮**本来就能**把这三个字段一次性清空，所以"反正有恢复默认"——保留它就够了。
+- ↺ 按钮单独删掉不影响数据流，只是失去了"对单个颜色快速重置"的能力。
+
+---
+
+### 🚀 建议的执行顺序
+
+1. 先做任务 **1**（最小、最确定），刷新看一眼效果
+2. 再做任务 **3**（同样小，同样确定）
+3. 然后做任务 **2**，**先走方案 A**，刷新看效果
+4. 觉得 ↺ 真的多余了 → 升级到方案 B
+5. 视觉还差点意思 → 任务 **4** + **5**（CSS 微调）
+6. 最后跑一遍任务 **6** 的验证清单
+
+每一步之间可以随时回滚（git diff / Ctrl+Z 都行），互不影响。    
+
+几个我特意没改的，等你确认
+Bug #2 判定修改回滚 — 原本以为是 bug，写完解释发现是有意设计。如果想让 parO 不继承资源绑定，每个变体都得手动重新绑一遍，反而麻烦。如果你确实想让变体独立配资源，再告诉我，我加一行清掉。
+customContext 在 stripCloneRuntimeFields 里被清掉、又被 home-methods.js 保留？ — 我刚才仔细看了下两边不冲突：strip 阶段只是"创建新卡"那一刻清掉，用户后来在 parO 上自己编辑，可以再写回。这个是正常的"模板继承"语义，没问题。
+Bug #3 的"目标 App"消费侧 — 我只做了"在预览顶部加一行 target_app: 提示"，没做"按 App 重新渲染"（不同 App 注入的模块可能不一样）。后者是产品策略问题（不同 App 应该看到不同的上下文吗？），留到你以后做 Prompt 模块一起设计。

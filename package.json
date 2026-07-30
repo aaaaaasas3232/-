@@ -1,0 +1,20 @@
+{
+  "name": "xiaoting",
+  "version": "0.1.0",
+  "private": true,
+  "description": "小听 - AI 角色扮演手机模拟器",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:single": "vite build --config vite.config.single.js",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.5.2",
+    "postcss": "^8.5.16",
+    "tailwindcss": "^3.4.19",
+    "vite": "^5.4.10",
+    "vite-plugin-singlefile": "^2.3.3"
+  }
+}

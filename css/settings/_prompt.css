@@ -1,0 +1,596 @@
+/* ============================================
+ * Prompt 模块样式（白色主色调 + 蓝色辅助）
+ * ============================================ */
+
+/* --- 主容器 --- */
+.prompt-app {
+    min-height: 100%;
+    padding-bottom: 20px;
+}
+
+/* --- 导航栏 --- */
+.prompt-nav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 0 12px;
+    min-height: 56px;
+}
+.prompt-nav__back {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: rgba(59, 130, 246, 0.08);
+    border-radius: 8px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s;
+}
+.prompt-nav__back:active { background: rgba(59, 130, 246, 0.16); }
+.prompt-nav__text {
+    flex: 1;
+    min-width: 0;
+}
+.prompt-nav__title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.prompt-nav__subtitle {
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 1px;
+}
+.prompt-nav__action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: none;
+    background: rgba(59, 130, 246, 0.08);
+    border-radius: 9px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s;
+}
+.prompt-nav__action:active { background: rgba(59, 130, 246, 0.16); }
+
+/* --- 内容区 --- */
+.prompt-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* --- 组信息卡片 --- */
+.prompt-group-info {
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 14px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+.prompt-group-info__row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 8px;
+}
+.prompt-group-info__row:last-child { margin-bottom: 0; }
+.prompt-group-info__item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.prompt-group-info__item--full { flex: 1; }
+.prompt-group-info__label {
+    font-size: 12px;
+    color: #94a3b8;
+    font-weight: 500;
+}
+.prompt-group-info__value {
+    font-size: 13px;
+    color: #334155;
+    font-weight: 600;
+}
+.prompt-group-info__value--on { color: #10b981; }
+.prompt-group-info__value--off { color: #94a3b8; }
+
+/* --- 卡片 --- */
+.prompt-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+.prompt-card:active {
+    transform: scale(0.98);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+.prompt-card__icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.prompt-card__icon--add {
+    background: rgba(59, 130, 246, 0.08) !important;
+}
+.prompt-card__body {
+    flex: 1;
+    min-width: 0;
+}
+.prompt-card__header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.prompt-card__num {
+    font-size: 11px;
+    font-weight: 700;
+    color: #94a3b8;
+    background: #f1f5f9;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-family: monospace;
+}
+.prompt-card__name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.prompt-card__name--add { color: #3b82f6; }
+.prompt-card__meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 4px;
+}
+.prompt-card__desc {
+    font-size: 12px;
+    color: #64748b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.prompt-card__desc--empty { color: #cbd5e1; font-style: italic; }
+.prompt-card__arrow { flex-shrink: 0; }
+.prompt-card--add {
+    border: 2px dashed #bfdbfe;
+    background: rgba(239, 246, 255, 0.5);
+    box-shadow: none;
+}
+
+/* --- Prompt 条目卡片 --- */
+.prompt-item-card {
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 14px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+.prompt-item-card:active {
+    transform: scale(0.98);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+.prompt-item-card__header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+.prompt-item-card__index {
+    font-size: 13px;
+    font-weight: 700;
+    color: #94a3b8;
+    background: #f8fafc;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.prompt-item-card__tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.prompt-item-card__text {
+    font-size: 13px;
+    color: #334155;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 80px;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+}
+.prompt-item-card__footer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+.prompt-item-card__priority {
+    font-size: 11px;
+    color: #94a3b8;
+    background: #f8fafc;
+    padding: 2px 8px;
+    border-radius: 999px;
+}
+.prompt-item-card__keywords {
+    font-size: 11px;
+    color: #6366f1;
+    background: rgba(99, 102, 241, 0.08);
+    padding: 2px 8px;
+    border-radius: 999px;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* --- 添加条目按钮 --- */
+.prompt-add-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px;
+    background: rgba(239, 246, 255, 0.5);
+    border: 2px dashed #bfdbfe;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+.prompt-add-item:active {
+    background: rgba(219, 234, 254, 0.8);
+    border-color: #3b82f6;
+}
+.prompt-add-item span {
+    font-size: 14px;
+    font-weight: 600;
+    color: #3b82f6;
+}
+
+/* --- 徽章 --- */
+.prompt-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+.prompt-badge--off {
+    background: rgba(148, 163, 184, 0.15);
+    color: #94a3b8;
+}
+.prompt-badge--kw {
+    background: rgba(99, 102, 241, 0.12);
+    color: #6366f1;
+}
+.prompt-badge--tw {
+    background: rgba(14, 165, 233, 0.12);
+    color: #0ea5e9;
+}
+.prompt-badge--tw.prompt-badge--inactive {
+    background: rgba(148, 163, 184, 0.12);
+    color: #94a3b8;
+}
+.prompt-badge--vec {
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+}
+
+/* --- 元信息项 --- */
+.prompt-meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #64748b;
+    background: #f8fafc;
+    padding: 2px 8px;
+    border-radius: 6px;
+}
+.prompt-meta-label {
+    color: #94a3b8;
+}
+.prompt-meta-value {
+    font-weight: 600;
+    color: #334155;
+}
+.prompt-meta-item--time {
+    color: #0ea5e9;
+    background: rgba(14, 165, 233, 0.08);
+}
+.prompt-meta-item--time .prompt-meta-value { color: #0ea5e9; }
+
+/* --- 空状态 --- */
+.prompt-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 40px 20px;
+    text-align: center;
+}
+.prompt-empty__title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #475569;
+}
+.prompt-empty__desc {
+    font-size: 13px;
+    color: #94a3b8;
+    line-height: 1.5;
+}
+
+/* --- 弹窗 --- */
+.prompt-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(6px);
+    animation: promptFadeIn 0.2s ease;
+}
+@keyframes promptFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+.prompt-modal {
+    width: calc(100% - 48px);
+    max-width: 320px;
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.18);
+    overflow: hidden;
+    animation: promptModalIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.prompt-modal--wide {
+    max-width: 340px;
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+}
+.prompt-modal--wide .prompt-modal__title {
+    flex-shrink: 0;
+}
+.prompt-modal--wide .prompt-modal__body {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.prompt-modal--wide .prompt-modal__body::-webkit-scrollbar {
+    display: none;
+}
+.prompt-modal--confirm {
+    text-align: center;
+    padding: 22px 22px 18px;
+}
+.prompt-modal--confirm .prompt-modal__title { padding: 0 0 8px; }
+.prompt-modal--confirm .prompt-modal__msg {
+    padding: 0 4px 22px;
+    line-height: 1.55;
+}
+.prompt-modal--confirm .prompt-modal__actions--confirm {
+    border-top: 1px solid #f1f5f9;
+    margin: 0 -22px -18px;
+    padding: 4px 0;
+}
+.prompt-modal--confirm .prompt-modal__actions--confirm .prompt-modal__btn {
+    height: 50px;
+}
+@keyframes promptModalIn {
+    from { opacity: 0; transform: scale(0.9) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.prompt-modal__title {
+    font-size: 17px;
+    font-weight: 700;
+    color: #0f172a;
+    padding: 20px 20px 0;
+    letter-spacing: -0.01em;
+}
+.prompt-modal__title--danger { color: #ef4444; }
+.prompt-modal__msg {
+    font-size: 13px;
+    color: #64748b;
+    line-height: 1.5;
+    padding: 4px 20px 0;
+}
+.prompt-modal__body {
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.prompt-modal__actions {
+    display: flex;
+    border-top: 1px solid #f1f5f9;
+    padding: 2px 0;
+}
+.prompt-modal__actions--confirm {
+    flex-direction: column;
+    gap: 0;
+}
+.prompt-modal__btn {
+    flex: 1;
+    height: 46px;
+    border: none;
+    background: transparent;
+    -webkit-appearance: none;
+    appearance: none;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+    color: #64748b;
+}
+.prompt-modal__btn:active { background: #f8fafc; }
+.prompt-modal__btn--primary {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent !important;
+    color: #3b82f6;
+    font-weight: 700;
+}
+.prompt-modal__btn--secondary {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent !important;
+    color: #0ea5e9;
+}
+.prompt-modal__btn--ghost {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent !important;
+    color: #94a3b8;
+}
+.prompt-modal__btn--danger {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent !important;
+    color: #ef4444;
+}
+.prompt-modal__btn--danger-solid {
+    color: #ffffff;
+    background: #ef4444;
+    font-weight: 700;
+    border-radius: 12px;
+}
+.prompt-modal__btn--danger-solid:active { background: #dc2626; }
+
+/* --- 表单元素 --- */
+.prompt-input {
+    width: 100%;
+    height: 44px;
+    padding: 0 14px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    background: #f8fafc;
+    font-size: 14px;
+    color: #0f172a;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+.prompt-input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+    background: #fff;
+}
+.prompt-input::placeholder { color: #94a3b8; }
+.prompt-input--sm {
+    height: 38px;
+    font-size: 13px;
+}
+/* 隐藏 time input 原生时钟图标 */
+.prompt-input[type="time"] {
+    -webkit-appearance: none;
+    appearance: none;
+}
+.prompt-input[type="time"]::-webkit-calendar-picker-indicator {
+    display: none;
+}
+
+.prompt-textarea {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    background: #f8fafc;
+    font-size: 14px;
+    color: #0f172a;
+    outline: none;
+    resize: vertical;
+    min-height: 80px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+    font-family: inherit;
+    line-height: 1.5;
+}
+.prompt-textarea:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+    background: #fff;
+}
+.prompt-textarea::placeholder { color: #94a3b8; }
+.prompt-textarea--lg { min-height: 120px; }
+
+.prompt-form-group {
+    margin-bottom: 14px;
+}
+.prompt-form-group:last-child { margin-bottom: 0; }
+.prompt-form-group--half { flex: 1; }
+
+.prompt-form-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 6px;
+}
+.prompt-form-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #3b82f6;
+    cursor: pointer;
+}
+
+.prompt-form-row {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.prompt-form-sep {
+    font-size: 12px;
+    color: #94a3b8;
+    flex-shrink: 0;
+}
+
+.prompt-form-hint {
+    display: block;
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 4px;
+}

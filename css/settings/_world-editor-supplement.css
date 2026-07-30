@@ -1,0 +1,496 @@
+/* ============================================
+ * 世界观库补充（v0.11 满血版）
+ * editor 紧凑型 row / checkgroup / 标签增强 / 阶段 / sub-phase / transitions
+ * ============================================ */
+
+/* editor 通用容器（凹陷内嵌风格） */
+.settings-app .wv-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    background: #E8E8ED;
+    border-radius: 12px;
+    box-shadow:
+        inset 0 2px 6px rgba(0, 0, 0, 0.12),
+        inset 0 -1px 2px rgba(255, 255, 255, 0.7);
+}
+
+/* 编辑器 section 分组卡片（浮出感） */
+.settings-app .wv-editor__section {
+    background: #fff;
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow:
+        0 1px 3px rgba(0, 0, 0, 0.08),
+        0 1px 1px rgba(0, 0, 0, 0.04);
+}
+
+/* Section 标题（小标签风格） */
+.settings-app .wv-editor__section-title {
+    font-size: 10px;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--settings-color-blue);
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(10, 132, 255, 0.15);
+}
+
+/* 地点/场所编辑器专属样式 */
+.settings-app .wv-place-editor,
+.settings-app .wv-location-editor {
+    gap: 10px;
+    padding: 12px;
+}
+
+/* 编辑器行样式 */
+.settings-app .wv-editor__row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* 标签样式 */
+.settings-app .wv-editor__row .wv-editor__label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--settings-color-label);
+    min-width: 52px;
+    padding-top: 6px;
+    flex-shrink: 0;
+}
+
+/* 输入框样式（凹陷内嵌） */
+.settings-app .wv-editor__input,
+.settings-app .wv-editor__textarea,
+.settings-app .wv-editor__select {
+    appearance: none;
+    flex: 1;
+    min-width: 0;
+    background: #F2F2F7;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 14px;
+    color: var(--settings-color-label);
+    box-shadow:
+        inset 0 1.5px 3px rgba(0, 0, 0, 0.08),
+        inset 0 -0.5px 1px rgba(255, 255, 255, 0.9);
+    transition: all 0.2s ease;
+}
+
+/* 输入框聚焦状态 */
+.settings-app .wv-editor__input:focus,
+.settings-app .wv-editor__textarea:focus,
+.settings-app .wv-editor__select:focus {
+    outline: none;
+    background: #fff;
+    box-shadow:
+        inset 0 1.5px 3px rgba(0, 0, 0, 0.08),
+        inset 0 -0.5px 1px rgba(255, 255, 255, 0.9),
+        0 0 0 2px rgba(10, 132, 255, 0.3);
+}
+
+/* textarea 样式 */
+.settings-app .wv-editor__textarea {
+    resize: vertical;
+    min-height: 70px;
+    line-height: 1.5;
+    font-family: inherit;
+}
+
+/* select 下拉箭头 */
+.settings-app .wv-editor__select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%238E8E93' d='M5 6L0 0h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+    cursor: pointer;
+}
+
+/* 行内布局（坐标输入等） */
+.settings-app .wv-editor__row--inline {
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+}
+
+.settings-app .wv-editor__row--inline .wv-editor__label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--settings-color-secondary);
+    width: auto;
+    min-width: auto;
+    padding-top: 0;
+    flex-shrink: 0;
+    margin-bottom: 0;
+}
+
+.settings-app .wv-editor__select--sm { max-width: 100px; flex: 0 0 auto; }
+
+.settings-app .wv-editor__input--num {
+    width: 50px;
+    flex: 0 0 50px;
+    text-align: center;
+    padding: 7px 4px;
+    background: #fff;
+}
+
+.settings-app .wv-editor__input--year {
+    width: 64px;
+    flex: 0 0 64px;
+    text-align: center;
+}
+
+.settings-app .wv-editor__sep {
+    font-size: 11px;
+    color: var(--settings-color-secondary);
+    flex-shrink: 0;
+}
+
+.settings-app .wv-editor__input--check {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+}
+
+.settings-app .wv-editor__color {
+    width: 32px;
+    height: 28px;
+    padding: 0;
+    flex: 0 0 auto;
+}
+
+.settings-app .wv-editor__actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.settings-app .wv-editor__checkgroup {
+    display: flex;
+    gap: 8px;
+    flex: 1;
+    align-items: center;
+}
+
+.settings-app .wv-editor__checkgroup--wrap { flex-wrap: wrap; }
+.settings-app .wv-editor__checkgroup label {
+    font-size: 11px;
+    color: var(--settings-color-label);
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.settings-app .wv-list__title-block { flex: 1; min-width: 0; }
+
+.settings-app .wv-anchor__head-group {
+    display: flex;
+    min-width: 0;
+}
+.settings-app .wv-anchor__head--inline .wv-anchor__head-group {
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 10px;
+    margin-bottom: 6px;
+}
+.settings-app .wv-list__back { margin-right: 6px; }
+
+/* 标签相关 */
+.settings-app .wv-tag { display: inline-flex; align-items: center; gap: 2px; }
+.settings-app .wv-tag--warn { background: rgba(255, 59, 48, 0.12); color: var(--wv-red); }
+.settings-app .wv-tag--ok { background: rgba(52, 199, 89, 0.16); color: var(--wv-green); }
+.settings-app .wv-tag--suggest { background: rgba(120, 120, 128, 0.05); border: 1px dashed rgba(120, 120, 128, 0.3); cursor: pointer; }
+.settings-app .wv-tag__remove {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--settings-color-tertiary);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 0;
+    margin-left: 2px;
+}
+.settings-app .wv-taggroup__suggest { margin-top: 6px; font-size: 11px; }
+.settings-app .wv-taggroup__suggest summary { color: var(--settings-color-tertiary); cursor: pointer; }
+.settings-app .wv-taggroup__suggest-list { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+
+/* 阶段 / 子阶段 */
+.settings-app .wv-phase {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: var(--wv-card-bg);
+    border-radius: 12px;
+    padding: 10px 12px;
+    border-left: 3px solid transparent;
+}
+.settings-app .wv-phase.is-active { border-left-color: var(--wv-blue); }
+.settings-app .wv-phases__current {
+    background: rgba(10, 132, 255, 0.08);
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-bottom: 4px;
+}
+.settings-app .wv-phases__current-label { font-size: 11px; color: var(--settings-color-tertiary); }
+.settings-app .wv-phases__current-name { font-size: 16px; font-weight: 700; margin-top: 2px; }
+.settings-app .wv-phase__ai-panel { margin-top: 4px; }
+.settings-app .wv-phase__ai-panel summary { font-size: 11px; color: var(--settings-color-secondary); cursor: pointer; }
+.settings-app .wv-phase__ai-row { display: flex; align-items: center; gap: 6px; padding: 4px 0; font-size: 11px; }
+.settings-app .wv-phase__ai-name { flex: 1; }
+.settings-app .wv-phase__ai-current { color: var(--settings-color-secondary); }
+
+/* sub-phase */
+.settings-app .wv-subphase {
+    border-top: 1px dashed rgba(120, 120, 128, 0.25);
+    margin-top: 4px;
+    padding-top: 6px;
+}
+.settings-app .wv-subphase__head { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.settings-app .wv-subphase__title { font-size: 11px; color: var(--settings-color-secondary); font-weight: 700; flex: 1; }
+.settings-app .wv-subphase__row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    font-size: 11px;
+    padding: 3px 0;
+}
+.settings-app .wv-subphase__name { font-weight: 700; flex: 0 0 80px; }
+.settings-app .wv-subphase__age { color: var(--settings-color-tertiary); }
+.settings-app .wv-subphase__summary { color: var(--settings-color-secondary); flex: 1; min-width: 100px; }
+.settings-app .wv-subphase__add details summary { font-size: 11px; color: var(--settings-color-tertiary); cursor: pointer; padding: 2px 0; }
+.settings-app .wv-subphase__add-form { padding: 6px 0; }
+.settings-app .wv-subphase__editor summary { font-size: 11px; font-weight: 700; color: var(--settings-color-secondary); cursor: pointer; }
+.settings-app .wv-subphase__editor-body { display: flex; flex-direction: column; gap: 4px; padding-top: 6px; }
+.settings-app .wv-subphase__editor-row { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+.settings-app .wv-subphase__editor-add { display: flex; gap: 4px; align-items: center; }
+
+/* transitions */
+.settings-app .wv-transitions { margin-top: 6px; }
+.settings-app .wv-transition { background: var(--wv-card-bg); border-radius: 12px; padding: 10px 12px; }
+
+/* timelines (v0.11 紧凑版) */
+.settings-app .wv-timeline-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+.settings-app .wv-timeline-event {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    background: var(--wv-card-bg);
+    border-radius: 10px;
+    padding: 6px 10px;
+    font-size: 11.5px;
+}
+.settings-app .wv-timeline-event__date { color: var(--settings-color-tertiary); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.settings-app .wv-timeline-event__title { flex: 1; font-weight: 600; }
+.settings-app .wv-timeline-event__desc { color: var(--settings-color-secondary); flex: 1; min-width: 100px; }
+.settings-app .wv-timeline-event__actions { display: flex; gap: 4px; }
+.settings-app .wv-timeline-ai { background: var(--wv-card-bg); border-radius: 10px; padding: 8px 10px; }
+.settings-app .wv-timeline-ai summary { font-weight: 700; cursor: pointer; }
+.settings-app .wv-timeline-add { padding: 8px 10px; background: rgba(10,132,255,0.05); border: 1px dashed rgba(10,132,255,0.3); border-radius: 10px; }
+
+
+/* 坐标输入专用宽度 */
+.settings-app .wv-editor__input--coord {
+    width: 78px !important;
+    flex: 0 0 78px !important;
+}
+
+/* drafts */
+.settings-app .wv-drafts { display: flex; flex-direction: column; gap: 8px; }
+
+/* snapshot（更紧凑版补充） */
+.settings-app .wv-snapshot__row { display: flex; justify-content: space-between; font-size: 11px; }
+.settings-app .wv-snapshot__label { color: var(--settings-color-tertiary); }
+.settings-app .wv-snapshot__val { color: var(--settings-color-label); font-weight: 600; }
+
+/* ============================================
+ * 地点/场所编辑器专用样式
+ * ============================================ */
+
+/* 编辑器操作按钮（凹陷风格） */
+.settings-app .wv-editor__actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0 2px;
+}
+
+.settings-app .wv-editor__actions .wv-btn {
+    flex: 1;
+    max-width: 100px;
+    padding: 9px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.18s ease;
+    border: none;
+    text-align: center;
+}
+
+.settings-app .wv-editor__actions .wv-btn--primary {
+    background: var(--settings-color-blue);
+    color: #fff;
+    box-shadow:
+        0 2px 6px rgba(10, 132, 255, 0.35),
+        0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.settings-app .wv-editor__actions .wv-btn--primary:hover {
+    background: #339DFF;
+}
+
+.settings-app .wv-editor__actions .wv-btn--primary:active {
+    background: #0077EE;
+    box-shadow:
+        inset 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.settings-app .wv-editor__actions .wv-btn--ghost {
+    background: rgba(120, 120, 128, 0.12);
+    color: var(--settings-color-secondary);
+}
+
+.settings-app .wv-editor__actions .wv-btn--ghost:hover {
+    background: rgba(120, 120, 128, 0.2);
+}
+
+/* 地点/场所编辑器的 section 样式 */
+.settings-app .wv-place-editor .wv-editor__section,
+.settings-app .wv-location-editor .wv-editor__section {
+    background: #fff;
+    border-radius: 10px;
+    padding: 12px 14px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.settings-app .wv-place-editor .wv-editor__section-title,
+.settings-app .wv-location-editor .wv-editor__section-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--settings-color-blue);
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(10, 132, 255, 0.15);
+}
+
+/* 图标输入框特殊样式 */
+.settings-app .wv-editor__input--icon {
+    width: 50px;
+    flex: 0 0 50px;
+    text-align: center;
+    font-size: 18px;
+    padding: 6px;
+    background: #F2F2F7;
+    box-shadow: inset 0 1.5px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* 坐标分隔符 */
+.settings-app .wv-editor__sep {
+    font-size: 12px;
+    color: var(--settings-color-tertiary);
+    flex-shrink: 0;
+    padding: 0 2px;
+}
+
+/* location-access 编辑器样式（紧凑凹陷） */
+.settings-app .wv-location-editor .wv-location-access {
+    background: #F2F2F7;
+    border-radius: 10px;
+    padding: 10px;
+    box-shadow: inset 0 1.5px 3px rgba(0, 0, 0, 0.06);
+}
+
+.settings-app .wv-location-access__persona {
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.settings-app .wv-location-access__persona.is-enabled {
+    box-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.04),
+        0 0 0 1.5px rgba(10, 132, 255, 0.3);
+}
+
+.settings-app .wv-location-access__persona-header {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    cursor: pointer;
+    gap: 8px;
+}
+
+.settings-app .wv-location-access__persona-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--settings-color-label);
+    flex: 1;
+}
+
+.settings-app .wv-location-access__frequency,
+.settings-app .wv-location-access__note {
+    padding: 8px 10px;
+    font-size: 13px;
+    border: none;
+    border-radius: 8px;
+    background: #F2F2F7;
+    box-shadow: inset 0 1.5px 3px rgba(0, 0, 0, 0.06);
+    transition: all 0.2s ease;
+}
+
+.settings-app .wv-location-access__frequency:focus,
+.settings-app .wv-location-access__note:focus {
+    outline: none;
+    background: #fff;
+    box-shadow:
+        inset 0 1.5px 3px rgba(0, 0, 0, 0.06),
+        0 0 0 2px rgba(10, 132, 255, 0.25);
+}
+
+/* 全选/清空按钮 */
+.settings-app .wv-location-access__select-all,
+.settings-app .wv-location-access__select-none {
+    padding: 5px 12px;
+    font-size: 11px;
+    font-weight: 500;
+    border-radius: 8px;
+    border: none;
+    background: rgba(120, 120, 128, 0.1);
+    color: var(--settings-color-secondary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.settings-app .wv-location-access__select-all:hover,
+.settings-app .wv-location-access__select-none:hover {
+    background: var(--settings-color-blue);
+    color: #fff;
+}
+
+.settings-app .wv-location-access__count {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--settings-color-blue);
+    margin-left: auto;
+}
