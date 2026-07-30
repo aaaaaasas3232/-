@@ -1,0 +1,20 @@
+# 强制所有文本文件以 UTF-8 存储，避免 PowerShell 默认 UTF-16 写入
+*.js       text eol=lf encoding=utf-8
+*.mjs      text eol=lf encoding=utf-8
+*.cjs      text eol=lf encoding=utf-8
+*.json     text eol=lf encoding=utf-8
+*.css      text eol=lf encoding=utf-8
+*.html     text eol=lf encoding=utf-8
+*.md       text eol=lf encoding=utf-8
+*.svg      text eol=lf encoding=utf-8
+*.txt      text eol=lf encoding=utf-8
+
+# Windows 批处理脚本保留 CRLF
+*.bat      text eol=crlf encoding=utf-8
+*.ps1      text eol=crlf encoding=utf-8
+
+# Git LFS 占位（暂未启用）
+*.png binary
+*.jpg binary
+*.gif binary
+*.webp binary
