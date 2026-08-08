@@ -74,6 +74,14 @@ function handlePresetClick(e) {
         b.classList.toggle('is-active', b.dataset.hoursPreset === preset);
     });
 
+    // 如果不是自定义模式，移除自定义选择器
+    if (preset !== 'custom') {
+        const selector = block.querySelector('.wv-hours-custom-selector');
+        if (selector) {
+            selector.remove();
+        }
+    }
+
     // 更新 data 属性
     block.dataset.hoursMode = preset;
 
@@ -113,7 +121,7 @@ function handlePresetClick(e) {
             const endHour = Math.floor((i + 1) * (24 / periodCount));
             return `
                 <div class="wv-hours-period" data-period-idx="${i}">
-                    <span class="wv-hours-period__range">${startHour}-${endHour}</span>
+                    <span class="wv-hours-period__range">${startHour}:00-${endHour}:00</span>
                     <input class="wv-hours-period__name" type="text"
                         data-hours-period="${i}"
                         placeholder="${hourLabel}" value="${name}">
@@ -211,7 +219,7 @@ function applyCustomPreset(block, count) {
             const endHour = Math.floor((i + 1) * (24 / periodCount));
             return `
                 <div class="wv-hours-period" data-period-idx="${i}">
-                    <span class="wv-hours-period__range">${startHour}-${endHour}</span>
+                    <span class="wv-hours-period__range">${startHour}:00-${endHour}:00</span>
                     <input class="wv-hours-period__name" type="text"
                         data-hours-period="${i}"
                         placeholder="${hourLabel}" value="${name}">
@@ -331,36 +339,17 @@ function handleDateClear(e) {
 
 /**
  * 处理场所访问备注的勾选切换
- * 勾选时启用频率选择和备注输入框，取消勾选时禁用
+ * 勾选时高亮行，清除勾选时变灰
  */
 function handleLocationAccessToggle(e) {
-    const checkbox = e.target.closest('.wv-location-access__checkbox');
+    const checkbox = e.target.closest('.wv-access-row__checkbox');
     if (!checkbox) return;
 
-    const personaCard = checkbox.closest('.wv-location-access__persona');
-    if (!personaCard) return;
+    const row = checkbox.closest('.wv-access-row');
+    if (!row) return;
 
-    const isEnabled = checkbox.checked;
-
-    // 切换 card 的 enabled 样式
-    personaCard.classList.toggle('is-enabled', isEnabled);
-
-    // 获取 body
-    const body = personaCard.querySelector('.wv-location-access__persona-body');
-    if (!body) return;
-
-    // 切换 body 的折叠样式
-    body.classList.toggle('is-collapsed', !isEnabled);
-
-    // 启用/禁用频率选择和备注输入框
-    const frequencySelect = body.querySelector('.wv-location-access__frequency');
-    const noteTextarea = body.querySelector('.wv-location-access__note');
-
-    if (frequencySelect) frequencySelect.disabled = !isEnabled;
-    if (noteTextarea) noteTextarea.disabled = !isEnabled;
-
-    // 更新计数
-    updateLocationAccessCount(personaCard.closest('.wv-location-access'));
+    row.classList.toggle('is-on', checkbox.checked);
+    updateLocationAccessCount(row.closest('.wv-location-access'));
 }
 
 /**
@@ -374,7 +363,7 @@ function handleLocationAccessSelect(e) {
     const container = btn.closest('.wv-location-access');
     if (!container) return;
 
-    const checkboxes = container.querySelectorAll('.wv-location-access__checkbox');
+    const checkboxes = container.querySelectorAll('.wv-access-row__checkbox');
 
     if (selectType === 'all') {
         checkboxes.forEach(cb => {
@@ -398,7 +387,7 @@ function handleLocationAccessSelect(e) {
  */
 function updateLocationAccessCount(container) {
     if (!container) return;
-    const checkboxes = container.querySelectorAll('.wv-location-access__checkbox');
+    const checkboxes = container.querySelectorAll('.wv-access-row__checkbox');
     const enabledCount = Array.from(checkboxes).filter(cb => cb.checked).length;
     const totalCount = checkboxes.length;
     const countEl = container.querySelector('.wv-location-access__count');
@@ -473,6 +462,94 @@ function handleZoomChange(e) {
     });
 }
 
+// ============================================
+// 地图拖拽
+// ============================================
+
+/** 地图拖拽状态 */
+let _mapDragState = null;
+
+/** 统一获取坐标（支持鼠标和触摸） */
+const getPointerPos = (e) => {
+    if (e.touches && e.touches.length > 0) {
+        return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+    if (e.changedTouches && e.changedTouches.length > 0) {
+        return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+    }
+    return { x: e.clientX, y: e.clientY };
+};
+
+/**
+ * 开始拖拽
+ */
+function handleMapMouseDown(e) {
+    const stage = e.target.closest('[data-wv-map-stage]');
+    if (!stage) return;
+    
+    // 如果点击的是 pin 元素，不触发地图拖拽（由 pin 自己的拖拽逻辑处理）
+    if (e.target.closest('[data-wv-map-pin]')) return;
+    // 忽略点击按钮等交互元素
+    if (e.target.closest('button, input, select, a')) return;
+
+    const pos = getPointerPos(e);
+    // 获取当前地图偏移
+    const route = window.settingsSdk?.worlds ? (window.__phoneAppsRef?.value?.find?.(a => a.id === 'settings')?.state?.world || {}) : {};
+    _mapDragState = {
+        startX: pos.x,
+        startY: pos.y,
+        startPanX: route.mapPanX ?? 0,
+        startPanY: route.mapPanY ?? 0,
+        stage,
+        isDragging: false,
+    };
+    stage.style.cursor = 'grabbing';
+}
+
+/**
+ * 拖拽中
+ */
+function handleMapMouseMove(e) {
+    if (!_mapDragState) return;
+
+    const pos = getPointerPos(e);
+    const dx = pos.x - _mapDragState.startX;
+    const dy = pos.y - _mapDragState.startY;
+
+    // 移动超过 3px 才算拖拽（避免点击误触）
+    if (!_mapDragState.isDragging && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
+        _mapDragState.isDragging = true;
+    }
+
+    if (_mapDragState.isDragging) {
+        e.preventDefault();
+        dispatchPageAction({
+            action: 'appMethod',
+            appId: 'settings',
+            method: 'worldSetMapPan',
+            payload: { panX: _mapDragState.startPanX + dx, panY: _mapDragState.startPanY + dy },
+        });
+    }
+}
+
+/**
+ * 结束拖拽
+ */
+function handleMapMouseUp(e) {
+    if (!_mapDragState) return;
+    _mapDragState.stage.style.cursor = 'grab';
+    _mapDragState = null;
+}
+
+/**
+ * 鼠标离开 stage 区域时结束拖拽
+ */
+function handleMapMouseLeave(e) {
+    if (!_mapDragState) return;
+    _mapDragState.stage.style.cursor = 'grab';
+    _mapDragState = null;
+}
+
 /**
  * 主点击处理
  */
@@ -492,11 +569,29 @@ export function initWorldEventHandlers() {
     if (_initialized) return;
     _initialized = true;
 
+    // 挂载时间轴拖拽事件（长按卡片可上下拖动重排序）
+    if (typeof window !== 'undefined' && typeof window.__wvAttachTimelineDrag === 'function') {
+        requestAnimationFrame(() => {
+            try { window.__wvAttachTimelineDrag(); } catch (_) {}
+        });
+    }
+
     document.addEventListener('click', handleClick, true);
     document.addEventListener('input', handleInput, true);
     document.addEventListener('change', handleSelectChange, true);
     document.addEventListener('change', handleZoomChange, true);
     document.addEventListener('input', handleZoomInput, true);
+
+    // 地图拖拽事件
+    document.addEventListener('mousedown', handleMapMouseDown, true);
+    document.addEventListener('mousemove', handleMapMouseMove, true);
+    document.addEventListener('mouseup', handleMapMouseUp, true);
+    document.addEventListener('mouseleave', handleMapMouseLeave, true);
+
+    // 触摸事件（移动端支持）
+    document.addEventListener('touchstart', handleMapMouseDown, { passive: false });
+    document.addEventListener('touchmove', handleMapMouseMove, { passive: false });
+    document.addEventListener('touchend', handleMapMouseUp, true);
 }
 
 export function destroyWorldEventHandlers() {
@@ -508,4 +603,15 @@ export function destroyWorldEventHandlers() {
     document.removeEventListener('change', handleSelectChange, true);
     document.removeEventListener('change', handleZoomChange, true);
     document.removeEventListener('input', handleZoomInput, true);
+
+    // 地图拖拽事件
+    document.removeEventListener('mousedown', handleMapMouseDown, true);
+    document.removeEventListener('mousemove', handleMapMouseMove, true);
+    document.removeEventListener('mouseup', handleMapMouseUp, true);
+    document.removeEventListener('mouseleave', handleMapMouseLeave, true);
+
+    // 触摸事件
+    document.removeEventListener('touchstart', handleMapMouseDown);
+    document.removeEventListener('touchmove', handleMapMouseMove);
+    document.removeEventListener('touchend', handleMapMouseUp, true);
 }

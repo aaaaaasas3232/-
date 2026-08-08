@@ -58,14 +58,14 @@ const refresh = () => {
  * 只在 step 跨步时(本工具里是每 0.25 一次)才被调用,因此也额外做一次 rAF 合并。
  */
 let _syncZoomRaf = 0;
-const syncZoomDom = (zoom) => {
+const syncZoomDom = (zoom, panX = 0, panY = 0) => {
     if (typeof window === 'undefined' || typeof document === 'undefined') return;
     if (_syncZoomRaf) return;
     _syncZoomRaf = window.requestAnimationFrame(() => {
         _syncZoomRaf = 0;
         try {
             const world = document.querySelector('.wv-map__world');
-            if (world) world.style.transform = `scale(${zoom})`;
+            if (world) world.style.transform = `scale(${zoom}) translate(${panX}px, ${panY}px)`;
             // 计算反向缩放（与 library.js 的 invZoom 公式保持一致）
             const inv = Math.max(0.35, 1 - (zoom - 1) * 0.08);
             document.querySelectorAll('.wv-map__pin').forEach(pin => {
@@ -256,16 +256,32 @@ export function buildWorldMethods() {
             refresh();
         },
 
+        /** 查看货币详情 */
+        worldViewCurrency(payload = {}) {
+            const route = getRoute(this.app);
+            delete route.editingCurrencyId;
+            route.viewingCurrencyId = payload.id || null;
+            refresh();
+        },
+
+        /** 关闭货币查看 */
+        worldViewCurrencyClose() {
+            delete getRoute(this.app).viewingCurrencyId;
+            refresh();
+        },
+
         /** 编辑货币 */
         worldEditCurrency(payload = {}) {
             const route = getRoute(this.app);
+            delete route.viewingCurrencyId;
             route.editingCurrencyId = payload.id || null;
             refresh();
         },
 
         /** 取消编辑 */
         worldCancelCurrencyEdit() {
-            delete getRoute(this.app).editingCurrencyId;
+            const route = getRoute(this.app);
+            delete route.editingCurrencyId;
             refresh();
         },
 
@@ -338,6 +354,8 @@ export function buildWorldMethods() {
             }
             await sdk.worlds.update(worldId, syncData);
             delete route.editingCurrencyId;
+            // 保存后进入查看模式
+            route.viewingCurrencyId = currencyData.id;
             notify(this.toolkit, 'success', isNew ? '已添加货币' : '已保存货币', name.trim());
             refresh();
             return currencyData;
@@ -734,13 +752,33 @@ export function buildWorldMethods() {
             }
         },
 
+        worldView(payload = {}) {
+            // 先清除编辑态，再设置查看态
+            delete getRoute(this.app).editingId;
+            getRoute(this.app).viewingId = payload.id;
+            refresh();
+        },
+
+        worldViewClose() {
+            // 关闭查看模式，回到收起状态
+            delete getRoute(this.app).viewingId;
+            refresh();
+        },
+
         worldEdit(payload = {}) {
+            // 先清除查看态，再设置编辑态
+            delete getRoute(this.app).viewingId;
             getRoute(this.app).editingId = payload.id;
             refresh();
         },
 
         worldEditCancel() {
-            delete getRoute(this.app).editingId;
+            const route = getRoute(this.app);
+            delete route.editingId;
+            // 取消后进入查看模式
+            if (route.currentWorldId) {
+                route.viewingId = route.currentWorldId;
+            }
             refresh();
         },
 
@@ -758,7 +796,10 @@ export function buildWorldMethods() {
                 const after = sdk.worlds.get(payload.id);
                 console.log('[worldSave] AFTER, world.chronologySettings=', JSON.stringify(after?.chronologySettings || null));
                 notify(this.toolkit, 'success', '已保存世界观', patch.name || payload.id);
-                delete getRoute(this.app).editingId;
+                const route = getRoute(this.app);
+                delete route.editingId;
+                // 保存后进入查看模式
+                route.viewingId = payload.id;
                 refresh();
                 return patch;
             } catch (err) {
@@ -809,7 +850,50 @@ export function buildWorldMethods() {
             const sdk = window.settingsSdk;
             if (!sdk || !payload.id) return null;
             const patch = readPlaceForm();
+            // v0.27：保存地点后，把 realCityRef 的选择回写到 weather app，
+            // 让该城市的卡片显示「(A 城)」映射标记。
+            const oldCityRef = (() => {
+                try {
+                    const old = sdk.places.get(payload.id);
+                    return old?.realCityRef || null;
+                } catch (_) { return null; }
+            })();
+            const newCityRef = patch.realCityRef || null;
+
             await sdk.places.update(payload.id, patch);
+
+            // 调用 weather app 的 service 双向同步 mappedName
+            const appsRef = typeof window !== 'undefined' ? window.__phoneAppsRef : null;
+            const weatherApp = appsRef?.value?.find?.(a => a && a.id === 'weather-app');
+            const setMapping = weatherApp?.services?.setCityMapping;
+            // 拿一份当前 weather cities 列表（含 mappedName），用于「值是否在 weather 里」的判断。
+            // v0.27：places 端可能存了旧的 REAL_CITIES id（如 'hangzhou'），
+            // 这些值在新版本 weather cities 里不存在。同步前先做有效性校验，
+            // 防止「表面写成功但 weather 没认账」的情况。
+            const weatherCities = (() => {
+                try {
+                    return window.weatherAppState?.cities || [];
+                } catch (_) { return []; }
+            })();
+            const cityExists = (name) => weatherCities.some(c => c && c.name === name);
+
+            if (typeof setMapping === 'function') {
+                try {
+                    // 旧映射：清掉（如果变了 / 或被清空 / 或旧值已不在 weather 里）
+                    if (oldCityRef && oldCityRef !== newCityRef && cityExists(oldCityRef)) {
+                        await setMapping({ cityName: oldCityRef, mappedName: null });
+                    }
+                    // 新映射：仅当 cityName 确实在 weather cities 里才写
+                    if (newCityRef && cityExists(newCityRef)) {
+                        await setMapping({ cityName: newCityRef, mappedName: patch.name || null });
+                    } else if (newCityRef) {
+                        console.warn('[worldSavePlace] 新选的城市在 weather 中不存在，跳过同步映射:', newCityRef);
+                    }
+                } catch (e) {
+                    console.warn('[worldSavePlace] 同步 weather 映射失败:', e);
+                }
+            }
+
             notify(this.toolkit, 'success', '已保存地点', patch.name);
             delete getRoute(this.app).editingPlaceId;
             refresh();
@@ -819,7 +903,29 @@ export function buildWorldMethods() {
         async worldDeletePlace(payload = {}) {
             const sdk = window.settingsSdk;
             if (!sdk || !payload.id) return false;
+            // 删除前先看 realCityRef，删完后让 weather 清掉映射（避免被其他地点误映射）
+            let oldCityRef = null;
+            try {
+                const old = sdk.places.get(payload.id);
+                oldCityRef = old?.realCityRef || null;
+            } catch (_) { /* ignore */ }
             await sdk.places.remove(payload.id);
+
+            if (oldCityRef) {
+                const appsRef = window.__phoneAppsRef;
+                const weatherApp = appsRef?.value?.find?.(a => a && a.id === 'weather-app');
+                const setMapping = weatherApp?.services?.setCityMapping;
+                const weatherCities = window.weatherAppState?.cities || [];
+                const cityExists = weatherCities.some(c => c && c.name === oldCityRef);
+                if (typeof setMapping === 'function' && cityExists) {
+                    try {
+                        await setMapping({ cityName: oldCityRef, mappedName: null });
+                    } catch (e) {
+                        console.warn('[worldDeletePlace] 清 weather 映射失败:', e);
+                    }
+                }
+            }
+
             notify(this.toolkit, 'success', '已删除地点', payload.id);
             refresh();
             return true;
@@ -1073,7 +1179,9 @@ export function buildWorldMethods() {
             const MAX_ZOOM = 5;
             const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom));
             route.mapZoom = newZoom;
-            syncZoomDom(newZoom);
+            const panX = route.mapPanX ?? 0;
+            const panY = route.mapPanY ?? 0;
+            syncZoomDom(newZoom, panX, panY);
         },
 
         /** 直接设置地图缩放（用于滑块）。 */
@@ -1085,8 +1193,12 @@ export function buildWorldMethods() {
             const MAX_ZOOM = 5;
             const oldZoom = route.mapZoom ?? 1;
             const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom));
-            // 松手 / 点按钮时统一落库 + 刷新（拖动期间由 worldSyncMapZoom 走 syncZoomDom）。
             route.mapZoom = newZoom;
+            // 重置 zoom=1 时同时清除拖拽偏移，让地图回到中心
+            if (newZoom === 1) {
+                delete route.mapPanX;
+                delete route.mapPanY;
+            }
             refresh();
         },
 
@@ -1094,7 +1206,18 @@ export function buildWorldMethods() {
         worldResetMapZoom() {
             const route = getRoute(this.app);
             route.mapZoom = 1;
+            delete route.mapPanX;
+            delete route.mapPanY;
             refresh();
+        },
+
+        /** 更新地图拖拽偏移（拖拽过程中高频调用）。 */
+        worldSetMapPan(payload = {}) {
+            const route = getRoute(this.app);
+            route.mapPanX = Number(payload.panX) || 0;
+            route.mapPanY = Number(payload.panY) || 0;
+            const zoom = route.mapZoom ?? 1;
+            syncZoomDom(zoom, route.mapPanX, route.mapPanY);
         },
 
         /* ============================================
@@ -1380,7 +1503,7 @@ export function buildWorldMethods() {
                 notify(this.toolkit, 'error', '标题不能为空', '');
                 return null;
             }
-            await sdk.timelines.updateTimelineEvent(payload.eventId, fields);
+            await sdk.timelines.updateTimelineEvent(world.id, payload.eventId, fields);
             notify(this.toolkit, 'success', '已保存', fields.title);
             delete getRoute(this.app).editingChronicleEventId;
             refresh();

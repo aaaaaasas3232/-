@@ -1,0 +1,313 @@
+/**
+ * chat-app / 红包&转账发送弹窗样式
+ *
+ * v0.45 — 红包/转账发送弹窗样式
+ */
+
+/* ============================================
+   红包发送弹窗
+   ============================================ */
+
+.app-shell[data-app-id="chat"] .redpacket-send-modal-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    animation: fadeIn 0.2s ease;
+}
+
+.app-shell[data-app-id="chat"] .redpacket-send-modal {
+    background: white;
+    border-radius: 16px 16px 0 0;
+    width: 100%;
+    max-width: 420px;
+    padding: 20px 20px 40px;
+    box-sizing: border-box;
+    animation: slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.app-shell[data-app-id="chat"] .redpacket-send-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.app-shell[data-app-id="chat"] .redpacket-send-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+}
+
+.app-shell[data-app-id="chat"] .redpacket-send-close {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: #f5f5f5;
+    border: none;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: #666;
+    padding: 0;
+}
+
+.app-shell[data-app-id="chat"] .redpacket-send-close svg {
+    width: 14px; height: 14px;
+}
+
+.app-shell[data-app-id="chat"] .redpacket-send-form {
+    margin-bottom: 16px;
+}
+
+.app-shell[data-app-id="chat"] .redpacket-send-amount-row {
+    display: flex;
+    align-items: center;
+    border-bottom: 2px solid #FF6B8A;
+    padding-bottom: 8px;
+    margin-bottom: 16px;
+}
+
+.app-shell[data-app-id="chat"] .redpacket-send-yen {
+    font-size: 28px;
+    font-weight: 700;
+    color: #FF6B8A;
+    margin-right: 4px;
+    line-height: 1;
+}
+
+.app-shell[data-app-id="chat"] .redpacket-send-amount-input {
+    flex: 1;
+    font-size: 32px;
+    font-weight: 700;
+    color: #FF6B8A;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: inherit;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="chat"] .redpacket-send-amount-input::placeholder {
+    color: #FFB3C6;
+}
+
+.app-shell[data-app-id="chat"] .redpacket-send-message-row {
+    margin-bottom: 8px;
+}
+
+.app-shell[data-app-id="chat"] .redpacket-send-message-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #E9ECEF;
+    border-radius: 10px;
+    font-size: 14px;
+    color: #333;
+    outline: none;
+    box-sizing: border-box;
+    font-family: inherit;
+    transition: border-color 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .redpacket-send-message-input:focus {
+    border-color: #FF6B8A;
+}
+
+.app-shell[data-app-id="chat"] .redpacket-send-message-input::placeholder {
+    color: #adb5bd;
+}
+
+.app-shell[data-app-id="chat"] .redpacket-send-hint {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #adb5bd;
+    margin-bottom: 20px;
+}
+
+.app-shell[data-app-id="chat"] .redpacket-send-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="chat"] .redpacket-send-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 14px;
+    background: linear-gradient(135deg, #FF6B8A, #FF3B5C);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    box-shadow: 0 4px 12px rgba(255, 59, 92, 0.35);
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.app-shell[data-app-id="chat"] .redpacket-send-btn:active {
+    transform: scale(0.97);
+    box-shadow: 0 2px 6px rgba(255, 59, 92, 0.25);
+}
+
+/* ============================================
+   转账发送弹窗
+   ============================================ */
+
+.app-shell[data-app-id="chat"] .transfer-send-modal-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    animation: fadeIn 0.2s ease;
+}
+
+.app-shell[data-app-id="chat"] .transfer-send-modal {
+    background: white;
+    border-radius: 16px 16px 0 0;
+    width: 100%;
+    max-width: 420px;
+    padding: 20px 20px 40px;
+    box-sizing: border-box;
+    animation: slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.app-shell[data-app-id="chat"] .transfer-send-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.app-shell[data-app-id="chat"] .transfer-send-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+}
+
+.app-shell[data-app-id="chat"] .transfer-send-close {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: #f5f5f5;
+    border: none;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: #666;
+    padding: 0;
+}
+
+.app-shell[data-app-id="chat"] .transfer-send-close svg {
+    width: 14px; height: 14px;
+}
+
+.app-shell[data-app-id="chat"] .transfer-send-form {
+    margin-bottom: 16px;
+}
+
+.app-shell[data-app-id="chat"] .transfer-send-amount-row {
+    display: flex;
+    align-items: center;
+    border-bottom: 2px solid #52c41a;
+    padding-bottom: 8px;
+    margin-bottom: 16px;
+}
+
+.app-shell[data-app-id="chat"] .transfer-send-yen {
+    font-size: 28px;
+    font-weight: 700;
+    color: #52c41a;
+    margin-right: 4px;
+    line-height: 1;
+}
+
+.app-shell[data-app-id="chat"] .transfer-send-amount-input {
+    flex: 1;
+    font-size: 32px;
+    font-weight: 700;
+    color: #52c41a;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: inherit;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="chat"] .transfer-send-amount-input::placeholder {
+    color: #b7eb8f;
+}
+
+.app-shell[data-app-id="chat"] .transfer-send-note-row {
+    margin-bottom: 8px;
+}
+
+.app-shell[data-app-id="chat"] .transfer-send-note-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #E9ECEF;
+    border-radius: 10px;
+    font-size: 14px;
+    color: #333;
+    outline: none;
+    box-sizing: border-box;
+    font-family: inherit;
+    transition: border-color 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .transfer-send-note-input:focus {
+    border-color: #52c41a;
+}
+
+.app-shell[data-app-id="chat"] .transfer-send-note-input::placeholder {
+    color: #adb5bd;
+}
+
+.app-shell[data-app-id="chat"] .transfer-send-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="chat"] .transfer-send-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 14px;
+    background: linear-gradient(135deg, #52c41a, #389e0d);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    box-shadow: 0 4px 12px rgba(82, 196, 26, 0.3);
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.app-shell[data-app-id="chat"] .transfer-send-btn:active {
+    transform: scale(0.97);
+    box-shadow: 0 2px 6px rgba(82, 196, 26, 0.2);
+}
+
+/* ============================================
+   动画
+   ============================================ */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}

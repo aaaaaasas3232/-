@@ -20,7 +20,7 @@ import {
     ANCHOR_TYPES,
 } from './sdk/defaults.js';
 import { buildPresetGroupState } from './presets/world-presets.js';
-import { renderEditForm } from './sdk/form-renderer.js';
+import { renderEditForm, renderViewForm } from './sdk/form-renderer.js';
 import {
     WORLD_GROUP_FORM_SCHEMA,
     ANCHOR_FORM_SCHEMA,
@@ -232,14 +232,24 @@ const renderWorldOverview = (app) => {
         return renderLibraryOverview(app);
     }
 
-    // 检查是否处于编辑态
+    // 检查是否处于查看态或编辑态
+    const viewingId = route.viewingId;
     const editingId = route.editingId;
+    const isViewing = viewingId === world.id;
     const isEditing = editingId === world.id;
 
     if (isEditing) {
         return `
             <div class="wv-overview wv-overview--editing">
                 ${renderWorldEditForm(world, route)}
+            </div>
+        `;
+    }
+
+    if (isViewing) {
+        return `
+            <div class="wv-overview wv-overview--viewing">
+                ${renderWorldViewForm(world, route)}
             </div>
         `;
     }
@@ -251,13 +261,25 @@ const renderWorldOverview = (app) => {
 
     return `
         <div class="wv-overview">
-            <div class="wv-landing" ${wvAction('worldEdit', { id: world.id })}>
+            <div class="wv-landing" ${wvAction('worldView', { id: world.id })}>
                 <div class="wv-landing__title">世界观概述</div>
                 ${summaryHtml}
-                <div class="wv-landing__cta">点击进入完整编辑视图 ›</div>
+                <div class="wv-landing__cta">点击查看完整内容 ›</div>
             </div>
         </div>
     `;
+};
+
+// 世界观查看模式表单
+const renderWorldViewForm = (world, route) => {
+    const ctx = {
+        e,
+        checkedAttr,
+        route,
+        closeAction: wvAction('worldViewClose'),
+        editAction: wvAction('worldEdit', { id: world.id }),
+    };
+    return renderViewForm(WORLD_FORM_SCHEMA, world, ctx);
 };
 
 const statColor = (tab) => ({
@@ -384,6 +406,7 @@ const renderWorldItemCard = (item, currentGroupId) => {
             <div class="wv-list__item-name">${e(item.name || item.id)}</div>
             <div class="wv-list__item-actions">
                 <button class="wv-btn wv-btn--primary wv-btn--sm" ${wvAction('worldEnter', { id: item.id })}>进入 ›</button>
+                <button class="wv-btn wv-btn--ghost wv-btn--sm" ${wvAction('worldView', { id: item.id })}>查看</button>
                 <button class="wv-btn wv-btn--ghost wv-btn--sm" ${wvAction('worldEdit', { id: item.id })}>编辑</button>
                 ${currentGroupId !== undefined ? `
                     <div class="wv-select-icon-wrap">
@@ -473,11 +496,9 @@ const renderLocationsList = (app) => {
                 ${emptyHint('', '还没有场所，点击右上角新建。')}
             ` : locations.map(loc => {
                 const isEditing = loc.id === editingId;
-                return `
-                    <div class="wv-list__item">
-                        ${isEditing ? renderLocationEditForm(loc, world, app) : renderLocationCard(loc)}
-                    </div>
-                `;
+                return isEditing
+                    ? `<div class="wv-list__item">${renderLocationEditForm(loc, world, app)}</div>`
+                    : renderLocationCard(loc);
             }).join('')}
         </div>
     `;
@@ -487,21 +508,25 @@ const renderLocationCard = (loc) => {
     const sdk = window.settingsSdk;
     const place = loc.placeRef ? sdk?.places.get(loc.placeRef) : null;
     const pos = loc.position || { x: 0, y: 0 };
+    const coordText = loc.isCenter ? `原点` : `x=${pos.x}, y=${pos.y}`;
     return `
-        <div class="wv-list__item-head">
-            <div class="wv-list__item-name">${e(loc.name)} ${loc.isCenter ? '<span class="wv-list__item-badge">主场所</span>' : ''}</div>
-            <div class="wv-list__item-actions">
-                ${!loc.isCenter ? `<button class="wv-btn wv-btn--ghost wv-btn--sm" ${wvAction('worldSetCenterLocation', { id: loc.id })}>设为主场所</button>` : ''}
-                <button class="wv-btn wv-btn--ghost wv-btn--sm" ${wvAction('worldEditLocation', { id: loc.id })}>编辑</button>
-                <button class="wv-btn wv-btn--danger wv-btn--sm" ${wvAction('worldDeleteLocation', { id: loc.id })}>删除</button>
+        <div class="wv-loc-card">
+            <div class="wv-loc-card__main">
+                <span class="wv-loc-card__icon">${e(loc.icon || '')}</span>
+                <span class="wv-loc-card__name">${e(loc.name)}</span>
+                ${loc.isCenter ? `<span class="wv-loc-card__badge wv-loc-card__badge--center">主</span>` : ''}
+                ${loc.accessType === 'restricted' ? `<span class="wv-loc-card__badge wv-loc-card__badge--warn">受限</span>` : ''}
             </div>
-        </div>
-        ${loc.summary ? `<div class="wv-list__item-summary">${e(loc.summary)}</div>` : ''}
-        <div class="wv-list__item-fields">
-            ${place ? `<span class="wv-list__item-field"><span class="wv-list__item-field-key">所属地点</span> ${e(place.name)}</span>` : ''}
-            <span class="wv-list__item-field"><span class="wv-list__item-field-key">坐标</span> ${formatCoord(pos)}</span>
-            ${loc.accessType === 'restricted' ? '<span class="wv-tag wv-tag--warn">受限</span>' : ''}
-            <span class="wv-list__item-field"><span class="wv-list__item-field-key">可见角色</span> ${e((loc.allowedRoles || ['user','ai']).join(','))}</span>
+            <div class="wv-loc-card__meta">
+                ${place ? `<span class="wv-loc-card__meta-item"><span class="wv-loc-card__meta-label">地点</span>${e(place.name)}</span>` : ''}
+                <span class="wv-loc-card__meta-item"><span class="wv-loc-card__meta-label">坐标</span>${coordText}</span>
+                <span class="wv-loc-card__meta-item"><span class="wv-loc-card__meta-label">可见</span>${e((loc.allowedRoles || ['user','ai']).join(','))}</span>
+            </div>
+            <div class="wv-loc-card__actions">
+                ${!loc.isCenter ? `<button class="wv-icon-btn" ${wvAction('worldSetCenterLocation', { id: loc.id })} title="设为主场所"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>` : ''}
+                <button class="wv-icon-btn" ${wvAction('worldEditLocation', { id: loc.id })} title="编辑"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                <button class="wv-icon-btn wv-icon-btn--danger" ${wvAction('worldDeleteLocation', { id: loc.id })} title="删除"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg></button>
+            </div>
         </div>
     `;
 };
@@ -563,16 +588,16 @@ const renderMapPlacePin = (place, editingId, world) => {
         return renderPlaceEditForm(place, world);
     }
     return `
-        <div class="wv-list__item">
-            <div class="wv-list__item-head">
-                <span class="wv-list__item-icon">${e(place.icon || '')}</span>
-                <span class="wv-list__item-name">${e(place.name)}</span>
+        <div class="wv-place-item">
+            <div class="wv-place-item__row">
+                <span class="wv-place-item__icon">${e(place.icon || '')}</span>
+                <span class="wv-place-item__name">${e(place.name)}</span>
+                <div class="wv-place-item__actions">
+                    <button class="wv-btn wv-btn--ghost wv-btn--sm" ${wvAction('worldEditPlace', { id: place.id })}>编辑</button>
+                    <button class="wv-btn wv-btn--ghost wv-btn--sm wv-btn--danger" ${wvAction('worldDeletePlace', { id: place.id })}>删除</button>
+                </div>
             </div>
-            <div class="wv-list__item-actions">
-                <button class="wv-btn wv-btn--ghost wv-btn--sm" ${wvAction('worldEditPlace', { id: place.id })}>编辑</button>
-                <button class="wv-btn wv-btn--ghost wv-btn--sm wv-btn--danger" ${wvAction('worldDeletePlace', { id: place.id })}>删除</button>
-            </div>
-            ${place.realCityRef ? `<div class="wv-list__item-fields"><span class="wv-list__item-field"><span class="wv-list__item-field-key">天气映射</span> ${e(getCityLabel(place.realCityRef))}</span></div>` : ''}
+            ${place.realCityRef ? `<div class="wv-place-item__sub"><span class="wv-place-item__sub-key">天气映射</span><span class="wv-place-item__sub-val">${e(getCityLabel(place.realCityRef))}</span></div>` : ''}
         </div>
     `;
 };
@@ -583,19 +608,19 @@ const renderMapLocationRow = (loc, editingId, world, app) => {
         return renderLocationEditForm(loc, world, app);
     }
     const badges = [
-        loc.isCenter ? '<span class="wv-tag wv-tag--primary">主场所</span>' : '',
-        loc.accessType === 'restricted' ? '<span class="wv-tag wv-tag--warning">受限</span>' : '',
+        loc.isCenter ? '<span class="wv-loc-item__badge wv-loc-item__badge--center">主场所</span>' : '',
+        loc.accessType === 'restricted' ? '<span class="wv-loc-item__badge wv-loc-item__badge--warn">受限</span>' : '',
     ].join('');
     return `
-        <div class="wv-list__item">
-            <div class="wv-list__item-head">
-                <span class="wv-list__item-icon">${e(loc.icon || '')}</span>
-                <span class="wv-list__item-name">${e(loc.name)}</span>
+        <div class="wv-loc-item">
+            <div class="wv-loc-item__row">
+                <span class="wv-loc-item__icon">${e(loc.icon || '')}</span>
+                <span class="wv-loc-item__name">${e(loc.name)}</span>
                 ${badges}
-            </div>
-            <div class="wv-list__item-actions">
-                <button class="wv-btn wv-btn--ghost wv-btn--sm" ${wvAction('worldEditLocation', { id: loc.id })}>编辑</button>
-                <button class="wv-btn wv-btn--ghost wv-btn--sm wv-btn--danger" ${wvAction('worldDeleteLocation', { id: loc.id })}>删除</button>
+                <div class="wv-loc-item__actions">
+                    <button class="wv-btn wv-btn--ghost wv-btn--sm" ${wvAction('worldEditLocation', { id: loc.id })}>编辑</button>
+                    <button class="wv-btn wv-btn--ghost wv-btn--sm wv-btn--danger" ${wvAction('worldDeleteLocation', { id: loc.id })}>删除</button>
+                </div>
             </div>
         </div>
     `;
@@ -611,6 +636,8 @@ const renderMap = (app) => {
     const route = app?.state?.world || {};
     const mapMode = route.mapMode || 'place';
     const zoom = app?.state?.world?.mapZoom ?? 1;
+    const panX = route.mapPanX ?? 0;
+    const panY = route.mapPanY ?? 0;
     const editingPlaceId = route.editingPlaceId;
     const editingLocationId = route.editingLocationId;
     const centerPlaceId = route.mapCenterPlaceId;
@@ -684,9 +711,9 @@ const renderMap = (app) => {
                     </div>
                 </div>
 
-                <div class="wv-map__stage">
+                <div class="wv-map__stage" data-wv-map-stage style="cursor: grab;">
                     ${places.length === 0 ? emptyHint('◈', '还没有地点，请先创建') : `
-                        <div class="wv-map__world" style="transform:scale(${zoom})">
+                        <div class="wv-map__world" style="transform:scale(${zoom}) translate(${panX}px, ${panY}px)">
                             ${centerPlace?.mapImageUrl
                                 ? `<img class="wv-map__bg-image" src="${e(centerPlace.mapImageUrl)}" alt="地图背景" />`
                                 : '<div class="wv-map__grid"></div>'}
@@ -770,9 +797,9 @@ const renderMap = (app) => {
                     </div>
                 </div>
 
-                <div class="wv-map__stage">
+                <div class="wv-map__stage" data-wv-map-stage style="cursor: grab;">
                     ${filteredLocations.length === 0 ? emptyHint('', '该地点下还没有场所') : `
-                        <div class="wv-map__world" style="transform:scale(${zoom})">
+                        <div class="wv-map__world" style="transform:scale(${zoom}) translate(${panX}px, ${panY}px)">
                             ${selectedPlace?.mapImageUrl
                                 ? `<img class="wv-map__bg-image" src="${e(selectedPlace.mapImageUrl)}" alt="场所地图背景" />`
                                 : '<div class="wv-map__grid"></div>'}
@@ -1061,14 +1088,9 @@ const renderChronicle = (app) => {
                              data-wv-tl-id="${e(evt.id)}"
                              data-wv-tl-index="${idx}">
                             <div class="wv-timeline__dot"></div>
-                            <div class="wv-timeline__card"
-                                 data-wv-tl-card
-                                 data-wv-tl-id="${e(evt.id)}"
-                                 data-wv-tl-handle>
-                                ${editingEventId === evt.id
-                                    ? renderChronicleEventEditForm(evt)
-                                    : renderChronicleEventRow(evt)}
-                            </div>
+                            ${editingEventId === evt.id
+                                ? renderChronicleEventEditForm(evt)
+                                : renderChronicleEventRow(evt)}
                         </div>
                     `).join('')}
                 </div>
@@ -1271,8 +1293,6 @@ const renderFlow = (app) => {
         const truncatedContent = flow.content && flow.content.length > 60
             ? e(flow.content.substring(0, 60)) + '…'
             : e(flow.content || '');
-        const createdDate = formatDate(flow.createdAt || Date.now());
-
         if (isEditing) {
             return `
                 <div class="wv-editor wv-ticket-editor">
@@ -1297,15 +1317,26 @@ const renderFlow = (app) => {
         return `
             <div class="wv-ticket" ${wvAction('worldEditFlow', { flowId: flow.id })}>
                 <div class="wv-ticket__body">
-                    <div class="wv-ticket__header">
-                        <span class="wv-ticket__date">${createdDate}</span>
+                    <div class="wv-ticket__info">
+                        <div class="wv-ticket__title">${e(flow.title || '未命名')}</div>
+                        <div class="wv-ticket__content">${truncatedContent}</div>
                     </div>
-                    <div class="wv-ticket__title">${e(flow.title || '未命名')}</div>
-                    <div class="wv-ticket__content">${truncatedContent}</div>
+                </div>
+                <div class="wv-ticket__divider">
+                    <div class="wv-ticket__divider-top"></div>
+                    <div class="wv-ticket__divider-bottom"></div>
                 </div>
                 <div class="wv-ticket__footer">
                     <button class="wv-btn wv-btn--ghost wv-btn--sm" ${wvAction('worldEditFlow', { flowId: flow.id })}>编辑</button>
                     <button class="wv-btn wv-btn--danger wv-btn--sm" ${wvAction('worldDeleteFlow', { flowId: flow.id })}>删除</button>
+                </div>
+                <div class="wv-ticket__notch">
+                    <div class="wv-ticket__notch-hole"></div>
+                    <div class="wv-ticket__notch-hole"></div>
+                    <div class="wv-ticket__notch-hole"></div>
+                    <div class="wv-ticket__notch-hole"></div>
+                    <div class="wv-ticket__notch-hole"></div>
+                    <div class="wv-ticket__notch-hole"></div>
                 </div>
             </div>
         `;
@@ -1560,6 +1591,7 @@ const renderChronicleEventRow = (evt) => {
 
     // 格式化日期显示（v0.17）：「大周期名称 数值 大周期单位 中周期名称 数值 中周期单位 小周期名称 数值 小周期单位」
     // 例如：洪武 5 年 新 3 月
+    // 注意：如果周期名称为空，会用「大周期/中周期/小周期（日）」替代
     const formatChronoDate = (dateStr) => {
         if (!dateStr || !dateStr.includes('/')) return '自定义';
         const parts = dateStr.split('/');
@@ -1570,33 +1602,37 @@ const renderChronicleEventRow = (evt) => {
         const year = parts[0] || '', month = parts[1] || '', day = parts[2] || '';
         if (!year && !month && !day) return '自定义';
 
-    // 拼装 3 段：大、中、小（"小" 在 v0.17 后代表"日"）
-    // 没填的段（name + val + label 全空）直接省略，否则渲染「名 数值 单位」
-    // val 为空字符串时显示 '·' 而不是 '_'（_ 留给「输入了无效值」的语义）
-    const renderNumericPart = (name, val, label) => {
-        const hasAny = name || val || label;
-        if (!hasAny) return '';
-        const displayVal = val === '' ? '·' : (val || '_');
-        return `${name || '·'} ${displayVal} ${label || '·'}`;
-    };
-    return [
-        renderNumericPart(largeCycleName, year, yearLabel),
-        renderNumericPart(mediumCycleName, month, monthLabel),
-        renderNumericPart(smallCycleName, day, dayLabel),
-    ].filter(s => s).join(' ');
+        // 拼装 3 段：大、中、小（"小" 在 v0.17 后代表"日"）
+        // 没填的段（name + val + label 全空）直接省略，否则渲染「名 数值 单位」
+        // val 为空字符串时显示 '·' 而不是 '_'（_ 留给「输入了无效值」的语义）
+        const renderNumericPart = (name, val, label, fallbackName) => {
+            const hasAny = name || val || label;
+            if (!hasAny) return '';
+            const displayVal = val === '' ? '·' : (val || '_');
+            const displayName = name || fallbackName || '·';
+            return `${displayName} ${displayVal} ${label || '·'}`;
+        };
+        return [
+            renderNumericPart(largeCycleName, year, yearLabel, '大周期'),
+            renderNumericPart(mediumCycleName, month, monthLabel, '中周期'),
+            renderNumericPart(smallCycleName, day, dayLabel, '小周期'),
+        ].filter(s => s).join(' ');
     };
 
     const ownerLabel = evt._ownerLabel || '';
     return `
-        <div class="wv-chronicle__event-head">
-            <span class="wv-chronicle__event-date">${e(formatChronoDate(evt.date || ''))}</span>
-            ${ownerLabel ? `<span class="wv-chronicle__event-owner">${e(ownerLabel)}</span>` : ''}
-            <span class="wv-chronicle__event-title">${e(evt.title)}</span>
-        </div>
-        ${evt.description ? `<div class="wv-chronicle__event-desc">${e(evt.description)}</div>` : ''}
-        <div class="wv-chronicle__event-actions">
-            <button class="wv-btn wv-btn--ghost wv-btn--sm" ${wvAction('worldEditTimelineEvent', { eventId: evt.id })}>编辑</button>
-            <button class="wv-btn wv-btn--danger wv-btn--sm" ${wvAction('worldDeleteTimelineEvent', { eventId: evt.id })}>×</button>
+        <div class="wv-tlcard" data-wv-tl-card data-wv-tl-id="${e(evt.id)}">
+            <div class="wv-tlcard__body">
+                <div class="wv-tlcard__header">
+                    <span class="wv-tlcard__title">${e(evt.title)}</span>
+                    <span class="wv-tlcard__date">${e(formatChronoDate(evt.date || ''))}</span>
+                </div>
+                ${evt.description ? `<div class="wv-tlcard__desc">${e(evt.description)}</div>` : ''}
+            </div>
+            <div class="wv-tlcard__actions">
+                <button class="wv-tlcard__btn" ${wvAction('worldEditTimelineEvent', { eventId: evt.id })}>编辑</button>
+                <button class="wv-tlcard__btn wv-tlcard__btn--del" ${wvAction('worldDeleteTimelineEvent', { eventId: evt.id })}>删除</button>
+            </div>
         </div>
     `;
 };
@@ -1678,14 +1714,22 @@ const renderAssets = (app) => {
     const currencies = world.currencies || [];
     const baseCurrency = currencies.find(c => c.isBase) || currencies[0];
     const editingId = route.editingCurrencyId;
+    const viewingId = route.viewingCurrencyId;
     const isCreating = editingId === '__new__';
 
     // 渲染单个货币卡片
     const renderCurrencyCard = (curr) => {
         const isEditing = curr.id === editingId;
+        const isViewing = curr.id === viewingId;
+
         if (isEditing) {
             return renderCurrencyEditForm(curr, currencies);
         }
+
+        if (isViewing) {
+            return renderCurrencyViewForm(curr, baseCurrency);
+        }
+
         const exchangeRate = curr.isBase ? '基准' : (curr.exchangeToBase != null ? `1 ${curr.name} = ${curr.exchangeToBase} ${baseCurrency?.name || '基准'}` : '—');
         return `
             <div class="wv-list__item wv-assets__currency-card">
@@ -1695,14 +1739,39 @@ const renderAssets = (app) => {
                     ${curr.unit ? `<span class="wv-tag wv-tag--secondary">${e(curr.unit)}</span>` : ''}
                     ${curr.isBase ? '<span class="wv-tag wv-tag--primary">基准</span>' : ''}
                     <div class="wv-list__item-actions">
-                        ${!curr.isBase ? `<button class="wv-btn wv-btn--ghost wv-btn--sm" ${wvAction('worldSetBaseCurrency', { id: curr.id })}>设基准</button>` : ''}
-                        <button class="wv-btn wv-btn--ghost wv-btn--sm" ${wvAction('worldEditCurrency', { id: curr.id })}>编辑</button>
-                        ${!curr.isBase ? `<button class="wv-btn wv-btn--danger wv-btn--sm" ${wvAction('worldDeleteCurrency', { id: curr.id })}>删除</button>` : ''}
+                        <button class="wv-btn wv-btn--ghost wv-btn--xs" ${wvAction('worldViewCurrency', { id: curr.id })}>查看</button>
+                        ${!curr.isBase ? `<button class="wv-btn wv-btn--ghost wv-btn--xs" ${wvAction('worldSetBaseCurrency', { id: curr.id })}>设基准</button>` : ''}
+                        <button class="wv-btn wv-btn--ghost wv-btn--xs" ${wvAction('worldEditCurrency', { id: curr.id })}>编辑</button>
+                        ${!curr.isBase ? `<button class="wv-btn wv-btn--danger wv-btn--xs" ${wvAction('worldDeleteCurrency', { id: curr.id })}>删除</button>` : ''}
                     </div>
                 </div>
-                ${curr.note ? `<div class="wv-list__item-summary">${e(curr.note)}</div>` : ''}
-                <div class="wv-list__item-fields">
-                    <span class="wv-list__item-field"><span class="wv-list__item-field-key">汇率</span> ${e(exchangeRate)}</span>
+            </div>
+        `;
+    };
+
+    // 渲染货币查看表单
+    const renderCurrencyViewForm = (curr, baseCurrency) => {
+        const exchangeRate = curr.isBase ? '基准' : (curr.exchangeToBase != null ? `1 ${curr.name} = ${curr.exchangeToBase} ${baseCurrency?.name || '基准'}` : '—');
+        return `
+            <div class="wv-editor wv-editor--view wv-assets__currency-form">
+                <div class="wv-view__row">
+                    <span class="wv-view__label">名称</span>
+                    <span class="wv-view__value">${e(curr.name || '')}</span>
+                </div>
+                <div class="wv-view__row">
+                    <span class="wv-view__label">符号</span>
+                    <span class="wv-view__value">${e(curr.symbol || '')}</span>
+                </div>
+                ${curr.unit ? `<div class="wv-view__row"><span class="wv-view__label">单位</span><span class="wv-view__value">${e(curr.unit)}</span></div>` : ''}
+                ${curr.note ? `<div class="wv-view__row"><span class="wv-view__label">说明</span><span class="wv-view__value">${e(curr.note)}</span></div>` : ''}
+                <div class="wv-view__row">
+                    <span class="wv-view__label">汇率</span>
+                    <span class="wv-view__value">${e(exchangeRate)}</span>
+                </div>
+                ${curr.isBase ? '<div class="wv-view__row"><span class="wv-view__label">类型</span><span class="wv-view__value">基准货币</span></div>' : ''}
+                <div class="wv-editor__actions wv-editor__actions--compact">
+                    <button class="wv-btn wv-btn--ghost wv-btn--pill" ${wvAction('worldViewCurrencyClose')}>收起</button>
+                    <button class="wv-btn wv-btn--ghost wv-btn--pill" ${wvAction('worldEditCurrency', { id: curr.id })}>编辑</button>
                 </div>
             </div>
         `;
@@ -1716,48 +1785,56 @@ const renderAssets = (app) => {
 
         return `
             <div class="wv-editor wv-assets__currency-form">
-                <div class="wv-editor__row wv-editor__row--first">
+                <div class="wv-editor__row">
+                    <label class="wv-editor__label">名称 *</label>
                     <input class="wv-editor__input" type="text"
                         data-currency-field="name"
-                        placeholder="货币名称 *"
+                        placeholder="名称 *"
                         value="${e(curr.name || '')}">
                 </div>
-                <div class="wv-editor__row wv-editor__row--inline">
-                    <input class="wv-editor__input wv-editor__input--small" type="text"
+                <div class="wv-editor__row">
+                    <label class="wv-editor__label">符号</label>
+                    <input class="wv-editor__input" type="text"
                         data-currency-field="symbol"
                         placeholder="符号"
                         value="${e(curr.symbol || '')}" maxlength="3">
-                    <input class="wv-editor__input wv-editor__input--small" type="text"
+                </div>
+                <div class="wv-editor__row">
+                    <label class="wv-editor__label">单位</label>
+                    <input class="wv-editor__input" type="text"
                         data-currency-field="unit"
                         placeholder="单位"
-                        value="${e(curr.unit || '')}" maxlength="6">
+                        value="${e(curr.unit || '')}">
                 </div>
-                <div class="wv-editor__row wv-editor__row--stacked">
-                    <textarea class="wv-editor__textarea" rows="2"
+                <div class="wv-editor__row">
+                    <label class="wv-editor__label">说明</label>
+                    <textarea class="wv-editor__textarea" rows="1"
                         data-currency-field="note"
-                        placeholder="说明（如：1 金币 = 100 铜币）">${e(curr.note || '')}</textarea>
+                        placeholder="说明">${e(curr.note || '')}</textarea>
                 </div>
-                <div class="wv-editor__row wv-editor__row--exchange-row">
+                <div class="wv-editor__row">
+                    <label class="wv-editor__label">汇率</label>
                     <div class="wv-editor__row-inline wv-editor__row-inline--exchange">
-                        <input class="wv-editor__input wv-editor__input--num" type="number" step="0.01" min="0"
+                        <input class="wv-editor__input wv-editor__input--num wv-editor__input--tiny" type="number" step="0.01" min="0"
                             data-currency-field="exchangeToBase"
                             placeholder="1"
                             value="${curr.exchangeToBase != null ? e(String(curr.exchangeToBase)) : ''}">
                         <span class="wv-exchange__name" data-exchange-currency-name="${e(curr.name || '')}">${e(curr.name || '货币')}</span>
                         <span class="wv-exchange__equals">=</span>
-                        <input class="wv-editor__input wv-editor__input--num" type="number" step="0.01" min="0"
+                        <input class="wv-editor__input wv-editor__input--num wv-editor__input--tiny" type="number" step="0.01" min="0"
                             data-currency-field="baseAmount"
                             placeholder="1"
                             value="${curr.baseAmount != null ? e(String(curr.baseAmount)) : '1'}">
-                        <select class="wv-editor__select wv-editor__select--currency" data-currency-field="baseCurrencyId">
-                            <option value="">选择基准货币</option>
-                            ${baseOptions.map(b => `<option value="${e(b.id)}" ${b.id === selectedBaseId ? 'selected' : ''}>${e(b.name)}</option>`).join('')}
+                        <select class="wv-editor__select wv-editor__select--compact" data-currency-field="baseCurrencyId">
+                            <option value="">基准</option>
+                            ${baseOptions.map(b => `<option value="${e(b.id)}" ${b.id ===selectedBaseId ? 'selected' : ''}>${e(b.name)}</option>`).join('')}
                         </select>
                     </div>
                 </div>
-                <div class="wv-editor__actions">
-                    <button class="wv-btn wv-btn--primary" ${wvAction('worldSaveCurrency', { id: curr.id || '__new__' })}>保存</button>
-                    <button class="wv-btn wv-btn--ghost" ${wvAction('worldCancelCurrencyEdit')}>取消</button>
+                <div class="wv-editor__actions wv-editor__actions--compact">
+                    <button class="wv-btn wv-btn--ghost wv-btn--pill" ${wvAction('worldViewCurrency')}>收起</button>
+                    <button class="wv-btn wv-btn--primary wv-btn--pill" ${wvAction('worldSaveCurrency', { id: curr.id || '__new__' })}>保存</button>
+                    <button class="wv-btn wv-btn--ghost wv-btn--pill" ${wvAction('worldCancelCurrencyEdit')}>取消</button>
                 </div>
             </div>
         `;
@@ -2064,6 +2141,7 @@ export function renderWorldLibrary(app) {
 
 const TL_LONG_PRESS_MS = 350;
 const TL_DRAG_ACTIVATED_CLASS = 'is-dragging';
+const TL_PRESS_CLASS = 'wv-tlcard--pressed';
 const TL_PLACEHOLDER_CLASS = 'wv-timeline__placeholder';
 
 let __wvTlDrag = null;
@@ -2088,7 +2166,7 @@ const tlCollectOrderedIds = (timeline) => tlGetRenderedCardNodes(timeline).map(c
 const tlResetDragStyles = () => {
     if (__wvTlDrag) {
         const { card, placeholder } = __wvTlDrag;
-        card?.classList?.remove(TL_DRAG_ACTIVATED_CLASS);
+        card?.classList?.remove(TL_DRAG_ACTIVATED_CLASS, TL_PRESS_CLASS);
         placeholder?.parentNode?.removeChild?.(placeholder);
         document.body.classList.remove('wv-timeline-dragging');
     }
@@ -2115,6 +2193,9 @@ const __wvAttachTimelineDrag = () => {
                 longPressTimer = null;
             }
             pressStartXY = null;
+            if (activeCardEl) {
+                activeCardEl.classList.remove(TL_PRESS_CLASS);
+            }
         };
 
         const findInsertBeforeNode = (clientY) => {
@@ -2167,9 +2248,14 @@ const __wvAttachTimelineDrag = () => {
             activeNodeEl = node;
             activePointerId = ev.pointerId;
             pressStartXY = { x: ev.clientX, y: ev.clientY };
+
+            // 立即给按压反馈，让用户知道按住了
+            card.classList.add(TL_PRESS_CLASS);
+
             longPressTimer = setTimeout(() => {
                 // 进入拖拽态
                 if (!activeCardEl) return;
+                card.classList.remove(TL_PRESS_CLASS);
                 card.classList.add(TL_DRAG_ACTIVATED_CLASS);
                 document.body.classList.add('wv-timeline-dragging');
                 __wvTlDrag = { card, placeholder: null };
@@ -2270,9 +2356,12 @@ const __wvAttachTimelineDrag = () => {
             tlResetDragStyles();
             activeCardEl = null;
             activeNodeEl = null;
+            activePointerId = null;
         });
     });
 };
+
+export { __wvAttachTimelineDrag };
 
 if (typeof window !== 'undefined') {
     window.__wvAttachTimelineDrag = __wvAttachTimelineDrag;

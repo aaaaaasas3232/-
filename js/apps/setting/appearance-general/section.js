@@ -26,6 +26,16 @@ import {
     renderSaveBar,
 } from '../ui-components.js';
 
+import {
+    APPEARANCE_STORE_NAME,
+    APPEARANCE_DB_KEY,
+} from './defaults.js';
+
+import {
+    DESKTOP_GRID_ROWS_OPTIONS,
+    clampDesktopGridRows,
+} from './theme-bridge.js';
+
 // 手机壳模块（新版）
 import {
     // 状态
@@ -63,13 +73,40 @@ import {
     applyExternalState as applyStatusBarExternalState,
 } from './phone-statusbar/index.js';
 
-import { applyDeviceTheme } from './theme-bridge.js';
+import {
+    applyDeviceTheme,
+    PHONE_HEIGHT_MIN,
+    PHONE_HEIGHT_MAX,
+    PHONE_HEIGHT_DEFAULT,
+    PHONE_Y_OFFSET_MIN,
+    PHONE_Y_OFFSET_MAX,
+    PHONE_Y_OFFSET_DEFAULT,
+} from './theme-bridge.js';
 
 const COLOR_METHOD = 'updateAppearanceField';
 const APP_ID = 'settings';
 
 function pct(value) {
     return Math.round((Number(value) || 0) * 100);
+}
+
+/**
+ * 把当前 app.state.ui.appearance 写入 IndexedDB（deviceSettings::device-theme）。
+ * 之前只有用户主动点保存按钮才会写，导致外观设置在手机端不持久化。
+ * 现在所有 onApply 回调都不再依赖手动保存。
+ */
+function persistAppearance(app) {
+    if (!app || !app.state || !app.state.ui || !app.state.ui.appearance) return;
+    const ui = { ...app.state.ui.appearance };
+    const db = app.toolkit && app.toolkit.db;
+    if (!db || !db.put) return;
+    db.put(APPEARANCE_STORE_NAME, {
+        key: APPEARANCE_DB_KEY,
+        ...ui,
+        updatedAt: Date.now(),
+    }).catch((err) => {
+        console.warn('[settings] 外观设置自动保存失败', err);
+    });
 }
 
 // ============================================
@@ -90,6 +127,45 @@ function renderPhoneCaseDIY() {
 function renderScreenWallpaperDIY() {
     const state = getScreenWallpaperState();
     return renderScreenWallpaperPanel(state);
+}
+
+// ============================================
+// 桌面网格选择（列数 / 行数）
+// ============================================
+
+/**
+ * 渲染「桌面网格」分组：只暴露「行数」（3~8）的数字按钮选择器。
+ * 列数固定为 4，不再开放自定义 —— 用户说「去掉列的自定义」。
+ * 每个按钮都是一个独立 appMethod 调用 —— 不会因为 slider 拖动产生高频更新。
+ */
+function renderDesktopGridPicker(ui) {
+    const currentRows = clampDesktopGridRows(ui.desktopGridRows);
+
+    const rowsChips = DESKTOP_GRID_ROWS_OPTIONS.map(value => ({
+        label: String(value),
+        value,
+    }));
+
+    const rowsRow = renderRow({
+        label: '行数',
+        description: `当前 ${currentRows} 行（每页图标行数，可翻页）`,
+        trailing: renderChipGroup({
+            presets: rowsChips,
+            currentValue: currentRows,
+            mod: 'square',
+            toAction: (preset) => ({
+                action: 'appMethod',
+                method: 'updateAppearanceField',
+                payload: { field: 'desktopGridRows', value: preset.value },
+            }),
+        }),
+    });
+
+    return `
+        <div class="settings-stack">
+            ${rowsRow}
+        </div>
+    `;
 }
 
 // ============================================
@@ -124,6 +200,51 @@ export function renderAppearanceSection(app) {
         value: capacityPct,
         field: 'batteryCapacity',
         method: COLOR_METHOD,
+    });
+
+    // ---- 高度拉条（始终可调，450-720）----
+    const phoneHeightPx = Math.max(
+        PHONE_HEIGHT_MIN,
+        Math.min(
+            PHONE_HEIGHT_MAX,
+            Number.isFinite(Number(ui.phoneHeight)) ? Math.round(Number(ui.phoneHeight)) : PHONE_HEIGHT_DEFAULT
+        )
+    );
+    const phoneHeightRow = renderRow({
+        label: '手机高度',
+        description: `当前 ${phoneHeightPx}px（${PHONE_HEIGHT_MIN}-${PHONE_HEIGHT_MAX}）`,
+        trailing: renderSlider({
+            min: PHONE_HEIGHT_MIN,
+            max: PHONE_HEIGHT_MAX,
+            step: 1,
+            value: phoneHeightPx,
+            field: 'phoneHeight',
+            method: COLOR_METHOD,
+        }),
+    });
+
+    // ---- 桌面网格（列数 4/5，行数 3~8）—— 紧贴「手机高度」下方，方便一起调节整体比例
+    const desktopGridPicker = renderDesktopGridPicker(ui);
+
+    // ---- 垂直位置拉条（始终可调，-100 ~ +100）----
+    const phoneYOffsetPx = Math.max(
+        PHONE_Y_OFFSET_MIN,
+        Math.min(
+            PHONE_Y_OFFSET_MAX,
+            Number.isFinite(Number(ui.phoneYOffset)) ? Math.round(Number(ui.phoneYOffset)) : PHONE_Y_OFFSET_DEFAULT
+        )
+    );
+    const phoneYOffsetRow = renderRow({
+        label: '垂直位置',
+        description: `当前偏移 ${phoneYOffsetPx}px（${PHONE_Y_OFFSET_MIN}~${PHONE_Y_OFFSET_MAX}，负数上移）`,
+        trailing: renderSlider({
+            min: PHONE_Y_OFFSET_MIN,
+            max: PHONE_Y_OFFSET_MAX,
+            step: 1,
+            value: phoneYOffsetPx,
+            field: 'phoneYOffset',
+            method: COLOR_METHOD,
+        }),
     });
 
     // ---- 开关行 ----
@@ -166,8 +287,24 @@ export function renderAppearanceSection(app) {
             ${statusBarSection}
 
             ${renderGroup({
-                title: '显示',
+                content: phoneHeightRow,
+                footer: `当前 ${phoneHeightPx}px（${PHONE_HEIGHT_MIN}-${PHONE_HEIGHT_MAX}）`,
+            })}
+
+            ${renderGroup({
+                content: phoneYOffsetRow,
+                footer: `当前偏移 ${phoneYOffsetPx}px（${PHONE_Y_OFFSET_MIN}~${PHONE_Y_OFFSET_MAX}，负数上移）`,
+            })}
+
+            ${renderGroup({
+                title: '桌面网格',
+                content: desktopGridPicker,
+                footer: '行数可在 3~8 之间任选；只改排布，不会重置你的桌面图标和小组件。',
+            })}
+
+            ${renderGroup({
                 content: hideCaseRow,
+                footer: '隐藏后由全屏模式接管高度。',
             })}
 
             ${renderSaveBar({
@@ -214,6 +351,7 @@ function initAppearanceSection(app) {
         if (app) {
             applyDeviceTheme(app.state.ui.appearance);
             window.refreshPhoneApps?.();
+            persistAppearance(app);
         }
     });
 
@@ -238,6 +376,7 @@ function initAppearanceSection(app) {
             app.state.ui.appearance.screenWallpaper = serializeScreenWallpaperState(wpState);
             applyDeviceTheme(app.state.ui.appearance);
             window.refreshPhoneApps?.();
+            persistAppearance(app);
         }
     });
 

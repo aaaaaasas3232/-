@@ -1,0 +1,583 @@
+/**
+ * chat-app / 聊天记录层级管理页样式 (v0.65 新建)
+ *
+ *   蓝色主 (#4A6FA5) · 白色辅 · 简洁大方
+ */
+
+/* ============================================
+ * 页面容器
+ * ============================================ */
+
+.app-shell[data-app-id="chat"] .memory-mgmt {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #F5F7FA;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-page {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 16px 40px;
+    box-sizing: border-box;
+    scrollbar-width: none;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-page::-webkit-scrollbar {
+    display: none;
+}
+
+/* ============================================
+ * 顶栏
+ * ============================================ */
+
+.app-shell[data-app-id="chat"] .memory-mgmt-topbar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 50px 12px 8px;
+    background: #FFFFFF;
+    border-bottom: 1px solid #E9ECEF;
+    z-index: 10;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-topbar .chat-back-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #4A6FA5;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-topbar .chat-back-btn:hover {
+    background: #F0F4FA;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-topbar .chat-back-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: #4A6FA5;
+    stroke-width: 2;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-topbar-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1F2937;
+    margin-left: 4px;
+    flex: 1;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-topbar-spacer {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+}
+
+/* ============================================
+ * 头部(头像 + 名字)
+ * ============================================ */
+
+.app-shell[data-app-id="chat"] .memory-mgmt-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 16px;
+    background: #FFFFFF;
+    margin-bottom: 12px;
+    border-radius: 14px;
+    border: 1px solid #E9ECEF;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-header-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-header-avatar-text {
+    font-size: 18px;
+    font-weight: 600;
+    color: #FFFFFF;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-header-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-header-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1F2937;
+    line-height: 1.2;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-header-sub {
+    font-size: 12px;
+    color: #6B7280;
+    margin-top: 2px;
+}
+
+/* ============================================
+ * 入口卡片(历史消息)
+ * ============================================ */
+
+.app-shell[data-app-id="chat"] .memory-mgmt-entry-card {
+    margin-bottom: 12px;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-entry {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: #FFFFFF;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: background 0.15s;
+    border: 1px solid #E9ECEF;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-entry:hover {
+    background: #F8FAFC;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-entry:active {
+    background: #F0F4FA;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-entry-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: #4A6FA5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-entry-icon svg {
+    width: 18px;
+    height: 18px;
+    stroke: #FFFFFF;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-entry-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-entry-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1F2937;
+    line-height: 1.3;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-entry-desc {
+    font-size: 12px;
+    color: #6B7280;
+    line-height: 1.3;
+    margin-top: 2px;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-entry-arrow {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: #9CA3AF;
+    stroke-width: 2;
+    flex-shrink: 0;
+}
+
+/* ============================================
+ * 层级配置卡片
+ * ============================================ */
+
+.app-shell[data-app-id="chat"] .memory-mgmt-config-card {
+    background: #FFFFFF;
+    border-radius: 14px;
+    border: 1px solid #E9ECEF;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-section-title {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid #F0F2F5;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-section-title > span:first-child {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1F2937;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-section-sub {
+    font-size: 11px;
+    color: #9CA3AF;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-level-list {
+    padding: 0;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-level-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid #F0F2F5;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-level-item:last-child {
+    border-bottom: none;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-level-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-level-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-level-id {
+    font-size: 11px;
+    font-weight: 600;
+    color: #4A6FA5;
+    background: #E8F2FF;
+    padding: 2px 6px;
+    border-radius: 4px;
+    line-height: 1.4;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-level-name-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: #1F2937;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-level-fixed {
+    font-size: 10px;
+    color: #9CA3AF;
+    background: #F3F4F6;
+    padding: 2px 6px;
+    border-radius: 4px;
+    line-height: 1.4;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-level-cycle-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-level-cycle-label {
+    font-size: 12px;
+    color: #6B7280;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-level-cycle-input {
+    width: 64px;
+    padding: 4px 8px;
+    border: 1px solid #E9ECEF;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #1F2937;
+    background: #FFFFFF;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-level-cycle-input:focus {
+    border-color: #4A6FA5;
+    box-shadow: 0 0 0 2px rgba(74, 111, 165, 0.15);
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-level-cycle-input:disabled {
+    background: #F3F4F6;
+    color: #9CA3AF;
+    cursor: not-allowed;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-level-cycle-input.is-invalid {
+    border-color: #DC2626;
+    box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.15);
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-level-cycle-unit {
+    font-size: 12px;
+    color: #6B7280;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-level-hint {
+    font-size: 11px;
+    color: #9CA3AF;
+    flex-basis: 100%;
+    margin-left: 0;
+    margin-top: 2px;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-level-save-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #4A6FA5;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #FFFFFF;
+    transition: background 0.15s;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-level-save-btn:hover {
+    background: #3E5F8E;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-level-save-btn svg {
+    width: 12px;
+    height: 12px;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-level-actions {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-level-actions-spacer {
+    width: 28px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-level-remove-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6B7280;
+    transition: all 0.15s;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-level-remove-btn:hover {
+    background: #FEE2E2;
+    color: #DC2626;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-level-remove-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* ============================================
+ * 添加层级按钮
+ * ============================================ */
+
+.app-shell[data-app-id="chat"] .memory-mgmt-add-level-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: calc(100% - 32px);
+    margin: 12px 16px 16px;
+    padding: 10px 16px;
+    background: #F5F8FC;
+    color: #4A6FA5;
+    border: 1px dashed #A8C8EC;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-add-level-btn:hover {
+    background: #E8F2FF;
+    border-color: #4A6FA5;
+}
+
+.app-shell[data-app-id="chat"] .memory-mgmt-add-level-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* ============================================
+ * 弹窗(添加层级 / 确认删)
+ * ============================================ */
+
+.app-shell[data-app-id="chat"] .memory-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 24px;
+}
+
+.app-shell[data-app-id="chat"] .memory-modal {
+    background: #FFFFFF;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 320px;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="chat"] .memory-modal-header {
+    padding: 16px 20px 8px;
+    border-bottom: 1px solid #F0F2F5;
+}
+
+.app-shell[data-app-id="chat"] .memory-modal-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1F2937;
+    line-height: 1.4;
+}
+
+.app-shell[data-app-id="chat"] .memory-modal-desc {
+    font-size: 12px;
+    color: #6B7280;
+    margin-top: 6px;
+    line-height: 1.5;
+}
+
+.app-shell[data-app-id="chat"] .memory-modal-body {
+    padding: 16px 20px;
+}
+
+.app-shell[data-app-id="chat"] .memory-modal-field {
+    margin-bottom: 12px;
+}
+
+.app-shell[data-app-id="chat"] .memory-modal-label {
+    font-size: 12px;
+    color: #6B7280;
+    margin-bottom: 6px;
+    display: block;
+}
+
+.app-shell[data-app-id="chat"] .memory-modal-input,
+.app-shell[data-app-id="chat"] .memory-modal-select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #E9ECEF;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #1F2937;
+    background: #FFFFFF;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.app-shell[data-app-id="chat"] .memory-modal-input:focus,
+.app-shell[data-app-id="chat"] .memory-modal-select:focus {
+    border-color: #4A6FA5;
+    box-shadow: 0 0 0 2px rgba(74, 111, 165, 0.15);
+}
+
+.app-shell[data-app-id="chat"] .memory-modal-cycle-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.app-shell[data-app-id="chat"] .memory-modal-cycle-input {
+    flex: 1;
+}
+
+.app-shell[data-app-id="chat"] .memory-modal-cycle-unit {
+    font-size: 12px;
+    color: #6B7280;
+}
+
+.app-shell[data-app-id="chat"] .memory-modal-hint {
+    font-size: 11px;
+    color: #DC2626;
+    margin-top: 4px;
+    line-height: 1.4;
+}
+
+.app-shell[data-app-id="chat"] .memory-modal-hint.is-success {
+    color: #4A6FA5;
+}
+
+.app-shell[data-app-id="chat"] .memory-modal-footer {
+    display: flex;
+    border-top: 1px solid #F0F2F5;
+}
+
+.app-shell[data-app-id="chat"] .memory-modal-btn {
+    flex: 1;
+    padding: 12px 16px;
+    border: none;
+    background: transparent;
+    font-size: 13px;
+    color: #4A6FA5;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.app-shell[data-app-id="chat"] .memory-modal-btn:hover {
+    background: #F5F8FC;
+}
+
+.app-shell[data-app-id="chat"] .memory-modal-btn.is-danger {
+    color: #DC2626;
+}
+
+.app-shell[data-app-id="chat"] .memory-modal-btn.is-danger:hover {
+    background: #FEE2E2;
+}
+
+.app-shell[data-app-id="chat"] .memory-modal-btn.is-primary {
+    color: #FFFFFF;
+    background: #4A6FA5;
+    font-weight: 500;
+}
+
+.app-shell[data-app-id="chat"] .memory-modal-btn.is-primary:hover {
+    background: #3E5F8E;
+}
+
+.app-shell[data-app-id="chat"] .memory-modal-btn.is-primary:disabled {
+    background: #9CA3AF;
+    cursor: not-allowed;
+}
+
+.app-shell[data-app-id="chat"] .memory-modal-btn + .memory-modal-btn {
+    border-left: 1px solid #F0F2F5;
+}

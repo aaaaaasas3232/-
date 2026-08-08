@@ -1,12 +1,11 @@
 // ============================================
 // 动作系统（actions）
-// 从 apps.js 第 267-337、1401-1407 行提取
 // 用于 app 间跳转、弹窗、调用方法、分享等
 // ============================================
 
 import { escapeHtml } from './escape.js';
 
-/** 规范化 action 对象，自动补 appId */
+/* 规范化 action 对象，自动补 appId */
 export function createActionObject(action, appId) {
     const normalizedAction = action && typeof action === 'object'
         ? { ...action }
@@ -19,12 +18,12 @@ export function createActionObject(action, appId) {
     return normalizedAction;
 }
 
-/** 把 action 序列化成字符串（用于 HTML data 属性） */
+/* 把 action 序列化成字符串（用于 HTML data 属性） */
 export function serializeAction(action, appId) {
     return escapeHtml(JSON.stringify(createActionObject(action, appId)));
 }
 
-/** 生成 data-app-action 属性字符串 */
+/* 生成 data-app-action 属性字符串 */
 export function createActionAttr(action, appId) {
     return `data-app-action='${serializeAction(action, appId)}'`;
 }
@@ -81,7 +80,6 @@ export function createAppMethodAction(method, payload = {}, appId = '') {
     }, appId);
 }
 
-/** 给 v-html 字符串拼接用的简化版本 */
 export function createAppAction(action, appId) {
     return JSON.stringify(createActionObject(action, appId));
 }

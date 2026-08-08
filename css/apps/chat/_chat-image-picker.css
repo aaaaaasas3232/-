@@ -1,0 +1,131 @@
+/* ============================================
+ * chat-app — 图片发送弹窗
+ *
+ * 路径:css/apps/chat/_chat-image-picker.css
+ *
+ * 用途:覆盖 framework 默认 modal 样式,做成粉蓝韩风的精致小弹窗。
+ *   - 整体宽度缩到 280px,小巧紧凑
+ *   - 配色用聊天 app 主色(#4A6FA5 蓝 / #F4A6CD 粉 / #A8C8EC 浅蓝)
+ *   - 默认 modal 标题/文本/分割线都被隐藏
+ *   - 按钮去边框线,左右对齐贴底
+ *
+ * 链入:css/apps/chat/index.css 已通过 @import './_chat-image-picker.css' 引入
+ *
+ * 作用域:所有规则用 `.app-shell[data-app-id="chat"]` 前缀锁定,
+ *        不影响其它 app 的 image-picker 弹窗
+ * ============================================ */
+
+/* 弹窗整体 — 小巧精致 */
+.app-shell[data-app-id="chat"] .app-modal.image-picker {
+    top: 50%;
+    width: 280px;
+    max-width: calc(100% - 56px);
+    padding: 18px 18px 14px;
+    border-radius: 22px;
+    transform: translate(-50%, -50%);
+    background: #ffffff;
+    box-shadow:
+        0 20px 40px rgba(74, 111, 165, 0.18),
+        0 4px 12px rgba(244, 166, 205, 0.12);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    animation: modalIn 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* 隐藏 framework 默认 modal 标题/文本(我们自己有 icon + 标题) */
+.app-shell[data-app-id="chat"] .app-modal.image-picker > .text-\[18px\],
+.app-shell[data-app-id="chat"] .app-modal.image-picker > .mt-3.text-sm {
+    display: none;
+}
+
+/* 弹窗内容容器 */
+.app-shell[data-app-id="chat"] .app-modal-image-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* 头部:icon + 标题居中 */
+.app-shell[data-app-id="chat"] .image-picker-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding-bottom: 2px;
+}
+
+.app-shell[data-app-id="chat"] .image-picker-icon {
+    width: 22px;
+    height: 22px;
+    color: #F4A6CD;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .image-picker-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #4A6FA5;
+    letter-spacing: 0.3px;
+}
+
+/* 提示小字 */
+.app-shell[data-app-id="chat"] .image-picker-hint {
+    font-size: 11px;
+    color: #9CA3AF;
+    text-align: center;
+    margin-top: -4px;
+    margin-bottom: 2px;
+    line-height: 1.4;
+}
+
+/* 输入框 */
+.app-shell[data-app-id="chat"] .image-picker-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid rgba(168, 200, 236, 0.5);
+    border-radius: 14px;
+    font-size: 13px;
+    line-height: 1.45;
+    resize: none;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    background: rgba(245, 248, 255, 0.6);
+    color: #1f2937;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+
+.app-shell[data-app-id="chat"] .image-picker-input:focus {
+    border-color: #A8C8EC;
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 0 0 3px rgba(168, 200, 236, 0.18);
+}
+
+.app-shell[data-app-id="chat"] .image-picker-input::placeholder {
+    color: #B0B8C8;
+    font-size: 12px;
+}
+
+/* 按钮区 — 顶部留白、左右铺满、底部贴边 */
+.app-shell[data-app-id="chat"] .app-modal.image-picker .app-modal-actions {
+    margin: 12px -18px -14px;
+}
+
+/* 按钮 — 去边框线、统一字号、文字上移 */
+.app-shell[data-app-id="chat"] .app-modal.image-picker .app-modal-action {
+    font-size: 13px;
+    padding: 0 0 10px;
+    font-weight: 500;
+    border-left: 0;
+    line-height: 40px;
+    margin-top: -10px;
+}
+
+.app-shell[data-app-id="chat"] .app-modal.image-picker .app-modal-action--cancel {
+    color: #94a3b8;
+}
+
+.app-shell[data-app-id="chat"] .app-modal.image-picker .app-modal-action--primary {
+    color: #F4A6CD;
+    font-weight: 600;
+}

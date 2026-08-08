@@ -1,0 +1,602 @@
+小听启动 · 人设主页新增「空间」模块 + AI 日程生成 + 心情日记双写
+==========================================================================
+
+一、需求原话复述
+----------------
+
+1) 在人设主页中,「作息」div 与「资产」div 之间,增加一个新的 div。
+2) 这个 div 管控的是:「世界观空间中,某个地点的某个场所,被某人设勾选为『可以去』之后,
+   就等于『这个人设拥有相关概率去这个场所』」。
+3) 世界观空间目前是「地点 → 场所」两级结构。地点可以绑定天气 App 里已添加的城市
+   (也就是 Place.realCityRef)。
+4) 用户举例:人设 A 绑定了世界 X。世界 X 下有地点「A 城」。A 城有两个场所:「医院」、「A 的家」。
+   「医院」对 A 标记为「偶尔去」,「家」对 A 标记为「经常在」。
+5) 把「北京」的天气映射给「A 城」后,回到 A 的人设主页 → 能看到当天 A 城的天气。
+6) 页面上有一个「生成 AI 今日日程」的按钮,真实调用 A 绑定的 API。
+   返回结构化数据(当前所在场所 + 今天还要去哪些场所 + 什么时候去 + 去干什么),
+   JS 解析后保存。
+7) AI 上下文必须拼齐这些维度:
+   - 当前人设 A 的全部角色卡(buildContextFromPersona 已经输出那份)
+   - 绑定的世界观的全部空间(地点列表 + 每个地点下的场所列表 +
+     每个场所对当前人设的访问备注/频率)
+   - 世界观的纪时系统(如果有:小时名 + 星期名 + 现实时钟 ↔ 纪时换算)
+   - A 的作息(rhythm,按 injectMode 决定 current / full)
+   - A 的本周日程(schedule,按 injectMode 决定 current / nearby / full)
+   - A 的今日心情(mood,按 injectMode 决定)
+8) 用户额外举的复杂例子:世界观是 6 个时间段而不是 24h,叫「白/黄/红/绿/黑/粉/蓝时间」。
+   用户下午 3 点打开页面 → 「现在是绿色时间」。AI 据此生成:
+   「黄色时间到红色时间在家里,红色时间到现在在医院,准备黑色时间以后回家。
+   来医院是准备干嘛」。这等价于「今日日程」,跟「本周日程」是不同维度。
+9) 「今日日程」生成结果要保存到心情日历里。
+10) 心情日历增加机制:每天默认有两次日记——
+    - 第一次:用户刚打开页面时,触发一次 AI 生成(开场日记)
+    - 第二次:用户结束、跟 AI 聊完天时,系统读取社媒记录 + 日记段落,一起喂给 AI,
+      生成今日结束日记。
+
+下面这份需求文档把上面 10 条 + 当前代码摸出的现状 + 工程决策 + 文件级实现建议梳一遍。
+无 md 语法,纯 ASCII 框图 + 缩进列表 + 段落。
+
+==========================================================================
+
+二、现状摸底(从代码读出来的)
+----------------------------
+
+[地点 / 场所 / 城市 映射现状]
+  * Place.realCityRef  → 城市名 (REAL_CITIES 的 label,比如「北京」)
+  * Location.realCityRef → 同上,但实际 location 多半继承自 place
+  * 天气 App 已通过 sdk.places.list() 反向拉映射,把 city.mappedName 写到状态里,
+    用于「世界观的 A 城」显示成「北京」以外的名字(weather-app.js _syncMappingsFromPlaces)
+  * 天气 App 对外 services: getWeatherForAI / getWeatherSummaryForAI / setCityMapping
+    可直接复用
+
+[场所访问备注 现状 — 关键发现]
+  * Location.accessNotes = { visitors: { [personaId]: { enabled, frequency, note } } }
+  * frequency 取值: always / often / sometimes / rarely / never
+    (geo-constants.js ACCESS_FREQUENCIES)
+  * 表单渲染器已经支持「勾选哪些 persona 能来 + 频率 + 备注」
+    (form-renderer.js 的 location-access 字段,大约 660~770 行)
+  * 因此你提的「如果场所选中了某人设可以去」 ——
+    现有的 accessNotes.visitors 已经覆盖这个语义,
+    本次需求不需要新加字段,只需要把这个数据结构读出来、汇总、喂给 AI。
+
+[世界观空间 API 现状]
+  * sdk.places.list({ worldRef }) / sdk.places.get(id)
+  * sdk.locations.list({ worldRef }) / sdk.locations.get(id)
+  * sdk.locations.getByPlace(worldId, placeId) / getMapDataByPlace
+  * 不存在「按 persona 反查该 persona 能去的全部场所」的 API,本次需要新增一个
+    helpers: getAccessibleLocationsForPersona(worldId, personaId) 或者
+    用纯函数 filter。
+
+[人设主页布局 现状 — 关键发现]
+  * renderPersonaHome() 顺序:
+      renderTopBlock
+      renderMoodCalendar
+      renderMoodDetailPanel
+      renderMoodBlock
+      renderWeekBlock   ← 这一行里还把 renderRhythmBlock 挂在末尾,
+                          因为作息长得跟日程贴在一起
+      renderAssetBlock
+      renderSocialBlock
+      renderContextBlock
+  * 作息目前是「周历卡片下方再嵌一个作息卡」(renderWeekBlock 末尾 ${renderRhythmBlock(app)})
+  * 你要求「作息 div 与资产 div 之间」 ——
+    实际上需要把 renderRhythmBlock 从 renderWeekBlock 里拎出来,跟新模块「空间」
+    并排放在 renderAssetBlock 之前。
+    建议新顺序: ... renderWeekBlock → renderRhythmBlock → 新的 renderSpaceBlock
+                → renderAssetBlock → ...
+
+[心情日历 / 日记 现状]
+  * sdk.diary 一人一天一篇:id = `${entityType}:${entityId}:${YYYY-MM-DD}`
+  * 字段: mood / moodIntensity / isPositive / diary / segments[]
+  * 当前 sdk.diary 一次只能存「一坨 diary 字符串」+ 一组 segments。
+    你要的「每日两次日记」(开场 / 结束),需要在日记记录里
+    加一个字段表示「这是第几次」。方案见 §四。
+
+[AI 生成心情 现状 — 复用基础]
+  * personaGenerateMood(payload) 走完链路:
+      1) 拿 persona.boundResources.apiRefs[0] → apiKeyId
+      2) systemPrompt + userPrompt(用 buildMoodAnalysisPrompt 拼)
+      3) callMoodApi → fetch openai/anthropic/gemini 兼容接口
+      4) JSON.parse → mood / moodIntensity / isPositive / diary
+      5) 写入 moodPendingSave → 用户点保存 → sdk.diary.setMoodDetail
+  * 新模块的「AI 今日日程生成」应该复用同一套 API 调用脚手架,
+    建议把 callMoodApi 重构为一个更通用的 callAiJson({ apiKey, systemPrompt, userPrompt, schema })
+    然后 mood / todaySchedule / endOfDayDiary 三处都共用。
+  * API Key 解析那一段(refType 'key' / 'group' / string id 三种)在
+    personaGenerateMood 里写死了,建议抽成一个 helper: resolveApiKeyIdForPersona(persona)
+
+[纪时系统 现状]
+  * sdk.chronology 提供 realToWorld / getHourNames / getWeekDayNames / format
+  * buildContextFromPersona 已经会在文首输出 chronoNote(现实时间 ↔ 纪时映射)
+  * 新模块「按纪时时间段选场所」需要直接调 chronology.realToWorld 把
+    现实时刻映射到当前 phase id / hour index。
+
+==========================================================================
+
+三、需求拆分
+------------
+
+[拆分后的 6 个子任务]
+
+A. 在人设主页新增「空间」卡片(静态展示)
+   位置:renderRhythmBlock 之后,renderAssetBlock 之前
+   内容:
+     - 顶部:绑定的世界名 + 地点数 / 场所数
+     - 当前地点:从 persona.boundWorldId → sdk.places.list → 显示「A 城 / 北京」
+       (用 place.realCityRef 反查 weather-app 的 weatherCache,显示当日天气)
+     - 当前场所:
+         * 实时(基于现在的现实时刻 → 纪时 → AI 上次生成的「今日日程」) ——
+           见 §C:今日日程第一段
+         * 或者「用户当前选中的在场」(可选,先不做)
+     - 「这个人设能去的全部场所」折叠列表:
+         按地点分组,每个场所显示:
+           名称 / 频率(always / often / sometimes / rarely / never)/
+           用户填写的备注(notes)/ 该场所是否映射了真实城市天气
+         频率过滤: 永远显示 always/often;sometimes/rarely 可折叠
+     - 「生成今日日程」按钮:调 §B 流程
+     - 实时天气小卡片:
+         * place.realCityRef → 天气 App 缓存
+         * 没缓存 → 显示「暂无天气,先去天气 App 添加 城市」
+         * 有缓存 → 显示 城市名 + 温度 + 天气描述 + 图标(复用 weather-app.js 的
+           WEATHER_ICONS / getWeatherIcon)
+
+B. 「生成今日日程」按钮(AI 调用)
+   流程:
+     1) 取 persona.boundResources.apiRefs[0] → apiKeyId → apiKey(封装 helper)
+     2) 取 persona → boundWorldId → world
+     3) 取 world.chronologySettings → 现实 → 世界时间 → 当前 phase / hour
+     4) 取 world 的全部 place / location + 该 persona 的 accessNotes.visitors
+     5) 拼 systemPrompt + userPrompt(见 §C)
+     6) 调 callAiJson → 拿回 JSON
+     7) JS 解析 → 写入 persona.diary 今日记录的 todaySchedule 字段(见 §D)
+     8) 灵动岛 notify + 强制 detailRenderTick++ 让主页立刻刷新
+
+C. AI prompt 拼接清单(注入顺序)
+   systemPrompt(固定一段,告诉 AI 角色与输出格式):
+     你需要为「${persona.name}」规划「${world.name}」世界中的「今日(现实 YYYY-MM-DD)」
+     的行程。基于该人设能去的全部场所(频率、备注)、他/她的作息与今日心情,
+     输出一份 4~8 段时间表。每段时间必须含:
+       phase: <现实小时数 0-23 / 或 纪时段名「绿色时间」>
+       locationId / locationName / placeName:
+       locationRef: <location.id, 必须从「可去的场所」列表里选>
+       activity: <中文 1~20 字,他在那做什么>
+       reason: <为什么去,关联他的心情/作息/性格 1 段话>
+       confidence: <0~1,基于频率与作息契合度>
+     整段返回严格 JSON,不要 markdown 包裹。
+   userPrompt(按以下顺序拼接):
+     [1] 当前人设基础卡 —— 调用 buildContextFromPersona(persona, entityType)
+         (已经被你确认 OK,完整覆盖性格 / 三观 / 作息 / 本周日程 / 心情 /
+          MBTI / 月计划 / 资产 / 关系 / 时间观提示)
+     [2] 世界观空间 —— 新 helper buildWorldSpaceContext(world, persona)
+         输出:
+           # 世界观空间
+           world: ${world.name}
+           地点:
+             - 名称: A 城
+               id: place-xxx
+               映射天气: 北京 (realCityRef)
+               当前天气(若缓存): 22°C 晴
+               场所:
+                 - 名称: A 的家
+                   id: loc-yyy
+                   频率: often (经常)
+                   备注: 卧室有钢琴,起居室有书架
+                   allowedPhases: [null] (全天)
+                 - 名称: 医院
+                   id: loc-zzz
+                   频率: sometimes (偶尔)
+                   备注: 每季度体检 / 偶尔感冒
+                   allowedPhases: [null]
+           ⚠ 此人设被场所「勾选为可以去」后,这些就是他/她今日行程的候选场地。
+     [3] 当前纪时(若启用)
+           # 当前纪时
+           worldTime: ${worldTimeStr}
+           currentPhase: 绿色时间 / hour index: 3 / 现实时间 15:32
+           全部 phase 映射: 白色=06~08, 黄色=08~11, 红色=11~13, 绿色=13~17,
+                            黑色=17~20, 粉色=20~23, 蓝色=23~06
+     [4] 现实已发生时段(可选)
+           现实已过去小时: 0..14 → 这些时段不能安排「即将去」,只能标为「已完成」
+     [5] 性格/心情/作息(已包含在 [1] 里,这里如果太长,建议裁掉
+         「偏好」/「资产」/「关系」这类非空间决策相关的内容)
+
+D. 持久化(今日日程挂哪儿?)
+   决策:复用 sdk.diary 的「一人一天一篇」,新增字段 todaySchedule。
+   原因:
+     * 日历本来就要在心情日历里渲染「今日日程」,跟 mood / diary 同表最自然
+     * 不需要新建 IndexedDB 表,不用动 defaults.js
+   diary 记录新结构:
+     {
+       id, entityType, entityId, date,
+       mood, moodIntensity, isPositive,
+       diary: string,                          // 现有字段
+       todaySchedule:                          // 新增
+         [
+           {
+             id,                              // schedule-event-xxx
+             fromPhase: '黄色时间',             // 现实 24h 也支持,纯字符串
+             fromHour: 10,                     // 现实小时,纯数字便于重渲
+             toPhase: '红色时间',
+             toHour: 12,
+             locationId: 'loc-yyy',
+             locationName: 'A 的家',
+             placeName: 'A 城',
+             activity: '在家吃午饭',
+             reason: '...',
+             confidence: 0.7,
+             generatedAt: <ts>,
+           },
+           ...
+         ],
+       todayScheduleGeneratedAt: <ts>,          // 上次生成时间
+       todayScheduleSource: 'ai',               // 'ai' | 'manual' | null
+       segments: [...],                          // 现有字段不变
+       // v0.30 二次日记机制 ——
+       openingDiary: {                          // 新增,开场日记
+         text: string,
+         generatedAt: <ts>,
+         source: 'ai' | 'manual',
+       },
+       closingDiary: {                          // 新增,结束日记
+         text: string,
+         generatedAt: <ts>,
+         source: 'ai' | 'manual',
+       },
+     }
+   迁移:旧记录里没这几个字段,getDateDiary 返回时直接判空,
+   心情日历 UI 兼容空字段。
+
+E. 心情日历每日两次日记
+   时机:
+     openingDiary:
+       * 触发点:人设主页 mount 完成且当天 openingDiary 不存在
+       * 行为:自动调一次 AI 生成,生成 prompt 包含:
+           - 当前人设卡
+           - 当前天气
+           - 当前日程(若有 todaySchedule)
+         写入 openingDiary
+       * UX:灵动岛静默通知「开场日记已生成」,不阻塞 UI
+       * 「重 roll 开场日记」按钮(可选,先不做)
+     closingDiary:
+       * 触发点:用户主动点「结束今日」按钮 OR 离开页面时 OR 第二天 0 点跨日
+       * 行为:自动调 AI,prompt 包含:
+           - 当前人设卡
+           - 当前天气
+           - todaySchedule(已被打开页面后定的日程)
+           - sdk.diary.getToday(...).segments(今日已生成的段落)
+           - 社媒记录(读社媒 App,见 §F)
+           - openingDiary(让 AI 看到「我早上写的」)
+         写入 closingDiary
+       * UX:写入后灵动岛通知 + 心情日历格子变「完整」状态(双横线 icon)
+   * 是否每次打开页面都生成 openingDiary?
+     否 — 一天只能一次。判 todayScheduleGeneratedAt/date 决定。
+     跨日重置 = date 改了或新一天 0 点。
+
+F. 社媒读取(给 closingDiary 用)
+   * 现状:人设主页有 renderSocialBlock 是占位,blog app 有发布但没沉淀接口
+   * 假设存在 sdk.social 或 window.__phoneSocialFeed,本次先按 best-effort:
+     closingDiary 的 userPrompt 里加一段
+       [社媒] 今日动态摘要:
+         - [15:32] 发表了博客「xxx」
+         - [18:14] 与 ai0 聊天,主题是 ...
+     如果 sdk 不可用,这段直接省略,prompt 仍然有效。
+
+G. UI 改动一览
+   * home-section.js renderPersonaHome:重排顺序,把 renderRhythmBlock 拎到
+     renderWeekBlock 之外,再插 renderSpaceBlock,再 renderAssetBlock。
+   * 新文件:js/apps/setting/persona/space-block.js
+     - renderSpaceBlock(app, persona)
+     - renderSpaceWeatherCard(weather)
+     - renderSpaceLocationsList(world, persona)
+     - renderSpaceSchedulePreview(todaySchedule)
+   * 新方法(挂到 buildPersonaHomeMethods):
+     - personaSpaceGenerateTodaySchedule()       // 触发 AI
+     - personaSpaceGenerateOpeningDiary()        // 触发 AI (opening)
+     - personaSpaceGenerateClosingDiary()        // 触发 AI (closing)
+     - personaSpaceRefreshWeather()              // 触发天气 App 拉缓存
+     - personaSpaceJumpToLocation(locId)         // 详情页跳场所(可选)
+   * 新 helper(js/apps/setting/persona/space-ai.js):
+     - resolveApiKeyIdForPersona(persona)
+     - callAiJson({ apiKey, systemPrompt, userPrompt, schema })
+       重构自 home-methods.js 的 callMoodApi,通用化,删去情绪特例。
+     - buildWorldSpaceContext(world, persona) → string
+     - buildTodaySchedulePrompt(persona, world, weather, todayDiary)
+     - buildOpeningDiaryPrompt(...)
+     - buildClosingDiaryPrompt(...)
+     - parseAiJsonOrFallback(content, schema) → object | null
+   * 新 helper(js/apps/setting/persona/space-sdk.js 或 world/sdk/geo/index.js):
+     - getAccessibleLocationsForPersona(worldId, personaId) →
+         [{ location, place, accessConfig }]
+     - getCurrentLocationForPersona(worldId, personaId, todaySchedule)
+         // 简单版:取 todaySchedule 里 fromHour <= now <= toHour 第一段
+     - getPlaceWeather(place) →
+         { condition, temperature, description, ... } | null
+         // 反查 weather-app 的 window.weatherAppState.weatherCache
+   * diary 模块扩展(js/apps/setting/world/sdk/diary.js):
+     - upsert 已兼容任意字段,无需改
+     - getToday 返回 todaySchedule / openingDiary / closingDiary 字段
+     - 新增方法(在 diary API 里挂上,非必须):
+         setTodaySchedule(entityType, entityId, todaySchedule, source)
+         setOpeningDiary(entityType, entityId, payload)
+         setClosingDiary(entityType, entityId, payload)
+       但因为 upsert 就能写,这三方法只是 wrapper 让调用方更清楚
+   * 心情日历渲染(renderMoodCalendar):
+     - 格子右侧多一个 dot 表示「双日记完整」(openingDiary && closingDiary 都存在)
+     - 详情面板(renderMoodDetailPanel):
+       增加「今日日程」区块(renderSpaceSchedulePreview)
+       增加「开场日记」+「结束日记」两块
+
+H. 风险与边界
+   * AI 不知道 phase 名 = 现实小时怎么换算:
+     systemPrompt 务必把 chrono 映射写进去,
+     同时让 fromHour/toHour 是现实 24h 整数(不依赖 phase 名),
+     phase 字段只是给用户读的展示。
+   * 场所 ID 漂移:prompt 里必须给 location.id 严格枚举,
+     解析时白名单校验,locationId 不在候选列表 → 丢弃整段并降级提示。
+   * 没有 API Key:复用 personaGenerateMood 的降级路径,
+     弹窗「未配置 API Key,请先在资源管理中添加」。
+   * 一天多次点「生成今日日程」:
+     写入前 confirm 弹窗「覆盖现有今日日程?」+ 「重 roll」选项,
+     成功后 todayScheduleSource='ai' + todayScheduleGeneratedAt 更新。
+   * closingDiary 的「结束」触发:
+     不要绑 beforeunload(浏览器不友好),改为:
+       1) 主页放一个「结束今日」按钮 → 主动生成
+       2) 系统跨日检测:每次进入主页若 date 已变,自动把昨天的 closingDiary
+          强制写一次(空 diary 也行,标记「已结束」)
+
+==========================================================================
+
+四、数据结构决策汇总
+--------------------
+
+[1] 访问频率
+    沿用现有 ACCESS_FREQUENCIES: always / often / sometimes / rarely / never
+    不新加字段,频率过滤只影响「空间列表显示哪些场所」,不影响 AI 行程候选范围。
+    (永远把 always/often/sometimes 都喂给 AI,rarely/never 默认不喂,
+     但提供 payload override 让用户可以把 rarely 也纳入。)
+
+[2] todaySchedule 字段位置
+    挂在 sdk.diary 一人一天一篇里,不新建 store。
+    getDateDiary 返回的 record 直接 .todaySchedule / .openingDiary / .closingDiary。
+    旧数据缺字段时按 undefined 处理。
+
+[3] 空间列表展示顺序
+    按 place.name 字典序 → 同一 place 内按 location 字典序。
+    「当前最有可能在的场所」标 ★(取 todaySchedule 当时段命中项)。
+
+[4] 现实时间 ↔ 纪时段
+    AI 只输出 24h 整数 fromHour/toHour。
+    渲染时再换算成 phase 名(phase 名通过 sdk.chronology.getHourNames 取)。
+
+[5] 用户手动 vs AI
+    todaySchedule / openingDiary / closingDiary 都有 source 字段:
+      'ai' = AI 生成,'manual' = 用户填,'none' = 空。
+    主页上每个块旁边一个「编辑」按钮(可选,v0.31 再做)。
+
+==========================================================================
+
+五、文件级改动清单(预估)
+------------------------
+
+新增文件:
+  1) js/apps/setting/persona/space-block.js
+       - renderSpaceBlock(app, persona)
+       - renderSpaceWeatherCard(weather, place)
+       - renderSpaceLocationsList(world, persona, todaySchedule)
+       - renderSpaceSchedulePreview(todaySchedule, hourNames)
+       - renderOpeningDiaryBlock(...)
+       - renderClosingDiaryBlock(...)
+  2) js/apps/setting/persona/space-ai.js
+       - resolveApiKeyIdForPersona(persona)
+       - callAiJson({ apiKey, systemPrompt, userPrompt, schema })
+       - buildWorldSpaceContext(world, persona)
+       - buildTodayScheduleSystemPrompt(world, persona)
+       - buildTodayScheduleUserPrompt(...)
+       - buildOpeningDiarySystemPrompt()
+       - buildOpeningDiaryUserPrompt(...)
+       - buildClosingDiarySystemPrompt()
+       - buildClosingDiaryUserPrompt(...)
+       - parseAiJsonOrFallback(content, fallback)
+  3) js/apps/setting/persona/space-sdk.js (可选,放 helper 也行)
+       - getAccessibleLocationsForPersona(sdk, worldId, personaId)
+       - getPlaceWeather(weatherAppState, place)
+       - getCurrentLocationBySchedule(todaySchedule, now)
+
+修改文件:
+  1) js/apps/setting/persona/home-section.js
+       - 调整 renderPersonaHome 顺序
+       - renderWeekBlock 末尾不再调 renderRhythmBlock
+       - 在 renderWeekBlock 之后,renderAssetBlock 之前插
+         ${renderRhythmBlock(app)}
+         ${renderSpaceBlock(app, persona)}
+       - renderMoodDetailPanel 增加今日日程 + 两次日记区块
+       - renderMoodCalendar 格子双日记完整度 dot
+  2) js/apps/setting/persona/home-methods.js
+       - 在 buildPersonaHomeMethods() 里加:
+         personaSpaceGenerateTodaySchedule
+         personaSpaceGenerateOpeningDiary
+         personaSpaceGenerateClosingDiary
+         personaSpaceRefreshWeather
+       - 把 callMoodApi 重构为 callAiJson(在 space-ai.js 里)
+         并把现有 callMoodApi 改为 callAiJson 的薄封装
+  3) js/apps/setting/world/sdk/diary.js
+       - getToday / getDateDiary 兼容新字段(实际上字段透传即可,不用改)
+       - 文档注释里说明 todaySchedule / openingDiary / closingDiary 字段
+       - (可选)新增 setTodaySchedule / setOpeningDiary / setClosingDiary wrapper
+  4) js/apps/setting/persona/persona-bridge.js
+       - 如果 SDK 暴露面需要更新,加上新方法
+  5) css/main.css 或 新建 css/space-block.css
+       - .phome-card--space 容器样式
+       - .phome-space__weather / .phome-space__locations / .phome-space__schedule
+       - .phome-space__location-row(frequency chip)
+       - .phome-space__schedule-row(phase + activity)
+       - .phome-diary-pair(opening/closing 对照)
+  6) js/apps/setting/world/sdk/form-renderer.js
+       - 不需要改,现有 location-access 字段已经支持 visitors + frequency,
+         这就是「勾选某人设可以去」的入口,无需新增 UI
+
+==========================================================================
+
+六、端到端交互流程(以你的例子走一遍)
+-----------------------------------
+
+前置数据:
+  - 人设 A(id=ai0,boundWorldId=world-x,boundResources.apiRefs=[key-deepseek])
+  - 世界 world-x:
+      chronologySettings: enabled,
+        customHours: ['白色时间','黄色时间','红色时间','绿色时间','黑色时间','粉色时间','蓝色时间'],
+        hoursRatio: { base: 7, real: 24 }  // 1 段 = 现实 ~3.43 小时
+      places:
+        - id=place-a-city, name=A 城, realCityRef=北京
+      locations:
+        - id=loc-home, name=A 的家, placeRef=place-a-city,
+          accessNotes.visitors.ai0 = { enabled: true, frequency: 'often', note: '起居室有钢琴' }
+        - id=loc-hospital, name=医院, placeRef=place-a-city,
+          accessNotes.visitors.ai0 = { enabled: true, frequency: 'sometimes', note: '季度体检' }
+  - 天气:北京今天 22°C 晴
+  - 当前现实时间:2026-08-02 15:32
+
+用户操作:
+  1) 打开设置 → 人设主页 → 看到「空间」卡片
+     - 顶部:世界 X · 1 个地点 · 2 个场所
+     - 当前地点:A 城 / 北京 22°C 晴
+     - 当前场所:正在「医院」(若 todaySchedule 命中 红色时间~绿色时间 那段)
+       OR 显示「根据今日日程:A 现在应该在医院」
+     - 可去场所:
+         A 的家 · 经常 · 起居室有钢琴
+         医院 · 偶尔 · 季度体检
+     - 按钮:[生成今日日程] [重 roll] [结束今日]
+  2) 用户点 [生成今日日程]
+     - 灵动岛「正在让 AI 规划今日行程...」
+     - AI 返回(示例):
+         [
+           { fromHour:10, toHour:12, locationId:'loc-home', activity:'在家吃午饭',
+             reason:'按作息 11~13 时段是午饭,医院下午再去', confidence:0.7 },
+           { fromHour:13, toHour:16, locationId:'loc-hospital', activity:'常规复诊',
+             reason:'近一周作息显示 13~17 偏疲惫,需要体检', confidence:0.55 },
+           { fromHour:20, toHour:22, locationId:'loc-home', activity:'回家休息',
+             reason:'黑色时间后回家,符合作息「夜里在家」', confidence:0.85 }
+         ]
+     - JS 解析,locationId 白名单校验(loc-home/loc-hospital 全合法)
+     - 写入 diary 记录 todaySchedule,source='ai',generatedAt=now
+     - 灵动岛「已生成今日日程」
+     - 主页自动刷新 → 显示:
+         黄色时间(10-12) A 的家 · 在家吃午饭
+         红色时间(13-16) 医院 · 常规复诊
+         黑色时间(20-22) A 的家 · 回家休息
+  3) 用户点 [结束今日]
+     - closingDiary 触发 → 拼 prompt,调 AI
+     - AI 返回一段总结(20~80 字):
+         「今天在医院做了一次例行检查,下午回家吃了妈妈做的菜,
+           晚间打算再练一会儿钢琴再睡。」
+     - 写入 diary 记录 closingDiary
+     - 心情日历今天格子变「完整」(双日记 dot)
+
+==========================================================================
+
+七、与现有 AGENTS.md 约定的对齐
+--------------------------------
+
+  - renderPage 内部不用 this:
+      space-block.js 全模块顶层函数,renderSpaceBlock 路由分发。
+  - 用户输入 / 数据库读出来的字符串必 escapeHtml:
+      场所名称 / 备注 / activity / reason / diary 全部走 escapeHtml。
+  - 跳转走 toolkit.actions.openApp:
+      「A 城的地图」可走 actions.openApp('map-app', ...),先不接。
+  - widget render 自己 escape payload:
+      暂不引入新 widget。
+  - 新增 IndexedDB 表:
+      不新增。diary 单 store 已经够。
+  - pages[].icon 是 framework 自动渲染字段,只接受纯文本:
+      不新增 tab,主页布局改不改 icon,只在 .phome-card--space 内部。
+  - 不要 .bak / test-debug / scripts:
+      新文件直接走 src 路径。
+  - 事件派发:
+      personaSpace* 写完数据后:
+        refresh()  // 内部调 __detailRenderTick++ + refreshPhoneApps
+      因为 v-html 不响应数据变化,必须靠 tick 重画。
+
+==========================================================================
+
+八、未决问题(留给你决定)
+------------------------
+
+  1) openingDiary 的「触发时机」是否要可关?
+     建议默认开启,主页 mount 后检测,如果没有就生成。
+     可加一个 persona.space.openingDiaryAuto = true/false 开关。
+  2) closingDiary 的「触发时机」?
+     a. 手动按钮(最简单)
+     b. 跨日检测(技术更漂亮,但 UX 上「第二天打开网页才看到昨天的 closing」有点奇怪)
+     c. 长时间未活动(>30 分钟)自动触发(类似 idle timer,需要框架支持)
+     建议先用 a,b 作为未来增强。
+  3) AI 没返回合法 JSON 时怎么处理?
+     a. 弹窗「生成失败,重试」
+     b. 自动重试一次(改 temperature 重抽)
+     建议 a,但留 retry 钩子。
+  4) todaySchedule 段落的「现实小时 ↔ 纪时段」换算?
+     现实小时 → 段名:用 hoursRatio 推:
+        base=7 real=24 → 段宽 = 24/7 ≈ 3.43h
+        0:00~3:25 蓝色时间, 3:25~6:50 白色时间, 6:50~10:15 黄色时间,
+        10:15~13:40 红色时间, 13:40~17:05 绿色时间, 17:05~20:30 黑色时间,
+        20:30~24:00 粉色时间
+     这个比例逻辑放 space-ai.js 的 helper 里。
+  5) 「用户没绑 API」怎么办?
+     沿用现有逻辑 — 弹灵动岛通知,「请先在资源管理中添加 API Key」。
+     但 todaySchedule 可降级到「本地模板」(按作息 + 频率硬编几段),
+     体验至少不空。先不做,留 TODO。
+  6) 「场所 accessNotes.visitors 没勾选某人设」的处理?
+     AI 看不到这个场所。但用户可能想「临时让 AI 去一趟」,
+     建议:
+       - 空间列表默认隐藏 rarely/never + 未勾选 enabled
+       - AI 候选范围:enabled=true && frequency != never
+       - 加一个「纳入 rarely/never」的开关(默认关)
+  7) 「地点但没映射城市 realCityRef」怎么办?
+     空间卡片显示「暂无天气映射」,
+     跳转到「地点编辑器」按钮(可选,先不做)。
+  8) 「用户今天已经手动填了 todaySchedule,AI 又来覆盖」
+     用 todayScheduleSource 区分:
+       source === 'manual' → confirm 后才能覆盖
+       source === 'ai' / null → 直接覆盖
+       永远保留手动段(若以后支持混合编辑)。
+
+==========================================================================
+
+九、推荐的最小可交付版本(v0.30 切片)
+------------------------------------
+
+Phase 1:基础设施
+  - space-sdk.js + space-ai.js(callAiJson 重构 + helper)
+  - home-section.js 插入 renderSpaceBlock,只渲染「静态」:
+      * 当前地点 + 天气(若 place.realCityRef 在 weatherCache 里)
+      * 「可去场所列表」(visitors 勾上的)
+      * 「生成今日日程」按钮(未实现 → notify)
+  - 调整 renderPersonaHome 顺序
+  - home-methods.js 加 personaSpaceGenerateTodaySchedule 空实现
+
+Phase 2:AI 行程生成
+  - callAiJson 实现
+  - 拼 prompt → 调 AI → 校验 locationId 白名单 → 写入 todaySchedule
+  - renderSpaceBlock 加 renderSpaceSchedulePreview
+  - 写入后刷新主页
+
+Phase 3:日记双写
+  - openingDiary:主页 mount 检测 → 自动触发
+  - closingDiary:手动按钮 + 跨日检测
+  - renderMoodDetailPanel 增加对应区块
+  - 心情日历格子 dot
+
+Phase 4:打磨
+  - 「重 roll」按钮
+  - 「结束今日」按钮 + 跨日逻辑
+  - 异常降级(无 API / JSON 解析失败 / 场所 ID 漂移)
+  - 灵动岛更友好的提示
+
+==========================================================================
+
+十、最后一句
+------------
+
+本需求文档已经把你提到的 6 个时间段、4 个 AI 上下文维度、心情日历的双日记机制、
+以及现有代码里已经存在的 accessNotes.visitors / Place.realCityRef / 天气 App services
+等可复用机制全部串起来了。代码改动集中在 persona/ + world/sdk/diary.js 两个目录,
+新增 ~3 个文件,修改 ~5 个文件,v0.30 切片(Phase 1+2)就能让人设主页的「空间」卡片
+跑通端到端行程生成。

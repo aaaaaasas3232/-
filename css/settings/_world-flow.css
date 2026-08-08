@@ -59,9 +59,9 @@
 .settings-app .wv-ticket {
     width: 100%;
     min-height: 80px;
-    background: linear-gradient(145deg, #ffffff, #f8f9fa);
+    background: #ffffff;
     border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 10px;
+    border-radius: 10px 0 0 10px;
     padding: 10px 14px;
     position: relative;
     display: flex;
@@ -70,7 +70,6 @@
     gap: 12px;
     cursor: pointer;
     transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .settings-app .wv-ticket:active {
@@ -85,28 +84,6 @@
     flex-direction: column;
     gap: 4px;
     min-width: 0;
-}
-
-/* 票根头部 - ID 和日期 */
-.settings-app .wv-ticket__header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 10px;
-}
-
-.settings-app .wv-ticket__id {
-    background: var(--wv-blue);
-    color: white;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-weight: 600;
-    font-size: 9px;
-}
-
-.settings-app .wv-ticket__date {
-    color: var(--settings-color-tertiary);
-    font-size: 9px;
 }
 
 /* 票根标题 */
@@ -158,4 +135,83 @@
 
 .settings-app .wv-ticket-editor .wv-ticket__notch-row {
     display: none;
+}
+
+/* ============================================
+ * 票根圆孔设计 - 锯齿与分割线圆孔
+ * ============================================ */
+
+/* 右侧锯齿孔容器 */
+.settings-app .wv-ticket__notch {
+    position: absolute;
+    right: -7px;
+    top: 0;
+    bottom: 0;
+    width: 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    align-items: center;
+    z-index: 1;
+}
+
+.settings-app .wv-ticket__notch-hole {
+    width: 12px;
+    height: 12px;
+    background: #F2F2F7;
+    border-radius: 50%;
+}
+
+/* 分割线区域 */
+.settings-app .wv-ticket__divider {
+    position: relative;
+    width: 24px;
+    min-width: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+/* 分割线 - 虚线样式 */
+.settings-app .wv-ticket__divider::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 10px;
+    bottom: 10px;
+    width: 1px;
+    background: repeating-linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0.2) 0px,
+        rgba(0, 0, 0, 0.2) 4px,
+        transparent 4px,
+        transparent 8px
+    );
+    transform: translateX(-50%);
+}
+
+/* 分割线圆孔 - 上 */
+.settings-app .wv-ticket__divider-top {
+    position: absolute;
+    top: -51px;
+    left:37px;
+    transform: translateX(-50%);
+    width: 12px;
+    height: 12px;
+    background: #F2F2F7;
+    border-radius: 50%;
+}
+
+/* 分割线圆孔 - 下 */
+.settings-app .wv-ticket__divider-bottom {
+    position: absolute;
+    bottom: -51px;
+    left: 37px;
+    transform: translateX(-50%);
+    width: 12px;
+    height: 12px;
+    background: #F2F2F7;
+    border-radius: 50%;
 }

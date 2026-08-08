@@ -5,13 +5,25 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <title>小听启动</title>
-        <script type="module" src="/src/index.js"></script>
+        <!--
+         * ★ /src/index.js 只在 </body> 之前 import 一次（line 521）。
+         * 历史上 <head> 里也有一份重复 import，会让 systemData.mount('#phone')
+         * 被调用两次 → #phone 容器里出现两份 .app-page-stack 副本，
+         * 导致 .app-page 的 :class="page-hidden" 只在其中一个生效，
+         * 视觉上「主页内容透到 detail 上」。
+         */
+        -->
         <script src="/js/vendor/vue.global.prod.js"></script>
-        <link rel="stylesheet" href="/css/main.css?v=2" />
-        <link rel="stylesheet" href="/css/settings.css?v=2" />
-        <link rel="stylesheet" href="/css/gallery.css?v=1" />
+        <link rel="stylesheet" href="/css/main.css?v=3" />
+        <link rel="stylesheet" href="/css/settings.css?v=3" />
         <link rel="stylesheet" href="/css/color-picker.css?v=1" />
         <link rel="stylesheet" href="/css/survey.css?v=1" />
+        <link rel="stylesheet" href="/css/weather-app.css?v=1" />
+        <link rel="stylesheet" href="/css/appstore.css?v=1" />
+        <link rel="stylesheet" href="/css/apps/chat/index.css?v=1" />
+        <link rel="stylesheet" href="/css/apps/chat/_chat-forward.css?v=1" />
+        <link rel="stylesheet" href="/css/apps/chat/_chat-forward-modal.css?v=1" />
+        <link rel="stylesheet" href="/css/apps/chat/_chat-new-group.css?v=1" />
     </head>
 
     <body>
@@ -131,17 +143,20 @@
                                 @pointercancel="onDesktopPointerCancel"
                             >
                                 <div v-for="(pageItems, pageIndex) in desktopPages" :key="`desktop-page-${pageIndex}`" class="currentPage" :data-page-index="pageIndex">
-                                    <div class="desktop-grid">
+                                    <div class="desktop-grid" :style="{ gridTemplateRows: `repeat(${desktopGridRows}, 76px)` }">
                                         <template v-for="(item, index) in pageItems" :key="item.id">
                                             <!-- App -->
                                             <div
                                                 v-if="item.kind === 'app'"
                                                 class="appContainer"
-                                                :class="{ editing: isEditMode, dragging: draggingIconId === item.id }"
+                                                :class="{ editing: isEditMode, dragging: draggingIconId === item.id, 'dock-source': isEditMode && !isDockApp(item.app.id) }"
                                                 :style="{
                                                     ...getDesktopAppStyle(item),
                                                     ...getDesktopGridItemStyle(item),
                                                 }"
+                                                draggable="true"
+                                                @dragstart="onDesktopAppDragStart($event, item.app.id)"
+                                                @dragend="onDesktopAppDragEnd"
                                             >
                                                 <div class="unreadBadge" v-if="item.app.badge">{{ item.app.badge }}</div>
                                                 <div
@@ -228,15 +243,64 @@
                                 </div>
                             </div>
 
-                        <div v-if="dockApps.length" class="app-dock">
+                        <div
+                            v-if="dockApps.length"
+                            class="app-dock"
+                            :class="{ 'desktop-edit-mode': isEditMode }"
+                            @dragover.prevent="onDockContainerDragOver"
+                            @drop.prevent="onDockContainerDrop"
+                        >
                             <div
-                                v-for="dockApp in dockApps"
+                                v-for="(dockApp, idx) in dockApps"
                                 :key="dockApp.id"
                                 class="dock-item"
+                                :draggable="isEditMode"
+                                :class="{ 'dock-drag-over': draggingDockId === dockApp.id && dockDropTargetIndex === idx }"
                                 @click.stop="openAppFromDock(dockApp.id)"
+                                @dragstart="onDockItemDragStart($event, dockApp.id, idx)"
+                                @dragover.prevent="onDockItemDragOver($event, idx)"
+                                @dragend="onDockItemDragEnd($event)"
+                                @pointerdown="onDockItemPointerDown($event, dockApp.id, idx)"
+                                @pointermove="onDockItemPointerMove($event, idx)"
+                                @pointerup="onDockItemPointerUp($event, idx)"
+                                @pointercancel="onDockItemPointerCancel"
                             >
                                 <div class="dock-icon" :style="dockApp.dockIconStyle" v-html="dockApp.dockIconHtml"></div>
                                 <div v-if="dockApp.badge" class="dock-badge">{{ dockApp.badge }}</div>
+                            </div>
+                            <div
+                                v-if="isEditMode && dockApps.length < dockMaxCount"
+                                class="dock-add-hint"
+                                draggable="false"
+                                @click="onOpenDockAdder"
+                                :class="{ 'dock-drag-over': dockDropTargetIndex === dockApps.length }"
+                            >
+                                <span class="dock-add-plus">+</span>
+                                <span class="dock-add-label">添加</span>
+                            </div>
+                        </div>
+
+                        <!-- Dock 添加面板：编辑模式 + 面板打开时显示 -->
+                        <div
+                            v-if="isEditMode && dockAdderOpen"
+                            class="dock-adder-backdrop"
+                            @click="onCloseDockAdder"
+                        >
+                            <div class="dock-adder-panel" @click.stop>
+                                <div class="dock-adder-title">选择 App 添加到 Dock</div>
+                                <div v-if="!dockAdderItems.length" class="dock-adder-empty">没有可添加的 App</div>
+                                <div class="dock-adder-grid">
+                                    <div
+                                        v-for="app in dockAdderItems"
+                                        :key="app.id"
+                                        class="dock-adder-item"
+                                        @click="onPickDockAdderItem(app.id)"
+                                    >
+                                        <div class="dock-adder-item-icon" :style="{ background: app.iconBg }" v-html="app.icon"></div>
+                                        <div class="dock-adder-item-name">{{ app.name }}</div>
+                                    </div>
+                                </div>
+                                <button class="dock-adder-close" @click="onCloseDockAdder">取消</button>
                             </div>
                         </div>
                     </div>
@@ -250,6 +314,7 @@
                             ref="cardShellElement"
                             :class="{ card: appViewMode === 'card', 'dragging-card': isDraggingCard }"
                             :style="activeAppShellStyle"
+                            :data-app-id="activeApp?.id || ''"
                             @click.stop="handleAppShellClick"
                             @mousedown="onCardMouseDown"
                             @pointerdown="onCardPointerDown"
@@ -260,21 +325,72 @@
                             <div class="app-background-layer" :style="activeAppBackgroundStyle"></div>
 
                             <div class="app-chrome">
-                                <div v-if="showAppTopbar" class="app-topbar">
-                                    <div>
-                                        <div class="app-topbar-title">{{ activeAppTitle }}</div>
-                                        <div v-if="activeAppSubtitle" class="app-topbar-subtitle">{{ activeAppSubtitle }}</div>
+                                <div v-if="showAppTopbar" class="app-topbar" :data-nav-type="activeAppTopbar?.type || 'standard'" :style="topbarStyle" @click="handleAppContentClick">
+                                    <!-- 仅标题 -->
+                                    <template v-if="(activeAppTopbar?.type || 'standard') === 'title-only'">
+                                        <div class="app-topbar-title-row">
+                                            <div class="app-topbar-title">{{ activeAppTitle }}</div>
+                                        </div>
+                                    </template>
+
+                                    <!-- 搜索框 -->
+                                    <template v-else-if="(activeAppTopbar?.type || 'standard') === 'search'">
+                                        <div class="app-topbar-search">
+                                            <svg class="app-topbar-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <circle cx="11" cy="11" r="8"/>
+                                                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                            </svg>
+                                            <span class="app-topbar-search-placeholder">{{ activeAppTopbar?.searchPlaceholder || '搜索' }}</span>
+                                        </div>
+                                    </template>
+
+                                    <!-- 分段控件 -->
+                                    <template v-else-if="(activeAppTopbar?.type || 'standard') === 'segmented'">
+                                        <div class="app-topbar-segments">
+                                            <button v-for="(seg, i) in (activeAppTopbar?.segments || ['选项一','选项二'])" :key="i" class="app-topbar-segment" :class="{ active: i === (activeAppTopbar?.activeSegment || 0) }">{{ seg }}</button>
+                                        </div>
+                                    </template>
+
+                                    <!-- 大标题 -->
+                                    <template v-else-if="(activeAppTopbar?.type || 'standard') === 'large-title'">
+                                        <div class="app-topbar-large-title">{{ activeAppTitle }}</div>
+                                    </template>
+
+                                    <!-- 仅按钮（中间用 pill 占位） -->
+                                    <template v-else-if="(activeAppTopbar?.type || 'standard') === 'buttons-only'">
+                                        <div v-if="activeAppTopbar?.showPill !== false" class="app-topbar-pill" :data-pg-pill="activeAppTopbar?.pillAction || ''">{{ activeAppTopbar?.pillText || activeApp?.name }}</div>
+                                    </template>
+
+                                    <!-- standard（默认） -->
+                                    <template v-else>
+                                        <div>
+                                            <div class="app-topbar-title">{{ activeAppTitle }}</div>
+                                            <div v-if="activeAppSubtitle" class="app-topbar-subtitle">{{ activeAppSubtitle }}</div>
+                                        </div>
+                                    </template>
+
+                                    <!-- ★ headerActions:顶栏右侧按钮组(每个按钮支持自定义 svg + action),
+                                         框架级能力,所有 app 都可用;有就替代 pill 渲染在 topbar 右侧 -->
+                                    <div v-if="activeAppTopbar?.headerActions?.length" class="app-topbar-actions">
+                                        <button v-for="(act, i) in activeAppTopbar.headerActions"
+                                                :key="i"
+                                                class="app-topbar-action"
+                                                :class="act.variant ? `app-topbar-action--${act.variant}` : ''"
+                                                :data-app-action="JSON.stringify(Object.assign({}, act.action, { appId: activeApp?.id }))"
+                                                :aria-label="act.ariaLabel || ''"
+                                                :title="act.ariaLabel || ''"
+                                                v-html="act.iconHtml"></button>
                                     </div>
-                                    <div class="app-topbar-pill">{{ activeApp?.name }}</div>
+                                    <div v-else-if="activeAppTopbar?.showPill !== false" class="app-topbar-pill" :data-pg-pill="activeAppTopbar?.pillAction || ''">{{ activeAppTopbar?.pillText || activeApp?.name }}</div>
                                 </div>
 
                                 <div class="app-content" :class="{ 'detail-active': !!currentDetailView }" @click="handleAppContentClick">
-                                    <div class="app-page-stack" :class="{ 'detail-active': !!currentDetailView }">
-                                        <div class="app-page" :class="{ 'page-hidden': !!currentDetailView }">
-                                            <div v-if="currentPageView" class="app-screen-panel" v-html="currentPageView"></div>
+                                    <div class="app-page-stack" :class="{ 'detail-active': !!currentDetailPage }">
+                                        <div v-show="!currentDetailPage" class="app-page">
+                                            <div v-if="activeApp" class="app-screen-panel" ref="appScreenPanel" v-html="currentPageView"></div>
                                         </div>
 
-                                        <div v-if="currentDetailView" class="app-detail-page">
+                                        <div v-if="currentDetailPage || currentDetailView" class="app-detail-page" :data-app-id="activeApp?.id">
                                             <div class="app-detail-surface">
                                                 <div class="app-detail-header">
                                                     <button class="detail-back-button" @click.stop="closeDetailPage">
@@ -288,15 +404,15 @@
                                                 </div>
 
                                                 <div class="app-detail-body">
-                                                    <div class="app-detail-panel" v-html="currentDetailView"></div>
+                                                    <div class="app-detail-panel" ref="appDetailPanel" v-html="currentDetailView"></div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div v-if="showAppNav" class="app-nav">
-                                    <div v-if="activeAppNavType === 'tab'" class="app-tab-bar">
+                                <div v-if="showAppNav" class="app-nav" :data-app-id="activeApp?.id || ''">
+                                    <div v-if="activeAppNavType === 'tab'" class="app-tab-bar" :data-app-id="activeApp?.id || ''">
                                         <div
                                             v-for="tab in navigationPages"
                                             :key="tab.id"
@@ -304,7 +420,8 @@
                                             :class="{ active: activeRootPageId === tab.id }"
                                             @click.stop="switchRootPage(tab.id)"
                                         >
-                                            <div class="app-tab-icon">{{ tab.icon || '•' }}</div>
+                                            <!-- icon 优先取 iconHtml(支持 SVG),fallback 到 icon(单字符文本,旧 app 兼容) -->
+                                            <div class="app-tab-icon" v-html="tab.iconHtml || escapeTabIcon(tab.icon)"></div>
                                             <div>{{ tab.label }}</div>
                                         </div>
                                     </div>
@@ -335,42 +452,88 @@
                             </div>
 
                             <div v-if="appModal.visible" class="app-modal-layer">
-                                <div class="app-modal-backdrop" @click.stop="closeModal"></div>
-                                <div class="app-modal" :class="appModal.type" @click.stop>
-                                    <div class="text-[18px] font-bold tracking-tight">{{ appModal.title }}</div>
-                                    <div class="mt-3 text-sm leading-6 text-slate-600">{{ appModal.text }}</div>
-                                    <template v-if="appModal.type === 'confirm'">
-                                        <div class="app-modal-divider"></div>
-                                        <div class="app-modal-actions">
-                                            <button class="app-modal-action app-modal-action--cancel" @click="closeModal">取消</button>
-                                            <button
-                                                class="app-modal-action"
-                                                :class="{ 'app-modal-action--danger': appModal.danger }"
-                                                @click="confirmAppModal"
-                                            >{{ appModal.confirmLabel || '确定' }}</button>
-                                        </div>
-                                    </template>
-                                    <template v-else-if="appModal.type === 'prompt'">
-                                        <textarea
-                                            class="app-modal-prompt-input"
-                                            :placeholder="appModal.placeholder || ''"
-                                            rows="3"
-                                            @keydown.ctrl.enter="confirmAppModal"
-                                            @keydown.meta.enter="confirmAppModal"
-                                        ></textarea>
-                                        <div class="app-modal-divider"></div>
-                                        <div class="app-modal-actions">
-                                            <button class="app-modal-action app-modal-action--cancel" @click="closeModal">{{ appModal.cancelLabel || '取消' }}</button>
-                                            <button class="app-modal-action" @click="confirmAppModal">{{ appModal.confirmLabel || '确定' }}</button>
-                                        </div>
-                                    </template>
-                                </div>
+                                <!-- chat-app 组件弹窗（地点卡片、图片描述等）- 全屏固定定位 -->
+                                <template v-if="appModal.type === 'chat-component'">
+                                    <div class="app-modal-backdrop" @click.stop="closeModal"></div>
+                                    <component
+                                        :is="appModal.component"
+                                        v-bind="appModal.props"
+                                        @close="() => { emitChatComponentEvent('onClose'); closeModal(); }"
+                                        @save="(val) => emitChatComponentEvent('onSave', val)"
+                                        @generate="(val) => emitChatComponentEvent('onGenerate', val)"
+                                        @select="(mode) => emitChatComponentEvent('onSelect', mode)"
+                                        @navigate="emitChatComponentEvent('onNavigate')"
+                                        @share="emitChatComponentEvent('onShare')"
+                                        @favorite="emitChatComponentEvent('onFavorite')"
+                                        @confirm="(result) => { emitChatComponentEvent('onConfirm', result); closeModal(); }"
+                                    ></component>
+                                </template>
+                                <!-- 标准弹窗类型 -->
+                                <template v-else>
+                                    <div class="app-modal-backdrop" @click.stop="closeModal"></div>
+                                    <div class="app-modal" :class="appModal.type" @click.stop>
+                                        <div v-if="appModal.type !== 'image-picker'" class="text-[18px] font-bold tracking-tight">{{ appModal.title }}</div>
+                                        <div v-if="appModal.type !== 'image-picker'" class="mt-3 text-sm leading-6 text-slate-600">{{ appModal.text }}</div>
+                                        <template v-if="appModal.type === 'confirm'">
+                                            <div class="app-modal-divider"></div>
+                                            <div class="app-modal-actions">
+                                                <button class="app-modal-action app-modal-action--cancel" @click="closeModal">取消</button>
+                                                <button
+                                                    class="app-modal-action"
+                                                    :class="{ 'app-modal-action--danger': appModal.danger }"
+                                                    @click="confirmAppModal"
+                                                >{{ appModal.confirmLabel || '确定' }}</button>
+                                            </div>
+                                        </template>
+                                        <template v-else-if="appModal.type === 'prompt'">
+                                            <textarea
+                                                class="app-modal-prompt-input"
+                                                :placeholder="appModal.placeholder || ''"
+                                                rows="3"
+                                                @keydown.ctrl.enter="confirmAppModal"
+                                                @keydown.meta.enter="confirmAppModal"
+                                            ></textarea>
+                                            <div class="app-modal-divider"></div>
+                                            <div class="app-modal-actions">
+                                                <button class="app-modal-action app-modal-action--cancel" @click="closeModal">{{ appModal.cancelLabel || '取消' }}</button>
+                                                <button class="app-modal-action" @click="confirmAppModal">{{ appModal.confirmLabel || '确定' }}</button>
+                                            </div>
+                                        </template>
+                                        <!-- 图片发送弹窗 -->
+                                        <template v-else-if="appModal.type === 'image-picker'">
+                                            <div class="app-modal-image-picker">
+                                                <div class="image-picker-header">
+                                                    <svg class="image-picker-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                                        <circle cx="8.5" cy="8.5" r="1.5"/>
+                                                        <polyline points="21 15 16 10 5 21"/>
+                                                    </svg>
+                                                    <span class="image-picker-title">发送图片</span>
+                                                </div>
+                                                <div class="image-picker-hint">描述图片内容,让 AI 帮你生成</div>
+                                                <div class="image-picker-body">
+                                                    <textarea
+                                                        class="image-picker-input"
+                                                        placeholder="例如:我家小猫在窗台晒太阳"
+                                                        rows="2"
+                                                    ></textarea>
+                                                </div>
+                                                <div class="app-modal-actions">
+                                                    <button class="app-modal-action app-modal-action--cancel" @click="closeModal">取消</button>
+                                                    <button class="app-modal-action app-modal-action--primary" @click="confirmAppModal">发送</button>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
 
-                    <!-- 顶层确认弹窗（独立于 activeApp，用于桌面红叉删除等不在 App 内触发的二次确认） -->
-                    <div v-if="confirmRequest.visible" class="app-confirm-layer">
+            <!-- 顶层确认弹窗（独立于 activeApp，用于桌面红叉删除等不在 App 内触发的二次确认） -->
+            <div v-if="confirmRequest.visible" class="app-confirm-layer">
                         <div class="app-modal-backdrop" @click="onConfirmCancel"></div>
                         <div class="app-modal app-modal-confirm" @click.stop>
                             <div class="text-[18px] font-bold tracking-tight">{{ confirmRequest.title }}</div>

@@ -1,0 +1,140 @@
+.desktopPages {
+    position: absolute;
+    inset: 58px 24px 92px;
+    z-index: 5;
+    overflow: hidden;
+}
+
+.currentPage {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 19px;
+    overflow: hidden;
+    transition: transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+    will-change: transform;
+}
+
+.currentPage.swiping {
+    transition: none !important;
+}
+
+.currentPage[data-page-index="0"] { transform: translateX(0%); }
+.currentPage[data-page-index="1"] { transform: translateX(100%); }
+.currentPage[data-page-index="2"] { transform: translateX(200%); }
+.currentPage[data-page-index="3"] { transform: translateX(300%); }
+.currentPage[data-page-index="4"] { transform: translateX(400%); }
+.currentPage[data-page-index="5"] { transform: translateX(500%); }
+
+.desktop-grid {
+    display: grid;
+    /* 列数固定为 4（不再让用户自定义），行数由 Vue 的 :style 绑定
+       （基于 desktopGridRows reactive 值）实时调整。
+       CSS 变量在这里只是兜底 —— 当 JS 还没把 inline style 落进来时，
+       CSS 用默认值 4 行；行数变化只走 :style 那一行。
+       见 index.html 的 .desktop-grid :style 绑定，以及
+       js/apps/setting/appearance-general/theme-bridge.js 写入 --desktop-grid-rows。 */
+    grid-template-columns: repeat(4, 56px);
+    grid-template-rows: repeat(var(--desktop-grid-rows, 4), 76px);
+    /* 每行固定 76px(图标 56 + widgetName 边距 5 + 文字 11 + 上下间距 4)，
+       这样 widget 跨 N 行的高度 = N×76 + (N-1)×18(row-gap) 可预测。 */
+    grid-auto-rows: 76px;
+    align-content: start;
+    justify-items: stretch;
+    align-items: start;
+    row-gap: 18px;
+    column-gap: 20px;
+    /*width: 266px;*/
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.appContainer {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    min-height: 76px;
+    transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease;
+    will-change: transform;
+}
+
+.appContainer.editing {
+    animation: iconJiggle 0.18s ease-in-out infinite alternate;
+}
+
+.appContainer.dragging {
+    z-index: 30;
+    opacity: 0.96;
+    animation: none;
+    transition: none;
+}
+
+.appTouch {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+.unreadBadge {
+    position: absolute;
+    top: -4px;
+    right: 8px;
+    z-index: 3;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #ff3b30;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(255, 59, 48, 0.32);
+}
+
+.appIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+    transition: transform 0.1s cubic-bezier(0.215, 0.61, 0.355, 1), box-shadow 0.1s ease;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.appTouch:hover .appIcon {
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transform: scale(1.05);
+}
+
+.appTouch:active .appIcon {
+    transform: scale(0.94);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+}
+
+.appName {
+    position: relative;
+    margin-top: 5px;
+    max-width: 70px;
+    font-size: 11px;
+    color: #fff;
+    text-align: center;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+

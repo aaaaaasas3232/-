@@ -105,3 +105,40 @@
     margin-left: 4px;
     color: var(--settings-color-tertiary);
 }
+
+/* 时间轴编辑状态下：切换按钮一行，日期输入下一行 */
+.settings-app .wv-timeline__node.is-editing .wv-date-block-wrapper {
+    flex-direction: column;
+    gap: 6px;
+}
+
+.settings-app .wv-timeline__node.is-editing .wv-date-field-toggles {
+    gap: 4px;
+    flex-wrap: nowrap;
+}
+
+.settings-app .wv-timeline__node.is-editing .wv-date-field-toggle {
+    font-size: 10px;
+    padding: 4px 8px;
+    flex-shrink: 0;
+}
+
+.settings-app .wv-timeline__node.is-editing .wv-date-block {
+    gap: 3px;
+    flex-wrap: nowrap;
+}
+
+.settings-app .wv-timeline__node.is-editing .wv-date-part {
+    font-size: 10px;
+    flex-shrink: 0;
+}
+
+.settings-app .wv-timeline__node.is-editing .wv-date-input--num,
+.settings-app .wv-timeline__node.is-editing .wv-date-input--year {
+    width: 50px;
+}
+
+.settings-app .wv-timeline__node.is-editing .wv-date-input--month,
+.settings-app .wv-timeline__node.is-editing .wv-date-input--day {
+    width: 42px;
+}

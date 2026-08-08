@@ -1,0 +1,389 @@
+/* ============================================
+ * chat-app 群聊详情页样式
+ *
+ * 仿妆原则: 用 framework 的脸，画 chat.js 的妆
+ * 效果参考: 参考/chat.js openGroupChatDetail()
+ *
+ * 群聊与私聊的差异:
+ *   - 群头像(九宫格拼接)
+ *   - 非用户消息显示发送者名字
+ *   - 工具栏为6个按钮(@成员/公告/成员/游戏)
+ *   - 长按发送模式提示
+ *
+ * ============================================ */
+
+/* ---- 群聊容器 - 基于私聊容器样式 ---- */
+.app-shell[data-app-id="chat"] .chat-group {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* ---- 全局 SVG 尺寸约束(chat-group 内的所有 svg) ---- */
+.app-shell[data-app-id="chat"] .chat-group svg {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+/* 返回按钮 SVG */
+.app-shell[data-app-id="chat"] .chat-group .chat-back-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* 头部按钮 SVG */
+.app-shell[data-app-id="chat"] .chat-group .header-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* 回复预览 SVG */
+.app-shell[data-app-id="chat"] .chat-group .reply-preview-left svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* 工具按钮 SVG (展开 + emoji + 发送) */
+.app-shell[data-app-id="chat"] .chat-group .expand-toolbar-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .emoji-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .send-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* 消息操作按钮 SVG */
+.app-shell[data-app-id="chat"] .chat-group .action-btn svg {
+    width: 11px;
+    height: 11px;
+}
+
+/* 群聊工具栏按钮 SVG */
+.app-shell[data-app-id="chat"] .chat-group .group-toolbar-btn-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* ---- 群聊头部 ---- */
+.app-shell[data-app-id="chat"] .chat-group .chat-header {
+    flex-shrink: 0;
+    background: #edf2fd;
+    padding: 60px 16px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    z-index: 10;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .chat-header-left {
+    display: flex;
+    align-items: center;
+    flex: 1;
+}
+
+/* 群头像容器 */
+.app-shell[data-app-id="chat"] .chat-group .group-avatar {
+    margin-right: 10px;
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.app-shell[data-app-id="chat"] .chat-group .group-avatar:hover {
+    transform: scale(1.05);
+}
+
+/* 头部信息区 */
+.app-shell[data-app-id="chat"] .chat-group .chat-header-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .chat-header-name {
+    color: #4A6FA5;
+    font-size: 16px;
+    font-weight: 500;
+    margin: 0;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .chat-header-status {
+    font-size: 11px;
+    color: #FF9500;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .status-hint {
+    color: #FF9500;
+}
+
+/* ---- 群聊消息区域 ---- */
+.app-shell[data-app-id="chat"] .chat-group .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    scroll-behavior: smooth;
+    background: #F8F9FA;
+}
+
+/* ---- 发送者名字 (群聊特有) ---- */
+.app-shell[data-app-id="chat"] .chat-group .sender-name {
+    font-size: 11px;
+    color: #666;
+    margin-bottom: 4px;
+    padding-left: 4px;
+}
+
+/* ---- 群聊 @ 提及高亮 ---- */
+.app-shell[data-app-id="chat"] .chat-group .mention {
+    color: #4A6FA5;
+    font-weight: 500;
+}
+
+/* ---- 群聊工具栏 ---- */
+.app-shell[data-app-id="chat"] .chat-group .group-toolbar-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .group-toolbar-btn {
+    background: #F0F2F5;
+    border: none;
+    padding: 12px 8px;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .group-toolbar-btn:hover {
+    background: #E4E8ED;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .group-toolbar-btn:active {
+    transform: scale(0.95);
+}
+
+.app-shell[data-app-id="chat"] .chat-group .group-toolbar-btn-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .group-toolbar-btn-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .group-toolbar-btn-label {
+    font-size: 10px;
+    color: #5A6B7D;
+}
+
+/* ---- 群聊发送按钮样式 ---- */
+.app-shell[data-app-id="chat"] .chat-group .group-send-btn {
+    background: linear-gradient(135deg, #34C759, #30D158);
+    box-shadow: 0 2px 10px rgba(52, 199, 89, 0.4);
+}
+
+/* ---- 群聊空消息状态 ---- */
+.app-shell[data-app-id="chat"] .chat-group .empty-group-messages {
+    text-align: center;
+    padding: 60px 30px;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .empty-group-messages .empty-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 16px;
+    background: linear-gradient(135deg, #34C759, #30D158);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .empty-group-messages .empty-icon svg {
+    width: 32px;
+    height: 32px;
+    fill: white;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .empty-group-messages .empty-title {
+    font-size: 15px;
+    color: #666;
+    margin-bottom: 6px;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .empty-group-messages .empty-desc {
+    font-size: 12px;
+    color: #999;
+    margin-bottom: 12px;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .empty-group-messages .empty-hint {
+    font-size: 11px;
+    color: #FF9500;
+    padding: 8px 14px;
+    background: #FFF5E6;
+    border-radius: 8px;
+    display: inline-block;
+}
+
+/* ---- 群聊欢迎卡片 (空消息时显示) ---- */
+.app-shell[data-app-id="chat"] .chat-group .group-welcome {
+    text-align: center;
+    padding: 40px 20px;
+    animation: fadeIn 0.5s ease;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .group-welcome-icon {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 16px;
+    background: linear-gradient(135deg, #34C759, #30D158);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 24px rgba(52, 199, 89, 0.3);
+}
+
+.app-shell[data-app-id="chat"] .chat-group .group-welcome-icon svg {
+    width: 36px;
+    height: 36px;
+    fill: white;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .group-welcome-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .group-welcome-subtitle {
+    font-size: 13px;
+    color: #999;
+    margin-bottom: 16px;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .group-welcome-hint {
+    font-size: 12px;
+    color: #FF9500;
+    padding: 10px 16px;
+    background: #FFF5E6;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .group-welcome-hint svg {
+    width: 16px;
+    height: 16px;
+    fill: #FF9500;
+}
+
+/* ---- 群聊公告标识 ---- */
+.app-shell[data-app-id="chat"] .chat-group .announcement-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: #FEF3C7;
+    border-radius: 12px;
+    font-size: 11px;
+    color: #D97706;
+    margin-left: 8px;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .announcement-badge svg {
+    width: 12px;
+    height: 12px;
+    fill: #D97706;
+}
+
+/* ---- 群聊成员在线状态 ---- */
+.app-shell[data-app-id="chat"] .chat-group .member-online-badge {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 12px;
+    height: 12px;
+    background: #34C759;
+    border-radius: 50%;
+    border: 2px solid white;
+}
+
+/* ---- 动画 ---- */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ---- 复用私聊的通用样式 ---- */
+/* 私聊样式已在 index.css 通过 @import './_chat-private.css' 加载,
+ * 本文件只覆盖群聊特有部分(气泡颜色/头像颜色)和 SVG 默认尺寸。 */
+
+/* 复用的选择器覆盖 */
+.app-shell[data-app-id="chat"] .chat-group .message-wrapper.user .message-bubble {
+    background: #FFE8F0;
+    border-color: #FFB3D1;
+    border-radius: 16px;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .message-wrapper.ai .message-bubble,
+.app-shell[data-app-id="chat"] .chat-group .message-wrapper:not(.user) .message-bubble {
+    background: #E8F2FF;
+    border-color: #B3D4FF;
+    border-radius: 16px;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .avatar.self {
+    background: #F4A6CD;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .avatar.other {
+    background: #A8C8EC;
+}
+
+/* 消息操作按钮 hover */
+.app-shell[data-app-id="chat"] .chat-group .message-wrapper:hover {
+    z-index: 5;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .message-wrapper:hover .message-actions {
+    display: flex;
+}

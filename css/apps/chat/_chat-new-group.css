@@ -1,0 +1,433 @@
+/* ============================================
+ * chat-app / 发起群聊页面样式 (v0.33)
+ *
+ * DOM 结构:
+ *   <div class="new-group-page">
+ *     <div class="chat-header">            ← 复用 chat-group 的 chat-header 样式
+ *       <div class="chat-header-left">
+ *         <button class="chat-back-btn" />
+ *         <div class="chat-header-info">
+ *           <div class="chat-header-name">...</div>
+ *           <div class="chat-header-status">...</div>
+ *         </div>
+ *       </div>
+ *     </div>
+ *     <div class="new-group-body">
+ *       <div class="new-group-step new-group-step-1|2">
+ *         <div class="new-group-tip" /> / <div class="new-group-summary" />
+ *         <div class="new-group-ai-grid" /> / <div class="new-group-mode-options" />
+ *         <div class="new-group-actions">
+ *           <button class="new-group-btn new-group-btn-ghost" />
+ *           <button class="new-group-btn new-group-btn-primary" />
+ *         </div>
+ *       </div>
+ *     </div>
+ *   </div>
+ * ============================================ */
+
+/* ---- 发起群聊页面容器(全屏 + 上下布局)---- */
+.app-shell[data-app-id="chat"] .new-group-page {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: #F8FAFC;
+    overflow: hidden;
+}
+
+/* ---- 顶部 header:复用 _chat-group.css 的 .chat-header 视觉,但作用域扩展到 new-group ----
+ * _chat-group.css 里的 .chat-header 样式是
+ *   `.app-shell[data-app-id="chat"] .chat-group .chat-header { ... }`
+ * 这里 new-group 页用了同样的 .chat-header 但**不在 .chat-group 容器里**,
+ * 所以需要单独补一份样式。
+ */
+.app-shell[data-app-id="chat"] .new-group-page .chat-header {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 60px 16px 12px;
+    background: #edf2fd;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    z-index: 10;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .chat-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .chat-back-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .chat-back-btn:hover {
+    background: #E9ECEF;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .chat-back-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: #4A6FA5;
+    stroke-width: 2;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .chat-header-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .chat-header-name {
+    color: #4A6FA5;
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .chat-header-status {
+    font-size: 11px;
+    color: #94A3B8;
+    line-height: 1.2;
+}
+
+/* ---- 内容区(可滚动)---- */
+.app-shell[data-app-id="chat"] .new-group-page .new-group-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-body::-webkit-scrollbar {
+    display: none;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-body {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* ---- 单步容器 ---- */
+.app-shell[data-app-id="chat"] .new-group-page .new-group-step {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* ---- step 1:顶部提示条 ---- */
+.app-shell[data-app-id="chat"] .new-group-page .new-group-tip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: #FFFFFF;
+    border-radius: 12px;
+    color: #475569;
+    font-size: 13px;
+    line-height: 1.4;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-tip strong {
+    color: #4A6FA5;
+    font-weight: 600;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-tip-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4A6FA5;
+    flex: 0 0 8px;
+}
+
+/* ---- step 1:AI 列表 grid ---- */
+.app-shell[data-app-id="chat"] .new-group-page .new-group-ai-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-ai-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    background: #FFFFFF;
+    border-radius: 14px;
+    border: 1.5px solid transparent;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    position: relative;
+    min-height: 56px;
+    font: inherit;
+    color: inherit;
+    width: 100%;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-ai-pill:hover {
+    background: #F8FAFC;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-ai-pill:active {
+    transform: scale(0.98);
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-ai-pill.is-selected {
+    border-color: #4A6FA5;
+    background: #F0F6FF;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-ai-check {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #E2E8F0;
+    color: transparent;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-ai-pill.is-selected .new-group-ai-check {
+    background: #4A6FA5;
+    color: #FFFFFF;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-ai-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #A8C8EC;
+    color: #FFFFFF;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex: 0 0 36px;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-ai-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-ai-name {
+    flex: 1;
+    font-size: 14px;
+    color: #1F2937;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 24px;
+}
+
+/* ---- step 1:空状态 ---- */
+.app-shell[data-app-id="chat"] .new-group-page .new-group-empty {
+    background: #FFFFFF;
+    border-radius: 14px;
+    padding: 32px 16px;
+    text-align: center;
+    color: #94A3B8;
+    font-size: 13px;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-empty-icon {
+    color: #CBD5E1;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-empty-icon svg {
+    width: 40px;
+    height: 40px;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-empty-text {
+    color: #94A3B8;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* ---- 底部操作按钮 ---- */
+.app-shell[data-app-id="chat"] .new-group-page .new-group-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    padding: 8px 0 24px;
+    margin-top: auto;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-btn {
+    padding: 10px 20px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background 0.15s ease, transform 0.05s ease;
+    font-family: inherit;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-btn:active {
+    transform: scale(0.97);
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-btn-ghost {
+    background: transparent;
+    color: #475569;
+    border-color: #E2E8F0;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-btn-ghost:hover {
+    background: #F1F5F9;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-btn-primary {
+    background: #4A6FA5;
+    color: #FFFFFF;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-btn-primary:hover {
+    background: #3D5C8A;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-btn-primary.is-disabled,
+.app-shell[data-app-id="chat"] .new-group-page .new-group-btn-primary[disabled] {
+    background: #CBD5E1;
+    cursor: not-allowed;
+}
+
+/* ---- step 2:成员摘要卡 ---- */
+.app-shell[data-app-id="chat"] .new-group-page .new-group-summary {
+    background: #FFFFFF;
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-summary-label {
+    font-size: 11px;
+    color: #94A3B8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-summary-list {
+    font-size: 14px;
+    color: #1F2937;
+    line-height: 1.4;
+}
+
+/* ---- step 2:mode 问题提示 ---- */
+.app-shell[data-app-id="chat"] .new-group-page .new-group-mode-question {
+    font-size: 13px;
+    color: #475569;
+    padding: 0 4px;
+}
+
+/* ---- step 2:mode 选项 list ---- */
+.app-shell[data-app-id="chat"] .new-group-page .new-group-mode-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-mode-option {
+    background: #FFFFFF;
+    border-radius: 14px;
+    border: 1.5px solid transparent;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-mode-option:hover {
+    background: #F8FAFC;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-mode-option.is-selected {
+    border-color: #4A6FA5;
+    background: #F0F6FF;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-mode-option input[type="radio"] {
+    display: none;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-mode-radio {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid #CBD5E1;
+    position: relative;
+    flex: 0 0 20px;
+    transition: border-color 0.15s ease;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-mode-option.is-selected .new-group-mode-radio {
+    border-color: #4A6FA5;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-mode-option.is-selected .new-group-mode-radio::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 10px;
+    height: 10px;
+    background: #4A6FA5;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-mode-info {
+    flex: 1;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-mode-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1F2937;
+    margin-bottom: 2px;
+}
+
+.app-shell[data-app-id="chat"] .new-group-page .new-group-mode-hint {
+    font-size: 12px;
+    color: #94A3B8;
+    line-height: 1.4;
+}

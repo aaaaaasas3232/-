@@ -1,0 +1,341 @@
+.dynamic-island {
+    position: absolute;
+    top: 15px;
+    left: 50%;
+    z-index: 1000;
+    width: 100px;
+    height: 36px;
+    border-radius: 25px;
+    background-color: #000;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    transform: translateX(-50%) scale(1);
+    transform-origin: center center;
+    transition:
+        width 0.4s cubic-bezier(0.32, 0.72, 0, 1),
+        height 0.4s cubic-bezier(0.32, 0.72, 0, 1),
+        border-radius 0.35s cubic-bezier(0.32, 0.72, 0, 1),
+        transform 0.3s cubic-bezier(0.32, 0.72, 0, 1),
+        box-shadow 0.3s ease-out;
+    will-change: width, height, transform;
+    cursor: pointer;
+}
+
+.dynamic-island-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    width: 100%;
+    height: 100%;
+    padding: 10px 15px;
+    color: white;
+    opacity: 0;
+    transition: opacity 0.2s ease-out 0.1s;
+    pointer-events: none;
+}
+
+.dynamic-island.active {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    transform: translateX(-50%) scale(1.05);
+}
+
+.dynamic-island.mini,
+.dynamic-island.compact,
+.dynamic-island.medium,
+.dynamic-island.large {
+    overflow: hidden;
+}
+
+.dynamic-island.mini {
+    width: 180px;
+    height: 36px;
+    border-radius: 23px;
+    animation: islandBounceIn 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes islandBounceIn {
+    0% {
+        width: 100px;
+        height: 36px;
+        transform: translateX(-50%) scale(0.95);
+    }
+    50% {
+        transform: translateX(-50%) scale(1.02);
+    }
+    100% {
+        width: 180px;
+        height: 36px;
+        transform: translateX(-50%) scale(1);
+    }
+}
+
+.dynamic-island.compact {
+    width: 220px;
+    height: 56px;
+    border-radius: 28px;
+    animation: islandExpandCompact 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes islandExpandCompact {
+    0% {
+        width: 100px;
+        height: 36px;
+        border-radius: 25px;
+        transform: translateX(-50%) scale(0.95);
+    }
+    100% {
+        width: 220px;
+        height: 56px;
+        border-radius: 28px;
+        transform: translateX(-50%) scale(1);
+    }
+}
+
+.dynamic-island.medium {
+    width: 240px;
+    height: 135px;
+    border-radius: 32px;
+    animation: islandExpandMedium 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes islandExpandMedium {
+    0% {
+        width: 100px;
+        height: 36px;
+        border-radius: 25px;
+        transform: translateX(-50%) scale(0.95);
+    }
+    40% {
+        transform: translateX(-50%) scale(1.02);
+    }
+    100% {
+        width: 240px;
+        height: 135px;
+        border-radius: 32px;
+        transform: translateX(-50%) scale(1);
+    }
+}
+
+.dynamic-island.large {
+    width: 280px;
+    height: 320px;
+    border-radius: 38px;
+    animation: islandExpandLarge 0.45s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes islandExpandLarge {
+    0% {
+        width: 240px;
+        height: 135px;
+        border-radius: 32px;
+        transform: translateX(-50%) scale(0.98);
+    }
+    40% {
+        transform: translateX(-50%) scale(1.01);
+    }
+    100% {
+        width: 280px;
+        height: 320px;
+        border-radius: 38px;
+        transform: translateX(-50%) scale(1);
+    }
+}
+
+.dynamic-island.mini > div,
+.dynamic-island.compact > div,
+.dynamic-island.medium > div,
+.dynamic-island.large > div {
+    animation: contentFadeIn 0.25s ease-out 0.15s both;
+}
+
+@keyframes contentFadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.dynamic-island-mini-variant {
+    padding: 0;
+}
+
+.dynamic-island.mini .dynamic-island-mini-variant {
+    flex-direction: row;
+    align-items: center;
+}
+
+.dynamic-island-mini-icon-box {
+    width: 25px;
+    height: 25px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+/* 变体 A：图标靠左 + 标题靠右（编辑模式风格）
+   这里的"小方块往左移很多、往上移一些"指的是这个圆角矩形图标 box，
+   用 transform 把它顶到灵动岛左上角，标题顺位跟随。*/
+.dynamic-island.mini .dynamic-island-mini-split {
+    justify-content: flex-start;
+    align-items: center;
+    gap: 6px;
+    padding-top: 2.5px;
+    padding-left: 60px;
+}
+
+.dynamic-island.mini .dynamic-island-mini-split .dynamic-island-mini-icon-box {
+    transform: translate(-18px, -2px);
+}
+
+.dynamic-island.mini .dynamic-island-mini-split .dynamic-island-mini-text {
+    max-width: 130px;
+    flex: 1;
+    transform: translate(-18px, -1px);
+}
+
+/* 变体 B：只有图标居中，且把整座灵动岛顶到 phone-screen 之上，
+   让灵动岛下半部分被手机壳顶部自然裁切，体现 iOS 灵动岛"藏起来"的感觉。*/
+/* === Medium 灵动岛内容布局 === */
+/* medium 整体尺寸 240x135 不变。
+   内层 padding 收紧、图标缩到 36x36、文字允许 2 行换行 + 行末省略。
+   用 grid 把图标列固定 36px、剩余宽度全部交给文字区，消息自动换行不溢出。*/
+.dynamic-island.medium .dynamic-island-content.dynamic-island-medium-info {
+    display: grid;
+    grid-template-columns: 36px 1fr;
+    column-gap: 12px;
+    align-items: start;
+    padding: 12px 14px;
+    box-sizing: border-box;
+}
+
+.dynamic-island.medium .dynamic-island-medium-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    line-height: 1;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    align-self: start;
+}
+
+.dynamic-island.medium .dynamic-island-medium-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    gap: 2px;
+    padding-top: 1px;
+}
+
+.dynamic-island.medium .dynamic-island-medium-title {
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: 0;
+}
+
+.dynamic-island.medium .dynamic-island-medium-message {
+    color: #a8a8ad;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.35;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    letter-spacing: 0;
+}
+
+/* === Compact 灵动岛：聊天通知形态（220x56）===
+   介于 mini (180x36) 和 medium (240x135) 之间。
+   左：圆形头像（emoji 或单字）；右：上行 名字#id / 下行 一句话消息。*/
+.dynamic-island.compact .dynamic-island-content {
+    padding: 8px 12px;
+    box-sizing: border-box;
+}
+
+.dynamic-island-notif {
+    display: grid;
+    grid-template-columns: 36px 1fr;
+    column-gap: 10px;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+}
+
+.dynamic-island-notif-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
+}
+
+.dynamic-island-notif-avatar-text {
+    font-size: 18px;
+    line-height: 1;
+    color: #fff;
+}
+
+.dynamic-island-notif-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.dynamic-island-notif-line1 {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.dynamic-island-notif-name {
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+.dynamic-island-notif-id {
+    color: #6e6e73;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: nowrap;
+    flex-shrink: 0;
+    letter-spacing: 0;
+}
+
+.dynamic-island-notif-msg {
+    color: #b8b8bd;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+

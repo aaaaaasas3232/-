@@ -18,6 +18,7 @@
  *   options: [{value, label}],    // select / radio 专用
  *   optionsFromConstants: 'REAL_CITIES',   // 从本文件常量取
  *   optionsFromContext: 'phases',           // 从 ctx 动态取
+ *   optionsFn: (model, ctx) => [{value, label}],  // 自定义函数（跨 app 数据源）
  *   optionValueKey: 'id',
  *   optionLabelKey: 'label',
  *   optionLabelFn: (item) => string,         // 自定义 label
@@ -200,19 +201,20 @@ export const ANCHOR_FORM_SCHEMA = {
 export const PLACE_FORM_SCHEMA = {
     fieldNamespace: 'place',
     wrapperClass: 'wv-place-editor',
+    noSection: true,
     sections: [
         {
             title: '基本信息',
             fields: [
-                { key: 'name', label: '名称', type: 'text', placeholder: '地点名称（如：A城）' },
-                { key: 'icon', label: '图标', type: 'text', placeholder: '如：🏰' },
-                { key: 'summary', label: '描述', type: 'textarea', rows: 3, placeholder: '简要描述这个地点...' },
+                { key: 'name', label: '名称', type: 'text', placeholder: '地点名称（如：A城）', labelPosition: 'top' },
+                { key: 'icon', label: '图标', type: 'text', placeholder: '如：🏰', labelPosition: 'top' },
+                { key: 'summary', label: '描述', type: 'textarea', rows: 3, placeholder: '简要描述这个地点...', labelPosition: 'top' },
             ]
         },
         {
             title: '位置信息',
             fields: [
-                { type: 'group', label: '坐标（X / Y 各 −100..+100）', inline: true, fields: [
+                { type: 'group', label: '坐标', inline: true, fields: [
                     { key: 'offsetX', type: 'number', placeholder: 'X', defaultValue: 0, inline: true,
                         className: 'wv-editor__input--coord',
                         transformWrite: (model) => {
@@ -227,9 +229,33 @@ export const PLACE_FORM_SCHEMA = {
                         } },
                 ]},
                 { key: 'realCityRef', label: '映射城市（天气）', type: 'select',
-                    optionsFromConstants: 'REAL_CITIES',
-                    optionValueKey: 'id', optionLabelKey: 'label',
-                    defaultValue: '', allowEmpty: true, emptyLabel: '不映射' },
+                    // v0.27：选项动态取自 weather app 已添加的城市列表，
+                    // 不再走预设的 REAL_CITIES（16 城硬编码）。
+                    optionsFn: () => {
+                        const w = window.weatherAppState;
+                        const list = Array.isArray(w?.cities) ? w.cities : [];
+                        // 如果 weather app 还没 hydrate（window.weatherAppState 不存在或 cities 为空），
+                        // 注册一次 weather-hydrated 监听，事件触发后让当前 detail view 重渲。
+                        // 注意：用 window 级一次性 flag 防止重复注册（多次 form render 也只挂一个监听）。
+                        if ((!w || list.length === 0) && !window.__weatherHydratedHookArmed) {
+                            window.__weatherHydratedHookArmed = true;
+                            window.addEventListener('weather-hydrated', () => {
+                                window.__weatherHydratedHookArmed = false;
+                                try {
+                                    if (window.__detailRenderTick) window.__detailRenderTick.value++;
+                                } catch (_) { /* ignore */ }
+                            }, { once: true });
+                        }
+                        return list
+                            .filter(c => c && c.name)
+                            .map(c => ({
+                                id: c.name,        // 用 id 字段做 value（兼容 form-renderer 的 optionValueKey 默认 'id'）
+                                name: c.mappedName
+                                    ? `${c.name}（${c.mappedName}）`
+                                    : c.name,
+                            }));
+                    },
+                    defaultValue: '', allowEmpty: true, emptyLabel: '不映射', labelPosition: 'top' },
             ]
         },
     ],
@@ -242,13 +268,14 @@ export const PLACE_FORM_SCHEMA = {
 export const LOCATION_FORM_SCHEMA = {
     fieldNamespace: 'location',
     wrapperClass: 'wv-location-editor',
+    noSection: true,
     sections: [
         {
             title: '基本信息',
             fields: [
-                { key: 'name', label: '名称', type: 'text', placeholder: '场所名称' },
-                { key: 'icon', label: '图标', type: 'text', placeholder: '如：☕' },
-                { key: 'summary', label: '描述', type: 'textarea', rows: 3, placeholder: '简要描述这个场所...' },
+                { key: 'name', label: '名称', type: 'text', placeholder: '场所名称', labelPosition: 'top' },
+                { key: 'icon', label: '图标', type: 'text', placeholder: '如：☕', labelPosition: 'top' },
+                { key: 'summary', label: '描述', type: 'textarea', rows: 3, placeholder: '简要描述这个场所...', labelPosition: 'top' },
             ]
         },
         {
@@ -257,7 +284,7 @@ export const LOCATION_FORM_SCHEMA = {
                 { key: 'placeRef', label: '所属地点', type: 'select',
                     optionsFromContext: 'places',
                     optionValueKey: 'id', optionLabelKey: 'name',
-                    defaultValue: '', allowEmpty: true, emptyLabel: '无地点（全局）' },
+                    defaultValue: '', allowEmpty: true, emptyLabel: '无地点（全局）', labelPosition: 'top' },
                 { type: 'group', label: '坐标（相对主地点）', inline: true, fields: [
                     { key: 'posX', type: 'number', placeholder: 'X', defaultValue: 0, inline: true,
                         className: 'wv-editor__input--coord',

@@ -12,7 +12,7 @@
  *   - 世界观      → world/
  *   - 图库        → gallery/
  *   - Prompt      → prompt/
- *   - API         → sections/api-page.js
+ *   - API         → api-manager/（新）
  *
  * 本文件只做「组装」：
  *   - 拼出 appConfig（id / name / icon / pages / stores / methods / services）
@@ -42,7 +42,7 @@ function syncIncomeFreqRows(compose, frequency) {
     });
 }
 
-import { cloneDefaults } from './defaults.js';
+import { DEFAULT_API_PARAMS } from './defaults.js';
 import { T } from './tokens.js';
 import {
     bindSliderChangeListener,
@@ -70,6 +70,8 @@ import { renderUserSection, buildUserMethods } from './user/index.js';
 import { renderAiSection, buildAiMethods } from './ai/index.js';
 // 人设主页模块（v0.18）
 import { renderPersonaHome, buildPersonaHomeMethods } from './persona/index.js';
+// ★ v0.67 钱包流水历史页
+import { renderTransactionHistory } from './persona/transaction-history.js';
 // 人设主页 API Bridge（v0.18）—— toolkit.persona.asset.*（同时兼容旧 persona.diary.generate）
 import { installPersonaDiaryApi } from './persona/persona-bridge.js';
 // 人设共享模块（AI / User 共用渲染 + 业务方法）
@@ -81,11 +83,23 @@ import { buildGalleryMethods } from './gallery/gallery-methods.js';
 import { renderPromptSection, bootstrapPrompt, buildPromptMethods } from './prompt/index.js';
 
 import { renderMainSection } from './sections/main-page.js';
-// 旧的简单 API 页面（保留备用）
-import { renderApiSection } from './sections/api-page.js';
+// 旧 API 页面（已删除，改用 api-manager）
+// import { renderApiSection } from './sections/api-page.js';
 // 新的 API 管理器
 import { renderApiManagerSection } from './api-manager/api-manager-section.js';
 import { buildApiManagerMethods } from './api-manager/api-manager-methods.js';
+// 数据库管理模块
+import { renderDatabaseSection, buildDatabaseMethods, handleDatabaseChange as _dbChange, handleDatabaseClick as _dbClick } from './database/section.js';
+// 导入与导出模块
+import { renderImportExportSection, buildImportExportMethods } from './import-export/section.js';
+// 软件管理模块
+import { renderSoftwareSection, buildSoftwareMethods, handleSoftwareChange as _swChange, handleSoftwareClick as _swClick } from './software/section.js';
+
+// 别名供 installGlobalBindings 使用
+const handleDatabaseChange = _dbChange;
+const handleDatabaseClick = _dbClick;
+const handleSoftwareChange = _swChange;
+const handleSoftwareClick = _swClick;
 
 // ============================================
 // 应用配置
@@ -93,24 +107,32 @@ import { buildApiManagerMethods } from './api-manager/api-manager-methods.js';
 
 const SETTINGS_APP_CONFIG = {
     id: 'settings',
-    name: '设置',
+    name: 'nook',
     icon: `
-        <svg viewBox="0 0 60 60" width="60" height="60" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="0 0 60 60" width="56" height="56" xmlns="http://www.w3.org/2000/svg" style="display:block;">
             <defs>
-                <radialGradient id="settings-gear" cx="50%" cy="38%" r="62%">
-                    <stop offset="0%" stop-color="#ffffff" />
-                    <stop offset="100%" stop-color="#dbe1ea" />
-                </radialGradient>
+                <linearGradient id="settings-gloss" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.45" />
+                    <stop offset="60%" stop-color="#FFFFFF" stop-opacity="0.10" />
+                    <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
+                </linearGradient>
+                <clipPath id="settings-clip">
+                    <rect x="0" y="0" width="60" height="60" rx="14" ry="14" />
+                </clipPath>
             </defs>
-            <rect width="60" height="60" rx="14" fill="url(#settings-gear)" />
-            <g transform="translate(30 30)" stroke="#374151" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none">
-                <circle r="7" />
-                <path d="M0 -16 L0 -12 M0 16 L0 12 M-16 0 L-12 0 M16 0 L12 0 M-11.3 -11.3 L-8.5 -8.5 M11.3 11.3 L8.5 8.5 M-11.3 11.3 L-8.5 8.5 M11.3 -11.3 L8.5 -8.5" />
-            </circle>
-            <circle cx="30" cy="30" r="7" fill="#374151" />
+            <g clip-path="url(#settings-clip)">
+                <!-- 顶部内反光（贴合粉色背景的微弱高光） -->
+                <rect x="0" y="0" width="60" height="30" fill="url(#settings-gloss)" />
+                <!-- 白色 "nook" 剪影：两耳（圆）+ 头身（椭圆），旋转 -45° 顶在右下角 -->
+                <g transform="translate(45 47) rotate(-45)">
+                    <circle cx="-16" cy="-15" r="10" fill="#FFFFFF" />
+                    <circle cx="16" cy="-15" r="10" fill="#FFFFFF" />
+                    <ellipse cx="0" cy="0" rx="22" ry="20" fill="#FFFFFF" />
+                </g>
+            </g>
         </svg>
     `,
-    iconBg: 'linear-gradient(145deg, #e5e7eb 0%, #cbd5e1 100%)',
+    iconBg: 'linear-gradient(145deg, #FFB6C1 0%, #FF8FAB 50%, #FF69B4 100%)',
     background: `linear-gradient(180deg, ${T.color.pageBackground} 0%, ${T.color.pageBackground} 100%)`,
     statusBarColor: T.color.label,
     homeIndicatorColor: T.color.quaternaryLabel,
@@ -131,7 +153,11 @@ const SETTINGS_APP_CONFIG = {
         { id: 'world',      type: 'detail' },
         { id: 'gallery',    type: 'detail' },
         { id: 'prompt',     type: 'detail' },
+        { id: 'importExport', type: 'detail' },
+        { id: 'database',   type: 'detail' },
+        { id: 'software',   type: 'detail' },
         { id: 'api',        type: 'detail' },
+        { id: 'transaction-history', type: 'detail' }, // ★ v0.67 钱包流水历史页(无 50 条限制)
     ],
     defaultRootPageId: 'main',
 
@@ -143,7 +169,11 @@ const SETTINGS_APP_CONFIG = {
         world:        { title: '世界观',     subtitle: '世界 / 标签 / 地点 / 快照' },
         gallery:      { title: '图库',       subtitle: '收藏 · 灵感 · 参考' },
         prompt:       { title: 'Prompt 工程', subtitle: '提示词库 · 模板 · 变量' },
+        importExport: { title: '导入与导出', subtitle: '角色卡 / AI / 世界观 / Prompt' },
+        database:     { title: '数据库管理',  subtitle: '数据表浏览 · 数据库检查' },
+        software:     { title: '软件管理',    subtitle: '插件安装 · JS 文件注册' },
         api:          { title: 'API',        subtitle: '当前提供方 / Key / 模型' },
+        transactionHistory: { title: '钱包流水', subtitle: '最近的收支记录' },
     },
 
     // IndexedDB 表声明（与 store 名一一对应）
@@ -175,11 +205,11 @@ const SETTINGS_APP_CONFIG = {
     ],
 
     setup({ app: appConfigArg }) {
-        const defaults = cloneDefaults();
+        const defaults = DEFAULT_API_PARAMS;
         const result = {
             ui: {
                 appearance: initialAppearance(),
-                api: defaults.api,
+                api: { ...defaults },
             },
             savedAt: {
                 appearance: 0,
@@ -190,6 +220,7 @@ const SETTINGS_APP_CONFIG = {
             ai:           { sub: 'list' },
             personaHome:  { entityType: 'user', entityId: 'user0' }, // ★ v0.18 默认进当前用户人设
             apiMgr:       { tab: 'keys', statsDays: 7 },              // ★ API 管理器状态
+            importExport: { tab: 'export', policy: 'overwrite', importTarget: '' },
             _hydrated:    false,
         };
         // ★ v0.19b 给长按 / schedule UI 提供访问 normalized app 的入口
@@ -204,6 +235,9 @@ const SETTINGS_APP_CONFIG = {
             ...buildAppearanceMethods(),
             ...buildApiMethods(),
             ...buildApiManagerMethods(),
+            ...buildDatabaseMethods(),
+            ...buildImportExportMethods(),
+            ...buildSoftwareMethods(),
             ...buildWorldMethods(),
             ...buildUserMethods(),
             ...buildAiMethods(),
@@ -270,6 +304,12 @@ const SETTINGS_APP_CONFIG = {
             });
             return `<div class="settings-app"><div class="persona-empty">人设主页加载中…</div></div>`;
         }
+        // v0.27：[已撤回] 不再在这里监听 weather-hydrated 触发 refreshPhoneApps。
+        // 原因：refreshPhoneApps 会重建所有 phone app → weather 重新 hydrate → 又触发
+        // weather-hydrated → 又 refresh → 死循环，并且会冲掉 settings 的 world 页。
+        // optionsFn 会在 settings world 页每次 render 时重新查 window.weatherAppState。
+        // 由于 weather 是 async 注册（hydrate 完才完成 register），settings world 页
+        // 首次 render 时 window.weatherAppState 必然已就绪。
         let body = '';
         switch (page.id) {
             case 'appearance':  body = renderAppearanceSection(app); break;
@@ -279,7 +319,11 @@ const SETTINGS_APP_CONFIG = {
             case 'world':       body = renderWorldLibrary(app); break;
             case 'gallery':     body = renderGallerySection(app); break;
             case 'prompt':      body = renderPromptSection(app); break;
+            case 'importExport': body = renderImportExportSection(app); break;
+            case 'database':     body = renderDatabaseSection(app); break;
+            case 'software':     body = renderSoftwareSection(app); break;
             case 'api':         body = renderApiManagerSection(app); break;
+            case 'transaction-history': body = renderTransactionHistory(app); break;
             default:            body = '';
         }
         return `<div class="settings-app">${body}</div>`;
@@ -335,6 +379,14 @@ function installGlobalBindings() {
     // ★ API 管理器事件
     document.addEventListener('change', handleApiMgrChange, true);
     document.addEventListener('click', handleApiMgrClick, true);
+
+    // ★ 数据库管理事件
+    document.addEventListener('change', handleDatabaseChange, true);
+    document.addEventListener('click', handleDatabaseClick, true);
+
+    // ★ 软件管理事件
+    document.addEventListener('change', handleSoftwareChange, true);
+    document.addEventListener('click', handleSoftwareClick, true);
 }
 
 // checkbox「指定时间」勾选态 → 切换时间 row 的视觉态
@@ -463,6 +515,8 @@ function handleMapDragStart(e) {
     
     // 检查是否点击了地图 pin
     const pin = target.closest('[data-wv-map-pin]');
+    const stage = target.closest('.wv-map__stage');
+    
     if (!pin) return;
     
     const shell = target.closest('.app-shell');
@@ -474,7 +528,6 @@ function handleMapDragStart(e) {
     if (!placeId && !locationId) return;
     
     // 获取地图容器的尺寸
-    const stage = pin.closest('.wv-map__stage');
     if (!stage) return;
     const stageRect = stage.getBoundingClientRect();
     
@@ -500,8 +553,6 @@ function handleMapDragStart(e) {
             pin.classList.add('is-dragging');
         }, 300)
     };
-    
-    e.preventDefault();
 }
 
 function handleMapDragMove(e) {
@@ -834,36 +885,39 @@ function handlePersonaScheduleClick(event) {
 
     const scheduleRoot = target.closest('.phome-schedule');
     if (!scheduleRoot) return;
-    const openDate = scheduleRoot.parentElement?.querySelector?.('.phome-week.is-open')
-        ? scheduleRoot.querySelector('.phome-schedule__date')?.textContent
-        : null;
-    console.log('[schedule] openDate UI:', openDate);
+
+    // ★ v0.31：始终从 data-schedule-date 读取，转换为周几，写入 weeklySchedule
+    const openDate = scheduleRoot.getAttribute('data-schedule-date')
+        || window.settingsApp?.state?.personaHome?.scheduleOpenDate
+        || '';
+    // 把 YYYY-MM-DD 转成 JS getDay() 的 0=周日~6=周六
+    const weekday = (() => {
+        if (!openDate) return null;
+        const d = new Date(openDate);
+        return isNaN(d) ? null : d.getDay();
+    })();
 
     // 添加
     if (target.matches('[data-schedule-add]')) {
         event.stopPropagation();
         const payload = collectScheduleFields(scheduleRoot, '[data-schedule-field]');
-        console.log('[schedule] add payload (FULL):', JSON.stringify(payload));
         if (!payload.title) {
             window.dispatchEvent(new CustomEvent('settings:toast', {
                 detail: { kind: 'warn', title: '需要标题', text: '请先填写日程标题' },
             }));
             return;
         }
-        console.log('[schedule] dispatching personaScheduleAddEvent');
-        dispatchMethodAction('personaScheduleAddEvent', {
-            ...payload,
-        });
+        if (weekday === null) return;
+        dispatchMethodAction('personaWeeklyScheduleAddEvent', { weekday, ...payload });
         clearScheduleFields(scheduleRoot, '[data-schedule-field]');
         return;
     }
     // 编辑（长按/点击浮层内的「编辑」按钮）
     const editAttr = target.getAttribute('data-schedule-longpress-edit');
     if (editAttr) {
-        event.stopPropagation(); // 阻止冒泡
+        event.stopPropagation();
         const item = target.closest('.phome-schedule__item');
         if (!item) return;
-        // 直接打开编辑态
         if (window.settingsApp) window.settingsApp.state.personaHome.schedulePressed = `edit::${editAttr}`;
         bumpSettingsDetailView();
         return;
@@ -871,23 +925,24 @@ function handlePersonaScheduleClick(event) {
     // 删除（长按/点击浮层内的「删除」按钮）
     const removeAttr = target.getAttribute('data-schedule-longpress-remove');
     if (removeAttr) {
-        event.stopPropagation(); // 阻止冒泡
+        event.stopPropagation();
         const evtId = removeAttr;
-        const openDate = window.settingsApp?.state?.personaHome?.scheduleOpenDate || '';
+        if (weekday === null) return;
         if (window.__phoneConfirm?.request) {
             window.__phoneConfirm.request({
                 title: '删除日程',
-                text: '确定要删除这条日程吗？删除后不可恢复。',
+                text: '确定要删除这条每周重复日程吗？删除后不可恢复。',
                 confirmLabel: '删除',
                 danger: true,
                 onConfirm: () => {
-                    dispatchMethodAction('personaScheduleRemoveEvent', { eventId: evtId, date: openDate });
+                    if (window.settingsApp) window.settingsApp.state.personaHome.schedulePressed = '';
+                    dispatchMethodAction('personaWeeklyScheduleRemoveEvent', { weekday, eventId: evtId });
                 },
             });
         } else {
-            // 兜底：framework 未挂载时用原生 confirm
-            if (confirm('确定要删除这条日程吗？')) {
-                dispatchMethodAction('personaScheduleRemoveEvent', { eventId: evtId, date: openDate });
+            if (confirm('确定要删除这条每周重复日程吗？')) {
+                if (window.settingsApp) window.settingsApp.state.personaHome.schedulePressed = '';
+                dispatchMethodAction('personaWeeklyScheduleRemoveEvent', { weekday, eventId: evtId });
             }
         }
         return;
@@ -895,32 +950,25 @@ function handlePersonaScheduleClick(event) {
     // 保存
     const saveAttr = target.getAttribute('data-schedule-save');
     if (saveAttr) {
-        event.stopPropagation(); // 阻止冒泡到 onScheduleItemAnyClick，避免它误清 pressed
+        event.stopPropagation();
         const item = target.closest('.phome-schedule__item');
         if (!item) return;
         const patch = collectScheduleFields(item, '[data-edit-field]');
-        console.log('[schedule] save patch (FULL):', JSON.stringify(patch), 'for eventId:', saveAttr);
-        if (!patch.title) {
-            console.warn('[schedule] save: title empty, ignored');
-            return;
-        }
+        if (!patch.title) return;
         if (window.settingsApp) window.settingsApp.state.personaHome.schedulePressed = '';
         bumpSettingsDetailView();
-        const openDate = window.settingsApp?.state?.personaHome?.scheduleOpenDate || '';
-        dispatchMethodAction('personaScheduleUpdateEvent', {
-            eventId: saveAttr,
-            date: openDate,
-            ...patch,
-        });
+        if (weekday !== null) {
+            dispatchMethodAction('personaWeeklyScheduleUpdateEvent', { weekday, eventId: saveAttr, ...patch });
+        }
         return;
     }
-    // 取消（收起编辑面板靠 refresh）
+    // 取消
     if (target.matches('[data-schedule-cancel]')) {
         if (window.settingsApp) window.settingsApp.state.personaHome.schedulePressed = '';
         bumpSettingsDetailView();
         return;
     }
-    // 长按浮层里的「编辑」 → 切到编辑态
+    // 长按浮层里的「编辑」
     const lpEdit = target.getAttribute('data-schedule-longpress-edit');
     if (lpEdit) {
         if (window.settingsApp) window.settingsApp.state.personaHome.schedulePressed = `edit::${lpEdit}`;
@@ -932,25 +980,24 @@ function handlePersonaScheduleClick(event) {
     if (lpRemove) {
         event.stopPropagation();
         const evtId = lpRemove;
-        const openDate = window.settingsApp?.state?.personaHome?.scheduleOpenDate || '';
+        if (weekday === null) return;
         if (window.__phoneConfirm?.request) {
             window.__phoneConfirm.request({
                 title: '删除日程',
-                text: '确定要删除这条日程吗？删除后不可恢复。',
+                text: '确定要删除这条每周重复日程吗？删除后不可恢复。',
                 confirmLabel: '删除',
                 danger: true,
                 onConfirm: () => {
-                    // 清掉按压态 + 派发删除
                     if (window.settingsApp) window.settingsApp.state.personaHome.schedulePressed = '';
-                    dispatchMethodAction('personaScheduleRemoveEvent', { eventId: evtId, date: openDate });
+                    dispatchMethodAction('personaWeeklyScheduleRemoveEvent', { weekday, eventId: evtId });
                 },
                 onCancel: () => {
                     if (window.settingsApp) window.settingsApp.state.personaHome.schedulePressed = '';
                 },
             });
-        } else if (confirm('确定要删除这条日程吗？')) {
+        } else if (confirm('确定要删除这条每周重复日程吗？')) {
             if (window.settingsApp) window.settingsApp.state.personaHome.schedulePressed = '';
-            dispatchMethodAction('personaScheduleRemoveEvent', { eventId: evtId, date: openDate });
+            dispatchMethodAction('personaWeeklyScheduleRemoveEvent', { weekday, eventId: evtId });
         }
         return;
     }

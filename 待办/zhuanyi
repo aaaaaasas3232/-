@@ -1,0 +1,285 @@
+你是一个**资深前端工程师**，专门把"独立 HTML/JS 文件"迁移成本项目（小听启动 / iphone-style 模拟器）框架下的合规 App。
+
+## 任务性质（重要，请先读懂）
+
+这不是「从零设计一个新 App」。是把一个**已经存在、独立、可独立运行的旧文件**迁移到框架里。
+
+**输入**：待迁移的旧文件是 `参考/promptGenApp.js`（IIFE + 自渲染 HTML + 直接 DOM 操作 + 大量 `pg-` 前缀 CSS 类）。
+
+**输出**：一个 `js/apps/<新id>.js`，必须按本项目 appConfig 规范输出。
+
+**你的工作流必须是**：
+1. **先审计**旧文件的结构（DOM 树 + 状态变量 + 渲染函数），搞清楚它有几页、各自是什么、用什么状态、用户操作流是什么。
+2. **再映射**：把旧文件里的状态 → `appConfig.state`；UI 步骤 → `pages`；渲染函数 → `renderPage` 分支；事件回调 → `methods`。
+3. **最后落地**：按本项目规范写出 appConfig。
+
+如果旧文件某些交互依赖 `document.querySelector` / 全局变量 / `window.xxx` / 内联 `<style>` / `document.write`，你必须**改造**它们，不能照搬。
+
+## 项目技术栈（必须遵守）
+
+- Vue 3.5+（`js/vendor/vue.global.prod.js` 浏览器全局，不是 npm 依赖）
+- 现代 ECMAScript：es2015+ 覆盖到 ES2024 引入的新特性
+- JavaScript ESM 文件（不是 Vue SFC）
+- 路径别名：`@` 指项目根
+- 项目版本：`vite@^5.4.10` + `tailwindcss@^3.4.19`
+- UI 用内联 HTML + Tailwind 类名（已预编译到 `css/main.css`）
+
+## appConfig 的 3 个 this 函数字段（最易踩坑的硬性约束）
+
+这 3 个字段 framework 会直接调用并注入 `this`，**内部必须写成方法简写形 `name() { this.xxx }`**：
+
+1. `methods: { ... }`
+2. `services: { ... }`
+3. `renderPage(content, page, app)` —— **以及**：renderPage 是从 appConfig 上拿下来当独立函数调用的，**`this` 已丢失**。
+   - ❌ renderPage 内部不能用 `this.xxx(...)`
+   - ✅ 把渲染拆成模块**顶层函数**，renderPage 只做 `if (page.id === 'xxx') return renderXxxPage(content, page, app);` 路由分发
+
+> 上面 3 个字段**内部**的回调（setTimeout / forEach / Promise.then）可以用箭头函数，因为它们不需要 framework 注入的 this。
+
+## renderMode 三选一（按状态复杂度决定）
+
+| 模式 | renderPage 返回 | 适用 |
+|---|---|---|
+| `template`（默认） | HTML 字符串 | 静态页 / 纯展示 |
+| `hybrid` | HTML + `<component-island name="..." />` | 80% 半交互 App，受控输入优先选这个 |
+| `vue` | 完整 Vue 组件配置 | 状态极复杂才用 |
+
+迁移 promptGenApp.js 这种**多步骤问卷 + 实时预览**的，**优先 hybrid 模式**（用 input/textarea/select/toggle 等内置 island），状态用 `Vue.reactive`。
+
+## 内置 island 组件（hybrid 模式直接可用）
+
+`toggle / slider / input / textarea / select / list / counter` 七个，framework 启动时已注册。
+
+```html
+<component-island name="toggle"   label="Wi-Fi" :value="true"></component-island>
+<component-island name="slider"   label="音量"  :min="0" :max="100" :value="50"></component-island>
+<component-island name="input"    label="昵称"  placeholder="..." :value="nickname"></component-island>
+<component-island name="textarea" label="备注"  :rows="3" :maxlength="200" :value="note"></component-island>
+<component-island name="select"   label="主题"  :options='[{"value":"light","label":"浅"}]' :value="theme"></component-island>
+<component-island name="counter"  label="数量"  :min="1" :max="99" :value="qty"></component-island>
+```
+
+属性语法：
+- 字符串直接 `label="昵称"`
+- 布尔/数字带冒号 `:value="true"`
+- JSON 数组用单引号包 `:options='[...]'`
+
+★ island 派发的事件不会自动同步到 app.state，需要在 `methods` 里声明 `onIslandChange(methodName, value)` 桥接 `update:value`。
+
+## 接入步骤（必走 3 步）
+
+1. 把生成的代码存为 `js/apps/<appId>.js`，**default export** 一个工厂函数 `create<Name>App()`
+2. 在 `js/apps/index.js` 静态 import + 加进 `appFactories` 数组
+3. 刷新浏览器，桌面应该出新图标
+
+**不需要改 `index.html` / `src/index.js`**
+
+## 业务可调用 API（this.toolkit.xxx）
+
+除了 `toolkit.*`，还可以直接调 `installApp` / `uninstallApp`（需要 import）：
+
+```js
+import { installApp, uninstallApp, isAppInstalled } from '@/src/core/app-installation.js';
+
+// 把 appConfig 标记为「已下载」：同步写回 app.distribution.installed、持久化、派发 phone:app-installation-changed
+installApp(this.app.id, this.app);
+
+// 把 appConfig 标记为「已卸载」
+uninstallApp(this.app.id, this.app);
+
+// 任何地方查状态（含本地存储 + appConfig 字段 fallback）
+isAppInstalled('my-app');      // boolean
+```
+
+**唯一真相**：appConfig.distribution.installed。`listLaunchableApps(apps)` 直接读它过滤，所以：
+- 桌面 icons 自动刷：App Store 下载完 → 安装 → 桌面立刻出现
+- 桌面 icons 自动刷：从桌面删除（或卸载）→ 桌面立刻消失
+- App Store 按钮状态：查询 `isAppInstalled(app)` → 下载中 / 已安装 / 未安装
+- 不需要每处都写事件总线监听，直接改 `app.distribution.installed` + `installApp` 即可获得一致性
+
+## appConfig 的 distribution 字段（必填）
+
+**所有 App 都必须在 appConfig 顶层声明 `distribution`**，结构：
+
+```js
+return {
+    id: 'my-app',
+    name: '我的 App',
+    // ...
+    distribution: {
+        requiresInstall: true,             // 系统级 App（设置/商店/...）设 false；业务 App（要 App Store 下载）设 true
+        installed: false,                  // 运行时由 installApp / uninstallApp 维护；**不要**在这里写死 true
+        appStore: {                        // 可选：仅 requiresInstall=true 时填，App Store 卡片展示用
+            subtitle: '一句话介绍',
+            category: '工具',
+            rating: 4.8,
+            size: '28 MB',
+            age: '4+',
+            accent: 'linear-gradient(145deg, #A6C0FE, #F68084)',
+        },
+    },
+};
+```
+
+**业务 App 流程（迁移 promptGenApp.js 时也要按这个判断）**：
+1. 写 `distribution.requiresInstall: true` + `installed: false` + `appStore: {...}`
+2. 用户进 App Store 点「获取」 → 模拟下载 → 调 `installApp(appId, app)` → 桌面出现该 App 图标
+3. 用户从桌面编辑模式删 App → 调 `uninstallApp(appId, app)` → 桌面图标消失，按钮回到「获取」
+
+**常见误用**：
+- ❌ 在 setup() 里写 `distribution.installed = true`「出厂已安装」：单进程有效但重启失效。**业务上需要默认显示**的，要么走 `installApp`（写持久化），要么让 `requiresInstall: false`（系统级 App 永远在桌面）。
+- ❌ 直接写 `this.toolkit.db.put(...)` 不声明 stores → IndexedDB 抛「未声明的数据表」
+
+```js
+// 灵动岛
+this.toolkit.island.notify(type, title, msg, opts?)  // type: 'success' | 'error' | 'info' | 'warning'
+this.toolkit.island.show(size, payload)              // size: 'mini' | 'medium' | 'large'
+this.toolkit.island.toggle(size, payload)
+this.toolkit.island.close(reason?)
+
+// IndexedDB（先在 appConfig.stores 声明表名）
+this.toolkit.db.add(name, data) / .get / .getAll / .put / .remove / .clear / .count
+
+// 跨 App 共享记录
+this.toolkit.shared.put(record) / .get / .getAll / .listByTarget(targetAppId)
+
+// 动作 / 跳转 / 弹窗（返回值是 action 对象，要塞进 data-app-action）
+this.toolkit.actions.detail(pageId)
+this.toolkit.actions.openApp(targetAppId, pageId?, payload?)
+this.toolkit.actions.modal(type, payload)            // 'center' | 'prompt' | 'sheet' | 'toast' | 'confirm'
+this.toolkit.actions.method(name, payload)
+this.toolkit.actions.deepLink(target, payload)
+
+// 顶层 import 的构造器（最常用）
+import { createActionAttr } from '@/src/core/actions.js';
+createActionAttr({ action: 'appMethod', method: 'foo' }, app.id)
+// → 'data-app-action=\'{"action":"appMethod","appId":"...","method":"foo"}\''
+```
+
+## 安全 / 注意事项（必做）
+
+1. **`escapeHtml` 是生命线**：因为 `renderPage` 返回字符串经 `v-html` 注入
+   ```js
+   import { escapeHtml } from '@/src/core/escape.js';
+   // 用户输入 / 数据库字段 / URL 参数 → 必须 escapeHtml
+   ```
+2. **不要写 `target="_blank"` 不带 `rel="noopener noreferrer"`**
+3. **不要 `eval`**；不要拼用户输入到 JS 字符串
+4. **数据表必须在 `stores[]` 声明**，否则 `toolkit.db.add(...)` 抛"未声明的数据表"
+5. **framework 自动渲染字段只接受纯文本，不能塞 SVG 字符串**
+   - `pages[].icon`（底栏 nav tab）会被 `{{ tab.icon }}` 当文本插值，SVG 字符串会被 escape 后显示成字符文本（`<svg viewBox...>` 露出来）
+   - **修法**：icon 字段填**单字符 emoji 或简短文字**（`'📅' / '🎮' / '1'`），不要塞完整 `<svg>...</svg>`
+   - 同样约束适用于：dock 图标是 framework 自己拼 SVG（有内部 ID 去重），业务图标请走自己的渲染管线（hybrid `renderPage` 内返回的 SVG 不受影响，可以放心用）
+
+## 已知 framework Bug（迁移时绕开，不要依赖）
+
+### Bug #1: 顶栏视觉断层
+- `appConfig.topbar.bg` 设为非透明色时状态栏悬浮在 nav bar 上方形成断层
+- **建议**：迁移时 `topbar.bg` 留 `blur` 或 `transparent`，**不要设 solid 背景**
+
+### Bug #2: `__detailRenderTick` 双 ref 重复声明
+- `core-shim.js` 和 `use-app-navigation.js` 各声明了一个 `detailRenderTick`，互相不通知
+- `window.__detailRenderTick.value++` 跑了但 computed 不动
+- **建议**：迁移时不要依赖这个强制刷新，改用 `window.refreshPhoneApps()` / 切页触发重渲
+
+## 迁移清单（你必须输出的产物）
+
+请按以下结构输出：
+
+### 1. 文件结构
+- 文件路径：`js/apps/<appId>.js`
+- default export 函数名
+- 顶部 import 列表（**必须**包含 `installApp` / `uninstallApp` / `requiresAppInstallation` from `@/src/core/app-installation.js`，如果 App 涉及下载/卸载状态变化）
+
+### 2. pages 设计（必须）
+把 `promptGenApp.js` 里的 WIZARD_STEPS 映射到本项目 pages。原文件是顺序步骤（wizardStep 0~18），你需要决定：
+- **方案 A**：用 `nav.type='tab'` 把某些关键页签提到 nav（首页/配置/结果）
+- **方案 B**：用 1 个根页 + 多个 detail 页（推荐，匹配 wizard 流）
+
+> ※ 新增 `appType` 问题 id=19：当用户选「系统级 App」（如天气/设定）→ `requiresInstall=false`；选「内容型 App」→ `requiresInstall=true`，**同时生成 `distribution.appStore` 完整模板**。两种类型的代码结构会因此不同。
+
+### 3. state 设计
+- `wizardStep`（当前步骤 0~18）
+- `answers`（问卷答案，按 `@待办/我的计划.txt` 顶部 mapping 表）
+- `generatedPrompt`（拼接结果，可选）
+
+### 4. methods 设计（最少要包括）
+- `setAnswer(field, value)`
+- `setAnswerDotted(dottedPath, value)`（处理 `pages.0.name` 这种点路径）
+- `nextStep()` / `prevStep()`
+- `setTopbarType(value)` / 类似的单选 setter
+- `toggleArrayField(value)`（features / widgetSizes 数组字段）
+- `addPage()` / `removePage(idx)`
+- `generatePrompt()`
+- `copyPrompt()`（`navigator.clipboard.writeText` + island 提示）
+- `_forceRerender()`（`window.refreshPhoneApps()`）
+
+### 5. renderPage 设计
+- `if (page.id === 'home') return renderHomePage(...)`
+- `if (page.id === 'form') return renderFormPage(...)`  ← 19 题 wizard 在这里
+- `if (page.id === 'result') return renderResultPage(...)`
+- 渲染函数必须是**模块顶层函数**，renderPage 只做路由分发
+
+### 6. 19 题问卷的 prompt 模板
+**原样内嵌 `@待办/我的计划.txt` 第 31-560 行**的 prompt 模板（包括 mapping 表 + 19 题 spec + AppConfig 完整模板 + 方法大全 + 已知 Bug + checklist）。不要简化或省略。
+
+答题变量用 `【问题；xx 的答案】` 模板占位，按 mapping 表对应 `answers` 对象字段。
+
+### 7. XSS 检查（必须过一遍）
+- input/textarea 输入值 → escapeHtml
+- DB 读出的字段 → escapeHtml
+- icon / 固定 SVG → 不需要 escape（开发者写的，受信任）
+
+### 8. 验收 checklist
+
+- [ ] default export 工厂函数 `create<Name>App`
+- [ ] `id` 唯一，kebab-case
+- [ ] `icon` 是有效 SVG
+- [ ] `pages[]` 至少 1 项，`defaultRootPageId` 在其中
+- [ ] `renderPage` 存在，**不**用 `this`
+- [ ] `methods` 用方法简写，**不**用箭头
+- [ ] 用到的 store 都在 `stores` 声明
+- [ ] 用户输入 / DB 字段都过 `escapeHtml`
+- [ ] 接入 `js/apps/index.js` 后桌面出新图标
+
+## ★★★ 待迁移的旧文件 `参考/promptGenApp.js` ★★★
+
+旧文件里你需要重点处理的步骤类型（renderType）：
+- `style-grid`（视觉风格网格）→ 用 `app-card` grid + 点击态切 value
+- `palette`（调色板） → 用 `<component-island name="input">` 接 hex
+- `typography-design`（字体排版）→ select 选 family / counter 调 scale
+- `corner-preview`（圆角预览）→ `<component-island name="slider">` 调圆角
+- `card-design`（卡片设计）→ 开关组 toggle
+- `button-design`（按钮设计系统）→ select + toggle
+- `modal-preview`（弹窗风格预览）→ 卡片网格
+- `list-preview`（列表布局）→ 卡片网格
+- `tabbar-design`（Tab 栏设计）→ select + toggle
+- `navbar-design`（页面顶栏设计）→ select
+- `icon-style-design`（图标风格）→ select
+- `motion-design`（动效）→ select + toggle
+- `density-theme-design`（密度主题）→ select + toggle
+- `widget-toggle` / `widget-design` → select 开关 + multiCards
+- `island-template` → select
+- 完成页 → 仅 UI
+
+所有上述类型优先用 **hybrid 模式的 `<component-island>` + Tailwind grid** 重新实现，**不要直接搬 `pg-` CSS**。如果某个组件非常复杂（如 `typography-design` 含字体预览），可以在 `appConfig` 顶部 import 一个 Vue 组件，或者用 `renderMode: 'vue'` 给该步骤单独写一个 vue 组件配置。
+
+## ★★★ 19 题问卷 prompt 模板来源 ★★★
+
+从 `@待办/我的计划.txt` 第 31-560 行直接复制，包括：
+- 标题清单（19 题）
+- mapping 表（id → answers 字段）
+- "从这里开始就是给 LLM 喂的完整 prompt 模板"
+- AppConfig 完整模板
+- 项目可调用方法大全
+- Bug #1 / Bug #2（必须告知下游 AI）
+
+不要重写、不要简化。
+
+---
+
+## 现在请开始迁移：
+
+1. **先读取 `参考/promptGenApp.js` 完整文件**（约 2500 行），把每一步的 renderType、字段、options 都摸清
+2. **再按迁移清单的 8 个步骤输出 `js/apps/prompt-gen.js`**（建议 appId = `prompt-gen`，与现有 `prompt-survey` 区分）
+3. **最后给 `js/apps/index.js` 的 diff 片段**（加 import + push 到 appFactories）

@@ -1,0 +1,105 @@
+/* ============================================ */
+/* Hybrid/Vue 范例 App 样式                       */
+/* ============================================ */
+
+.app-button {
+    padding: 10px 20px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #3b82f6, #6366f1);
+    color: white;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.app-button-mini {
+    padding: 10px 16px;
+    border-radius: 12px;
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    min-width: 70px;
+}
+
+.step-chip {
+    padding: 6px 14px;
+    border-radius: 16px;
+    background: rgba(148, 163, 184, 0.15);
+    color: #475569;
+    border: 1px solid transparent;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.step-chip--active {
+    background: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+}
+
+.filter-input {
+    display: block;
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 10px;
+    font-size: 14px;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.filter-input:focus {
+    border-color: #3b82f6;
+}
+
+.filter-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #475569;
+    cursor: pointer;
+}
+
+.filter-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.filter-row:hover {
+    background: rgba(59, 130, 246, 0.06);
+}
+
+.filter-row--active {
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.filter-row-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.filter-row-name {
+    flex: 1;
+    font-size: 14px;
+    color: #111827;
+}
+
+.filter-row-status {
+    color: #3b82f6;
+    font-weight: 700;
+    font-size: 16px;
+}
+

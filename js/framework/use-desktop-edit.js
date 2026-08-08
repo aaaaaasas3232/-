@@ -6,6 +6,21 @@
  * 不走 Vue ref，避免每帧 reactive 重算带来的卡顿。
  */
 import { UI_CONSTANTS, ISLAND_CLOSE_REASONS, createPressState, resetPressState } from './utils.js';
+import {
+    APP_INSTALLATION_CHANGED_EVENT,
+    requiresAppInstallation,
+    uninstallApp,
+    listLaunchableApps,
+    isAppInstalled,
+} from '../../src/core/app-installation.js';
+import {
+    addToDock as addToDockConfig,
+    removeFromDock as removeFromDockConfig,
+    reorderDock as reorderDockConfig,
+    listRemovedFromDock as listRemovedFromDockConfig,
+    listAddableToDock as listAddableToDockConfig,
+    hydrateDockLayout,
+} from '../../src/core/dock-config.js';
 
 // === widget footprint: 每种 size 在 4 列网格里占多大 ===
 // 当前 .desktop-grid 是 4 列固定,每页 16 个线性 slot (= 4x4)。
@@ -43,11 +58,58 @@ function resolveWidgetFootprint(widget) {
     };
 }
 
-export function useDesktopEdit({ apps, widgetBoard, appRegistry, island, activeAppId, openApp, openModal, closeModal }) {
+export function useDesktopEdit({
+    apps,
+    widgetBoard,
+    appRegistry,
+    island,
+    activeAppId,
+    openApp,
+    openModal,
+    closeModal,
+    desktopGridConfig,
+}) {
     const { LONG_PRESS_MS, ICON_DRAG_THRESHOLD } = UI_CONSTANTS;
-    const DESKTOP_GRID_COLUMNS = 4;
-    const DESKTOP_GRID_ROWS = 4;
-    const DESKTOP_PAGE_SIZE = DESKTOP_GRID_COLUMNS * DESKTOP_GRID_ROWS;
+    // 桌面网格（列数 / 行数）由 settings app 的 theme-bridge 写到
+    // window.__phoneDesktopGridConfig（一个 Vue.reactive() 对象）。
+    //
+    // 关键：useDesktopEdit 由 framework/core-shim 在 bootstrapSystemData 里调用，
+    // 而 theme-bridge.js 是由 settings app 模块加载时才会 evaluate —— core-shim 先跑，
+    // 此时 window.__phoneDesktopGridConfig 还是 null。
+    //
+    // 如果只把 cfg 缓存在闭包里，等 theme-bridge.js 加载完后：
+    //   - desktopGridConfig 参数可能是 null
+    //   - window.__phoneDesktopGridConfig 是 null
+    //   - 闭包里存的是 fallback { columns: 4, rows: 4 }（普通对象，无响应式）
+    // → computed 永远读不到 reactive，后续用户改值就不生效。
+    //
+    // 解决（与 use-app-navigation 处理 statusBarConfig 同款）：
+    //   - desktopGridConfigVersion: 每当 theme-bridge.js dispatch
+    //     `settings:desktop-grid-updated` 时递增；computed 读 version.value 注册依赖。
+    //   - computed 内部每次重新读 window.__phoneDesktopGridConfig（不要在闭包缓存）。
+    const desktopGridConfigVersion = Vue.ref(0);
+    function bumpDesktopGridConfigVersion() {
+        desktopGridConfigVersion.value = desktopGridConfigVersion.value + 1;
+    }
+    function resolveDesktopGridConfig() {
+        const fromWindow = typeof window !== 'undefined' ? window.__phoneDesktopGridConfig : null;
+        if (fromWindow) return fromWindow;
+        if (desktopGridConfig && typeof desktopGridConfig === 'object') return desktopGridConfig;
+        return { columns: 4, rows: 4 };
+    }
+    if (typeof window !== 'undefined') {
+        window.addEventListener('settings:desktop-grid-updated', bumpDesktopGridConfigVersion);
+    }
+    const desktopGridRows = Vue.computed(() => {
+        void desktopGridConfigVersion.value;
+        const cfg = resolveDesktopGridConfig();
+        const r = Number(cfg?.rows);
+        return Number.isFinite(r) && r > 0 ? Math.round(r) : 4;
+    });
+    // 列数固定为 4 —— 不再走 reactive 桥，footprintOfItem / findFreePlacement /
+    // planDesktopPages / occupyPlacement / draggingFootprint 全都从这里读。
+    const DESKTOP_COLUMNS_FIXED = 4;
+    const desktopGridColumns = Vue.ref(DESKTOP_COLUMNS_FIXED);
     const PAGE_EDGE_SWITCH_THRESHOLD = 24;
     const SWIPE_HORIZONTAL_THRESHOLD = 10;
     const SWIPE_LOCK_RATIO = 1.2;
@@ -110,20 +172,53 @@ export function useDesktopEdit({ apps, widgetBoard, appRegistry, island, activeA
     // - 加 suppress flags 是为了打破"反向刷 set apps 触发 apps watch 又改 boardItems"的循环。
 
     const boardItems = Vue.ref([]);
+    let suppressAppSync = false;
     function initBoardItemsFromApps() {
-        for (const app of apps.value) {
-            boardItems.value.push({ kind: 'app', id: `app::${app.id}`, app });
+        // ★ 修复：先尝试从 desktop-config 恢复顺序，并同步回写 apps.value（让外部 ref 也按正确顺序）
+        const savedOrder = loadDesktopAppOrder();
+        if (savedOrder && savedOrder.length > 0) {
+            console.log('[use-desktop-edit] 从 desktop-config 恢复 App 顺序:', savedOrder.length, '个');
+            const appById = new Map(apps.value.map(a => [a.id, a]));
+            const reorderedApps = [];
+            
+            // 按保存的顺序重建 boardItems 和 apps
+            for (const appId of savedOrder) {
+                const app = appById.get(appId);
+                if (app) {
+                    boardItems.value.push({ kind: 'app', id: `app::${app.id}`, app });
+                    reorderedApps.push(app);
+                    appById.delete(appId);
+                }
+            }
+            // 把配置里没有的新 App 加到末尾
+            for (const app of appById.values()) {
+                boardItems.value.push({ kind: 'app', id: `app::${app.id}`, app });
+                reorderedApps.push(app);
+            }
+            
+            // ★ 关键：回写 apps.value，让外部 ref 也按正确顺序排列
+            // 这样 syncRegisteredApps 里的 preserved 就能保持用户拖拽后的顺序
+            suppressAppSync = true; // 防止触发 syncFromApps 反向同步
+            apps.value = reorderedApps;
+            Vue.nextTick(() => { suppressAppSync = false; });
+        } else {
+            // 没有保存的顺序，用当前 apps 顺序初始化
+            console.log('[use-desktop-edit] 未找到保存的 App 顺序，使用当前顺序');
+            for (const app of apps.value) {
+                boardItems.value.push({ kind: 'app', id: `app::${app.id}`, app });
+            }
         }
     }
     initBoardItemsFromApps();
 
-    let suppressAppSync = false;
     function syncFromApps() {
         if (suppressAppSync) return;
         const externalAppIds = new Set(apps.value.map(a => a.id));
         const externalAppsById = new Map();
         for (const a of apps.value) externalAppsById.set(a.id, a);
         let mutated = false;
+        
+        // 1. 删除已经不在 apps.value 里的 app items（卸载的 app）
         for (let i = boardItems.value.length - 1; i >= 0; i--) {
             const item = boardItems.value[i];
             if (item.kind === 'app' && !externalAppIds.has(item.app.id)) {
@@ -131,6 +226,8 @@ export function useDesktopEdit({ apps, widgetBoard, appRegistry, island, activeA
                 mutated = true;
             }
         }
+        
+        // 2. 更新已有 app 的引用（app 对象可能被重新创建了）
         for (const item of boardItems.value) {
             if (item.kind === 'app') {
                 const fresh = externalAppsById.get(item.app.id);
@@ -141,6 +238,8 @@ export function useDesktopEdit({ apps, widgetBoard, appRegistry, island, activeA
                 }
             }
         }
+        
+        // 3. 添加新 app（新安装的）
         const existingAppIds = new Set(
             boardItems.value.filter(b => b.kind === 'app').map(b => b.app.id)
         );
@@ -150,6 +249,7 @@ export function useDesktopEdit({ apps, widgetBoard, appRegistry, island, activeA
                 mutated = true;
             }
         }
+        
         if (mutated) {
             boardItems.value = [...boardItems.value];
         }
@@ -159,7 +259,10 @@ export function useDesktopEdit({ apps, widgetBoard, appRegistry, island, activeA
     function syncFromWidgets() {
         if (suppressWidgetSync) return;
         const externalInstIds = new Set(widgetBoard.value.map(w => w.instanceId));
+        const widgetById = new Map(widgetBoard.value.map(w => [w.instanceId, w]));
         let mutated = false;
+        
+        // 1. 删除已经不在 widgetBoard 里的 widget items
         for (let i = boardItems.value.length - 1; i >= 0; i--) {
             const item = boardItems.value[i];
             if (item.kind === 'widget' && !externalInstIds.has(item.widget.instanceId)) {
@@ -167,35 +270,53 @@ export function useDesktopEdit({ apps, widgetBoard, appRegistry, island, activeA
                 mutated = true;
             }
         }
-        const existingInstIds = new Set(
-            boardItems.value.filter(b => b.kind === 'widget').map(b => b.widget.instanceId)
-        );
-        for (const w of widgetBoard.value) {
-            if (!existingInstIds.has(w.instanceId)) {
-                const footprint = resolveWidgetFootprint(w);
-                boardItems.value.push({
-                    kind: 'widget',
-                    id: `widget::${w.qualifiedId}::${w.instanceId}`,
-                    widget: w,
-                    footprint,
-                });
-                mutated = true;
-            } else {
-                // size / orientation 变更后更新 footprint
-                const existing = boardItems.value.find(b => b.kind === 'widget' && b.widget.instanceId === w.instanceId);
-                if (existing) {
-                    const freshFootprint = resolveWidgetFootprint(w);
+        
+        // 2. 更新已有 widget 的 footprint（size/orientation 变化）
+        for (const item of boardItems.value) {
+            if (item.kind === 'widget') {
+                const fresh = widgetById.get(item.widget.instanceId);
+                if (fresh) {
+                    const freshFootprint = resolveWidgetFootprint(fresh);
                     if (
-                        existing.footprint?.cols !== freshFootprint.cols
-                        || existing.footprint?.rows !== freshFootprint.rows
-                        || existing.footprint?.cssClass !== freshFootprint.cssClass
+                        item.footprint?.cols !== freshFootprint.cols ||
+                        item.footprint?.rows !== freshFootprint.rows ||
+                        item.footprint?.cssClass !== freshFootprint.cssClass
                     ) {
-                        existing.footprint = freshFootprint;
+                        item.footprint = freshFootprint;
+                        item.widget = fresh;
                         mutated = true;
                     }
                 }
             }
         }
+        
+        // 3. 添加新 widget：按 widget.boardIndex 插入（如果有），否则加到末尾
+        const existingInstIds = new Set(
+            boardItems.value.filter(b => b.kind === 'widget').map(b => b.widget.instanceId)
+        );
+        
+        for (const w of widgetBoard.value) {
+            if (!existingInstIds.has(w.instanceId)) {
+                const footprint = resolveWidgetFootprint(w);
+                const newItem = {
+                    kind: 'widget',
+                    id: `widget::${w.qualifiedId}::${w.instanceId}`,
+                    widget: w,
+                    footprint,
+                };
+                
+                // 如果 widget 带有 boardIndex（从持久化加载），插入到指定位置
+                if (typeof w.boardIndex === 'number') {
+                    const targetIndex = Math.max(0, Math.min(w.boardIndex, boardItems.value.length));
+                    boardItems.value.splice(targetIndex, 0, newItem);
+                } else {
+                    // 否则追加到末尾
+                    boardItems.value.push(newItem);
+                }
+                mutated = true;
+            }
+        }
+        
         if (mutated) {
             boardItems.value = [...boardItems.value];
         }
@@ -218,12 +339,55 @@ export function useDesktopEdit({ apps, widgetBoard, appRegistry, island, activeA
         if (sameApps && sameWidgets) return;
         suppressAppSync = true;
         suppressWidgetSync = true;
-        if (!sameApps) apps.value = newApps;
-        if (!sameWidgets) widgetBoard.value = newWidgets;
+        if (!sameApps) {
+            apps.value = newApps;
+            // ★ 新增：持久化桌面 App 顺序到 desktop-config
+            saveDesktopAppOrder(newApps);
+        }
+        if (!sameWidgets) {
+            // ★ 修复：给每个 widget 标记它在 boardItems 里的真实位置（boardIndex）
+            // 这样 saveWidgetBoard() 保存的 boardIndex 才是"widget 在混排桌面中的正确位置"
+            // 而不是"widget 在 widgetBoard 数组里的序号"
+            const widgetsWithPosition = newWidgets.map(w => {
+                const boardIdx = boardItems.value.findIndex(
+                    item => item.kind === 'widget' && item.widget === w
+                );
+                return boardIdx >= 0 ? { ...w, boardIndex: boardIdx } : w;
+            });
+            widgetBoard.value = widgetsWithPosition;
+        }
         Vue.nextTick(() => {
             suppressAppSync = false;
             suppressWidgetSync = false;
         });
+    }
+
+    // 保存桌面 App 顺序（只保存 app.id 列表）
+    // 正确方法名是 update，不是 updateDesktopConfig（window.__desktopConfig 挂载见 desktop-config.js）
+    function saveDesktopAppOrder(appsList) {
+        const appOrder = appsList.map(app => app.id);
+        if (typeof window !== 'undefined' && typeof window.__desktopConfig?.update === 'function') {
+            window.__desktopConfig.update({
+                pages: [{
+                    id: 'home',
+                    label: '主屏',
+                    apps: appOrder,
+                }],
+            });
+            console.log('[use-desktop-edit] 保存 App 顺序:', appOrder.length, '个');
+        } else {
+            console.warn('[use-desktop-edit] desktop-config API 未就绪，无法保存 App 顺序');
+        }
+    }
+
+    // 启动时从 desktop-config 恢复 App 顺序
+    function loadDesktopAppOrder() {
+        if (typeof window === 'undefined' || !window.__desktopConfig) return null;
+        const cfg = window.__desktopConfig.get();
+        const pages = cfg?.pages || [];
+        if (pages.length === 0) return null;
+        // 只取第一页的 apps 列表（当前版本只支持单页）
+        return pages[0]?.apps || null;
     }
 
     Vue.watch(apps, syncFromApps);
@@ -231,26 +395,31 @@ export function useDesktopEdit({ apps, widgetBoard, appRegistry, island, activeA
     Vue.watch(boardItems, syncAppsAndWidgetsFromBoard);
 
     function footprintOfItem(item) {
+        const columns = desktopGridColumns.value;
+        const rows = desktopGridRows.value;
         if (item.kind === 'app') {
             return { cols: 1, rows: 1 };
         }
         return {
-            cols: Math.min(DESKTOP_GRID_COLUMNS, Math.max(1, item.footprint?.cols || 1)),
-            rows: Math.min(DESKTOP_GRID_ROWS, Math.max(1, item.footprint?.rows || 1)),
+            cols: Math.min(columns, Math.max(1, item.footprint?.cols || 1)),
+            rows: Math.min(rows, Math.max(1, item.footprint?.rows || 1)),
         };
     }
 
     function findFreePlacement(occupied, footprint) {
-        for (let cell = 0; cell < DESKTOP_PAGE_SIZE; cell += 1) {
-            const row = Math.floor(cell / DESKTOP_GRID_COLUMNS);
-            const column = cell % DESKTOP_GRID_COLUMNS;
-            if (column + footprint.cols > DESKTOP_GRID_COLUMNS || row + footprint.rows > DESKTOP_GRID_ROWS) {
+        const columns = desktopGridColumns.value;
+        const rows = desktopGridRows.value;
+        const pageSize = columns * rows;
+        for (let cell = 0; cell < pageSize; cell += 1) {
+            const row = Math.floor(cell / columns);
+            const column = cell % columns;
+            if (column + footprint.cols > columns || row + footprint.rows > rows) {
                 continue;
             }
             let available = true;
             for (let y = row; y < row + footprint.rows && available; y += 1) {
                 for (let x = column; x < column + footprint.cols; x += 1) {
-                    if (occupied[y * DESKTOP_GRID_COLUMNS + x]) {
+                    if (occupied[y * columns + x]) {
                         available = false;
                         break;
                     }
@@ -264,18 +433,22 @@ export function useDesktopEdit({ apps, widgetBoard, appRegistry, island, activeA
     }
 
     function occupyPlacement(occupied, placement, footprint) {
+        const columns = desktopGridColumns.value;
         for (let y = placement.row; y < placement.row + footprint.rows; y += 1) {
             for (let x = placement.column; x < placement.column + footprint.cols; x += 1) {
-                occupied[y * DESKTOP_GRID_COLUMNS + x] = true;
+                occupied[y * columns + x] = true;
             }
         }
     }
 
-    // 分页和 CSS 实际落格共用同一个 4×4 规划结果，避免 widget 面积和数据项索引混用。
+    // 分页和 CSS 实际落格共用同一个 (columns × rows) 规划结果，
+    // 避免 widget 面积和数据项索引混用。columns / rows 由 settings app 同步过来。
     function planDesktopPages(items) {
+        const columns = desktopGridColumns.value;
+        const pageSize = columns * desktopGridRows.value;
         const pages = [];
         let pageItems = [];
-        let occupied = Array(DESKTOP_PAGE_SIZE).fill(false);
+        let occupied = Array(pageSize).fill(false);
         let pageIndex = 0;
 
         for (let boardIndex = 0; boardIndex < items.length; boardIndex += 1) {
@@ -285,7 +458,7 @@ export function useDesktopEdit({ apps, widgetBoard, appRegistry, island, activeA
             if (!placement && pageItems.length) {
                 pages.push(pageItems);
                 pageItems = [];
-                occupied = Array(DESKTOP_PAGE_SIZE).fill(false);
+                occupied = Array(pageSize).fill(false);
                 pageIndex += 1;
                 placement = findFreePlacement(occupied, footprint);
             }
@@ -310,6 +483,8 @@ export function useDesktopEdit({ apps, widgetBoard, appRegistry, island, activeA
         return pages;
     }
 
+    // desktopPages 依赖 boardItems 与 grid 尺寸（columns / rows），
+    // 改网格大小会触发重算。
     const desktopPages = Vue.computed(() => planDesktopPages(boardItems.value));
     const desktopPageDots = Vue.computed(() => desktopPages.value.map((_, page) => ({ page })));
 
@@ -698,12 +873,15 @@ export function useDesktopEdit({ apps, widgetBoard, appRegistry, island, activeA
     }
 
     function getGridGeometry(gridRect) {
-        const scale = gridRect.width > 0 ? gridRect.width / 284 : 1;
+        // column-gap 在 CSS 里写死 20px，cell 宽写死 56px，
+        // 因此无论 columns = 4 还是 5，每 cell 的 column pitch = 56 + 20 = 76px 是不变量。
+        // 直接用常量 76/94 算 pixel 位置，比用 gridRect.width / 284 反推 scale 更稳定
+        // （gridRect.width 会随 column count 变化，scale 会"自以为是"地把 pitch 算大）。
         return {
-            cellWidth: 56 * scale,
-            cellHeight: 76 * scale,
-            columnPitch: 76 * scale,
-            rowPitch: 94 * scale,
+            cellWidth: 56,
+            cellHeight: 76,
+            columnPitch: 76,
+            rowPitch: 94,
         };
     }
 
@@ -782,7 +960,7 @@ export function useDesktopEdit({ apps, widgetBoard, appRegistry, island, activeA
         const draggingFootprint = pressState.sourceIndex >= 0
             ? footprintOfItem(boardItems.value[pressState.sourceIndex])
             : null;
-        const isFullRowWidget = draggingFootprint && draggingFootprint.cols >= DESKTOP_GRID_COLUMNS;
+        const isFullRowWidget = draggingFootprint && draggingFootprint.cols >= desktopGridColumns.value;
         // 大号组件自身 footprint 比邻居大很多，用邻居高度算的吸附阈值太紧，
         // 手指稍微上挪就会"出列"导致落到下一行。按自己一行视觉高度放宽阈值。
         const dragRowPixel = draggingFootprint
@@ -1403,7 +1581,17 @@ export function useDesktopEdit({ apps, widgetBoard, appRegistry, island, activeA
             '删除 App',
             '确定从桌面移除这个 App 吗？此操作无法撤销。',
             () => {
-                apps.value = apps.value.filter(a => a.id !== appId);
+                const registryApp = appRegistry?.getApp?.(appId);
+                if (requiresAppInstallation(registryApp)) {
+                    // 可安装 App：从安装记录里抹掉 + 写回 appConfig.distribution.installed，
+                    // core-shim 监听事件后会重算 apps.value，App Store 也跟着回退到「获取」
+                    uninstallApp(appId, registryApp);
+                    return;
+                }
+                // 系统级 App：从桌面 boardItems 里抹掉
+                if (typeof window !== 'undefined' && window.__phoneAppsRef?.value) {
+                    window.__phoneAppsRef.value = window.__phoneAppsRef.value.filter(a => a.id !== appId);
+                }
             }
         );
     }
@@ -1482,6 +1670,52 @@ export function useDesktopEdit({ apps, widgetBoard, appRegistry, island, activeA
         return true;
     }
 
+    // ============================================================
+    // Dock 编辑（仅编辑模式下生效）
+    //  - deleteDockItem: 从 Dock 移除（不卸载 App，只是 dock.visible = false）
+    //  - addDockItem: 把桌面 App 加到 Dock 末尾
+    //  - reorderDockItem: 在 Dock 内把 app 移到 targetIndex
+    //  - listDockRemoved: 已加入过 Dock 但当前不在的 App 列表（用于"恢复"）
+    //  - listDockAddable: 已安装但不在 Dock 的 App（桌面 + 按钮提示用）
+    // ============================================================
+    function deleteDockItem(appId) {
+        const target = apps.value.find(a => a.id === appId);
+        if (!target) return;
+        const targetName = target.name || appId;
+        requestConfirm(
+            '从 Dock 移除',
+            `确定把「${targetName}」从 Dock 移除吗？App 本身不会被卸载。`,
+            () => {
+                removeFromDockConfig(appId, apps.value);
+            }
+        );
+    }
+
+    function addDockItem(appId) {
+        if (!apps.value.find(a => a.id === appId)) return;
+        addToDockConfig(appId, apps.value);
+    }
+
+    function reorderDockItem(appId, targetIndex) {
+        reorderDockConfig(appId, targetIndex, apps.value);
+    }
+
+    function listDockRemoved() {
+        return listRemovedFromDockConfig(apps.value);
+    }
+
+    function listDockAddable() {
+        // 仅列出已安装（可启动）但不在 dock 的 App
+        const launchable = listLaunchableApps(apps.value);
+        return listAddableToDockConfig(launchable);
+    }
+
+    function isDockApp(appId) {
+        const app = apps.value.find(a => a.id === appId);
+        if (!app) return false;
+        return !!app?.dock?.visible;
+    }
+
     return {
         isEditMode,
         draggingIconId,
@@ -1490,6 +1724,8 @@ export function useDesktopEdit({ apps, widgetBoard, appRegistry, island, activeA
         activeDesktopPage,
         desktopPages,
         desktopPageDots,
+        desktopGridColumns,
+        desktopGridRows,
         boardItems,
         pressState,
         exitEditMode,
@@ -1512,5 +1748,12 @@ export function useDesktopEdit({ apps, widgetBoard, appRegistry, island, activeA
         removeWidgetFromBoard,
         removeAppFromBoard,
         listAvailableWidgets,
+        // dock 编辑
+        deleteDockItem,
+        addDockItem,
+        reorderDockItem,
+        listDockRemoved,
+        listDockAddable,
+        isDockApp,
     };
 }

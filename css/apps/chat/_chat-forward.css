@@ -1,0 +1,283 @@
+/* ============================================
+ * chat-app / 转发消息卡片 (v0.33 重写)
+ *
+ *   类名必须 100% 对齐 renderChatRecordBubble() 的输出:
+ *     - .chat-record-card                    外层容器
+ *     - .chat-record-body.chat-record-single 单条 variant
+ *     - .chat-record-body.chat-record-multi  多条 variant (折叠预览)
+ *     - .chat-record-quote / -sender / -text 单条 cite 区域
+ *     - .chat-record-preview / -row / -sender / -text 多条预览列表
+ *     - .chat-record-meta / -icon / -title / -overflow 底部「聊天记录」chip + overflow
+ *
+ *   与 chat-app 现有分享卡片(地点 / 红包 / 转账)风格保持一致:
+ *     - 白底圆角 14px + iOS 风阴影
+ *     - meta 区是浅蓝渐变条 跟 desc-image-modal-card 风格呼应
+ * ============================================ */
+
+/* ---- 外层卡片 ---- */
+.chat-record-card {
+    background: #FFFFFF;
+    border-radius: 14px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+    overflow: hidden;
+    max-width: 280px;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.chat-record-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.1);
+}
+
+.chat-record-card:active {
+    transform: scale(0.98);
+}
+
+/* ---- 主体区域 ---- */
+.chat-record-body {
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* ============================================
+ * 单条 variant — 完整显示一条消息
+ * ============================================ */
+.chat-record-single {
+    border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.chat-record-quote {
+    font-size: 13px;
+    line-height: 1.5;
+    color: #1F2937;
+    word-break: break-word;
+    display: flex;
+    gap: 6px;
+}
+
+.chat-record-quote-sender {
+    flex-shrink: 0;
+    font-weight: 600;
+    color: #4A6FA5;
+}
+
+.chat-record-quote-text {
+    flex: 1;
+    color: #1F2937;
+    word-break: break-word;
+}
+
+/* ============================================
+ * 多条 variant — 折叠预览 3 条
+ * ============================================ */
+.chat-record-multi {
+    background: #FAFBFC;
+}
+
+.chat-record-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 12px;
+}
+
+.chat-record-preview-row {
+    display: flex;
+    gap: 6px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #475569;
+    word-break: break-word;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chat-record-preview-sender {
+    flex-shrink: 0;
+    font-weight: 600;
+    color: #5A8BC7;
+}
+
+.chat-record-preview-text {
+    flex: 1;
+    color: #475569;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ============================================
+ * 底部 meta 区 — 「聊天记录」chip + overflow
+ * 与 chat.js 原版风格一致:F0F6FF → E8F2FF 渐变条
+ * ============================================ */
+.chat-record-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: linear-gradient(135deg, #F0F6FF 0%, #E8F2FF 100%);
+    color: #4A6FA5;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.chat-record-icon {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    color: #4A6FA5;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.chat-record-icon svg {
+    width: 14px;
+    height: 14px;
+    stroke: currentColor;
+    fill: none;
+}
+
+.chat-record-title {
+    color: #1F2937;
+    font-size: 12px;
+    font-weight: 600;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chat-record-overflow {
+    font-size: 11px;
+    color: #94A3B8;
+    font-weight: 500;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+/* ============================================
+ * 群聊转发的头像组(预留扩展位)
+ * ============================================ */
+.chat-record-card-avatars {
+    display: flex;
+    align-items: center;
+    margin-right: 2px;
+    flex-shrink: 0;
+}
+
+.chat-record-card-avatars .avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid #FFFFFF;
+    background: #A8C8EC;
+    color: #FFFFFF;
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: -6px;
+    overflow: hidden;
+}
+
+.chat-record-card-avatars .avatar:first-child {
+    margin-left: 0;
+}
+
+.chat-record-card-avatars .avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* ============================================
+ * 单条 (chat-record-detail-card) 详情大屏样式
+ *   - 用于 forward-detail 弹窗,展示所有消息
+ * ============================================ */
+.chat-record-detail-card {
+    background: #FFFFFF;
+    border-radius: 18px;
+    margin: 12px;
+    padding: 0;
+    box-shadow: 0 2px 14px rgba(15, 23, 42, 0.08);
+    overflow: hidden;
+}
+
+.chat-record-detail-card .head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px;
+    background: linear-gradient(135deg, #F0F6FF 0%, #E8F2FF 100%);
+    border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.chat-record-detail-card .head .icon {
+    width: 22px;
+    height: 22px;
+    color: #4A6FA5;
+}
+
+.chat-record-detail-card .head .meta {
+    flex: 1;
+}
+
+.chat-record-detail-card .head .meta .title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1F2937;
+}
+
+.chat-record-detail-card .head .meta .sub {
+    font-size: 12px;
+    color: #6B7280;
+    margin-top: 2px;
+}
+
+.chat-record-detail-card .body {
+    padding: 4px 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-record-detail-card .body .item {
+    padding: 10px 16px;
+    display: flex;
+    gap: 10px;
+    font-size: 14px;
+    line-height: 1.5;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.04);
+}
+
+.chat-record-detail-card .body .item:last-child {
+    border-bottom: none;
+}
+
+.chat-record-detail-card .body .item .sender {
+    flex: 0 0 60px;
+    color: #4A6FA5;
+    font-weight: 600;
+    word-break: break-word;
+}
+
+.chat-record-detail-card .body .item .content {
+    flex: 1;
+    color: #1F2937;
+    word-break: break-word;
+}
+
+.chat-record-detail-card .footer {
+    padding: 10px 16px;
+    color: #6B7280;
+    font-size: 11px;
+    text-align: center;
+    border-top: 1px solid rgba(15, 23, 42, 0.06);
+}

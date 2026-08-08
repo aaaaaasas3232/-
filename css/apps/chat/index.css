@@ -1,0 +1,429 @@
+/* ============================================
+ * chat-app 作用域 CSS 主入口
+ *
+ * 路径:css/apps/chat/index.css
+ *
+ * 引入方式:index.html `<link rel="stylesheet" href="/css/apps/chat/index.css?v=1" />`
+ * (与项目其他 app 同风格:weather-app / appstore / survey)
+ *
+ * 当前 phase:Phase 11 页面 UI 复原
+ *
+ * 样式规范（重要！）:
+ *   - JS 只放动态数据属性(data-*)和无法预知的动态颜色
+ *   - 所有固定样式写到 CSS 文件
+ *   - 动态颜色用 data-color 属性 + CSS 选择器
+ *   - 动画延迟用 CSS nth-child 选择器
+ *   - SVG icon 只保留 viewBox，宽高在 CSS 中设置
+ *
+ * 子文件链入:
+ *   - _chat-base.css       — Phase 1 占位
+ *   - _chat-messages.css   ✅ 消息列表样式
+ *   - _chat-contacts.css   ✅ 通讯录样式
+ *   - _chat-moments.css    ✅ 动态页样式
+ *   - _chat-profile.css    ✅ 个人页样式
+ *   - _chat-private.css    ✅ Phase 1.3 私聊详情页样式
+ *   - _chat-group.css      (群聊样式)   — Phase 1.4
+ *   - _chat-call.css       (通话样式)   — Phase 9.5
+ *   - _chat-bubble.css     ✅ Phase 1.5 消息气泡样式
+ *   - _chat-input.css      ✅ Phase 1.6 输入区域样式
+ *   - _chat-settings.css   ✅ Phase 11 聊天设置详情页样式
+ *   - _chat-post.css       ✅ Phase 11 发布新动态详情页样式
+ *   - _chat-emoji.css      (表情包)     — Phase 6
+ *   - _chat-history.css    (历史记录)   — Phase 7
+ *   - _chat-summary.css    (摘要)       — Phase 7
+ *   - _chat-game.css       (游戏)       — Phase 9
+ *   - _chat-responsive.css (响应式)     — Phase 11
+ *
+ * 作用域约定:
+ *   - 所有规则用 `.app-shell[data-app-id="chat"]` 前缀锁定
+ *   - 不写 #phone 守卫(项目其他 app 都不写)
+ * ============================================ */
+
+@import './_chat-base.css';
+@import './_chat-messages.css';
+@import './_chat-contacts.css';
+@import './_chat-moments.css';
+@import './_chat-profile.css';
+@import './_chat-private.css';   /* ✅ Phase 1.3 私聊详情页样式 */
+@import './_chat-group.css';    /* ✅ Phase 1.4 群聊详情页样式 */
+@import './_chat-bubble.css';   /* ✅ Phase 1.5 消息气泡样式 */
+@import './_chat-input.css';    /* ✅ Phase 1.6 输入区域样式 */
+@import './_chat-settings.css'; /* ✅ Phase 11 聊天设置详情页样式 */
+@import './_chat-new-chat.css'; /* ✅ 发起聊天页面样式 */
+@import './_chat-new-group.css'; /* ✅ v0.33 发起群聊页面样式(选 AI + 选 mode) */
+@import './_chat-post.css'; /* ✅ 发布新动态详情页样式 */
+@import './_chat-call-record-detail.css'; /* ✅ 通话/视频记录详情页样式 */
+@import './_chat-multiselect.css'; /* ✅ 消息多选：收藏/转发/取消 */
+@import './_chat-calendar-view.css'; /* ✅ Phase 11 日历视图详情页样式 */
+@import './_chat-story-archive.css'; /* ✅ Phase 11 故事存档详情页样式 */
+@import './_chat-image-picker.css'; /* ✅ 图片发送弹窗 — 粉蓝韩风精致小弹窗 */
+@import './_chat-prompt-manager.css'; /* ✅ Phase 11 回复提示词管理详情页样式 */
+@import './_chat-favorites.css'; /* ✅ 收藏详情页 */
+@import './_chat-desc-image.css'; /* ✅ 模拟图片组件样式 */
+@import './_chat-location-card.css'; /* ✅ 地点卡片弹窗样式 */
+@import './_chat-location-picker.css'; /* ✅ v0.45 地点选择弹窗样式 */
+@import './_chat-game-selector.css'; /* ✅ Phase 11 游戏选择器页面样式 */
+@import './_chat-leaderboard.css'; /* ✅ Phase 11 游戏排行榜页面样式 */
+@import './_chat-call.css'; /* ✅ Phase 11 通话页面样式 */
+@import './_chat-voice-record.css'; /* ✅ Phase 11 语音录制弹窗样式 */
+@import './_chat-mode-selector-modal.css'; /* ✅ v0.24 添加新朋友时的模式选择弹窗 */
+@import './_chat-forward.css'; /* ✅ v0.33 转发消息卡片样式 (chat-record-card body/meta) */
+@import './_chat-forward-modal.css'; /* ✅ v0.33 转发目标选择弹窗 */
+@import './_chat-record-detail-modal.css'; /* ✅ v0.33 聊天记录详情弹窗 (点击卡片展开全部消息) */
+@import './_chat-archive-modal.css'; /* ✅ v0.42 故事存档系列弹窗 (封存/恢复确认/删除确认) */
+@import './_chat-send-modal.css'; /* ✅ v0.45 红包/转账发送弹窗样式 */
+@import './_chat-emoji-picker.css'; /* ✅ v0.49 表情包选择器面板样式 */
+@import './_chat-summary.css'; /* ✅ v0.61 概要系统弹窗 + 历史消息页 + 概要入口按钮样式 */
+@import './_chat-api-call.css'; /* ✅ v0.62 API 调用详情页 + 发送按钮长按视觉反馈 */
+@import './_chat-memory-management.css'; /* ✅ v0.65 聊天记录层级管理页样式 */
+@import './_chat-memory-history.css'; /* ✅ v0.65 历史消息页样式（上下结构） */
+@import './_chat-receive-modals.css'; /* ✅ v0.67 红包/转账接收确认弹窗 + 通话结束概要 + 入站来电样式 */
+
+/* chat-app 根容器 */
+.chat-app {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+}
+
+/* tab 内容区(占位,后续按 page 拆) */
+.chat-app .chat-tab-content {
+    padding: 24px 16px;
+    color: #4A6FA5;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.chat-app .chat-tab-placeholder__title {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 6px;
+    color: #4A6FA5;
+}
+
+.chat-app .chat-tab-placeholder__subtitle {
+    font-size: 12px;
+    color: #8E8E8E;
+    margin: 0;
+}
+
+/* framework 默认 .app-tab-icon 里的 SVG 调小(原 24px,改 22px 跟 chat.js 对齐) */
+.chat-app .app-tab-icon svg {
+    width: 22px;
+    height: 22px;
+    display: block;
+}
+
+/* ============================================
+ * chat-app app-shell 样式
+ * ============================================ */
+
+/* app-shell 背景蓝色渐变（从蓝→粉→白） */
+.app-shell[data-app-id="chat"] {
+    background: linear-gradient(180deg, #E8F2FF 0%, #FFF5F7 50%, #FFFFFF 100%);
+}
+
+/* app-content 背景:默认透明，只有消息列表页是白色抽屉 */
+.app-shell[data-app-id="chat"] .app-content {
+    background: transparent;
+}
+
+/* 消息列表页有 .chat-messages 时显示白色抽屉 */
+.app-shell[data-app-id="chat"] .app-content:has(.chat-messages) {
+    background: #FFFFFF;
+    border-radius: 20px 20px 0 0;
+    padding: 0;
+}
+
+/* screen-panel 顶部间距16px，左右底部贴合 */
+.app-shell[data-app-id="chat"] .app-screen-panel {
+    padding: 16px 0 0;
+}
+
+/* ============================================
+ * Phase 1.1 — topbar 样式
+ * ============================================ */
+
+/* topbar 容器透明 */
+.app-shell[data-app-id="chat"] .app-topbar {
+    background: transparent;
+    box-shadow: none;
+    padding: 0 16px;
+}
+
+/* 标题 "消息" — 蓝色、上移 */
+.app-shell[data-app-id="chat"] .app-topbar-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #4A6FA5;
+    position: relative;
+    top: -14px;
+}
+
+/* ★ v0.37 故事模式顶栏标题变粉(字由 JS 同步改为 "Dream",色由 CSS 切) */
+.app-shell[data-app-id="chat"][data-chat-mode="story"] .app-topbar-title {
+    color: #FF4F8B;
+}
+
+/* v0.25 framework headerActions：复刻 chat 搜索按钮视觉，仅调整 chat-app。 */
+.app-shell[data-app-id="chat"] .app-topbar-action {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 50%;
+    background: #F8F9FA;
+    border: 1px solid #D6E4FF;
+    color: #4A6FA5;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transform: translateY(-15px);
+    transition: all 0.3s;
+    backdrop-filter: none;
+}
+
+.app-shell[data-app-id="chat"] .app-topbar-action:hover,
+.app-shell[data-app-id="chat"] .app-topbar-action--solid:hover {
+    background: #F8F9FA;
+    border-color: #D6E4FF;
+}
+
+.app-shell[data-app-id="chat"] .app-topbar-action:active,
+.app-shell[data-app-id="chat"] .app-topbar-action--solid:active {
+    background: #F8F9FA;
+    transform: translateY(-15px) scale(0.92);
+}
+
+.app-shell[data-app-id="chat"] .app-topbar-action svg {
+    width: 14px;
+    height: 14px;
+    color: #4A6FA5;
+    stroke: #4A6FA5;
+    fill: none;
+}
+
+/* ============================================
+ * ★ v0.37 故事模式顶栏按钮变粉
+ *   - mode 信号挂到 .app-shell 上 (.app-shell[data-chat-mode="story"])
+ *   - 仅影响当前 app 的两个 framework 自动渲染的顶栏按钮 (messages tab 专属,其他 tab 没这两个按钮)
+ *   - 切回 calendar mode 时,蓝色样式仍由上面的基础选择器覆盖回来
+ * ============================================ */
+
+/* 基础:所有按钮变粉(覆盖默认的 #4A6FA5 蓝色 + #D6E4FF 蓝边) */
+.app-shell[data-app-id="chat"][data-chat-mode="story"] .app-topbar-action {
+    background: #FFF0F5;
+    border-color: #FFC2D9;
+    color: #FF6B9D;
+}
+
+.app-shell[data-app-id="chat"][data-chat-mode="story"] .app-topbar-action:hover,
+.app-shell[data-app-id="chat"][data-chat-mode="story"] .app-topbar-action--solid:hover {
+    background: #FFE0EC;
+    border-color: #FFA0C0;
+}
+
+.app-shell[data-app-id="chat"][data-chat-mode="story"] .app-topbar-action:active,
+.app-shell[data-app-id="chat"][data-chat-mode="story"] .app-topbar-action--solid:active {
+    background: #FFD0DE;
+    transform: translateY(-15px) scale(0.92);
+}
+
+/* SVG 描边 / 填充变粉(v-html 出来的 svg 走 stroke 属性,需同时覆盖 stroke / fill / color) */
+.app-shell[data-app-id="chat"][data-chat-mode="story"] .app-topbar-action svg {
+    color: #FF6B9D;
+    stroke: #FF6B9D;
+}
+
+/* solid 变体额外加深 — mode toggle 按钮当前在 story 模式下走的 variant='solid',
+   需要单独再叠一层实色背景,让按钮在视觉上更突出「当前是故事模式」 */
+.app-shell[data-app-id="chat"][data-chat-mode="story"] .app-topbar-action--solid {
+    background: rgba(255, 107, 157, 0.18);
+    border-color: #FF6B9D;
+    color: #FF4F8B;
+}
+
+.app-shell[data-app-id="chat"][data-chat-mode="story"] .app-topbar-action--solid:hover {
+    background: rgba(255, 107, 157, 0.28);
+    border-color: #FF4F8B;
+}
+
+.app-shell[data-app-id="chat"][data-chat-mode="story"] .app-topbar-action--solid:active {
+    background: rgba(255, 107, 157, 0.38);
+}
+
+.app-shell[data-app-id="chat"][data-chat-mode="story"] .app-topbar-action--solid svg {
+    color: #FF4F8B;
+    stroke: #FF4F8B;
+}
+
+/* 搜索按钮 — v0.25 起由 messages-page v-html 顶部输出,不再依赖 initTopbar 注入 */
+.app-shell[data-app-id="chat"] .chat-search-btn {
+    position: relative;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(219, 234, 255, 0.06);
+    border: 1px solid rgba(74, 111, 165, 0.2);
+    border-radius: 50%;
+    cursor: pointer;
+    color: #4A6FA5;
+    transition: all 0.2s ease;
+}
+
+.app-shell[data-app-id="chat"] .chat-search-btn:active {
+    background: rgba(153, 176, 218, 0.15);
+    transform: scale(0.92);
+}
+
+.app-shell[data-app-id="chat"] .chat-search-btn svg {
+    stroke: #4A6FA5;
+    width: 14px;
+    height: 14px;
+}
+
+/* 通讯录页的搜索框样式 */
+.app-shell[data-app-id="chat"] .app-topbar-search {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 36px;
+    padding: 0 14px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(168, 200, 236, 0.3);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    color: #333;
+    font-size: 14px;
+}
+
+.app-shell[data-app-id="chat"] .app-topbar-search-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    color: #A8C8EC;
+}
+
+.app-shell[data-app-id="chat"] .app-topbar-search-placeholder {
+    color: #999;
+}
+
+/* ============================================
+ * Phase 1.2 — nav-tab 样式
+ * ============================================ */
+
+.app-nav[data-app-id="chat"] {
+    padding: 0;
+}
+
+.app-nav[data-app-id="chat"] .app-tab-bar {
+    background: #FFFFFF;
+    border: none;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 0;
+    height: 44px;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: 0 -1px 0 rgba(0, 0, 0, 0.04);
+    position: relative;
+    overflow: hidden;
+}
+
+/* ---- Tab 项颜色 ---- */
+.app-nav[data-app-id="chat"] .app-tab-item {
+    color: #B0B8C4;
+    transition: color 0.25s ease;
+    position: relative;
+    overflow: hidden;
+}
+.app-nav[data-app-id="chat"] .app-tab-item.active {
+    color: #5A8AC7;
+}
+
+/* ---- SVG icon 描边色 + 大小(22px)---- */
+.app-nav[data-app-id="chat"] .app-tab-icon svg {
+    width: 22px;
+    height: 22px;
+    display: block;
+    stroke: #B0B8C4;
+    transition: stroke 0.25s ease, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.app-nav[data-app-id="chat"] .app-tab-item.active .app-tab-icon svg {
+    stroke: #5A8AC7;
+    transform: scale(1.06);
+}
+
+/* ---- Label 文字 ---- */
+.app-nav[data-app-id="chat"] .app-tab-item > div:last-child {
+    font-size: 10px;
+    font-weight: 400;
+    transition: font-weight 0.25s ease;
+}
+.app-nav[data-app-id="chat"] .app-tab-item.active > div:last-child {
+    font-weight: 500;
+}
+
+/* ---- 点击波纹(用 ::after 圆形扩散)---- */
+.app-nav[data-app-id="chat"] .app-tab-item::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: rgba(90, 138, 199, 0.08);
+    transform: scale(0);
+    opacity: 0;
+    pointer-events: none;
+}
+.app-nav[data-app-id="chat"] .app-tab-item:active::after {
+    animation: chatTabRipple 0.4s ease-out forwards;
+}
+@keyframes chatTabRipple {
+    0%   { transform: scale(0); opacity: 1; }
+    100% { transform: scale(2); opacity: 0; }
+}
+
+/* ---- 按下反馈 ---- */
+.app-nav[data-app-id="chat"] .app-tab-item:active {
+    opacity: 0.6;
+}
+
+/* ---- 滑动指示器(由 mountNavIndicator 注入 .chat-tab-indicator)---- */
+.app-nav[data-app-id="chat"] .chat-tab-indicator {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    background: rgba(123, 163, 217, 0.1);
+    border-radius: 12px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.25s ease,
+        left 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+        width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 指示器位置(4 个 tab 等宽 25%) */
+.app-nav[data-app-id="chat"] .app-tab-bar:has(.app-tab-item:nth-child(2).active) .chat-tab-indicator {
+    left: 3px;
+    width: calc(25% - 6px);
+    opacity: 1;
+}
+.app-nav[data-app-id="chat"] .app-tab-bar:has(.app-tab-item:nth-child(3).active) .chat-tab-indicator {
+    left: calc(25% + 3px);
+    width: calc(25% - 6px);
+    opacity: 1;
+}
+.app-nav[data-app-id="chat"] .app-tab-bar:has(.app-tab-item:nth-child(4).active) .chat-tab-indicator {
+    left: calc(50% + 3px);
+    width: calc(25% - 6px);
+    opacity: 1;
+}
+.app-nav[data-app-id="chat"] .app-tab-bar:has(.app-tab-item:nth-child(5).active) .chat-tab-indicator {
+    left: calc(75% + 3px);
+    width: calc(25% - 6px);
+    opacity: 1;
+}

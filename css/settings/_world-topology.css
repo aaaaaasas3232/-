@@ -248,14 +248,15 @@
     gap: 8px;
 }
 
-/* section 标题样式 - 去掉分割线 */
+/* section 标题样式 - 居中、无分割线、浅色大字 */
 .settings-app .wv-world-editor .wv-editor__section-title {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     text-transform: none;
-    color: var(--settings-color-label);
-    letter-spacing: 0;
-    margin-bottom: 2px;
+    color: #6b7280;
+    text-align: center;
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
 }
 
 /* 世界编辑器 row 样式 - 去掉分割线 */
@@ -276,9 +277,9 @@
 
 /* label 样式 - 世界编辑器 */
 .settings-app .wv-world-editor .wv-editor__label {
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--settings-color-secondary);
+    font-size: 12px;
+    font-weight: 400;
+    color: #374151;
     width: 100%;
     flex-shrink: 0;
     margin-bottom: 2px;
@@ -294,7 +295,8 @@
     border-radius: 8px;
     padding: 8px 10px;
     font-size: 13px;
-    color: var(--settings-color-label);
+    color: var(--settings-color-secondary);
+    box-shadow: none;
 }
 
 .settings-app .wv-world-editor .wv-editor__textarea {
@@ -314,7 +316,9 @@
     width: auto;
     margin-bottom: 0;
     flex-shrink: 0;
-    font-size: 11px;
+    font-size: 12px;
+    font-weight: 400;
+    color: #374151;
 }
 
 .settings-app .wv-world-editor .wv-editor__row--inline .wv-editor__input,
@@ -322,6 +326,8 @@
     flex: 1;
     min-width: 0;
     font-size: 11px;
+    color: var(--settings-color-secondary);
+    box-shadow: none;
 }
 
 .settings-app .wv-world-editor .wv-editor__row--inline .wv-editor__input--num {
@@ -407,8 +413,8 @@
 }
 
 .settings-app .wv-world-editor .wv-editor__toggle-tab.is-active {
-    color: var(--settings-color-label);
-    background: rgba(255, 255, 255, 0.95);
+    color: #ffffff;
+    background: var(--wv-blue, #0A84FF);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
@@ -420,68 +426,79 @@
     padding: 8px 0;
 }
 
-/* 预设按钮组 - 紧凑胶囊 */
+/* 预设按钮组 - 胶囊 Tab 样式 */
 .settings-app .wv-world-editor .wv-hours-presets {
     display: flex;
-    gap: 4px;
-    align-items: center;
+    gap: 0;
+    background: rgba(120, 120, 128, 0.12);
+    border-radius: 8px;
+    padding: 2px;
+    flex-shrink: 0;
+    width: 100%;
 }
 
 .settings-app .wv-world-editor .wv-preset-btn {
     appearance: none;
     flex: 1;
-    padding: 5px 10px;
+    padding: 4px 8px;
     font-size: 11px;
     font-weight: 500;
     color: var(--settings-color-secondary);
-    background: rgba(120, 120, 128, 0.08);
+    background: transparent;
     border: none;
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.18s ease;
     font-family: inherit;
+    text-align: center;
 }
 
 .settings-app .wv-world-editor .wv-preset-btn:hover {
-    background: rgba(120, 120, 128, 0.12);
+    color: var(--settings-color-label);
 }
 
 .settings-app .wv-world-editor .wv-preset-btn.is-active {
-    color: var(--wv-blue, #0A84FF);
-    background: rgba(10, 132, 255, 0.1);
-    font-weight: 600;
+    color: var(--settings-color-label);
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-/* 自定义数量选择器 */
+/* 自定义数量选择器 - 胶囊 Tab 样式 */
 .settings-app .wv-world-editor .wv-hours-custom-selector {
     display: flex;
+    gap: 0;
+    background: rgba(120, 120, 128, 0.12);
+    border-radius: 8px;
+    padding: 2px;
     flex-wrap: wrap;
-    gap: 4px;
-    padding-top: 4px;
+    width: 100%;
 }
 
 .settings-app .wv-world-editor .wv-custom-count-btn {
     appearance: none;
-    padding: 5px 10px;
+    flex: 1;
+    min-width: 0;
+    padding: 4px 6px;
     font-size: 11px;
     font-weight: 500;
     color: var(--settings-color-secondary);
-    background: rgba(120, 120, 128, 0.08);
+    background: transparent;
     border: none;
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.18s ease;
     font-family: inherit;
+    text-align: center;
 }
 
 .settings-app .wv-world-editor .wv-custom-count-btn:hover {
-    background: rgba(120, 120, 128, 0.12);
+    color: var(--settings-color-label);
 }
 
 .settings-app .wv-world-editor .wv-custom-count-btn.is-active {
-    color: var(--wv-blue, #0A84FF);
-    background: rgba(10, 132, 255, 0.1);
-    font-weight: 600;
+    color: var(--settings-color-label);
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 /* 周名称编辑器样式 */
@@ -509,7 +526,7 @@
     padding: 6px 4px;
     font-size: 11px;
     text-align: center;
-    color: var(--settings-color-label);
+    color: var(--settings-color-secondary);
     background: rgba(255, 255, 255, 0.8);
     border: 1px solid rgba(120, 120, 128, 0.15);
     border-radius: 6px;
@@ -563,22 +580,22 @@
 }
 
 .settings-app .wv-world-editor .wv-hours-period__range {
-    font-size: 9px;
-    color: var(--settings-color-tertiary);
+    font-size: 10px;
+    color: var(--settings-color-secondary);
     font-weight: 500;
-    min-width: 28px;
+    min-width: 48px;
     padding-top: 2px;
 }
 
 .settings-app .wv-world-editor .wv-hours-period__name {
     flex: 1;
     padding: 3px 6px;
-    font-size: 11px;
+    font-size: 12px;
     text-align: left;
+    color: var(--settings-color-secondary);
     background: rgba(255, 255, 255, 0.9);
     border: none;
     border-radius: 4px;
-    color: var(--settings-color-label);
 }
 
 .settings-app .wv-world-editor .wv-hours-period__name:focus {

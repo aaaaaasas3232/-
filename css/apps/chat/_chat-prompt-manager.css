@@ -1,0 +1,2885 @@
+/**
+ * chat-app / 回复提示词管理详情页样式
+ *
+ * 触发:聊天设置页 → 「回复提示词」一行
+ *
+ * 页面布局:
+ *   - 顶部:自接管 topbar(返回按钮 + 「回复提示词」标题)
+ *   - 头部信息卡(头像 + 名字 + 当前激活的 prompt 数)
+ *   - 「当前上下文」卡片(可折叠,可排序)
+ *   - 「可用 Prompt」卡片(按软件分组,每组可折叠)
+ *
+ * 风格:跟 chat-settings / calendar-view 同款(蓝粉渐变背景 + 白底卡片 + iOS 圆角)
+ * 禁用 emoji:全部用 inline SVG
+ */
+
+/* ============================================
+ * 页面容器
+ * ============================================ */
+
+/* 外层容器:接管 detail-page 的整个布局 */
+.app-shell[data-app-id="chat"] .prompt-manager {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: linear-gradient(180deg, #E8F2FF 0%, #FFF5F7 50%, #FFFFFF 100%);
+}
+
+/* ============================================
+ * 顶部 topbar(自接管)
+ * ============================================ */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-topbar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 50px 12px 8px;
+    background: rgba(237, 242, 253, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    z-index: 10;
+    gap: 4px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-topbar-title {
+    flex: 1;
+    text-align: center;
+    font-size: 17px;
+    font-weight: 600;
+    color: #4A6FA5;
+    letter-spacing: 0.2px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-topbar-spacer {
+    width: 36px;
+    flex-shrink: 0;
+}
+
+/* 返回按钮:跟 chat-settings / chat-private 同款 */
+.app-shell[data-app-id="chat"] .prompt-manager .chat-back-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+    color: #4A6FA5;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .chat-back-btn:hover {
+    background: #E9ECEF;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .chat-back-btn:active {
+    background: rgba(168, 200, 236, 0.25);
+    transform: scale(0.92);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .chat-back-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: #4A6FA5;
+    stroke-width: 2;
+}
+
+/* ============================================
+ * 滚动区
+ * ============================================ */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-page {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    padding: 14px 16px 60px;
+}
+
+/* ============================================
+ * 头部信息卡
+ * ============================================ */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-header-info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: rgba(168, 200, 236, 0.22);
+    border-radius: 16px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-header-avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(74, 111, 165, 0.15);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-header-avatar-text {
+    font-size: 22px;
+    font-weight: 600;
+    color: #FFFFFF;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-header-avatar[data-avatar-color] {
+    background: var(--avatar-color, #A8C8EC);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-header-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-header-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #262626;
+    line-height: 1.2;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-header-stat {
+    font-size: 12px;
+    color: #8E8E93;
+    margin-top: 4px;
+    line-height: 1.4;
+}
+
+/* 通用卡片 */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-card {
+    background: #FFFFFF;
+    border-radius: 16px;
+    margin-bottom: 14px;
+    overflow: hidden;
+}
+
+/* ============================================
+ * 大区块 header(可折叠)
+ * ============================================ */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-section-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-section-head:hover {
+    background: rgba(168, 200, 236, 0.05);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-section-head:active {
+    background: rgba(168, 200, 236, 0.12);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-section-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: #E8F2FF;
+    color: #4A6FA5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-card-section:nth-of-type(2) .pm-section-icon {
+    background: #FFE6F0;
+    color: #D4728A;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-section-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-section-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-section-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #262626;
+    line-height: 1.3;
+}
+
+/* ★ v0.61.8 「当前上下文」section 右上角 💾 保存按钮(原刷新按钮改名为保存) */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-section-save {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(168, 200, 236, 0.12);
+    color: #4A6FA5;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.18s ease, transform 0.18s ease;
+}
+.app-shell[data-app-id="chat"] .prompt-manager .pm-section-save:hover {
+    background: rgba(168, 200, 236, 0.22);
+}
+.app-shell[data-app-id="chat"] .prompt-manager .pm-section-save:active {
+    transform: scale(0.92);
+}
+.app-shell[data-app-id="chat"] .prompt-manager .pm-section-save svg {
+    width: 16px;
+    height: 16px;
+}
+/* ★ 兼容 v0.61.7 旧 class 名(防止历史 render 残留触发样式缺失) */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-section-refresh {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(168, 200, 236, 0.12);
+    color: #4A6FA5;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.18s ease, transform 0.18s ease;
+}
+.app-shell[data-app-id="chat"] .prompt-manager .pm-section-refresh:hover {
+    background: rgba(168, 200, 236, 0.22);
+}
+.app-shell[data-app-id="chat"] .prompt-manager .pm-section-refresh:active {
+    transform: scale(0.92);
+}
+.app-shell[data-app-id="chat"] .prompt-manager .pm-section-refresh svg {
+    width: 16px;
+    height: 16px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-section-desc {
+    font-size: 12px;
+    color: #8E8E93;
+    margin-top: 3px;
+    line-height: 1.4;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-section-arrow {
+    width: 16px;
+    height: 16px;
+    color: #C7C7CC;
+    flex-shrink: 0;
+    transition: transform 0.25s ease;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-section-head[aria-expanded="true"] .pm-section-arrow {
+    transform: rotate(180deg);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-section-body {
+    padding: 6px 0 10px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-section-body[style*="display: none"] {
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+/* ============================================
+ * 第一部分:当前上下文 prompt 列表
+ * ============================================ */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-active-list {
+    padding: 0 4px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-active-item {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    position: relative;
+    transition: background 0.15s;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-active-item:last-child {
+    border-bottom: none;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-active-item:hover {
+    background: rgba(168, 200, 236, 0.04);
+}
+
+/* 拖动手柄 */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-active-drag-handle {
+    width: 22px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #C7C7CC;
+    cursor: grab;
+    touch-action: none;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-active-drag-handle:active {
+    cursor: grabbing;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-active-drag-handle svg {
+    width: 14px;
+    height: 22px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-active-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-active-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-active-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #262626;
+    line-height: 1.3;
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-active-order {
+    font-size: 11px;
+    color: #8E8E93;
+    flex-shrink: 0;
+    background: rgba(168, 200, 236, 0.12);
+    padding: 2px 8px;
+    border-radius: 8px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-active-body {
+    font-size: 12.5px;
+    color: #4A4A4A;
+    line-height: 1.6;
+    background: #F8F9FB;
+    padding: 10px 12px;
+    border-radius: 10px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    border-left: 3px solid #A8C8EC;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-active-body-folded {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-active-body-preview {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+    color: #4A4A4A;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border-left: none;
+    background: transparent;
+    padding: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-body-expand-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: rgba(74, 111, 165, 0.1);
+    color: #4A6FA5;
+    border: none;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-body-expand-btn:hover {
+    background: rgba(74, 111, 165, 0.18);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-body-expand-btn svg {
+    width: 11px;
+    height: 11px;
+    transition: transform 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-body-expand-btn[aria-expanded="true"] svg {
+    transform: rotate(180deg);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-active-body-full {
+    margin-top: 6px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-active-hint {
+    padding: 10px 16px 4px;
+    font-size: 11px;
+    color: #8E8E93;
+    line-height: 1.5;
+    text-align: center;
+}
+
+/* ============================================
+ * 第二部分:可用 Prompt 软件分组
+ * ============================================ */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-groups {
+    padding: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-group {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-group:last-child {
+    border-bottom: none;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-group-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-group-head:hover {
+    background: rgba(168, 200, 236, 0.05);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-group-head:active {
+    background: rgba(168, 200, 236, 0.12);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-group-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #E8F2FF, #FFE6F0);
+    color: #4A6FA5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-group-icon svg {
+    width: 17px;
+    height: 17px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-group-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-group-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #262626;
+    line-height: 1.3;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-group-desc {
+    font-size: 11.5px;
+    color: #8E8E93;
+    margin-top: 2px;
+    line-height: 1.3;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-group-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-group-count {
+    font-size: 12px;
+    color: #8E8E93;
+    background: rgba(168, 200, 236, 0.12);
+    padding: 2px 8px;
+    border-radius: 8px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-group-arrow {
+    width: 14px;
+    height: 14px;
+    color: #C7C7CC;
+    transition: transform 0.25s ease;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-group-head[aria-expanded="true"] .pm-group-arrow {
+    transform: rotate(180deg);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-group-body {
+    padding: 4px 16px 14px;
+    background: #FAFBFD;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-group-body[style*="display: none"] {
+    display: none;
+}
+
+/* 软件下的 prompt 单条 */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-group-prompt {
+    background: #FFFFFF;
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-group-prompt:last-child {
+    margin-bottom: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-group-prompt-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: space-between;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-group-prompt-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-group-prompt-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: #262626;
+    line-height: 1.3;
+    display: block;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-group-prompt-desc {
+    font-size: 11.5px;
+    color: #8E8E93;
+    margin-top: 3px;
+    line-height: 1.4;
+    display: block;
+}
+
+/* ============================================
+ * 卡片预览 + JSON 结构(音乐示例)
+ * ============================================ */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-card-preview-block {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed rgba(168, 200, 236, 0.4);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-card-preview-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #8E8E93;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+/* 音乐卡片预览(同款 song-share-card,来自 chat.js) */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-music-card-preview {
+    border-radius: 12px;
+    overflow: hidden;
+    width: 180px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+    margin-bottom: 12px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-music-card-inner {
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-music-card-cover {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-music-card-cover svg {
+    width: 18px;
+    height: 18px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-music-card-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-music-card-title {
+    color: white;
+    font-weight: 600;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-music-card-artist {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 11px;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-music-card-footer {
+    padding: 8px 10px;
+    background: rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-music-card-footer-label {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-music-card-footer-label svg {
+    width: 12px;
+    height: 12px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-music-card-footer-hint {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 10px;
+}
+
+/* JSON 结构区 */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-card-json-block {
+    background: #F8F9FB;
+    border-radius: 10px;
+    padding: 10px 12px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-card-json-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-card-json-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #8E8E93;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-copy-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: rgba(74, 111, 165, 0.1);
+    color: #4A6FA5;
+    border: none;
+    padding: 3px 9px;
+    border-radius: 8px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-copy-btn:hover {
+    background: rgba(74, 111, 165, 0.18);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-copy-btn:active {
+    transform: scale(0.96);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-copy-btn svg {
+    width: 11px;
+    height: 11px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-card-json {
+    margin: 0;
+    padding: 8px 10px;
+    background: #FFFFFF;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 6px;
+    font-family: "SF Mono", Monaco, Consolas, "Courier New", monospace;
+    font-size: 11px;
+    line-height: 1.5;
+    color: #4A4A4A;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 160px;
+    overflow-y: auto;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-card-json-hint {
+    font-size: 10.5px;
+    color: #8E8E93;
+    margin-top: 6px;
+    line-height: 1.4;
+}
+
+/* ============================================
+ * iOS toggle(同 chat-settings / chat-private 同款)
+ * ============================================ */
+.app-shell[data-app-id="chat"] .prompt-manager .chat-toggle {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 28px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .chat-toggle-input {
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    cursor: pointer;
+    z-index: 1;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .chat-toggle-track {
+    position: absolute;
+    inset: 0;
+    background: #E9E9EB;
+    border-radius: 14px;
+    transition: background 0.2s ease;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .chat-toggle-input:checked + .chat-toggle-track {
+    background: #34C759;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .chat-toggle-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 24px;
+    height: 24px;
+    background: #FFFFFF;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+    transition: transform 0.2s ease;
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .chat-toggle-input:checked ~ .chat-toggle-thumb {
+    transform: translateX(22px);
+}
+
+/* ============================================
+ * 滚动条(隐藏视觉,但保留滚动功能)
+ *   - webkit (Chrome / Safari / Edge): width 0 + transparent
+ *   - Firefox: scrollbar-width: none
+ *   - IE / Edge Legacy: -ms-overflow-style: none
+ * ============================================ */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-page::-webkit-scrollbar {
+    width: 0;
+    background: transparent;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-page {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE 10+ */
+}
+
+/* ============================================
+ * ★ v0.50 新增:头部「新增」按钮
+ * ============================================ */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-add-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: #77a7eb;
+    color:#FFFFFF;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: transform 0.15s;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-add-btn:hover {
+    transform: translateY(-1px);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-add-btn:active {
+    transform: translateY(0) scale(0.97);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-add-btn svg {
+    width: 14px;
+    height: 14px;
+    stroke: #FFFFFF;
+}
+
+/* ============================================
+ * ★ v0.50 新增:第一部分「当前上下文」列表行
+ *   - 序号 tag + 标题/正文 + 操作按钮组 + toggle
+ * ============================================ */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-active-list {
+    padding: 0 4px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-active-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    transition: background 0.15s;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-active-item:last-child {
+    border-bottom: none;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-active-item:hover {
+    background: rgba(168, 200, 236, 0.04);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-active-order-tag {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #A8C8EC, #F4A6CD);
+    color: #FFFFFF;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-active-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-active-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-active-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #262626;
+    line-height: 1.3;
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-active-source {
+    font-size: 10.5px;
+    color: #8E8E93;
+    background: rgba(168, 200, 236, 0.12);
+    padding: 2px 7px;
+    border-radius: 8px;
+    flex-shrink: 0;
+    letter-spacing: 0.2px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-active-body {
+    font-size: 12.5px;
+    color: #4A4A4A;
+    line-height: 1.5;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-active-side {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+/* ============================================
+ * ★ v0.50 新增:第二部分「可用 Prompt」列表行
+ * ============================================ */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-available-list {
+    padding: 0 4px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-available-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    transition: background 0.15s;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-available-item:last-child {
+    border-bottom: none;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-available-item:hover {
+    background: rgba(244, 166, 205, 0.04);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-available-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-available-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-available-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #262626;
+    line-height: 1.3;
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-available-source {
+    font-size: 10.5px;
+    color: #8E8E93;
+    background: rgba(244, 166, 205, 0.16);
+    padding: 2px 7px;
+    border-radius: 8px;
+    flex-shrink: 0;
+    letter-spacing: 0.2px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-available-body {
+    font-size: 12.5px;
+    color: #4A4A4A;
+    line-height: 1.5;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-available-side {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+/* ============================================
+ * ★ v0.50 新增:操作按钮组(上移/下移/编辑/删除)
+ * ============================================ */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-row-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-action {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: none;
+    background: rgba(168, 200, 236, 0.14);
+    color: #4A6FA5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    padding: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-action:hover {
+    background: rgba(168, 200, 236, 0.26);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-action:active {
+    transform: scale(0.92);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-action svg {
+    width: 13px;
+    height: 13px;
+    fill: none;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-action--edit {
+    background: rgba(74, 111, 165, 0.12);
+    color: #4A6FA5;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-action--del {
+    background: rgba(255, 59, 48, 0.1);
+    color: #FF3B30;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-action--del:hover {
+    background: rgba(255, 59, 48, 0.2);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-action:disabled,
+.app-shell[data-app-id="chat"] .prompt-manager .pm-action[disabled] {
+    opacity: 0.35;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* ============================================
+ * ★ v0.50 新增:iOS 风 toggle(button 版)
+ *   - 用 <button> 而不是 <input>,因为 framework 派发 click
+ *   - .pm-toggle--on → 绿色 + thumb 滑到右边
+ * ============================================ */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-toggle {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    border-radius: 11px;
+    border: none;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-toggle-track {
+    position: absolute;
+    inset: 0;
+    background: #E9E9EB;
+    border-radius: 11px;
+    transition: background 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-toggle--on .pm-toggle-track {
+    background: #34C759;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-toggle-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    background: #FFFFFF;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+    transition: transform 0.2s;
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-toggle--on .pm-toggle-thumb {
+    transform: translateX(18px);
+}
+
+/* ============================================
+ * ★ v0.50 新增:空状态(emoji-free,纯 SVG)
+ * ============================================ */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-empty {
+    padding: 36px 24px;
+    text-align: center;
+    color: #8E8E93;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-empty-icon {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 12px;
+    background: linear-gradient(135deg, rgba(168, 200, 236, 0.18), rgba(244, 166, 205, 0.18));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #A8C8EC;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-empty-icon svg {
+    width: 26px;
+    height: 26px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-empty-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #4A4A4A;
+    margin-bottom: 4px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-empty-desc {
+    font-size: 12px;
+    color: #8E8E93;
+    line-height: 1.5;
+}
+
+/* ============================================
+ * ★ v0.52 统一 prompt 行结构 <details>/<summary>
+ *   - pm-item: 最外层 <details>
+ *   - pm-item-summary: 可点击行(序号 + 标题 + 预览 + 操作)
+ *   - pm-item-body: 展开后正文
+ * ============================================ */
+
+/* ---- 行容器 ---- */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item {
+    display: block;
+    border-radius: 12px;
+    background: #FFFFFF;
+    border: 1px solid rgba(0, 0, 0, 0.10);
+    margin: 0 12px 6px 12px;
+    overflow: hidden;
+    transition: box-shadow 0.15s;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item:last-child {
+    margin-bottom: 0;
+    margin-left: 12px;
+    margin-right: 12px;
+}
+
+/* ---- 可点击行 ---- */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item-summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+    transition: background 0.15s;
+    min-height: 56px;
+    box-sizing: border-box;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item-summary::-webkit-details-marker {
+    display: none; /* Safari 隐藏默认三角 */
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item-summary:hover {
+    background: rgba(168, 200, 236, 0.05);
+}
+
+/* ---- 序号 / 角色标签 ---- */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item-tag {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #A8C8EC, #C7DAF0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item-tag--system {
+    background: linear-gradient(135deg, #A8C8EC, #F4A6CD);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item-tag-text {
+    font-size: 11px;
+    font-weight: 700;
+    color: #FFFFFF;
+    line-height: 1;
+}
+
+/* ---- 主体:标题 + 预览 ---- */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #262626;
+    line-height: 1.3;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item-source {
+    font-size: 10.5px;
+    color: #8E8E93;
+    background: rgba(168, 200, 236, 0.12);
+    padding: 2px 7px;
+    border-radius: 8px;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item-source--system {
+    background: rgba(74, 111, 165, 0.10);
+    color: #4A6FA5;
+    font-weight: 600;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item-preview {
+    font-size: 12px;
+    color: #6E6E73;
+    line-height: 1.5;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ---- 右侧:操作 + 箭头 ---- */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item-arrow {
+    width: 16px;
+    height: 16px;
+    color: #C7C7CC;
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item[open] .pm-item-arrow {
+    transform: rotate(180deg);
+}
+
+/* ---- 展开后正文 ---- */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item-body {
+    padding: 10px 12px 14px;
+    border-top: 1px dashed rgba(168, 200, 236, 0.3);
+    background: #FAFBFD;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item-content {
+    font-size: 12.5px;
+    color: #4A4A4A;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: #FFFFFF;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border-left: 3px solid #A8C8EC;
+}
+
+/* ---- 系统 prompt 变体 ---- */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item--system-user {
+    /* 保持通用 pm-item 白底样式，无额外背景 */
+}
+
+/* 用户系统 prompt:去掉左边竖线(与 AI 系统 prompt 保持一致) */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item--system-user .pm-item-content {
+    border-left: none;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item--system-ai {
+    border-left: none;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item--system-ai .pm-item-content {
+    /* 无左边竖线 */
+}
+
+/* ★ 当前聊天回合 item（murmur 组内）的正文：去掉左边蓝色竖线 */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item--control[data-kind="context-rounds"] .pm-item-content {
+    border-left: none;
+}
+
+/* ★ 第三方 App Prompt item 的正文：去掉左边蓝色竖线 */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item--app-prompt .pm-item-content {
+    border-left: none;
+}
+
+/* ---- 开启态 ---- */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item--on {
+    background: linear-gradient(135deg, rgba(52, 199, 89, 0.05), #FFFFFF);
+    border-color: rgba(52, 199, 89, 0.25);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item--on .pm-item-title {
+    color: #1a6b35;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item--on .pm-item-content {
+    border-left-color: #34C759;
+}
+
+/* ---- 锁标记 ---- */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-locked-badge {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(74, 111, 165, 0.12);
+    color: #4A6FA5;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item--system-ai .pm-locked-badge {
+    background: rgba(244, 166, 205, 0.12);
+    color: #C7638E;
+}
+
+/* ---- 世界观 prompt 变体 ---- */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item--world {
+    background: linear-gradient(135deg, rgba(124, 179, 66, 0.08), rgba(255, 255, 255, 1));
+    border-color: rgba(124, 179, 66, 0.30);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item--world .pm-item-content {
+    border-left-color: rgba(124, 179, 66, 0.40);
+}
+
+/* ============================================
+ * ★ v0.52 列表容器(去掉旧 pm-active-list / pm-available-list)
+ * ============================================ */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-active-list,
+.app-shell[data-app-id="chat"] .prompt-manager .pm-available-list {
+    padding: 4px 2px;
+}
+
+/* ============================================
+ * ★ v0.52 单行操作按钮组(优先级 / 注入深度 / 编辑 / 启用 tab)
+ *   - 横向 chip 样式,圆角矩形
+ *   - icon + 文字,共 4 个并排
+ * ============================================ */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-row-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 26px;
+    padding: 0 9px;
+    border-radius: 6px;
+    background: rgba(168, 200, 236, 0.10);
+    border: 1px solid transparent;
+    color: #4A6FA5;
+    font-size: 11.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    line-height: 1;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-chip svg {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-chip:hover {
+    background: rgba(168, 200, 236, 0.20);
+    border-color: rgba(74, 111, 165, 0.20);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-chip:active {
+    transform: scale(0.95);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-chip--edit {
+    background: rgba(175, 82, 222, 0.10);
+    color: #8B3FCB;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-chip--edit:hover {
+    background: rgba(175, 82, 222, 0.20);
+    border-color: rgba(139, 63, 203, 0.20);
+}
+
+/* ★ v0.61.8.9 删除按钮(垃圾桶 icon) */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-chip--delete {
+    background: rgba(229, 72, 77, 0.10);
+    color: #E5484D;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-chip--delete:hover {
+    background: rgba(229, 72, 77, 0.20);
+    border-color: rgba(229, 72, 77, 0.30);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-chip--toggle {
+    /* 旧的单按钮 toggle 变体已废弃(改用 pm-segmented-tabs) */
+}
+
+/* ============================================
+ * ★ v0.53 启停 segmented-tabs(参考 settings app)
+ *   - 外层胶囊容器(灰色背景)
+ *   - 激活态:白底 + 深色文字 + 阴影
+ * ============================================ */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-segmented-tabs {
+    display: inline-flex;
+    gap: 0;
+    background: rgba(120, 120, 128, 0.16);
+    border-radius: 7px;
+    padding: 2px;
+    line-height: 1.3;
+    color: #6E6E73;
+    text-align: center;
+    flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-segmented-tab {
+    appearance: none;
+    padding: 4px 10px;
+    font-size: 11.5px;
+    line-height: 1.1;
+    font-weight: 500;
+    color: #6E6E73;
+    background: transparent;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    text-align: center;
+    font-family: inherit;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-segmented-tab:hover {
+    color: #262626;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-segmented-tab.is-active {
+    color: #262626;
+    background: #FFFFFF;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-segmented-tab:active {
+    transform: scale(0.95);
+}
+
+/* ============================================
+ * ★ v0.53 上下文预览区块(完整人设上下文文本)
+ * ============================================ */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-context-preview {
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    background: #FAFBFD;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-context-preview__raw {
+    margin: 0;
+    padding: 12px;
+    font-size: 12px;
+    line-height: 1.7;
+    color: #4A4A4A;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    overflow-wrap: break-word;
+    background: #F8F9FB;
+    border-radius: 10px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-context-preview__raw::-webkit-scrollbar {
+    width: 0;
+    background: transparent;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-context-preview__raw {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+/* ============================================
+ * v0.61 新增 css 集合 —— 仅供粘贴补充使用
+ *
+ * 用途:新样式,不属于待办文档里的旧样式
+ * 用法:把这部分 CSS 粘贴到 _chat-prompt-manager.css 末尾
+ *      (旧样式先用待办文档的版本覆盖回去)
+ *
+ * v0.61.1 新增:
+ *   - .pm-card-section          section 卡片(白底 + 圆角 + 内边距)
+ *   - .pm-card-section--library 库区域专用
+ *   - .pm-section-divider       section 之间分割条(横线 + label)
+ *   - .pm-section-divider-text  分割条文字
+ *   - .pm-section-divider-line  分割条横线
+ *   - .pm-item[open]            详情卡展开状态
+ *   - .pm-item--system          系统虚拟 prompt 配色变体
+ *   - .pm-item--control         系统控制卡(虚线边框)
+ *   - .pm-active-list, .pm-available-list, .pm-library-list, .pm-system-controls 列表容器
+ *   - .pm-chip--pull            拉取按钮
+ *   - .pm-chip--preview         预览按钮
+ *   - .pm-segmented-tabs--app   第三方 App 启停 tabs
+ *   - .pm-row-actions--locked   锁住行(背景胶囊)
+ *   - .pm-row-actions--system   系统控制卡特有背景
+ *   - .pm-lock-badge            锁徽标
+ *   - .pm-lock-badge svg        锁徽标 svg
+ *   - .pm-library-check         库「已添加」对勾
+ *   - .pm-library-check svg
+ *   - .pm-empty::before         「空卡片」浮动小标签
+ *
+ * v0.61 nook 分组标题:
+ *   - .pm-nook-group            nook 分组卡片
+ *   - .pm-nook-group__title     nook 分组标题
+ *   - .pm-nook-group__desc      nook 分组描述
+ *
+ * v0.61.2 序号 + 拖拽:
+ *   - .pm-card-index            圆形序号徽标(粉底白字 28x28)
+ *   - .pm-card.pm-card-dragging 拖拽中卡片视觉(放大 + 半透明 + 阴影)
+ *   - .pm-card[data-pm-draggable="true"]       可拖拽卡片光标
+ *   - .pm-card[data-pm-draggable="true"]:active 拖拽中光标
+ *   - .pm-card-placeholder      释放占位符(虚线圆角矩形)
+ *
+ * v0.61.3 概要 item + context rounds:
+ *   - .pm-summary-item          概要通用卡(日历/故事/K 链)
+ *   - .pm-summary-item--calendar 日历概要变体
+ *   - .pm-summary-item--story    故事概要变体
+ *   - .pm-summary-item--rolling  滚动摘要卡变体
+ *   - .pm-summary-item-head      概要头部
+ *   - .pm-summary-item-icon      概要图标
+ *   - .pm-summary-item-icon svg  概要图标 svg
+ *   - .pm-summary-item-main      概要主体
+ *   - .pm-summary-item-title     概要标题
+ *   - .pm-summary-item-meta      概要 meta(日期 + 计数)
+ *   - .pm-summary-item-range     概要日期范围
+ *   - .pm-summary-item-count     概要消息数
+ *   - .pm-summary-item-badge     概要类型徽标
+ *   - .pm-summary-item-badge--dynamic 概要动态徽标
+ *   - .pm-summary-item-source    概要来源序号
+ *   - .pm-summary-item-preview   概要预览文本
+ *
+ * v0.61.5 特殊卡片预览:
+ *   - .pm-special-card-preview  预览卡片容器
+ *   - .pm-preview-card          预览卡片基类
+ *   - .pm-preview-card--music   音乐卡片样式
+ *   - .pm-preview-card__cover              封面
+ *   - .pm-preview-card__cover--placeholder 占位封面
+ *   - .pm-preview-card__cover--placeholder svg
+ *   - .pm-preview-card__meta               文本块
+ *   - .pm-preview-card__title              标题
+ *   - .pm-preview-card__sub                副标题
+ *   - .pm-preview-card--red-packet         红包卡片样式
+ *   - .pm-preview-card__redpacket-header   红包头部
+ *   - .pm-preview-card__redpacket-icon     红包 icon
+ *   - .pm-preview-card__redpacket-icon svg
+ *   - .pm-preview-card__redpacket-text     红包文字
+ *   - .pm-preview-card__redpacket-title    红包标题
+ *   - .pm-preview-card__redpacket-sender   红包发送者
+ *   - .pm-preview-card__redpacket-footer   红包底部
+ *   - .pm-preview-card__redpacket-cta      红包 CTA 文字
+ *   - .pm-preview-card--location           位置卡片样式
+ *   - .pm-preview-card__location-map       位置缩略图
+ *   - .pm-preview-card__location-grid      位置网格背景
+ *   - .pm-preview-card__location-pin       位置 pin
+ *   - .pm-preview-card__location-pin svg
+ *   - .pm-preview-card__location-info      位置信息块
+ *   - .pm-preview-card__location-name      位置名
+ *   - .pm-preview-card__location-address   位置地址
+ *   - .pm-preview-card--text               文本预览样式
+ *   - .pm-preview-card__text               文本预览文字
+ * ============================================ */
+
+/* ---------- v0.61.1 section 卡片 + 分割条 ---------- */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-card-section {
+    padding: 0 0 12px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-card-section--library {
+    margin-top: 6px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-section-divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px 6px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-section-divider-text {
+    font-size: 11px;
+    font-weight: 700;
+    color: #8E8E93;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-section-divider-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(168, 200, 236, 0.28), rgba(168, 200, 236, 0));
+}
+
+/* ---------- v0.61.1 pm-item 扩展状态 ---------- */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item[open] {
+    border-color: rgba(0, 0, 0, 0.10);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item--system {
+    background: linear-gradient(135deg, rgba(232, 242, 255, 0.4), rgba(255, 255, 255, 1));
+    border-color: rgba(168, 200, 236, 0.36);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item--control {
+    background: #FFFFFF;
+    border-style: solid;
+    border-color: rgba(0, 0, 0, 0.10);
+}
+
+/* ★ v0.66 记忆概要卡(在 Murmur 折叠区内的虚拟系统级卡)
+ *   - 跟其它 control card 同款外观,在 title 加个浅蓝徽章区分
+ *   - 不可拖,放在 summary 区域,用户可控:toggle 启用 / 删除
+ */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item--memory-summary {
+    position: relative;
+}
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item--memory-summary::before {
+    content: 'L1';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-size: 10px;
+    color: #4A6FA5;
+    background: #E8F0FB;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item--memory-summary[data-kind="memory-summary-L2"]::before { content: 'L2'; }
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item--memory-summary[data-kind="memory-summary-L3"]::before { content: 'L3'; }
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item--memory-summary[data-kind="memory-summary-L4"]::before { content: 'L4'; }
+
+/* 列表容器(只是为了管理嵌套层级,本身不强制 padding) */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-active-list,
+.app-shell[data-app-id="chat"] .prompt-manager .pm-available-list,
+.app-shell[data-app-id="chat"] .prompt-manager .pm-library-list,
+.app-shell[data-app-id="chat"] .prompt-manager .pm-system-controls {
+    display: flex;
+    flex-direction: column;
+}
+
+/* ============================================
+ * ★ v0.61.8.5 小眼睛(预览)按钮 → 26x26 圆角正方形
+ *   - 之前:height:26 + padding:0 9px 横向矩形,带「预览」文字
+ *   - 现在:正方形 26x26,纯 SVG,无文字,用于触发 previewAppPrompt
+ * ============================================ */
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-chip--pull,
+.app-shell[data-app-id="chat"] .prompt-manager .pm-chip--preview {
+    color: #4A6FA5;
+}
+
+/* ★ v0.61.8.10 已拉取的库条目按钮 → 灰态 + 禁用
+ *   - 用户反馈「拉取按钮点击一次以后就变灰!!必须变灰防止反复拉取」
+ *   - 视觉上跟正常拉取按钮位置一致,只是颜色灰掉 + 鼠标变 not-allowed
+ *   - DOM 上加 disabled 属性,framework click 委托走前就被浏览器拦住
+ */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-chip--pulled,
+.app-shell[data-app-id="chat"] .prompt-manager .pm-chip--pulled:hover {
+    color: #B0B0B5;
+    background: rgba(120, 120, 128, 0.08);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-chip--pulled:active {
+    transform: none;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-chip--preview {
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 8px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-chip--preview svg {
+    width: 14px;
+    height: 14px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-segmented-tabs--app {
+    flex-shrink: 0;
+}
+
+/* ---------- v0.61.1 row actions 锁变体 + 锁徽标 ---------- */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-row-actions--locked {
+    padding: 4px 6px;
+    background: rgba(168, 200, 236, 0.10);
+    border-radius: 10px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-row-actions--system {
+    /* 系统控制卡特有背景 */
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-lock-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(168, 200, 236, 0.18);
+    color: #4A6FA5;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-lock-badge svg {
+    width: 13px;
+    height: 13px;
+    stroke: currentColor;
+    fill: none;
+}
+
+/* ---------- v0.61.1 Prompt 库对勾 ---------- */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-library-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    color: #2A8552;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-library-check svg {
+    width: 14px;
+    height: 14px;
+    stroke: currentColor;
+    fill: none;
+}
+
+/* ---------- v0.61.1 空状态「空卡片」浮动标签 ---------- */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-empty::before {
+    content: '空卡片';
+    position: absolute;
+    top: -10px;
+    left: 16px;
+    padding: 2px 10px;
+    background: #FFFFFF;
+    border: 1px solid rgba(74, 111, 165, 0.20);
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #4A6FA5;
+    letter-spacing: 0.3px;
+}
+
+/* ---------- v0.61 nook 分组标题 ---------- */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-nook-group {
+    margin: 10px 14px 4px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(255, 230, 240, .72), rgba(244, 241, 255, .72));
+    border: 1px solid rgba(212, 114, 138, .16);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-nook-group__title {
+    color: #D4728A;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-nook-group__desc {
+    margin-top: 2px;
+    color: #8E8E93;
+    font-size: 11px;
+}
+
+/* ---------- v0.61.2 序号 + 拖拽 ---------- */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-card-index {
+    flex: 0 0 28px;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: #F4A6CD;
+    color: #FFFFFF;
+    font-size: 13px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    -webkit-user-select: none;
+    font-feature-settings: 'tnum';
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-card.pm-card-dragging {
+    transform: scale(1.05);
+    opacity: 0.7;
+    z-index: 10;
+    cursor: grabbing;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-card[data-pm-draggable="true"] {
+    cursor: grab;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-card[data-pm-draggable="true"]:active {
+    cursor: grabbing;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-card-placeholder {
+    height: 56px;
+    margin: 8px 14px;
+    border: 2px dashed rgba(244, 166, 205, 0.6);
+    border-radius: 14px;
+    background: rgba(244, 166, 205, 0.06);
+    pointer-events: none;
+    transition: height 0.18s ease;
+}
+
+/* ---------- v0.61.3 概要 item + context rounds ---------- */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-summary-item {
+    margin: 8px 14px;
+    padding: 12px 14px;
+    background: #FFFFFF;
+    border: 1px solid rgba(168, 200, 236, 0.28);
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-summary-item--calendar {
+    border-color: rgba(168, 200, 236, 0.4);
+    background: linear-gradient(135deg, rgba(232, 242, 255, 0.45), rgba(255, 255, 255, 1));
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-summary-item--story {
+    border-color: rgba(212, 114, 138, 0.36);
+    background: linear-gradient(135deg, rgba(255, 230, 240, 0.45), rgba(255, 255, 255, 1));
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-summary-item--rolling {
+    border-color: rgba(168, 200, 236, 0.4);
+    background: linear-gradient(135deg, rgba(168, 200, 236, 0.12), rgba(255, 255, 255, 1));
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-summary-item-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-summary-item-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 14px;
+    background: rgba(168, 200, 236, 0.16);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-summary-item-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-summary-item-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-summary-item-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #222;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-summary-item-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 2px;
+    font-size: 11px;
+    color: #8E8E93;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-summary-item-range {
+    color: #4A6FA5;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-summary-item-count {
+    color: #8E8E93;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-summary-item-badge {
+    padding: 1px 8px;
+    background: rgba(168, 200, 236, 0.18);
+    color: #4A6FA5;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-summary-item-badge--dynamic {
+    background: rgba(244, 166, 205, 0.18);
+    color: #D4728A;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-summary-item-source {
+    flex-shrink: 0;
+    font-size: 11px;
+    color: #C7C7CC;
+    font-weight: 600;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-summary-item-preview {
+    font-size: 12px;
+    color: #666;
+    line-height: 1.5;
+    padding-left: 38px;
+    word-break: break-word;
+}
+
+/* ★ v0.63.1 空 K 链概要卡(已启用但还没生成 K0)的样式 */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-summary-item--empty {
+    border-color: rgba(168, 200, 236, 0.20);
+    background: linear-gradient(135deg, rgba(168, 200, 236, 0.06), rgba(255, 255, 255, 1));
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-summary-item--empty .pm-summary-item-preview {
+    color: #8E8E93;
+    font-style: italic;
+}
+
+/* ★ v0.63.2 K 链个人 toggle 关闭(不注入 AI)时的「当前上下文区」概要卡样式
+ *   - 卡片仍然显示(总开关开),但视觉上灰掉 + 「已停用」徽标
+ *   - 跟 K 链卡片的 toggle 状态一致
+ */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-summary-item--disabled {
+    opacity: 0.65;
+    border-style: dashed;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-summary-item--disabled .pm-summary-item-preview {
+    color: #8E8E93;
+}
+
+/* ---------- v0.61.5 特殊卡片预览 ---------- */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-special-card-preview {
+    margin: 0 0 10px 0;
+    padding: 10px;
+    border-radius: 10px;
+    background: rgba(244, 241, 255, 0.32);
+    border: 1px solid rgba(168, 200, 236, 0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;       /* ★ v0.61.8:preview 区可点击触发 previewAppPrompt */
+    transition: background 0.18s, border-color 0.18s, transform 0.18s;
+}
+.app-shell[data-app-id="chat"] .prompt-manager .pm-special-card-preview:hover {
+    background: rgba(168, 200, 236, 0.22);
+    border-color: rgba(74, 111, 165, 0.32);
+}
+.app-shell[data-app-id="chat"] .prompt-manager .pm-special-card-preview:active {
+    background: rgba(168, 200, 236, 0.32);
+    transform: scale(0.98);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-preview-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-preview-card--music {
+    background: #FFFFFF;
+    border: 1px solid rgba(196, 130, 220, 0.32);
+    border-radius: 10px;
+    padding: 8px 12px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-preview-card__cover {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background-color: #E8E2F2;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-preview-card__cover--placeholder {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #8B5CF6;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-preview-card__cover--placeholder svg {
+    width: 20px;
+    height: 20px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-preview-card__meta {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-preview-card__title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #222;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-preview-card__sub {
+    font-size: 11px;
+    color: #8E8E93;
+    margin-top: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-preview-card--red-packet {
+    background: linear-gradient(135deg, #E94560 0%, #C0394B 100%);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: #FFFFFF;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-preview-card__redpacket-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-preview-card__redpacket-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.18);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-preview-card__redpacket-icon svg {
+    width: 16px;
+    height: 16px;
+    color: #FFFFFF;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-preview-card__redpacket-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-preview-card__redpacket-title {
+    font-size: 13px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-preview-card__redpacket-sender {
+    font-size: 11px;
+    opacity: 0.84;
+    margin-top: 2px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-preview-card__redpacket-footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.18);
+    padding-top: 8px;
+    text-align: center;
+    font-size: 12px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-preview-card__redpacket-cta {
+    color: rgba(255, 255, 255, 0.92);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-preview-card--location {
+    background: linear-gradient(135deg, #E8F2FF 0%, #D6E4FF 100%);
+    border: 1px solid rgba(74, 111, 165, 0.32);
+    border-radius: 10px;
+    padding: 8px 12px;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-preview-card__location-map {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    background: #FFFFFF;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-preview-card__location-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(74, 111, 165, 0.18) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(74, 111, 165, 0.18) 1px, transparent 1px);
+    background-size: 8px 8px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-preview-card__location-pin {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #4A6FA5;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-preview-card__location-pin svg {
+    width: 24px;
+    height: 24px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-preview-card__location-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-preview-card__location-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #4A6FA5;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-preview-card__location-address {
+    font-size: 11px;
+    color: #6B7280;
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-preview-card--text {
+    background: #FFFFFF;
+    border: 1px dashed rgba(168, 200, 236, 0.42);
+    border-radius: 8px;
+    padding: 10px 14px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-preview-card__text {
+    font-size: 12px;
+    color: #4A6FA5;
+    line-height: 1.6;
+}
+
+/* ============================================
+ * v0.61.6 按 App 分组折叠样式
+ * ============================================ */
+
+/* App 分组折叠列表容器 */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-app-group-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* 单个 App 折叠项 */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-app-group {
+    border-radius: 0;
+    background: #FFFFFF;
+    border: 1px solid rgba(0, 0, 0, 0.10);
+    overflow: hidden;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-app-group[open] {
+    border-color: rgba(0, 0, 0, 0.10);
+}
+
+/* 折叠头部（点击区域） */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-app-group__summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-app-group__summary::-webkit-details-marker {
+    display: none;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-app-group__summary:hover {
+    background: rgba(168, 200, 236, 0.08);
+}
+
+/* 头部左侧：图标 + 名称 + 计数 */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-app-group__header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-app-group__icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-app-group__name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1F2937;
+}
+
+/* 折叠头部 text 容器（包含 name + desc 两行） */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-app-group__text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-app-group__desc {
+    font-size: 11px;
+    color: #6B7280;
+    font-weight: 400;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-app-group__count {
+    font-size: 11px;
+    color: #6B7280;
+    background: rgba(107, 114, 128, 0.10);
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: auto;
+}
+
+/* 折叠箭头 */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-app-group__arrow {
+    width: 18px;
+    height: 18px;
+    color: #9CA3AF;
+    transition: transform 0.25s ease;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-app-group[open] .pm-app-group__arrow {
+    transform: rotate(180deg);
+}
+
+/* 折叠体内内容 */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-app-group__body {
+    padding: 0 14px 14px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* ============================================
+ * ★ v0.61.8 App Prompt 预览编辑器弹窗样式
+ *   - 弹窗宽度更宽一点(撑满内容)
+ *   - JSON textarea:等宽字体 + 浅灰底 + 错误时红框
+ *   - 按钮组:5 个按钮(复制/编辑/复原/取消/保存)
+ * ============================================ */
+
+.reply-prompt-modal.app-prompt-preview-modal {
+    max-width: 460px;
+    width: calc(100vw - 36px);
+}
+
+.reply-prompt-modal.app-prompt-preview-modal .reply-prompt-modal {
+    /* 防嵌套覆盖 */
+}
+
+.reply-prompt-modal.app-prompt-preview-modal .app-prompt-preview-stage {
+    background: linear-gradient(135deg, #F8FAFC 0%, #E8F2FF 100%);
+    border-radius: 12px;
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 72px;
+}
+
+.reply-prompt-modal.app-prompt-preview-modal .app-prompt-preview-stage-inner {
+    width: 100%;
+}
+
+.reply-prompt-modal.app-prompt-preview-modal .app-prompt-preview-textarea {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 12px;
+    line-height: 1.55;
+    background: #F8FAFC;
+    border: 1px solid rgba(168, 200, 236, 0.32);
+    min-height: 160px;
+    resize: vertical;
+}
+
+.reply-prompt-modal.app-prompt-preview-modal .app-prompt-preview-textarea[readonly] {
+    background: #F1F5F9;
+    color: #475569;
+    cursor: text;
+}
+
+.reply-prompt-modal.app-prompt-preview-modal .reply-prompt-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.reply-prompt-modal.app-prompt-preview-modal .app-prompt-preview-error {
+    color: #DC2626;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.reply-prompt-modal.app-prompt-preview-modal .app-prompt-preview-dirty {
+    color: #D97706;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.reply-prompt-modal.app-prompt-preview-modal .app-prompt-preview-actions {
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.reply-prompt-modal.app-prompt-preview-modal .reply-prompt-btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 12px;
+    background: #F1F5F9;
+    color: #475569;
+    border: 1px solid rgba(168, 200, 236, 0.32);
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s;
+}
+
+.reply-prompt-modal.app-prompt-preview-modal .reply-prompt-btn-secondary svg {
+    width: 14px;
+    height: 14px;
+}
+
+.reply-prompt-modal.app-prompt-preview-modal .reply-prompt-btn-secondary:hover {
+    background: #E2E8F0;
+}
+
+.reply-prompt-modal.app-prompt-preview-modal .reply-prompt-btn-secondary:active {
+    transform: scale(0.97);
+}
+
+.reply-prompt-modal.app-prompt-preview-modal .reply-prompt-btn-secondary:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    background: #F1F5F9;
+}
+
+/* ============================================
+ * ★ v0.61.8.4 两套互斥面板(text / preview)
+ *   - pm-app-prompt-views 容器带 data-prompt-id
+ *   - 两个 panel:
+ *     · .pm-app-prompt-text-panel    点 summary 时显示(只显示正文 1 个 div)
+ *     · .pm-app-prompt-preview-panel 点小眼睛时显示(预览卡片 + 编辑器,2 个 div)
+ *   - 互斥规则:
+ *     · 默认(无任何操作):两个 panel 都隐藏,details 收起
+ *     · details 展开(点 summary)+ active=text  → text-panel 显示
+ *     · active=preview(点小眼睛) → preview-panel 显示,details 强制展开
+ *     · 收起 details(再点 summary / 小眼睛) → 两个 panel 都隐藏
+ *   - 通过 .pm-app-prompt-views 的 data-active 属性控制(由 previewAppPrompt method 切换)
+ * ============================================ */
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-app-prompt-views {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+/* ★ 默认:两个 panel 都隐藏(等 method / details 切换决定) */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-app-prompt-views .pm-app-prompt-panel {
+    display: none;
+}
+
+/* ★ details 展开 + 无 data-active(summary 切换)→ 显示正文面板 */
+.app-shell[data-app-id="chat"] .prompt-manager details.pm-item[open]
+    .pm-app-prompt-views:not([data-active="preview"])
+    .pm-app-prompt-text-panel {
+    display: block;
+}
+
+/* ★ 显式 data-active=preview(点小眼睛触发)→ 显示预览面板 */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-app-prompt-views[data-active="preview"]
+    .pm-app-prompt-preview-panel {
+    display: block;
+}
+
+/* ============================================
+ * ★ v0.61.8.5 内联编辑器包装(已不用 details/summary)
+ *   - .pm-app-prompt-editor-wrap   包裹编辑器(header + component-island)
+ *   - .pm-app-prompt-editor-header 头部:小眼睛图标 + 「预览/编辑xxx」文字
+ *   - 默认显示,不再依赖 <details> 折叠(HTML 不允许嵌套 details)
+ * ============================================ */
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-app-prompt-editor-wrap {
+    margin: 10px 0 0 0;
+    padding: 0;
+    background: rgba(244, 241, 255, 0.32);
+    border: 1px solid rgba(168, 200, 236, 0.18);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-app-prompt-editor-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #4A6FA5;
+    user-select: none;
+    border-bottom: 1px solid rgba(168, 200, 236, 0.18);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-app-prompt-editor-header svg {
+    width: 14px;
+    height: 14px;
+    color: #4A6FA5;
+    flex-shrink: 0;
+}
+
+/* island 内的预览区 / textarea / 按钮组 */
+.app-shell[data-app-id="chat"] .prompt-manager .app-prompt-preview-island {
+    padding: 0 12px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .app-prompt-preview-stage {
+    background: linear-gradient(135deg, #F8FAFC 0%, #E8F2FF 100%);
+    border-radius: 10px;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 64px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .app-prompt-preview-stage-inner {
+    width: 100%;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .app-prompt-preview-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .app-prompt-preview-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #4A6FA5;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .app-prompt-preview-error {
+    color: #DC2626;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .app-prompt-preview-dirty {
+    color: #D97706;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .app-prompt-preview-textarea {
+    width: 100%;
+    box-sizing: border-box;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 12px;
+    line-height: 1.55;
+    background: #F8FAFC;
+    border: 1px solid rgba(168, 200, 236, 0.32);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: #1F2937;
+    resize: vertical;
+    min-height: 140px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .app-prompt-preview-textarea[readonly] {
+    background: #F1F5F9;
+    color: #475569;
+    cursor: text;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .app-prompt-preview-textarea:focus {
+    outline: none;
+    border-color: #4A6FA5;
+    background: #FFFFFF;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .app-prompt-preview-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+    margin: 12px 0;
+    padding: 4px 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .app-prompt-preview-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 0;
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.18s;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .app-prompt-preview-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .app-prompt-preview-btn--secondary {
+    background: #F1F5F9;
+    color: #475569;
+    border-color: rgba(168, 200, 236, 0.32);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .app-prompt-preview-btn--secondary:hover {
+    background: #E2E8F0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .app-prompt-preview-btn--secondary:active {
+    transform: scale(0.97);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .app-prompt-preview-btn--secondary:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    background: #F1F5F9;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .app-prompt-preview-btn--primary {
+    background: linear-gradient(135deg, #A8C8EC 0%, #F4A6CD 100%);
+    color: #FFFFFF;
+    border-color: transparent;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .app-prompt-preview-btn--primary:hover {
+    box-shadow: 0 4px 12px rgba(168, 200, 236, 0.45);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .app-prompt-preview-btn--primary:active {
+    transform: scale(0.97);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .app-prompt-preview-btn--primary:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    background: #94A3B8;
+}
+
+/* ============================================
+ * ★ v0.63.1 K 链卡片样式
+ *   - 小眼睛按钮右上角 K 数量 badge
+ *   - 预览面板(显示 K 组所有 K 原文)样式
+ *   - 单条 K 卡片样式
+ *   - 空 K 组 / 空 text 面板的占位文案样式
+ * ============================================ */
+
+/* K 链卡片小眼睛按钮的 badge(显示 K 组里 K 的总数) */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-chip--kchain-eye {
+    position: relative;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-chip--kchain-eye .pm-chip__badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 14px;
+    height: 14px;
+    padding: 0 4px;
+    border-radius: 7px;
+    background: linear-gradient(135deg, #A8C8EC 0%, #F4A6CD 100%);
+    color: #FFFFFF;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 14px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(168, 200, 236, 0.45);
+    pointer-events: none;
+}
+
+/* K 链空态卡片(整体左偏蓝提示) */
+.app-shell[data-app-id="chat"] .prompt-manager details.pm-item--kchain-empty
+    > summary.pm-item-summary {
+    background: linear-gradient(135deg, rgba(168, 200, 236, 0.06) 0%, rgba(244, 166, 205, 0.04) 100%);
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-kchain-text-empty {
+    margin: 8px 0 0 0;
+    padding: 10px 12px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #8E8E93;
+    background: rgba(244, 166, 205, 0.06);
+    border: 1px dashed rgba(168, 200, 236, 0.32);
+    border-radius: 10px;
+}
+
+/* K 链预览面板头部(小眼睛 + 「K 组内容 · N 条」) */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-kchain-preview-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #4A6FA5;
+    background: rgba(168, 200, 236, 0.10);
+    border-bottom: 1px solid rgba(168, 200, 236, 0.18);
+    user-select: none;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-kchain-preview-head svg {
+    width: 14px;
+    height: 14px;
+    color: #4A6FA5;
+    flex-shrink: 0;
+}
+
+/* K 列表容器(可滚动) */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-kchain-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-kchain-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-kchain-list::-webkit-scrollbar-thumb {
+    background: rgba(168, 200, 236, 0.32);
+    border-radius: 2px;
+}
+
+/* 空 K 组占位 */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-kchain-empty {
+    padding: 16px 12px;
+    text-align: center;
+    color: #8E8E93;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-kchain-empty__title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #4A6FA5;
+    margin-bottom: 4px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-kchain-empty__desc {
+    font-size: 11px;
+    line-height: 1.5;
+    color: #8E8E93;
+}
+
+/* 单条 K 卡片 */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-kchain-item {
+    padding: 10px 12px;
+    background: linear-gradient(135deg, rgba(244, 241, 255, 0.36) 0%, rgba(255, 255, 255, 0.95) 100%);
+    border: 1px solid rgba(168, 200, 236, 0.22);
+    border-radius: 10px;
+    transition: opacity 0.18s ease;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-kchain-item.is-disabled {
+    opacity: 0.55;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-kchain-item__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-kchain-item__title {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-kchain-item__tag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 8px;
+    background: rgba(168, 200, 236, 0.18);
+    color: #4A6FA5;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-kchain-item__count {
+    font-size: 11px;
+    color: #8E8E93;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-kchain-item__badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 6px;
+    border-radius: 5px;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-kchain-item__badge--on {
+    background: rgba(42, 133, 82, 0.14);
+    color: #2A8552;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-kchain-item__badge--off {
+    background: rgba(120, 120, 128, 0.14);
+    color: #8E8E93;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-kchain-item__time {
+    font-size: 10px;
+    color: #C7C7CC;
+    font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-kchain-item__body {
+    font-size: 12px;
+    line-height: 1.7;
+    color: #333;
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: rgba(255, 255, 255, 0.6);
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(168, 200, 236, 0.14);
+}

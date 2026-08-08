@@ -1,0 +1,64 @@
+/* ============================================
+ * 隐藏手机壳时的全局兜底
+ * ============================================ */
+.phone-case.phone-case--hidden {
+    background: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+}
+
+/*
+ * 隐藏手机壳后，让 #phone 直接撑到当前视口尺寸（不保持 390:590）。
+ * 宽 = 100vw，高 = 100vh，edge-to-edge 完全贴边。
+ */
+#phone.phone--fullscreen {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: none !important;
+    /* 重置定位，避免 body flex 居中产生偏移 */
+    margin: 0 !important;
+}
+
+/* 全屏模式：body 不再 flex 居中，避免任何边距残留 */
+body:has(#phone.phone--fullscreen) {
+    display: block !important;
+}
+
+#phone.phone--fullscreen .phone-case {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/*
+ * 隐藏手机壳时，屏幕本身也必须拍平 —— 否则四角会露出"双层圆角"。
+ * 同时去除 desktop-wallpaper 的 clip-path inset，否则四角仍被裁成圆角。
+ *
+ * 进一步：app-page-stack 默认 `border-radius: 28px 28px 0 0`、app-screen-panel 默认 padding，
+ * 在全屏模式下也要抹掉，否则 app 内部仍然"凹"在屏幕里。
+ */
+#phone.phone--fullscreen .phone-screen {
+    border-radius: 0 !important;
+}
+#phone.phone--fullscreen .desktop-wallpaper {
+    border-radius: 0 !important;
+    clip-path: none !important;
+}
+#phone.phone--fullscreen .app-page-stack {
+    border-radius: 0 !important;
+}
+#phone.phone--fullscreen .app-shell,
+#phone.phone--fullscreen .app-content,
+#phone.phone--fullscreen .app-page,
+#phone.phone--fullscreen .app-detail-page {
+    border-radius: 0 !important;
+}
+
+/*
+ * 例外：app 向上拖拽形成的卡片（.app-shell.card）本身就是圆角设计，
+ * 在全屏模式下要保留 28px 圆角，不要被上面的 .app-shell 规则拍平。
+ */
+#phone.phone--fullscreen .app-shell.card {
+    border-radius: 28px !important;
+}

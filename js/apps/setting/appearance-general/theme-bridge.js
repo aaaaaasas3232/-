@@ -35,6 +35,37 @@ import {
     DEFAULT_STATUS_BAR_STATE,
 } from './phone-statusbar/index.js';
 
+export const PHONE_HEIGHT_MIN = 450;
+export const PHONE_HEIGHT_MAX = 720;
+export const PHONE_HEIGHT_DEFAULT = 590;
+export const PHONE_Y_OFFSET_MIN = -100;
+export const PHONE_Y_OFFSET_MAX = 100;
+export const PHONE_Y_OFFSET_DEFAULT = 0;
+
+// 桌面网格（行数）—— 用户可在设置里调整 3~8；
+// 列数固定为 4，不再开放自定义。
+// 默认与历史一致（4 × 4），升级旧 DB 时通过 DEFAULT_THEME 自动补齐。
+export const DESKTOP_GRID_ROWS_MIN = 3;
+export const DESKTOP_GRID_ROWS_MAX = 8;
+export const DESKTOP_GRID_ROWS_DEFAULT = 4;
+export const DESKTOP_GRID_ROWS_OPTIONS = [3, 4, 5, 6, 7, 8];
+
+// 列数固定常量（4）—— 保留只读访问，不再让用户改。
+export const DESKTOP_GRID_COLUMNS = 4;
+
+function clampInt(value, min, max, fallback) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return fallback;
+    const rounded = Math.round(n);
+    if (rounded < min) return min;
+    if (rounded > max) return max;
+    return rounded;
+}
+
+export function clampDesktopGridRows(value) {
+    return clampInt(value, DESKTOP_GRID_ROWS_MIN, DESKTOP_GRID_ROWS_MAX, DESKTOP_GRID_ROWS_DEFAULT);
+}
+
 const DEFAULT_THEME = Object.freeze({
     batteryColor: '#73AE52',
     batteryCapacity: 0.6,
@@ -43,6 +74,12 @@ const DEFAULT_THEME = Object.freeze({
     caseShadow: '0 20px 45px rgba(0, 0, 0, 0.25)',
     hideCase: false,
     screenCornerRadius: 40,
+    // 手机高度（px），450-720 之间可调；保持 390 宽不变，按比例放大
+    phoneHeight: 590,
+    // 手机垂直偏移（px），负数上移、正数下移，范围 -100 ~ +100
+    phoneYOffset: 0,
+    // 桌面网格 行数（3~8）—— 列数固定为 4，由 DESKTOP_GRID_COLUMNS 常量提供
+    desktopGridRows: DESKTOP_GRID_ROWS_DEFAULT,
     // 整体状态栏开关（不影响灵动岛）— 字段定义集中在 phone-statusbar 模块
     ...DEFAULT_STATUS_BAR_STATE,
     // 桌面屏幕壁纸（持久化字段「screenWallpaper」是序列化后的 JSON 字符串）
@@ -144,6 +181,16 @@ function applyThemeToCssVars(theme) {
 
     // 桌面屏幕壁纸
     const wp = deserializeScreenWallpaper(theme?.screenWallpaper);
+
+    // 桌面网格（列数固定 4，行数 3~8）—— 写到 CSS 变量，CSS / Vue 模板都从同一处读
+    const gridColumns = DESKTOP_GRID_COLUMNS;
+    const gridRows = clamp(
+        theme?.desktopGridRows ?? DEFAULT_THEME.desktopGridRows,
+        DESKTOP_GRID_ROWS_MIN,
+        DESKTOP_GRID_ROWS_MAX
+    );
+    root.style.setProperty('--desktop-grid-columns', String(gridColumns));
+    root.style.setProperty('--desktop-grid-rows', String(gridRows));
 }
 
 /**
@@ -202,13 +249,40 @@ function applyCaseToDOM(theme) {
 
     if (phoneEl) {
         phoneEl.classList.toggle('phone--fullscreen', hideCase);
-
-        // 恢复默认尺寸
-        phoneEl.style.width = '';
-        phoneEl.style.height = '';
     }
 
+    // 手机高度：仅在显示手机壳（非全屏）时使用用户配置；
+    // 全屏模式下由 .phone--fullscreen 的 CSS 公式接管高度
+    const phoneHeight = clamp(
+        theme?.phoneHeight ?? DEFAULT_THEME.phoneHeight,
+        PHONE_HEIGHT_MIN,
+        PHONE_HEIGHT_MAX
+    );
+
+    // 垂直偏移（px）：用 transform: translateY 上/下平移 #phone；
+    // 必须和 CSS 上的 scale(var(--phone-scale)) 共存，所以组合写成同一 transform
+    const phoneYOffset = clamp(
+        theme?.phoneYOffset ?? DEFAULT_THEME.phoneYOffset,
+        PHONE_Y_OFFSET_MIN,
+        PHONE_Y_OFFSET_MAX
+    );
+
     if (!hideCase) {
+        // 显示手机壳：写入自定义高度
+        if (phoneEl) {
+            phoneEl.style.width = '';
+            phoneEl.style.height = `${phoneHeight}px`;
+        }
+        phoneCase.style.width = '';
+        phoneCase.style.height = `${phoneHeight}px`;
+
+        if (phoneEl) {
+            // 合并 CSS 上的 scale(var(--phone-scale)) + 用户的 translateY：
+            // 直接复用同一个 CSS 变量，让浏览器自己解析，避开反推 matrix 易错的坑
+            // （matrix(a,b,c,d,e,f) 里 a/d 才是 scaleX/scaleY，反推易混）
+            phoneEl.style.transform = `translateY(${phoneYOffset}px) scale(var(--phone-scale, 1))`;
+        }
+
         const bg = getEffectiveBackground(theme);
         const radius = clamp(theme?.caseRadius ?? DEFAULT_THEME.caseRadius, 0, 80);
         const shadow = theme?.caseShadow || DEFAULT_THEME.caseShadow;
@@ -376,6 +450,9 @@ export function applyDeviceTheme(theme = {}) {
     // 把状态栏字段同步到 reactive 容器，供 Vue 状态栏模板订阅
     syncStatusBarConfig(theme);
 
+    // 把桌面网格字段同步到 reactive 容器，供 framework useDesktopEdit 订阅
+    syncDesktopGridConfig(theme);
+
     // 电池宽度需要在布局后重新计算
     requestAnimationFrame(() => {
         applyBatteryToDOM(theme);
@@ -477,6 +554,57 @@ function applyStatusBarConfigTo(target, theme) {
         : DEFAULT_STATUS_BAR_STATE.statusBarFiveGLabel;
 }
 
+// ============================================
+// 桌面网格字段桥（供 framework useDesktopEdit 订阅）
+// ============================================
+/**
+ * 当前桌面网格（列数 / 行数）的「reactive 视图」。
+ * framework（use-desktop-edit.js）在 computed 里读它 → 拖拽算法 / 分页算法跟着重算。
+ *
+ * 设计：与 _statusBarConfigRef 平行的一套桥，存的是数值（4/5 与 3~8）。
+ *
+ * 派发事件 `settings:desktop-grid-updated`：让 framework 兜底触发重算，
+ * 防止 reactive 在 framework bootstrap 之后才被创建时丢失依赖。
+ */
+const _desktopGridConfigRef = { value: null };
+function getDesktopGridConfig() {
+    if (!_desktopGridConfigRef.value && typeof window !== 'undefined' && window.Vue) {
+        _desktopGridConfigRef.value = window.Vue.reactive({
+            columns: DESKTOP_GRID_COLUMNS,
+            rows: DESKTOP_GRID_ROWS_DEFAULT,
+        });
+    }
+    return _desktopGridConfigRef.value;
+}
+// 模块顶层立即尝试创建（如果 Vue 已就绪）
+getDesktopGridConfig();
+if (typeof window !== 'undefined') {
+    window.__phoneDesktopGridConfig = _desktopGridConfigRef.value;
+    // ★ 关键：模块刚 evaluate 时，useDesktopEdit 的 desktopGridConfigVersion
+    // 监听器已经注册（core-shim 跑得比 settings app 早）。如果在创建 reactive 后
+    // 不 bump 一次，computed 不会重算，仍然返回早先 fallback 的 4×4。
+    // 派发一次 settings:desktop-grid-updated，触发 framework 兜底重算。
+    window.dispatchEvent(new CustomEvent('settings:desktop-grid-updated'));
+}
+
+/**
+ * 把 theme 上的桌面网格字段同步到 reactive 配置。
+ */
+export function syncDesktopGridConfig(theme = {}) {
+    const target = getDesktopGridConfig();
+    if (!target) return;
+    // 列数固定为 4，不再写入从 theme 来的 desktopGridColumns（如有遗留值也归一）。
+    target.columns = DESKTOP_GRID_COLUMNS;
+    target.rows = clamp(
+        theme?.desktopGridRows ?? DEFAULT_THEME.desktopGridRows,
+        DESKTOP_GRID_ROWS_MIN,
+        DESKTOP_GRID_ROWS_MAX
+    );
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('settings:desktop-grid-updated'));
+    }
+}
+
 /**
  * 同步当前 DOM 状态到 CSS 变量
  * 用于在 DOM 变化后重新同步变量
@@ -495,6 +623,10 @@ export function syncThemeFromDOM() {
         showStatusBar: statusBar ? statusBar.style.display !== 'none' : true,
         screenCornerRadius: phoneScreen ? parseFloat(phoneScreen.style.borderRadius) || 40 : 40,
         caseRadius: parseFloat(phoneCase.style.borderRadius) || 50,
+        // 从 #phone / .phone-case 的 inline height 读回当前值（去掉 px）
+        phoneHeight: parseFloat(phoneEl?.style.height) || DEFAULT_THEME.phoneHeight,
+        // 从 #phone 的 inline transform 提取 translateY
+        phoneYOffset: parseTranslateY(phoneEl?.style.transform) ?? DEFAULT_THEME.phoneYOffset,
     };
 
     // 从样式获取背景
@@ -510,6 +642,15 @@ export function syncThemeFromDOM() {
     }
 
     applyThemeToCssVars(theme);
+}
+
+// 从 "translateY(50px) scale(1, 1)" 这类 transform 字符串里抽 translateY
+function parseTranslateY(transformStr) {
+    if (!transformStr || transformStr === 'none') return 0;
+    const m = /translateY\(\s*(-?\d+(?:\.\d+)?)\s*px\s*\)/.exec(transformStr);
+    if (!m) return 0;
+    const v = parseFloat(m[1]);
+    return Number.isFinite(v) ? v : 0;
 }
 
 // ============================================
@@ -539,10 +680,162 @@ export function initThemeSystem() {
             --battery-color: ${DEFAULT_THEME.batteryColor};
             --battery-capacity: ${DEFAULT_THEME.batteryCapacity};
             --status-bar-hidden: 0;
+            --desktop-grid-columns: ${DESKTOP_GRID_COLUMNS};
+            --desktop-grid-rows: ${DEFAULT_THEME.desktopGridRows};
         }
     `;
     document.head.appendChild(style);
 
     // 即便没有任何 settings 调用 applyDeviceTheme，也确保 reactive 容器至少有默认值
     syncStatusBarConfig(DEFAULT_THEME);
+    syncDesktopGridConfig(DEFAULT_THEME);
+}
+
+/**
+ * ★ 新增：框架早期主题应用（core-shim 在 settings app hydrate 前调用）
+ * 在桌面渲染之前就从 IndexedDB 读取保存的外观设置并应用到 DOM。
+ * 这样用户不需要先打开 settings app 就能看到之前保存的外观状态。
+ */
+if (typeof window !== 'undefined') {
+    window.__applyEarlyTheme = function(themeRaw) {
+        console.log('[theme-bridge] __applyEarlyTheme 应用主题:', JSON.stringify(themeRaw));
+        if (!themeRaw) return;
+
+        const root = document.documentElement;
+
+        // 手机壳背景
+        const bg = getEffectiveBackground(themeRaw);
+        root.style.setProperty('--case-bg', bg || 'transparent');
+
+        // 手机壳圆角
+        const caseRadius = clamp(themeRaw?.caseRadius ?? DEFAULT_THEME.caseRadius, 0, 80);
+        root.style.setProperty('--case-radius', `${caseRadius}px`);
+
+        // 手机壳阴影
+        const shadow = themeRaw?.caseShadow || DEFAULT_THEME.caseShadow;
+        root.style.setProperty('--case-shadow', shadow);
+
+        // 手机壳可见性
+        const hidden = themeRaw?.hideCase === true ? 1 : 0;
+        root.style.setProperty('--case-hidden', String(hidden));
+
+        // 屏幕圆角
+        const screenRadius = clamp(themeRaw?.screenCornerRadius ?? DEFAULT_THEME.screenCornerRadius, 0, 80);
+        root.style.setProperty('--screen-radius', `${screenRadius}px`);
+
+        // 电池颜色
+        const batteryColor = themeRaw?.batteryColor || DEFAULT_THEME.batteryColor;
+        root.style.setProperty('--battery-color', batteryColor);
+
+        // 电池电量
+        const batteryCapacity = clamp(themeRaw?.batteryCapacity ?? DEFAULT_THEME.batteryCapacity, 0, 1);
+        root.style.setProperty('--battery-capacity', String(batteryCapacity));
+
+        // 状态栏可见性
+        const statusBarHidden = themeRaw?.showStatusBar === false ? 1 : 0;
+        root.style.setProperty('--status-bar-hidden', String(statusBarHidden));
+
+        // 状态栏细分字段
+        if (typeof themeRaw?.statusBarTimeColor === 'string' && themeRaw.statusBarTimeColor) {
+            root.style.setProperty('--status-bar-time-color', themeRaw.statusBarTimeColor);
+        }
+        if (typeof themeRaw?.statusBarSignalColor === 'string' && themeRaw.statusBarSignalColor) {
+            root.style.setProperty('--status-bar-signal-color', themeRaw.statusBarSignalColor);
+        }
+        if (typeof themeRaw?.statusBarFiveGColor === 'string' && themeRaw.statusBarFiveGColor) {
+            root.style.setProperty('--status-bar-fivg-color', themeRaw.statusBarFiveGColor);
+        }
+        if (typeof themeRaw?.statusBarFiveGLabel === 'string' && themeRaw.statusBarFiveGLabel) {
+            root.style.setProperty('--status-bar-fivg-label', `"${themeRaw.statusBarFiveGLabel.replace(/"/g, '\\"')}"`);
+        }
+
+        // 桌面网格（列数固定 4，行数 3~8）
+        const earlyGridCols = DESKTOP_GRID_COLUMNS;
+        const earlyGridRows = clamp(
+            themeRaw?.desktopGridRows ?? DEFAULT_THEME.desktopGridRows,
+            DESKTOP_GRID_ROWS_MIN,
+            DESKTOP_GRID_ROWS_MAX
+        );
+        root.style.setProperty('--desktop-grid-columns', String(earlyGridCols));
+        root.style.setProperty('--desktop-grid-rows', String(earlyGridRows));
+
+        // 把保存的桌面网格行数同步到 reactive 桥 __phoneDesktopGridConfig，
+        // 让 useDesktopEdit 的 computed 在用户进 settings 前就读到正确的行数
+        // （没有这一步的话，模板 :style 仍按 reactive 的默认值 4 行渲染）。
+        syncDesktopGridConfig({
+            desktopGridRows: earlyGridRows,
+        });
+
+        // 应用到 DOM（手机壳）
+        const phoneCase = document.querySelector('.phone-case');
+        const phoneEl = document.getElementById('phone');
+        if (phoneCase) {
+            const hideCase = themeRaw?.hideCase === true;
+            phoneCase.classList.toggle('phone-case--hidden', hideCase);
+
+            if (phoneEl) {
+                phoneEl.classList.toggle('phone--fullscreen', hideCase);
+            }
+
+            if (!hideCase) {
+                const phoneHeight = clamp(
+                    themeRaw?.phoneHeight ?? DEFAULT_THEME.phoneHeight,
+                    PHONE_HEIGHT_MIN,
+                    PHONE_HEIGHT_MAX
+                );
+                if (phoneEl) {
+                    phoneEl.style.width = '';
+                    phoneEl.style.height = `${phoneHeight}px`;
+                }
+                phoneCase.style.width = '';
+                phoneCase.style.height = `${phoneHeight}px`;
+
+                const phoneYOffset = clamp(
+                    themeRaw?.phoneYOffset ?? DEFAULT_THEME.phoneYOffset,
+                    PHONE_Y_OFFSET_MIN,
+                    PHONE_Y_OFFSET_MAX
+                );
+                if (phoneEl) {
+                    phoneEl.style.transform = `translateY(${phoneYOffset}px) scale(var(--phone-scale, 1))`;
+                }
+
+                // 应用背景
+                const trimmed = (bg || '').trim();
+                if (/^url\(/i.test(trimmed)) {
+                    phoneCase.style.backgroundImage = trimmed;
+                    phoneCase.style.backgroundSize = 'cover';
+                    phoneCase.style.backgroundPosition = 'center';
+                    phoneCase.style.backgroundRepeat = 'no-repeat';
+                    phoneCase.style.backgroundColor = '';
+                } else if (/^(linear-|radial-|conic-)/i.test(trimmed)) {
+                    phoneCase.style.backgroundImage = trimmed;
+                } else {
+                    phoneCase.style.backgroundImage = `linear-gradient(${trimmed}, ${trimmed})`;
+                    phoneCase.style.backgroundColor = '';
+                }
+                phoneCase.style.borderRadius = `${caseRadius}px`;
+                phoneCase.style.boxShadow = shadow;
+            } else {
+                phoneCase.style.background = 'transparent';
+                phoneCase.style.backgroundImage = 'none';
+                phoneCase.style.backgroundColor = 'transparent';
+                phoneCase.style.backgroundSize = '';
+                phoneCase.style.backgroundPosition = '';
+                phoneCase.style.backgroundRepeat = '';
+                phoneCase.style.boxShadow = 'none';
+                phoneCase.style.borderRadius = '0';
+            }
+        }
+
+        // 屏幕圆角
+        const phoneScreen = document.querySelector('.phone-screen');
+        if (phoneScreen) {
+            phoneScreen.style.borderRadius = `${screenRadius}px`;
+        }
+
+        // 桌面壁纸
+        applyScreenWallpaperToDOM(themeRaw);
+
+        console.log('[theme-bridge] __applyEarlyTheme 完成');
+    };
 }

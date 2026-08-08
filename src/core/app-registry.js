@@ -9,12 +9,24 @@ import { createAppToolkit } from './app-toolkit.js';
 export const APP_PAGE_CONTENT = {};
 export const DETAIL_PAGE_CONTENT = {};
 
+// 合法 renderMode 取值
+//   - 'template' : renderPage() 返回 HTML 字符串，框架原样 v-html。
+//                 现状唯一支持的模式，所有旧 App 走这个。
+//   - 'hybrid'   : renderPage() 返回 HTML 字符串 + <component-island /> 标签。
+//                 框架在 v-html 完成后扫描 island 并替换为真 Vue 组件。
+//   - 'vue'      : renderPage() 返回 Vue 组件配置（template / data / methods ...）。
+//                 框架用 Vue.createApp() 挂载，组件内部完全响应式。
+const VALID_RENDER_MODES = ['template', 'hybrid', 'vue'];
+
 function normalizeAppConfig(appConfig) {
     const stores = normalizeStoreConfig(appConfig.stores);
     const sharedStores = SHARED_STORES.filter(sharedStore => !stores.some(store => store.name === sharedStore.name));
     const declaredStores = [...stores, ...sharedStores];
     const normalizedPageContent = appConfig.pageContent || {};
     const normalizedDetailContent = appConfig.detailContent || {};
+    // ★ 新增：renderMode 默认 'template'，保证旧 App 的零侵入升级
+    const rawRenderMode = typeof appConfig.renderMode === 'string' ? appConfig.renderMode.trim().toLowerCase() : '';
+    const normalizedRenderMode = VALID_RENDER_MODES.includes(rawRenderMode) ? rawRenderMode : 'template';
     // widgets：app 可选注册它"提供"的小组件。
     // 每个 widget 形如：
     //   { id, label, icon, iconBg, defaultSize, render(size, payload) -> html, renderDesktop(item) -> html }
@@ -30,10 +42,34 @@ function normalizeAppConfig(appConfig) {
         ? (appConfig.setup({ toolkit, app: appConfig }) || {})
         : {};
 
-    appConfig.state = {
-        ...(appConfig.state || {}),
-        ...initialState,
-    };
+    // 注意：appConfig.state 可能已经被 setup() 用 Vue.reactive 包过。
+    // spread 会丢掉 reactivity，所以必须优先保留 initialState 本身的引用，
+    // 只在它和现有 state 都是 plain object 时才走 spread 合并。
+    const existingState = appConfig.state;
+    if (existingState && typeof existingState === 'object' && !Array.isArray(existingState)) {
+        const existingIsReactive = !!(existingState.__v_isReactive || existingState.__v_raw);
+        const initialIsReactive = !!(initialState && (initialState.__v_isReactive || initialState.__v_raw));
+        if (existingIsReactive || initialIsReactive) {
+            // 至少有一边是 reactive：把它当 base，把另一边的字段按需 attach
+            const base = initialIsReactive ? initialState : existingState;
+            const extras = initialIsReactive ? existingState : initialState;
+            if (extras && typeof extras === 'object' && Array.isArray(extras) === false) {
+                for (const key of Object.keys(extras)) {
+                    if (base[key] === undefined) {
+                        base[key] = extras[key];
+                    }
+                }
+            }
+            appConfig.state = base;
+        } else {
+            appConfig.state = {
+                ...existingState,
+                ...initialState,
+            };
+        }
+    } else {
+        appConfig.state = initialState;
+    }
 
     const normalizedMethods = {};
     const methodContext = {
@@ -55,6 +91,7 @@ function normalizeAppConfig(appConfig) {
 
     return {
         ...appConfig,
+        renderMode: normalizedRenderMode,
         stores: declaredStores,
         pageContent: normalizedPageContent,
         detailContent: normalizedDetailContent,
@@ -150,10 +187,32 @@ export function createAppRegistry() {
             const normalizedApp = normalizeAppConfig(appConfig);
             mergeAppContent(normalizedApp);
 
+            this.apps.push(normalizedApp);
+            this.appMap[normalizedApp.id] = normalizedApp;
+            return normalizedApp;
+        },
+        async registerAppAsync(appConfig) {
+            if (!appConfig?.id) {
+                return null;
+            }
+
+            if (this.appMap[appConfig.id]) {
+                return this.appMap[appConfig.id];
+            }
+
+            const normalizedApp = normalizeAppConfig(appConfig);
+            mergeAppContent(normalizedApp);
+
             if (window.myDb) {
-                normalizedApp.stores.forEach(store => {
-                    window.myDb.registerStore(store.name, store.keyPath);
-                });
+                try {
+                    await window.myDb.ensureSchema();
+                    for (const store of normalizedApp.stores) {
+                        if (window.myDb._hasOpenStore(store.name)) continue;
+                        window.myDb.registerStore(store.name, store.keyPath);
+                    }
+                } catch (e) {
+                    console.warn('[app-registry] ensureSchema 失败', e);
+                }
             }
 
             this.apps.push(normalizedApp);
@@ -233,6 +292,17 @@ export function registerPhoneApp(appConfig) {
     if (app) {
         window.refreshPhoneApps?.();
         // 通知桌面组件，widget pool 可能扩展了
+        window.refreshPhoneWidgets?.();
+    }
+    return app;
+}
+
+// ★ 异步版本：会在 store 升级到 IndexedDB 之后才 resolve。
+// 业务代码对「添加后立刻要从 db 读回来」要求严格时用这个。
+export async function registerPhoneAppAsync(appConfig) {
+    const app = await externalAppRegistry.registerAppAsync(appConfig);
+    if (app) {
+        window.refreshPhoneApps?.();
         window.refreshPhoneWidgets?.();
     }
     return app;

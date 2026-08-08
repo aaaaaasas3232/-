@@ -1,0 +1,264 @@
+/* ============================================
+ * chat-app 地点选择弹窗样式 (v0.45)
+ *
+ *   发送位置功能：从世界观场所列表中选择
+ *   结构：标题栏 → 世界信息 → 搜索框 → 地点列表
+ * ============================================ */
+
+/* ---- 弹窗遮罩 ---- */
+.location-picker-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 10000;
+    animation: locationPickerFadeIn 0.2s ease;
+}
+
+@keyframes locationPickerFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* ---- 弹窗主体 ---- */
+.location-picker-modal {
+    width: 100%;
+    max-height: 70vh;
+    background: #fff;
+    border-radius: 18px 18px 0 0;
+    display: flex;
+    flex-direction: column;
+    animation: locationPickerSlideUp 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+    overflow: hidden;
+}
+
+@keyframes locationPickerSlideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
+
+/* ---- 标题栏 ---- */
+.location-picker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 16px 12px;
+    border-bottom: 1px solid #F0F0F0;
+}
+
+.location-picker-title {
+    font-size: 17px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.location-picker-close {
+    appearance: none;
+    background: transparent;
+    border: none;
+    color: #4A6FA5;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: background 0.15s;
+}
+
+.location-picker-close:hover {
+    background: rgba(74, 111, 165, 0.1);
+}
+
+.location-picker-close:active {
+    opacity: 0.7;
+}
+
+/* ---- 世界信息 ---- */
+.location-picker-world {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 16px;
+    font-size: 12px;
+    color: #6B7280;
+    background: #F9FAFB;
+}
+
+/* ---- 搜索框 ---- */
+.location-picker-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 16px 12px;
+    padding: 10px 12px;
+    background: #F3F4F6;
+    border-radius: 10px;
+    border: 1.5px solid transparent;
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.location-picker-search:focus-within {
+    border-color: #4A6FA5;
+    background: #fff;
+}
+
+.location-picker-search-input {
+    flex: 1;
+    appearance: none;
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    color: #1f2937;
+    outline: none;
+}
+
+.location-picker-search-input::placeholder {
+    color: #9CA3AF;
+}
+
+/* ---- 加载状态 ---- */
+.location-picker-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 48px 16px;
+    color: #9CA3AF;
+    font-size: 14px;
+}
+
+.location-picker-spinner {
+    width: 24px;
+    height: 24px;
+    border: 2.5px solid #E5E7EB;
+    border-top-color: #4A6FA5;
+    border-radius: 50%;
+    animation: locationPickerSpin 0.8s linear infinite;
+}
+
+@keyframes locationPickerSpin {
+    to { transform: rotate(360deg); }
+}
+
+/* ---- 空状态 ---- */
+.location-picker-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 48px 16px;
+    color: #9CA3AF;
+    font-size: 14px;
+    text-align: center;
+}
+
+/* ---- 地点列表 ---- */
+.location-picker-list {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: env(safe-area-inset-bottom, 16px);
+}
+
+.location-picker-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.location-picker-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.location-picker-list::-webkit-scrollbar-thumb {
+    background: #D1D5DB;
+    border-radius: 2px;
+}
+
+/* ---- 地点项 ---- */
+.location-picker-item {
+    appearance: none;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid #F3F4F6;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s;
+    font-family: inherit;
+}
+
+.location-picker-item:hover {
+    background: #F9FAFB;
+}
+
+.location-picker-item:active {
+    background: #F3F4F6;
+}
+
+.location-picker-item--selected {
+    background: rgba(74, 111, 165, 0.06);
+}
+
+.location-picker-item-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #E8F2FF, #D6E4FF);
+    color: #4A6FA5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.location-picker-item-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.location-picker-item-name {
+    font-size: 15px;
+    font-weight: 500;
+    color: #1f2937;
+    line-height: 1.4;
+}
+
+.location-picker-item-meta {
+    font-size: 12px;
+    color: #9CA3AF;
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.location-picker-item-check {
+    color: #4A6FA5;
+    flex-shrink: 0;
+}
+
+/* ---- 响应式 ---- */
+@media (min-width: 480px) {
+    .location-picker-modal-overlay {
+        align-items: center;
+    }
+
+    .location-picker-modal {
+        width: calc(100% - 48px);
+        max-width: 360px;
+        border-radius: 18px;
+        max-height: 60vh;
+    }
+}

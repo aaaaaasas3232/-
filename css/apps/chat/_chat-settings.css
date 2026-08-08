@@ -1,0 +1,948 @@
+/**
+ * chat-app / 聊天设置详情页样式
+ *
+ * Phase 11 — UI 复原
+ *
+ * 旧版:ChatApp.prototype.openAIChatProfile(aiId)
+ * 风格:白底卡片 + 蓝粉渐变背景(与 app shell 一致)
+ *
+ * 样式规范:
+ *   - 所有样式写到本文件
+ *   - JS 只放动态数据属性(data-*)和无法预知的动态颜色
+ *   - 动态颜色通过 [data-color-xxx] 属性选择器设置
+ */
+
+/* ============================================
+ * 作用域:app-shell[data-app-id="chat"] 后代
+ * ============================================ */
+
+/* ============================================
+ * 页面容器
+ * ============================================ */
+
+/* 外层容器:接管 detail-page 的整个布局 */
+.app-shell[data-app-id="chat"] .chat-settings {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: linear-gradient(180deg, #E8F2FF 0%, #FFF5F7 50%, #FFFFFF 100%);
+}
+
+/* 顶部 topbar(只保留返回按钮) */
+.app-shell[data-app-id="chat"] .chat-settings-topbar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 50px 12px 8px;
+    background: rgba(237, 242, 253, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    z-index: 10;
+}
+
+/* chat-settings 自己的返回按钮(同 chat-private 同款) */
+.app-shell[data-app-id="chat"] .chat-settings .chat-back-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 8px;
+    transition: all 0.2s;
+    color: #4A6FA5;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .chat-settings .chat-back-btn:hover {
+    background: #E9ECEF;
+}
+
+.app-shell[data-app-id="chat"] .chat-settings .chat-back-btn:active {
+    background: rgba(168, 200, 236, 0.25);
+    transform: scale(0.92);
+}
+
+.app-shell[data-app-id="chat"] .chat-settings .chat-back-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: #4A6FA5;
+    stroke-width: 2;
+}
+
+/* 内部页面滚动区 */
+.app-shell[data-app-id="chat"] .chat-settings .chat-settings-page {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 16px 40px;
+    box-sizing: border-box;
+    scrollbar-width: none;
+}
+
+.app-shell[data-app-id="chat"] .chat-settings .chat-settings-page::-webkit-scrollbar {
+    display: none;
+}
+
+/* ============================================
+ * 头部(头像 + 名字 + 状态)
+ * ============================================ */
+
+/* 头部整体 */
+.app-shell[data-app-id="chat"] .chat-settings-header {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+/* 头像容器 */
+.app-shell[data-app-id="chat"] .chat-settings-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 20px;
+    background: #f0f0f0;
+    margin: 0 auto 15px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(168, 200, 236, 0.3);
+}
+
+/* 头像图像 */
+.app-shell[data-app-id="chat"] .chat-settings-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* 头像 fallback 文字 */
+.app-shell[data-app-id="chat"] .chat-settings-avatar-text {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    color: white;
+    font-weight: 600;
+}
+
+/* 头像背景色 — 通过 [data-avatar-color] 选择 */
+.app-shell[data-app-id="chat"] .chat-settings-avatar[data-avatar-color] {
+    background: var(--avatar-color, #A8C8EC);
+}
+.app-shell[data-app-id="chat"] [data-avatar-color="#A8C8EC"] { --avatar-color: #A8C8EC; }
+.app-shell[data-app-id="chat"] [data-avatar-color="#F4A6CD"] { --avatar-color: #F4A6CD; }
+.app-shell[data-app-id="chat"] [data-avatar-color="#B8D4F0"] { --avatar-color: #B8D4F0; }
+.app-shell[data-app-id="chat"] [data-avatar-color="#FFD4E5"] { --avatar-color: #FFD4E5; }
+.app-shell[data-app-id="chat"] [data-avatar-color="#C8E6F4"] { --avatar-color: #C8E6F4; }
+.app-shell[data-app-id="chat"] [data-avatar-color="#FFC8DD"] { --avatar-color: #FFC8DD; }
+
+/* 联系人姓名 */
+.app-shell[data-app-id="chat"] .chat-settings-name {
+    font-size: 22px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+/* 联系人状态 */
+.app-shell[data-app-id="chat"] .chat-settings-status {
+    font-size: 14px;
+    color: #666;
+}
+
+/* ============================================
+ * 三个圆形入口按钮(语音 / 视频 / 朋友圈)
+ * ============================================ */
+
+.app-shell[data-app-id="chat"] .chat-settings-icons-row {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin-bottom: 25px;
+}
+
+.app-shell[data-app-id="chat"] .chat-settings-icon-btn {
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.app-shell[data-app-id="chat"] .chat-settings-icon-btn:active {
+    transform: scale(0.92);
+}
+
+.app-shell[data-app-id="chat"] .chat-settings-icon-circle {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, #96e1ff42, #ffe6fa);
+    box-shadow: 0 0 6px 1px #3d507361;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 8px;
+}
+
+.app-shell[data-app-id="chat"] .chat-settings-icon-circle svg {
+    width: 24px;
+    height: 24px;
+    fill: #4A6FA5;
+}
+
+.app-shell[data-app-id="chat"] .chat-settings-icon-label {
+    font-size: 12px;
+    color: #666;
+}
+
+/* ============================================
+ * 卡片通用样式
+ * ============================================ */
+
+.app-shell[data-app-id="chat"] .chat-settings-card {
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+    margin: 0 0 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+/* 区块标题(白底卡片内的小标题) */
+.app-shell[data-app-id="chat"] .chat-section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, rgba(168, 200, 236, 0.15), rgba(244, 166, 205, 0.1));
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.app-shell[data-app-id="chat"] .chat-section-title svg {
+    width: 16px;
+    height: 16px;
+    fill: #4A6FA5;
+}
+
+.app-shell[data-app-id="chat"] .chat-section-title span {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* ============================================
+ * 设置项基础样式
+ * ============================================ */
+
+.app-shell[data-app-id="chat"] .chat-setting-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.app-shell[data-app-id="chat"] .chat-setting-item:active {
+    background: rgba(74, 111, 165, 0.04);
+}
+
+.app-shell[data-app-id="chat"] .chat-setting-item.chat-setting-last {
+    border-bottom: none;
+}
+
+/* 设置项 label */
+.app-shell[data-app-id="chat"] .chat-setting-label {
+    font-size: 15px;
+    color: #333;
+}
+
+/* 设置项 value (右侧) */
+.app-shell[data-app-id="chat"] .chat-setting-value {
+    color: #999;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    text-align: right;
+    max-width: 60%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 设置项箭头 */
+.app-shell[data-app-id="chat"] .chat-setting-arrow {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: #ccc;
+    stroke-width: 2;
+    flex-shrink: 0;
+}
+
+/* 「聊天背景」一行的右侧缩略图预览(v0.29) */
+.app-shell[data-app-id="chat"] .chat-bg-preview {
+    width: 32px;
+    height: 22px;
+    border-radius: 6px;
+    display: inline-block;
+    vertical-align: middle;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+    margin-right: 2px;
+    flex: none;
+}
+
+.app-shell[data-app-id="chat"] .chat-setting-default-text {
+    color: #9CA3AF;
+    font-size: 14px;
+}
+
+/* 让「聊天背景」一行的设置项整行可点 + 浅色 hover */
+.app-shell[data-app-id="chat"] .chat-setting-item[id="set-chat-background"] {
+    cursor: pointer;
+    transition: background 0.18s ease;
+}
+
+.app-shell[data-app-id="chat"] .chat-setting-item[id="set-chat-background"]:hover {
+    background: rgba(74, 111, 165, 0.04);
+}
+
+.app-shell[data-app-id="chat"] .chat-setting-item[id="set-chat-background"]:active {
+    background: rgba(74, 111, 165, 0.08);
+}
+
+.app-shell[data-app-id="chat"] .chat-setting-arrow.chat-setting-arrow-solo {
+    align-self: center;
+}
+
+/* label + desc 复合(label-block,带描述的设置项) */
+.app-shell[data-app-id="chat"] .chat-setting-label-block {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="chat"] .chat-setting-label-block .chat-setting-label {
+    display: block;
+}
+
+.app-shell[data-app-id="chat"] .chat-setting-desc {
+    display: block;
+    font-size: 11px;
+    color: #999;
+    margin-top: 2px;
+}
+
+/* label-row(用于带 badge 的复合 label,如"回复增强 Beta") */
+.app-shell[data-app-id="chat"] .chat-setting-label-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.app-shell[data-app-id="chat"] .chat-setting-badge {
+    font-size: 10px;
+    color: white;
+    background: linear-gradient(135deg, #FF6B9D, #FF96A8);
+    padding: 1px 6px;
+    border-radius: 8px;
+}
+
+/* 开关型设置项(label-block 在左,开关在右) */
+.app-shell[data-app-id="chat"] .chat-setting-toggle-item {
+    padding: 15px 20px;
+    gap: 12px;
+}
+
+.app-shell[data-app-id="chat"] .chat-setting-toggle-item .chat-setting-label-block {
+    flex: 1;
+}
+
+/* 图标型设置项(带左边的圆形小图标) */
+.app-shell[data-app-id="chat"] .chat-setting-icon-item {
+    gap: 10px;
+}
+
+.app-shell[data-app-id="chat"] .chat-setting-icon-mini {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .chat-setting-icon-mini svg {
+    width: 16px;
+    height: 16px;
+}
+
+.app-shell[data-app-id="chat"] .chat-setting-icon-mini[data-color-kind="blue"] {
+    background: linear-gradient(135deg, #E8F2FF, #D6E4FF);
+}
+.app-shell[data-app-id="chat"] .chat-setting-icon-mini[data-color-kind="blue"] svg {
+    fill: #4A6FA5;
+}
+
+.app-shell[data-app-id="chat"] .chat-setting-icon-mini[data-color-kind="pink"] {
+    background: linear-gradient(135deg, #FFF0F3, #FFE4EC);
+}
+.app-shell[data-app-id="chat"] .chat-setting-icon-mini[data-color-kind="pink"] svg {
+    fill: #D4728A;
+}
+
+/* ============================================
+ * iOS 风 toggle 开关
+ * ============================================ */
+
+.app-shell[data-app-id="chat"] .chat-toggle {
+    position: relative;
+    width: 50px;
+    height: 28px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .chat-toggle-input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.app-shell[data-app-id="chat"] .chat-toggle-track {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    border-radius: 28px;
+    transition: background-color 0.3s;
+}
+
+.app-shell[data-app-id="chat"] .chat-toggle-thumb {
+    position: absolute;
+    height: 22px;
+    width: 22px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    border-radius: 50%;
+    transition: left 0.3s, transform 0.3s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.app-shell[data-app-id="chat"] .chat-toggle-input:checked + .chat-toggle-track {
+    background-color: #34C759;
+}
+
+.app-shell[data-app-id="chat"] .chat-toggle-input:checked + .chat-toggle-track + .chat-toggle-thumb {
+    left: 25px;
+}
+
+/* ============================================
+ * 互动统计 — 4 个小卡片网格
+ * ============================================ */
+
+.app-shell[data-app-id="chat"] .chat-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    padding: 16px 20px;
+}
+
+.app-shell[data-app-id="chat"] .chat-stat-card {
+    border-radius: 12px;
+    padding: 14px;
+    text-align: center;
+    transition: transform 0.2s ease;
+    cursor: default;
+}
+
+.app-shell[data-app-id="chat"] .chat-stat-card:active {
+    transform: scale(0.97);
+}
+
+.app-shell[data-app-id="chat"] .chat-stat-value {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.app-shell[data-app-id="chat"] .chat-stat-label {
+    font-size: 11px;
+}
+
+/* 4 个统计卡不同配色 */
+.app-shell[data-app-id="chat"] .chat-stat-card[data-color-gradient="blue"] {
+    background: linear-gradient(135deg, #E8F2FF, #F0F7FF);
+}
+.app-shell[data-app-id="chat"] .chat-stat-card[data-color-gradient="blue"] .chat-stat-value {
+    color: #4A6FA5;
+}
+.app-shell[data-app-id="chat"] .chat-stat-card[data-color-gradient="blue"] .chat-stat-label {
+    color: #7BA3D9;
+}
+
+.app-shell[data-app-id="chat"] .chat-stat-card[data-color-gradient="pink"] {
+    background: linear-gradient(135deg, #FFF0F3, #FFF5F7);
+}
+.app-shell[data-app-id="chat"] .chat-stat-card[data-color-gradient="pink"] .chat-stat-value {
+    color: #FF6B9D;
+}
+.app-shell[data-app-id="chat"] .chat-stat-card[data-color-gradient="pink"] .chat-stat-label {
+    color: #FF96A8;
+}
+
+.app-shell[data-app-id="chat"] .chat-stat-card[data-color-gradient="green"] {
+    background: linear-gradient(135deg, #E8FFF0, #F0FFF5);
+}
+.app-shell[data-app-id="chat"] .chat-stat-card[data-color-gradient="green"] .chat-stat-value {
+    color: #34C759;
+}
+.app-shell[data-app-id="chat"] .chat-stat-card[data-color-gradient="green"] .chat-stat-label {
+    color: #5BD77A;
+}
+
+.app-shell[data-app-id="chat"] .chat-stat-card[data-color-gradient="amber"] {
+    background: linear-gradient(135deg, #FFF8E8, #FFFBF0);
+}
+.app-shell[data-app-id="chat"] .chat-stat-card[data-color-gradient="amber"] .chat-stat-value {
+    color: #F5A623;
+}
+.app-shell[data-app-id="chat"] .chat-stat-card[data-color-gradient="amber"] .chat-stat-label {
+    color: #F7BC5E;
+}
+
+/* ============================================
+ * 危险操作卡片(红字)
+ * ============================================ */
+
+.app-shell[data-app-id="chat"] .chat-settings-card-danger {
+    /* 与普通卡片一致,但内部文字颜色不同 */
+}
+
+.app-shell[data-app-id="chat"] .chat-setting-danger-item {
+    justify-content: center;
+    padding: 15px 20px;
+}
+
+.app-shell[data-app-id="chat"] .chat-setting-danger-text {
+    color: #FF3B30;
+    font-size: 15px;
+}
+
+/* ============================================
+ * 响应式适配
+ * ============================================ */
+
+@media (max-width: 360px) {
+    .app-shell[data-app-id="chat"] .chat-settings-page {
+        padding: 16px 12px 32px;
+    }
+
+    .app-shell[data-app-id="chat"] .chat-settings-icons-row {
+        gap: 24px;
+    }
+
+    .app-shell[data-app-id="chat"] .chat-setting-item {
+        padding: 13px 16px;
+    }
+
+    .app-shell[data-app-id="chat"] .chat-section-title {
+        padding: 11px 16px;
+    }
+}
+
+/* ============================================
+ * 群聊设置页面特有样式
+ * ============================================ */
+
+/* 群聊设置页面容器(复用 chat-settings 基础样式) */
+.app-shell[data-app-id="chat"] .chat-group-settings {
+    /* 复用 .chat-settings 的通用样式 */
+}
+
+/* 群聊设置头部 */
+.app-shell[data-app-id="chat"] .group-settings-header {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+/* 群头像区域 */
+.app-shell[data-app-id="chat"] .group-settings-avatar {
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: center;
+}
+
+/* 群聊名称 */
+.app-shell[data-app-id="chat"] .group-settings-name {
+    font-size: 22px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+/* 群成员数量 */
+.app-shell[data-app-id="chat"] .group-settings-count {
+    font-size: 14px;
+    color: #666;
+}
+
+/* 群成员预览区域 */
+.app-shell[data-app-id="chat"] .group-members-preview {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="chat"] .group-members-avatars {
+    display: flex;
+    align-items: center;
+}
+
+.app-shell[data-app-id="chat"] .group-member-avatar {
+    position: relative;
+    margin-right: -8px;
+}
+
+.app-shell[data-app-id="chat"] .group-member-avatar:last-of-type {
+    margin-right: 0;
+}
+
+/* 群主标识 */
+.app-shell[data-app-id="chat"] .admin-badge {
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 8px;
+    color: white;
+    background: linear-gradient(135deg, #FF6B9D, #FF96A8);
+    padding: 1px 4px;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+
+/* 更多成员 */
+.app-shell[data-app-id="chat"] .group-member-more {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #E9ECEF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: -8px;
+}
+
+.app-shell[data-app-id="chat"] .group-member-more span {
+    font-size: 12px;
+    color: #666;
+    font-weight: 500;
+}
+
+/* 群成员项整体布局 */
+.app-shell[data-app-id="chat"] #group-members-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.app-shell[data-app-id="chat"] #group-members-item > .chat-setting-label {
+    margin-bottom: 0;
+}
+
+.app-shell[data-app-id="chat"] #group-members-item > .group-members-preview {
+    width: 100%;
+    justify-content: space-between;
+}
+
+.app-shell[data-app-id="chat"] #group-members-item > .group-members-preview > .chat-setting-arrow {
+    align-self: center;
+}
+
+/* 退出群聊按钮特殊颜色 */
+.app-shell[data-app-id="chat"] .chat-setting-danger-text.exit-group {
+    color: #FF3B30;
+}
+
+/* 群设置页面头部调整 */
+.app-shell[data-app-id="chat"] .chat-group-settings .chat-settings-page {
+    padding-top: 15px;
+}
+
+/* ============================================
+ * ★ v0.61.8.11 上下文长度设置弹窗(ContextLengthModal)
+ *   - 极简风格:减/加按钮 + 中间数字输入 + 底部取消/保存
+ *   - 视觉与 AiRemarkModal / EditReplyPromptModal 对齐
+ * ============================================ */
+
+.ctx-length-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.ctx-length-modal {
+    width: 85%;
+    max-width: 320px;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+    overflow: hidden;
+}
+
+.ctx-length-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 18px 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.ctx-length-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #222;
+}
+
+.ctx-length-close {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    padding: 0;
+    transition: background 0.15s;
+}
+
+.ctx-length-close:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.ctx-length-close svg {
+    width: 16px;
+    height: 16px;
+}
+
+.ctx-length-body {
+    padding: 18px 20px;
+}
+
+.ctx-length-desc {
+    font-size: 13px;
+    color: #8e8e93;
+    margin-bottom: 18px;
+    text-align: center;
+    line-height: 1.5;
+}
+
+.ctx-length-control {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.ctx-length-btn {
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: all 0.15s;
+}
+
+.ctx-length-btn--minus {
+    background: #f2f2f7;
+    color: #007aff;
+}
+
+.ctx-length-btn--minus:hover:not(:disabled) {
+    background: #e0e0e8;
+}
+
+.ctx-length-btn--plus {
+    background: linear-gradient(135deg, #4A6FA5 0%, #D4728A 100%);
+    color: #fff;
+}
+
+.ctx-length-btn--plus:hover:not(:disabled) {
+    opacity: 0.85;
+}
+
+.ctx-length-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.ctx-length-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+.ctx-length-display {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.ctx-length-input {
+    width: 72px;
+    height: 48px;
+    border: 1.5px solid #d1d1d6;
+    border-radius: 10px;
+    text-align: center;
+    font-size: 28px;
+    font-weight: 600;
+    color: #222;
+    background: #f8f8f8;
+    outline: none;
+    transition: border-color 0.2s;
+    /* 隐藏浏览器默认箭头 */
+    -moz-appearance: textfield;
+}
+
+.ctx-length-input::-webkit-outer-spin-button,
+.ctx-length-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.ctx-length-input:focus {
+    border-color: #4A6FA5;
+    background: #fff;
+}
+
+.ctx-length-unit {
+    font-size: 15px;
+    color: #8e8e93;
+}
+
+.ctx-length-hint {
+    text-align: center;
+    font-size: 12px;
+    color: #8e8e93;
+    margin-bottom: 16px;
+    min-height: 18px;
+}
+
+.ctx-length-hint--error {
+    color: #ff3b30;
+}
+
+.ctx-length-example {
+    background: #f8f8f8;
+    border-radius: 10px;
+    padding: 12px 14px;
+}
+
+.ctx-length-example-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.ctx-length-example-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 12px;
+    color: #555;
+    margin-bottom: 5px;
+    line-height: 1.4;
+}
+
+.ctx-length-example-item:last-child {
+    margin-bottom: 0;
+}
+
+.ctx-length-example-label {
+    font-weight: 600;
+    color: #4A6FA5;
+    flex-shrink: 0;
+}
+
+.ctx-length-footer {
+    display: flex;
+    gap: 10px;
+    padding: 14px 20px 20px;
+}
+
+.ctx-length-btn-cancel {
+    flex: 1;
+    height: 44px;
+    border: 1.5px solid #d1d1d6;
+    border-radius: 10px;
+    background: #fff;
+    font-size: 15px;
+    font-weight: 500;
+    color: #444;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.ctx-length-btn-cancel:hover {
+    background: #f5f5f5;
+}
+
+.ctx-length-btn-save {
+    flex: 1.5;
+    height: 44px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #4A6FA5 0%, #D4728A 100%);
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+
+.ctx-length-btn-save:hover:not(:disabled) {
+    opacity: 0.85;
+}
+
+.ctx-length-btn-save:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/* ★ v0.63 滚动摘要容量弹窗 rcap-field */
+.app-shell[data-app-id="chat"] .rcap-field {
+    margin-bottom: 14px;
+}
+.app-shell[data-app-id="chat"] .rcap-field:last-child {
+    margin-bottom: 0;
+}
+.app-shell[data-app-id="chat"] .rcap-field-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #4A6FA5;
+    margin-bottom: 6px;
+    padding-left: 4px;
+}

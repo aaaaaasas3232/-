@@ -16,11 +16,29 @@ import { ACCESS_FREQUENCIES } from './geo/geo-constants.js';
 const defaultCheckedAttr = (v) => (v ? 'checked' : '');
 
 /**
- * 解析字段的 option 列表：可能是 options / optionsFromConstants / optionsFromContext。
+ * 解析字段的 option 列表：可能是 options / optionsFromConstants / optionsFromContext / optionsFn。
  */
 const resolveOptions = (field, ctx) => {
     if (typeof field.options === 'function') return field.options(ctx?.model, ctx) || [];
     if (Array.isArray(field.options)) return field.options;
+    // v0.27：动态函数来源（schema 里直接写函数，render 时调一次拿 options）
+    // 用于跨 app 数据源（天气 app cities、世界观 AI 列表等）。
+    if (typeof field.optionsFn === 'function') {
+        try {
+            const arr = field.optionsFn(ctx?.model, ctx) || [];
+            const valueKey = field.optionValueKey || 'id';
+            const labelKey = field.optionLabelKey || 'name';
+            return arr.map(item => ({
+                value: item[valueKey],
+                label: field.optionLabelFn
+                    ? field.optionLabelFn(item)
+                    : (item[labelKey] ?? String(item[valueKey])),
+            }));
+        } catch (e) {
+            console.warn('[form-renderer] optionsFn 抛错:', e);
+            return [];
+        }
+    }
     if (field.optionsFromConstants) {
         const arr = CONSTANT_LOOKUP[field.optionsFromConstants];
         if (!arr) return [];
@@ -110,12 +128,14 @@ const coerceWriteValue = (field, raw) => {
 export function renderEditForm(schema, model, ctx) {
     const e = ctx.e || escapeHtml;
     const wrapperClass = schema.wrapperClass ? `wv-editor ${schema.wrapperClass}` : 'wv-editor';
+    const noSection = schema.noSection || ctx.noSection;
     const groups = schema.sections
-        ? schema.sections.map(s => renderSection(s, model, schema, ctx))
+        ? schema.sections.map(s => renderSection(s, model, schema, ctx, { noSection }))
         : [renderFieldList(schema.fields, model, schema, ctx)];
     const actions = schema.actionsBuilder
         ? schema.actionsBuilder(ctx, model)
         : ((schema.hideActions || ctx.hideActions) ? '' : `<div class="wv-editor__actions">
+                ${ctx.viewAction ? `<button class="wv-btn wv-btn--ghost" ${ctx.viewAction}>${e(ctx.viewLabel || '查看')}</button>` : ''}
                 ${ctx.saveAction ? `<button class="wv-btn wv-btn--primary" ${ctx.saveAction}>${e(ctx.saveLabel || '保存')}</button>` : ''}
                 ${ctx.cancelAction ? `<button class="wv-btn wv-btn--ghost" ${ctx.cancelAction}>${e(ctx.cancelLabel || '取消')}</button>` : ''}
             </div>`);
@@ -128,8 +148,118 @@ export function renderEditForm(schema, model, ctx) {
     `;
 }
 
-const renderSection = (section, model, schema, ctx) => {
+/**
+ * 查看模式渲染器 - 精致小巧，只读展示
+ * renderViewForm(schema, model, ctx) 返回 HTML 字符串
+ */
+export function renderViewForm(schema, model, ctx) {
     const e = ctx.e || escapeHtml;
+    const wrapperClass = schema.wrapperClass ? `wv-editor wv-editor--view ${schema.wrapperClass}` : 'wv-editor wv-editor--view';
+
+    // 渲染字段的查看内容
+    const renderViewField = (field, model, schema, ctx) => {
+        const value = readModelValue(field, model, ctx);
+        const displayValue = formatFieldValue(field, value, ctx);
+
+        if (displayValue === null || displayValue === '') return '';
+
+        return `
+            <div class="wv-view__row">
+                <span class="wv-view__label">${e(field.label || '')}</span>
+                <span class="wv-view__value">${displayValue}</span>
+            </div>
+        `;
+    };
+
+    const renderViewSection = (section, model, schema, ctx) => {
+        const fields = (section.fields || []).map(f => renderViewField(f, model, schema, ctx)).join('\n');
+        if (!fields) return '';
+        return `
+            <div class="wv-view__section">
+                ${section.title ? `<div class="wv-view__section-title">${e(section.title)}</div>` : ''}
+                ${fields}
+            </div>
+        `;
+    };
+
+    const groups = schema.sections
+        ? schema.sections.map(s => renderViewSection(s, model, schema, ctx)).filter(Boolean)
+        : schema.fields
+            ? schema.fields.map(f => renderViewField(f, model, schema, ctx)).filter(Boolean)
+            : [];
+
+    if (groups.length === 0) {
+        return `
+            <div class="${wrapperClass}">
+                <div class="wv-view__empty">暂无内容</div>
+                <div class="wv-editor__actions">
+                    ${ctx.closeAction ? `<button class="wv-btn wv-btn--ghost" ${ctx.closeAction}>${e(ctx.closeLabel || '收起')}</button>` : ''}
+                    ${ctx.editAction ? `<button class="wv-btn wv-btn--ghost" ${ctx.editAction}>${e(ctx.editLabel || '编辑')}</button>` : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="${wrapperClass}">
+            ${groups.join('\n')}
+            <div class="wv-editor__actions">
+                ${ctx.closeAction ? `<button class="wv-btn wv-btn--ghost" ${ctx.closeAction}>${e(ctx.closeLabel || '收起')}</button>` : ''}
+                ${ctx.editAction ? `<button class="wv-btn wv-btn--ghost" ${ctx.editAction}>${e(ctx.editLabel || '编辑')}</button>` : ''}
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * 格式化字段值为可读文本
+ */
+const formatFieldValue = (field, value, ctx) => {
+    if (value == null || value === '') return '';
+
+    switch (field.type) {
+        case 'checkbox':
+            return value ? '是' : '否';
+
+        case 'select':
+            // 尝试从 options 中找到 label
+            if (field.options) {
+                const opts = typeof field.options === 'function' ? field.options(ctx?.model, ctx) : field.options;
+                const found = opts?.find(o => String(o.value) === String(value));
+                if (found) return found.label;
+            }
+            return String(value);
+
+        case 'textarea':
+            // 多行文本转为单行显示
+            return String(value).replace(/\n/g, ' ');
+
+        case 'color':
+            return value;
+
+        case 'checkboxGroup':
+            if (Array.isArray(value) && value.length > 0) {
+                return value.join('、');
+            }
+            return '';
+
+        case 'chronology-hours':
+            if (typeof value === 'object' && value !== null) {
+                const hours = value.customHours || [];
+                return hours.length > 0 ? hours.join(' ') : '24时制';
+            }
+            return '';
+
+        default:
+            return String(value);
+    }
+};
+
+const renderSection = (section, model, schema, ctx, { noSection } = {}) => {
+    const e = ctx.e || escapeHtml;
+    if (noSection) {
+        return renderFieldList(section.fields, model, schema, ctx);
+    }
     return `
         <div class="wv-editor__section">
             <div class="wv-editor__section-title">${e(section.title)}</div>
@@ -348,8 +478,10 @@ const renderCheckboxGroupRow = (field, model, schema, ctx, e, checkedAttr) => {
 const renderRow = (field, model, schema, ctx, controlHtml) => {
     const e = ctx.e || escapeHtml;
     const isInline = field.inline;
+    const isStacked = field.labelPosition === 'top';
     const classes = ['wv-editor__row'];
     if (isInline) classes.push('wv-editor__row--inline');
+    if (isStacked) classes.push('wv-editor__row--stacked');
     if (field.topSpacing) classes.push('wv-editor__row--top-spaced');
     if (field.noLabel) classes.push('wv-editor__row--no-label');
     const labelHtml = field.noLabel ? '' : `<label class="wv-editor__label">${e(field.label || '')}</label>`;
@@ -559,11 +691,7 @@ const renderChronologyDateBlock = (field, model, schema, ctx, e) => {
         </div>
     `;
 
-    const dateHtml = `
-        ${partsOut.join('')}
-        <button class="wv-btn wv-btn--ghost wv-btn--xs wv-date-clear-btn" type="button"
-            data-date-clear="${e(field.key)}" title="清除日期（留空=自定义时间）">×</button>
-    `;
+    const dateHtml = partsOut.join('');
 
     // 隐藏的完整日期字符串（兼容旧数据格式 year/month/day）
     // 隐藏字段在保存时按当前空值写入对应段位；保留已录入字段。
@@ -696,68 +824,50 @@ const renderLocationAccessBlock = (field, model, schema, ctx, e) => {
     const allEnabled = enabledCount === personas.length;
     const noneEnabled = enabledCount === 0;
 
-    // 渲染每个人设的配置项（折叠状态）
+    // 渲染每个人设配置项（始终展开）
     const personaItems = personas.map(persona => {
         const config = visitors[persona.id] || { enabled: false, frequency: 'sometimes', note: '' };
         const isEnabled = !!config.enabled;
         const frequency = config.frequency || 'sometimes';
         const note = config.note || '';
 
-        // 频率选项 HTML
         const frequencyOptions = ACCESS_FREQUENCIES.map(f => {
             return `<option value="${e(f.value)}" ${frequency === f.value ? 'selected' : ''}>${e(f.label)}</option>`;
         }).join('');
 
         return `
-            <div class="wv-location-access__persona ${isEnabled ? 'is-enabled' : ''}" data-persona-id="${e(persona.id)}">
-                <div class="wv-location-access__persona-header">
-                    <label class="wv-location-access__toggle">
+            <div class="wv-access-row ${isEnabled ? 'is-on' : ''}" data-persona-id="${e(persona.id)}">
+                <div class="wv-access-row__head">
+                    <label class="wv-access-row__check">
                         <input type="checkbox"
-                            class="wv-location-access__checkbox"
+                            class="wv-access-row__checkbox"
                             data-location-access-toggle="${e(persona.id)}"
                             ${isEnabled ? 'checked' : ''}>
-                        <span class="wv-location-access__persona-name">${e(persona.name)}</span>
+                        <span class="wv-access-row__name">${e(persona.name)}</span>
                     </label>
-                    <span class="wv-location-access__persona-type ${e(persona.type)}">${e(persona.typeLabel)}</span>
+                    <span class="wv-access-row__type ${e(persona.type)}">${e(persona.typeLabel)}</span>
                 </div>
-                <div class="wv-location-access__persona-body ${isEnabled ? '' : 'is-collapsed'}">
-                    <div class="wv-location-access__frequency-row">
-                        <span class="wv-location-access__field-label">频率</span>
-                        <select class="wv-location-access__frequency"
-                            data-location-access-frequency="${e(persona.id)}"
-                            ${!isEnabled ? 'disabled' : ''}>
-                            ${frequencyOptions}
-                        </select>
-                    </div>
-                    <div class="wv-location-access__note-row">
-                        <span class="wv-location-access__field-label">备注</span>
-                        <textarea class="wv-location-access__note"
-                            rows="1"
-                            data-location-access-note="${e(persona.id)}"
-                            placeholder="关于此场所..."
-                            ${!isEnabled ? 'disabled' : ''}>${e(note)}</textarea>
-                    </div>
+                <div class="wv-access-row__body">
+                    <select class="wv-access-row__freq"
+                        data-location-access-frequency="${e(persona.id)}">
+                        ${frequencyOptions}
+                    </select>
+                    <textarea class="wv-access-row__note"
+                        rows="1"
+                        data-location-access-note="${e(persona.id)}"
+                        placeholder="备注">${e(note)}</textarea>
                 </div>
             </div>
         `;
     }).join('');
 
-    // 构建完整 HTML（带折叠功能）
-    const hiddenData = {
-        visitors: visitors,
-    };
-
     return `
         <div class="wv-editor__row">
             <label class="wv-editor__label">${e(field.label || '访问备注')}</label>
             <div class="wv-location-access">
-                <div class="wv-location-access__toolbar">
-                    <button class="wv-location-access__select-all" data-location-access-select="all">
-                        全选
-                    </button>
-                    <button class="wv-location-access__select-none" data-location-access-select="none">
-                        清空
-                    </button>
+                <div class="wv-location-access__bar">
+                    <button class="wv-location-access__btn" data-location-access-select="all">全选</button>
+                    <button class="wv-location-access__btn" data-location-access-select="none">清空</button>
                     <span class="wv-location-access__count">${enabledCount}/${personas.length}</span>
                 </div>
                 <div class="wv-location-access__list">
@@ -765,7 +875,7 @@ const renderLocationAccessBlock = (field, model, schema, ctx, e) => {
                 </div>
                 <input type="hidden"
                     data-${schema.fieldNamespace}-field="${e(field.key)}"
-                    value="${e(JSON.stringify(hiddenData))}"
+                    value="${e(JSON.stringify({ visitors }))}"
                     data-location-access-store="${e(field.key)}">
             </div>
         </div>

@@ -3,6 +3,12 @@
 // 所有依赖都是静态 import，vite 会自动按依赖图加载。
 // ============================================
 
+// ============================================
+// 核心启动加载器（必须最先运行，打印加载顺序日志）
+// ============================================
+import '@/js/framework/desktop-config.js';  // 桌面统一配置
+import '@/js/framework/boot-loader.js';      // 启动日志
+
 import { APP_ICONS, UI_ICONS, UI_TOKENS, UI_SYMBOLS } from '@/src/core/icons.js';
 import { sharedIconLibrary } from '@/src/core/icon-library.js';
 import {
@@ -89,6 +95,8 @@ window.createShareRecordAction = createShareRecordAction;
 // 手机壳等比缩放：保证在不同尺寸的手机上都能完整、居中显示
 // 设计尺寸：390 x 590
 // 当视口宽度 < 390 或高度 < 590 时，按比例缩放
+// 隐藏手机壳（phone-case--hidden / phone--fullscreen）时跳过缩放，
+// 让 #phone 直接撑到当前视口尺寸，宽高不再锁 390:590。
 // ============================================
 (function setupPhoneScaling() {
     const PHONE_WIDTH = 390;
@@ -96,7 +104,19 @@ window.createShareRecordAction = createShareRecordAction;
     const PHONE_PADDING = 16;
     const root = document.documentElement;
 
+    function isPhoneCaseHidden() {
+        const phoneCase = document.querySelector('.phone-case');
+        const phoneEl = document.getElementById('phone');
+        return phoneEl?.classList.contains('phone--fullscreen') ||
+               phoneCase?.classList.contains('phone-case--hidden');
+    }
+
     function recomputeScale() {
+        // 全屏/隐藏手机壳：不缩放，让 #phone 自己撑到视口
+        if (isPhoneCaseHidden()) {
+            root.style.setProperty('--phone-scale', '1');
+            return;
+        }
         const vw = window.innerWidth;
         const vh = window.innerHeight;
         const scaleX = (vw - PHONE_PADDING) / PHONE_WIDTH;
@@ -110,5 +130,14 @@ window.createShareRecordAction = createShareRecordAction;
     window.addEventListener('orientationchange', recomputeScale, { passive: true });
     if (window.visualViewport) {
         window.visualViewport.addEventListener('resize', recomputeScale, { passive: true });
+    }
+
+    // 监听 class 变化：隐藏手机壳时立即重算 scale
+    if (typeof MutationObserver !== 'undefined') {
+        const observer = new MutationObserver(() => recomputeScale());
+        const phoneEl = document.getElementById('phone');
+        if (phoneEl) observer.observe(phoneEl, { attributes: true, attributeFilter: ['class'] });
+        const phoneCase = document.querySelector('.phone-case');
+        if (phoneCase) observer.observe(phoneCase, { attributes: true, attributeFilter: ['class'] });
     }
 })();

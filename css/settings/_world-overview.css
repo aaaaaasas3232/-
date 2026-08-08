@@ -30,11 +30,11 @@
     gap: 6px;
     overflow-x: auto;
     scrollbar-width: none;
-    padding: 4px 2px 2px;
-    background: rgba(255, 255, 255, 0.55);
+    padding: 4px;
+    background: #FFFFFF;
     border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.5);
-    backdrop-filter: blur(8px);
+    border: 1px solid rgba(60, 60, 67, 0.08);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .settings-app .wv-tabs::-webkit-scrollbar { display: none; }
@@ -48,6 +48,7 @@
     padding: 6px 10px;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 4px;
     cursor: pointer;
     flex: 0 0 auto;
@@ -55,10 +56,14 @@
     transition: background-color 0.18s ease, color 0.18s ease;
 }
 
+.settings-app .wv-tab:hover {
+    background: rgba(60, 60, 67, 0.06);
+    color: var(--settings-color-label, #1c1c1e);
+}
+
 .settings-app .wv-tab.is-active {
     background: var(--wv-blue);
     color: #fff;
-    box-shadow: 0 2px 6px rgba(10, 132, 255, 0.35);
 }
 
 .settings-app .wv-tab__glyph { font-size: 14px; line-height: 1; }
@@ -72,26 +77,44 @@
 }
 
 .settings-app .wv-tab--back {
-    background: rgba(0, 0, 0, 0.05);
+    background: rgba(60, 60, 67, 0.06);
     color: var(--settings-color-text, #1c1c1e);
     border-radius: 999px;
     flex: 0 0 auto;
+    padding: 6px 12px;
 }
 
 .settings-app .wv-tab--back:hover {
-    background: rgba(0, 0, 0, 0.12);
+    background: rgba(60, 60, 67, 0.12);
+    color: var(--settings-color-text, #1c1c1e);
 }
 
 .settings-app .wv-tabs__world-tabs {
     display: flex;
-    gap: 6px;
-    overflow-x: auto;
-    scrollbar-width: none;
+    gap: 4px;
     flex: 1 1 auto;
     min-width: 0;
+    overflow: hidden;
 }
 
 .settings-app .wv-tabs__world-tabs::-webkit-scrollbar { display: none; }
+
+/* 世界级子 tab —— 填满剩余空间，去掉右侧空白 */
+.settings-app .wv-tabs__world-tabs .wv-tab {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 6px 6px;
+}
+
+/* 库级 tab：只有 2 个，让它们均分；与 world 级视觉一致 */
+.settings-app .wv-tabs--library {
+    overflow: hidden;
+}
+.settings-app .wv-tabs--library .wv-tab {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 6px 8px;
+}
 
 .settings-app .wv__body {
     display: flex;
@@ -141,8 +164,9 @@
 }
 
 .settings-app .wv-btn--danger {
-    background: rgba(255, 59, 48, 0.12);
-    color: var(--wv-red);
+    background: #FFFFFF;
+    color: var(--settings-color-secondary);
+    border: 1px solid rgba(60, 60, 67, 0.15);
 }
 
 .settings-app .wv-btn--sm {
@@ -597,7 +621,7 @@
     top: 6px;
     bottom: 6px;
     width: 2px;
-    background: linear-gradient(180deg, rgba(99,102,241,0.5), rgba(236,72,153,0.4));
+    background: #c7c7cc;
     border-radius: 1px;
 }
 .settings-app .wv-timeline__node {
@@ -612,12 +636,10 @@
     height: 12px;
     border-radius: 999px;
     background: #fff;
-    border: 2px solid rgba(99, 102, 241, 0.9);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+    border: 1.5px solid #c7c7cc;
 }
 .settings-app .wv-timeline__node.is-editing .wv-timeline__dot {
-    border-color: rgba(236, 72, 153, 0.9);
-    box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.12);
+    border-color: #8e8e93;
 }
 .settings-app .wv-timeline__card {
     background: rgba(255, 255, 255, 0.78);
@@ -629,6 +651,15 @@
     user-select: none;
     -webkit-user-select: none;
     transition: box-shadow 0.18s ease, transform 0.18s ease, opacity 0.18s ease;
+}
+
+.settings-app .wv-timeline__node.is-editing > .wv-timeline__card {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    cursor: default;
+    box-shadow: none;
 }
 .settings-app .wv-timeline__card:active { cursor: grabbing; }
 .settings-app .wv-timeline__card.is-dragging {

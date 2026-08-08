@@ -34,7 +34,9 @@ function getScreenMetrics() {
                          phoneCase?.classList.contains('phone-case--hidden');
 
     if (isFullscreen) {
-        return { width: 390, height: 590, offsetX: 0, offsetY: 0 };
+        // 全屏模式：手机壳被隐藏，手机直接撑到当前视口。
+        // 读真实尺寸，避免卡片位置写死 390x590 导致偏移。
+        return { width: window.innerWidth, height: window.innerHeight, offsetX: 0, offsetY: 0 };
     }
 
     if (phoneScreen && phoneCase) {

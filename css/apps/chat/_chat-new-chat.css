@@ -1,0 +1,573 @@
+/* ============================================
+ * chat-app 发起聊天页面样式
+ *
+ * 仿妆原则: 1:1 复刻旧版 chat.js 的 openNewChatSelector() UI
+ *
+ * ============================================ */
+
+/* ---- 发起聊天页面容器 ---- */
+.app-shell[data-app-id="chat"] .new-chat-page {
+    height: 100%;
+    background: #F8F9FA;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 隐藏 framework 自带的 detail header */
+.app-shell[data-app-id="chat"] .app-detail-header {
+    display: none !important;
+}
+
+/* detail-body 去除 padding */
+.app-shell[data-app-id="chat"] .app-detail-body {
+    padding: 0 !important;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="chat"] .app-detail-panel {
+    height: 100%;
+    overflow: hidden;
+}
+
+/* ---- 顶部栏 ---- */
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-header {
+    flex-shrink: 0;
+    background: #edf2fd;
+    padding: 60px 16px 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    z-index: 10;
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-back-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    padding: 0;
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-back-btn:hover {
+    background: #E9ECEF;
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-back-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: #4A6FA5;
+    stroke-width: 2;
+}
+
+/* ---- 内容区域 ---- */
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* 隐藏滚动条 */
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-content::-webkit-scrollbar {
+    display: none;
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-content {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* ---- 标题 ---- */
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-title {
+    font-size: 17px;
+    font-weight: 600;
+    color: #333;
+}
+
+/* ---- 搜索框 ---- */
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-search {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-search .search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
+    color: #999;
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-search .search-input {
+    width: 100%;
+    padding: 12px 15px 12px 40px;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 14px;
+    background: white;
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-search .search-input:focus {
+    border-color: #A8C8EC;
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-search .search-input::placeholder {
+    color: #999;
+}
+
+/* ---- 操作项按钮 (创建群聊/添加朋友) ---- */
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-action-item,
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-create-group-btn {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    background: white;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    width: 100%;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-action-item:hover,
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-create-group-btn:hover {
+    background: #F8FBFF;
+    transform: translateX(4px);
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-action-item:active,
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-create-group-btn:active {
+    transform: scale(0.98);
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-action-item .action-icon,
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-create-group-btn svg {
+    width: 24px;
+    height: 24px;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-action-item .action-icon.create-group,
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-create-group-btn svg {
+    color: #34C759;
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-action-item .action-icon.add-friend {
+    background: #007AFF;
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-action-item .action-icon svg {
+    width: 24px;
+    height: 24px;
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-action-item .action-label,
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-create-group-btn span {
+    font-weight: 500;
+    color: #333;
+    font-size: 15px;
+}
+
+/* ---- 联系人列表标题 ---- */
+.app-shell[data-app-id="chat"] .new-chat-page .contacts-title {
+    font-weight: 500;
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 10px;
+    padding-left: 4px;
+}
+
+/* ---- 联系人列表 ---- */
+.app-shell[data-app-id="chat"] .new-chat-page .contacts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* ---- 联系人项 ---- */
+.app-shell[data-app-id="chat"] .new-chat-page .contact-select-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    background: white;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .contact-select-item:hover {
+    background: #F8FBFF;
+    transform: translateX(4px);
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .contact-select-item:active {
+    transform: scale(0.98);
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .contact-avatar {
+    width: 45px;
+    height: 45px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 18px;
+    font-weight: 500;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .contact-info {
+    flex: 1;
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .contact-name {
+    font-weight: 500;
+    font-size: 15px;
+    color: #333;
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .contact-type {
+    font-size: 12px;
+    color: #666;
+    margin-top: 2px;
+}
+
+/* ---- 在线状态点 ---- */
+.app-shell[data-app-id="chat"] .new-chat-page .contact-online-dot {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 10px;
+    height: 10px;
+    background: #4ade80;
+    border-radius: 50%;
+    border: 2px solid white;
+}
+
+/* ---- v0.27:右侧元数据容器(放 badge + online-dot) ---- */
+.app-shell[data-app-id="chat"] .new-chat-page .contact-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    margin-left: 12px;
+}
+
+/* ---- v0.27:已添加徽标 ---- */
+.app-shell[data-app-id="chat"] .new-chat-page .contact-added-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    background: #FFE0EC;
+    color: #D4728A;
+    border: 1px solid rgba(212, 114, 138, 0.25);
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .contact-added-badge--other {
+    background: #E8F2FF;
+    color: #4A6FA5;
+    border: 1px solid rgba(74, 111, 165, 0.25);
+}
+
+/* ---- v0.27:已加同 mode → 禁用 ---- */
+.app-shell[data-app-id="chat"] .new-chat-page .contact-select-item--disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+    background: #F8F9FA;
+    filter: grayscale(0.4);
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .contact-select-item--disabled:hover {
+    background: #F8F9FA;
+    transform: none;
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .contact-select-item--disabled:active {
+    transform: none;
+}
+
+/* ---- v0.27:空状态(默认用户未绑世界时显示) ---- */
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    background: white;
+    border-radius: 12px;
+    margin-top: 12px;
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-empty-icon {
+    font-size: 36px;
+    margin-bottom: 12px;
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-empty-text {
+    font-size: 16px;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 6px;
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-empty-hint {
+    font-size: 13px;
+    color: #888;
+    line-height: 1.6;
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-empty-link {
+    display: inline-block;
+    margin-top: 8px;
+    color: #007aff;
+    font-weight: 500;
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-empty-state:hover .new-chat-empty-link {
+    text-decoration: underline;
+}
+
+/* ---- v0.27 加载 spinner ---- */
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-loading {
+    text-align: center;
+    padding: 48px 24px;
+    background: white;
+    border-radius: 12px;
+    margin-top: 12px;
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-loading-spinner {
+    width: 28px;
+    height: 28px;
+    margin: 0 auto 12px;
+    border: 3px solid rgba(0, 122, 255, 0.15);
+    border-top-color: #007aff;
+    border-radius: 50%;
+    animation: new-chat-spin 0.8s linear infinite;
+}
+
+@keyframes new-chat-spin {
+    to { transform: rotate(360deg); }
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-loading-text {
+    color: #888;
+    font-size: 13px;
+}
+
+/* ---- 动画 ---- */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-title {
+    animation: slideDown 0.3s ease;
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-search {
+    animation: slideDown 0.3s ease 0.05s backwards;
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-action-item {
+    animation: slideDown 0.3s ease backwards;
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-action-item:nth-child(1) { animation-delay: 0.1s; }
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-action-item:nth-child(2) { animation-delay: 0.15s; }
+
+.app-shell[data-app-id="chat"] .new-chat-page .contacts-title {
+    animation: slideDown 0.3s ease 0.2s backwards;
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .contact-select-item {
+    animation: slideDown 0.3s ease backwards;
+}
+
+/* ============================================
+ * ★ v0.23 聊天记录模式选择页
+ * ============================================ */
+.app-shell[data-app-id="chat"] .chat-mode-selector-page {
+    height: 100%;
+    background: linear-gradient(180deg, #E8F2FF 0%, #FFF5F7 50%, #FFFFFF 100%);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-shell[data-app-id="chat"] .chat-mode-selector-header {
+    flex-shrink: 0;
+    padding: 60px 16px 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.app-shell[data-app-id="chat"] .chat-mode-selector-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #4A6FA5;
+}
+
+.app-shell[data-app-id="chat"] .chat-mode-selector-desc {
+    padding: 0 20px 12px;
+    font-size: 12px;
+    color: #888;
+    line-height: 1.5;
+}
+
+.app-shell[data-app-id="chat"] .chat-mode-selector-list {
+    flex: 1;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+}
+
+.app-shell[data-app-id="chat"] .chat-mode-selector-card {
+    text-align: left;
+    background: #FFFFFF;
+    border-radius: 18px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(74, 111, 165, 0.06);
+    font-family: inherit;
+    width: 100%;
+}
+
+.app-shell[data-app-id="chat"] .chat-mode-selector-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(74, 111, 165, 0.12);
+}
+
+.app-shell[data-app-id="chat"] .chat-mode-selector-card--calendar:hover {
+    border-color: rgba(74, 111, 165, 0.3);
+}
+
+.app-shell[data-app-id="chat"] .chat-mode-selector-card--story:hover {
+    border-color: rgba(255, 107, 157, 0.4);
+}
+
+.app-shell[data-app-id="chat"] .chat-mode-selector-card__icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+}
+
+.app-shell[data-app-id="chat"] .chat-mode-selector-card__icon svg {
+    width: 32px;
+    height: 32px;
+}
+
+.app-shell[data-app-id="chat"] .chat-mode-selector-card__icon--calendar {
+    background: linear-gradient(135deg, #4A6FA5 0%, #6B8DBF 100%);
+    color: white;
+}
+
+.app-shell[data-app-id="chat"] .chat-mode-selector-card__icon--story {
+    background: linear-gradient(135deg, #FF6B9D 0%, #FF9DBE 100%);
+    color: white;
+}
+
+.app-shell[data-app-id="chat"] .chat-mode-selector-card__title {
+    font-size: 17px;
+    font-weight: 600;
+    color: #2C3E50;
+    margin-bottom: 6px;
+}
+
+.app-shell[data-app-id="chat"] .chat-mode-selector-card__desc {
+    font-size: 13px;
+    color: #6B7280;
+    line-height: 1.55;
+    margin-bottom: 14px;
+}
+
+.app-shell[data-app-id="chat"] .chat-mode-selector-card__hint {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.app-shell[data-app-id="chat"] .chat-mode-selector-card__chip {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: rgba(74, 111, 165, 0.12);
+    color: #4A6FA5;
+    font-weight: 500;
+}
+
+.app-shell[data-app-id="chat"] .chat-mode-selector-card__chip--story {
+    background: rgba(255, 107, 157, 0.15);
+    color: #FF6B9D;
+}
+
+/* ---- ★ v0.23 new-chat 顶部 mode chip ---- */
+.app-shell[data-app-id="chat"] .new-chat-mode-chip {
+    margin-left: auto;
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-weight: 500;
+    background: rgba(74, 111, 165, 0.12);
+    color: #4A6FA5;
+}
+.app-shell[data-app-id="chat"] .new-chat-mode-chip--story {
+    background: rgba(255, 107, 157, 0.15);
+    color: #FF6B9D;
+}
+
+/* ---- ★ v0.28 当前世界观 chip ---- */
+.app-shell[data-app-id="chat"] .new-chat-world-chip {
+    margin-left: auto;
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-weight: 500;
+    background: rgba(74, 111, 165, 0.12);
+    color: #4A6FA5;
+    align-items: center;
+    max-width: 50%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

@@ -1,0 +1,67 @@
+/* 片刻：从 App Store 安装后显示的专注 App */
+.focus-app {
+    min-height: 100%;
+    padding: 34px 22px 90px;
+    box-sizing: border-box;
+    color: #2c2050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.focus-card {
+    width: 100%;
+    padding: 34px 24px 28px;
+    border-radius: 30px;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.76);
+    border: 1px solid rgba(109, 93, 251, 0.12);
+    box-shadow: 0 18px 42px rgba(83, 61, 148, 0.14);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+.focus-kicker {
+    color: #7b69c9;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+}
+
+.focus-time {
+    margin-top: 16px;
+    font-size: 68px;
+    font-weight: 300;
+    line-height: 1;
+    letter-spacing: -0.055em;
+    font-variant-numeric: tabular-nums;
+}
+
+.focus-caption {
+    margin: 13px 0 28px;
+    color: #837a9e;
+    font-size: 14px;
+}
+
+.focus-primary,
+.focus-secondary {
+    width: 100%;
+    border: 0;
+    border-radius: 16px;
+    padding: 13px 18px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.focus-primary {
+    color: #fff;
+    background: linear-gradient(135deg, #6d5dfb, #b968f0);
+    box-shadow: 0 8px 20px rgba(109, 93, 251, 0.28);
+}
+
+.focus-secondary {
+    margin-top: 10px;
+    color: #6d5dfb;
+    background: rgba(109, 93, 251, 0.09);
+}

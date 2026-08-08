@@ -1,0 +1,555 @@
+/* ============================================
+ * chat-app 输入区域样式
+ *
+ * 仿妆原则: 用 framework 的脸，画 chat.js 的妆
+ * 效果参考: 参考/chat.js renderPrivateChat() 输入区部分
+ *
+ * 样式规范:
+ *   - 所有样式写到本文件
+ *   - JS 只放动态数据属性(data-*)和无法预知的动态颜色
+ *   - 动态颜色通过 CSS 属性选择器 [data-color="xxx"] 设置
+ *
+ * ============================================ */
+
+/* ---- 输入区域容器 ---- */
+.app-shell[data-app-id="chat"] .chat-private .input-container, .app-shell[data-app-id="chat"] .chat-group .input-container {
+    flex-shrink: 0;
+    background: white;
+    padding: 10px 14px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+    z-index: 10;
+}
+
+/* ---- 消息列表容器 ---- */
+.app-shell[data-app-id="chat"] .chat-private .chat-messages, .app-shell[data-app-id="chat"] .chat-group .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 20px 10px 0;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+/* 隐藏滚动条 */
+.app-shell[data-app-id="chat"] .chat-private .chat-messages::-webkit-scrollbar, .app-shell[data-app-id="chat"] .chat-group .chat-messages::-webkit-scrollbar {
+    display: none;
+}
+
+/* ---- 展开工具栏按钮 ---- */
+.app-shell[data-app-id="chat"] .chat-private .expand-toolbar-btn, .app-shell[data-app-id="chat"] .chat-group .expand-toolbar-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #F8F9FA;
+    border: 1px solid #E9ECEF;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .expand-toolbar-btn:hover, .app-shell[data-app-id="chat"] .chat-group .expand-toolbar-btn:hover {
+    background: #E9ECEF;
+    transform: scale(1.05);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .expand-toolbar-btn:active, .app-shell[data-app-id="chat"] .chat-group .expand-toolbar-btn:active {
+    transform: scale(0.95);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .expand-toolbar-btn.active, .app-shell[data-app-id="chat"] .chat-group .expand-toolbar-btn.active {
+    background: #D6E4FF;
+    border-color: #A8C8EC;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .expand-toolbar-btn svg, .app-shell[data-app-id="chat"] .chat-group .expand-toolbar-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: #4A6FA5;
+    stroke-width: 2;
+}
+
+/* ---- 输入框包装器 ---- */
+.app-shell[data-app-id="chat"] .chat-private .input-wrapper, .app-shell[data-app-id="chat"] .chat-group .input-wrapper {
+    flex: 1;
+    background: #F8F9FA;
+    border: 1px solid #E9ECEF;
+    border-radius: 20px;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .input-wrapper:focus-within, .app-shell[data-app-id="chat"] .chat-group .input-wrapper:focus-within {
+    border-color: #A8C8EC;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(168, 200, 236, 0.2);
+}
+
+/* ---- 可编辑输入框 ---- */
+.app-shell[data-app-id="chat"] .chat-private .message-input, .app-shell[data-app-id="chat"] .chat-group .message-input {
+    flex: 1;
+    outline: none;
+    font-size: 14px;
+    min-height: 22px;
+    max-height: 80px;
+    word-break: break-word;
+    color: #333;
+    line-height: 1.5;
+    overflow-y: auto;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-input:empty::before, .app-shell[data-app-id="chat"] .chat-group .message-input:empty::before {
+    content: attr(data-placeholder);
+    color: #C4C4C4;
+    pointer-events: none;
+}
+
+/* ---- 表情按钮 ---- */
+.app-shell[data-app-id="chat"] .chat-private .emoji-btn, .app-shell[data-app-id="chat"] .chat-group .emoji-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    opacity: 0.6;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .emoji-btn:hover, .app-shell[data-app-id="chat"] .chat-group .emoji-btn:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .emoji-btn:active, .app-shell[data-app-id="chat"] .chat-group .emoji-btn:active {
+    transform: scale(0.95);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .emoji-btn svg, .app-shell[data-app-id="chat"] .chat-group .emoji-btn svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: #666;
+    stroke-width: 1.5;
+}
+
+/* ---- 发送按钮 ---- */
+.app-shell[data-app-id="chat"] .chat-private .send-btn, .app-shell[data-app-id="chat"] .chat-group .send-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #A8C8EC, #95B8E0);
+    border: none;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    flex-shrink: 0;
+    box-shadow: 0 2px 10px rgba(168, 200, 236, 0.4);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .send-btn:hover, .app-shell[data-app-id="chat"] .chat-group .send-btn:hover {
+    transform: scale(1.1) rotate(-5deg);
+    background: #95B8E0;
+    box-shadow: 0 4px 15px rgba(168, 200, 236, 0.6);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .send-btn:active, .app-shell[data-app-id="chat"] .chat-group .send-btn:active {
+    transform: scale(0.95);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .send-btn:disabled, .app-shell[data-app-id="chat"] .chat-group .send-btn:disabled {
+    background: #E0E0E0;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .send-btn:disabled:hover, .app-shell[data-app-id="chat"] .chat-group .send-btn:disabled:hover {
+    transform: none;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .send-btn svg, .app-shell[data-app-id="chat"] .chat-group .send-btn svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+}
+
+/* ---- v0.62.5 长按发送按钮:进度填充 → 变粉 → 满了发送 ---- */
+.app-shell[data-app-id="chat"] .chat-private .send-btn,
+.app-shell[data-app-id="chat"] .chat-group .send-btn {
+    /* 默认状态:蓝色背景(已在上面定义) */
+    position: relative;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* 长按时的进度填充层(用 ::before 覆盖一层渐变粉色,
+   通过 --press-progress 自定义属性控制宽度 0→100%) */
+.app-shell[data-app-id="chat"] .chat-private .send-btn::before,
+.app-shell[data-app-id="chat"] .chat-group .send-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #FF9CC4, #FF6FA8, #E94B8E);
+    /* 默认隐藏(width: 0) */
+    width: 0;
+    height: 100%;
+    transition: width 0s;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* 按下状态:进度从 0 涨到 100%,CSS transition 用 --press-duration 控制 */
+.app-shell[data-app-id="chat"] .chat-private .send-btn.is-pressing::before,
+.app-shell[data-app-id="chat"] .chat-group .send-btn.is-pressing::before {
+    width: var(--press-progress, 100%);
+    transition: width var(--press-duration, 3000ms) linear;
+}
+
+/* 按下状态:整体变粉(可选,这里直接靠 ::before 覆盖) */
+.app-shell[data-app-id="chat"] .chat-private .send-btn.is-pressing,
+.app-shell[data-app-id="chat"] .chat-group .send-btn.is-pressing {
+    transform: scale(0.95);
+    background: #FF9CC4;
+}
+
+/* 触发后(已满):保持粉色 + 轻微脉冲 */
+.app-shell[data-app-id="chat"] .chat-private .send-btn.is-pressing--armed,
+.app-shell[data-app-id="chat"] .chat-group .send-btn.is-pressing--armed {
+    background: #E94B8E;
+    transform: scale(1.05);
+    box-shadow: 0 4px 20px rgba(233, 75, 142, 0.5);
+}
+
+/* svg 在 ::before 之上 */
+.app-shell[data-app-id="chat"] .chat-private .send-btn svg,
+.app-shell[data-app-id="chat"] .chat-group .send-btn svg {
+    position: relative;
+    z-index: 1;
+}
+
+/* ---- 工具组 (默认收起在输入栏下方,展开时向下推开) ---- */
+.app-shell[data-app-id="chat"] .chat-private .input-toolbar, .app-shell[data-app-id="chat"] .chat-group .input-toolbar {
+    flex-shrink: 0;
+    background: #FAFBFC;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                padding 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 0 12px;
+    border-top: 1px solid transparent;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .input-toolbar.expanded, .app-shell[data-app-id="chat"] .chat-group .input-toolbar.expanded,
+.app-shell[data-app-id="chat"] .chat-private .input-toolbar.input-toolbar-expanded, .app-shell[data-app-id="chat"] .chat-group .input-toolbar.input-toolbar-expanded {
+    max-height: 240px;
+    padding: 10px 12px;
+    border-top-color: #E9ECEF;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .expand-toolbar-btn.active, .app-shell[data-app-id="chat"] .chat-group .expand-toolbar-btn.active {
+    background: linear-gradient(135deg, #A8C8EC, #95B8E0);
+    border-color: #A8C8EC;
+    transform: rotate(45deg);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .expand-toolbar-btn.active svg, .app-shell[data-app-id="chat"] .chat-group .expand-toolbar-btn.active svg {
+    stroke: #FFFFFF;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .toolbar-content, .app-shell[data-app-id="chat"] .chat-group .toolbar-content {
+    padding: 0;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .toolbar-grid, .app-shell[data-app-id="chat"] .chat-group .toolbar-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+}
+
+/* ---- 工具栏按钮 ---- */
+.app-shell[data-app-id="chat"] .chat-private .toolbar-btn, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn {
+    background: #F0F2F5;
+    border: none;
+    padding: 12px 6px;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .toolbar-btn:hover, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn:hover {
+    background: #E4E8ED !important;
+    transform: translateY(-2px);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .toolbar-btn:active, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn:active {
+    transform: scale(0.96);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .toolbar-btn-icon, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .toolbar-btn-icon svg, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .toolbar-btn-label, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn-label {
+    font-size: 10px;
+    color: #5A6B7D;
+    font-weight: 500;
+}
+
+/* ---- 工具栏图标样式 ---- */
+
+/* 图片 */
+.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="image"] .toolbar-btn-icon, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="image"] .toolbar-btn-icon {
+    background: #E4E8ED;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="image"] svg, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="image"] svg {
+    fill: #5A6B7D;
+}
+
+/* 语音 */
+.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="voice"] .toolbar-btn-icon, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="voice"] .toolbar-btn-icon {
+    background: #E4E8ED;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="voice"] svg, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="voice"] svg {
+    fill: #5A6B7D;
+}
+
+/* 表情 */
+.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="sticker"] .toolbar-btn-icon, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="sticker"] .toolbar-btn-icon {
+    background: #E4E8ED;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="sticker"] svg, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="sticker"] svg {
+    fill: none;
+    stroke: #5A6B7D;
+    stroke-width: 2;
+}
+
+/* 位置 */
+.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="location"] .toolbar-btn-icon, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="location"] .toolbar-btn-icon {
+    background: #E4E8ED;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="location"] svg, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="location"] svg {
+    fill: #5A6B7D;
+}
+
+/* 红包 */
+.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="redpacket"] .toolbar-btn-icon, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="redpacket"] .toolbar-btn-icon {
+    background: #FEE2E2;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="redpacket"] svg, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="redpacket"] svg {
+    fill: #DC2626;
+}
+
+/* 转账 */
+.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="transfer"] .toolbar-btn-icon, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="transfer"] .toolbar-btn-icon {
+    background: #FEF3C7;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="transfer"] svg, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="transfer"] svg {
+    fill: #D97706;
+}
+
+/* 通话 */
+.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="call"] .toolbar-btn-icon, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="call"] .toolbar-btn-icon {
+    background: #E4E8ED;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="call"] svg, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="call"] svg {
+    fill: #5A6B7D;
+}
+
+/* 收藏 */
+.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="favorite"] .toolbar-btn-icon, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="favorite"] .toolbar-btn-icon {
+    background: #E4E8ED;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="favorite"] svg, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="favorite"] svg {
+    fill: #5A6B7D;
+}
+
+/* ---- 回复预览区域 ---- */
+.app-shell[data-app-id="chat"] .chat-private .reply-preview, .app-shell[data-app-id="chat"] .chat-group .reply-preview {
+    display: none;
+    padding: 10px 16px;
+    background: linear-gradient(90deg, #E8F2FF, #F8FBFF);
+    border-left: 3px solid #A8C8EC;
+    animation: slideUp 0.3s ease;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .reply-preview.active, .app-shell[data-app-id="chat"] .chat-group .reply-preview.active {
+    display: block;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .reply-preview-content, .app-shell[data-app-id="chat"] .chat-group .reply-preview-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .reply-preview-left, .app-shell[data-app-id="chat"] .chat-group .reply-preview-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .reply-preview-icon, .app-shell[data-app-id="chat"] .chat-group .reply-preview-icon {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: #A8C8EC;
+    stroke-width: 2;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .reply-preview-text, .app-shell[data-app-id="chat"] .chat-group .reply-preview-text {
+    font-size: 12px;
+    color: #666;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .reply-preview-text span, .app-shell[data-app-id="chat"] .chat-group .reply-preview-text span {
+    color: #4A6FA5;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .cancel-reply-btn, .app-shell[data-app-id="chat"] .chat-group .cancel-reply-btn {
+    width: 24px;
+    height: 24px;
+    background: #F0F0F0;
+    border: none;
+    color: #8E8E8E;
+    cursor: pointer;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    font-size: 16px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .cancel-reply-btn:hover, .app-shell[data-app-id="chat"] .chat-group .cancel-reply-btn:hover {
+    background: #E0E0E0;
+    color: #666;
+}
+
+/* ---- 动画 ---- */
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes messageIn {
+    from {
+        opacity: 0;
+        transform: translateY(15px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ---- 语音录制状态 ---- */
+.app-shell[data-app-id="chat"] .chat-private .input-container.recording .expand-toolbar-btn, .app-shell[data-app-id="chat"] .chat-group .input-container.recording .expand-toolbar-btn,
+.app-shell[data-app-id="chat"] .chat-private .input-container.recording .emoji-btn, .app-shell[data-app-id="chat"] .chat-group .input-container.recording .emoji-btn {
+    display: none;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .voice-recording-hint, .app-shell[data-app-id="chat"] .chat-group .voice-recording-hint {
+    display: none;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: #FF6B6B;
+    animation: pulse 1s ease infinite;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .input-container.recording .voice-recording-hint, .app-shell[data-app-id="chat"] .chat-group .input-container.recording .voice-recording-hint {
+    display: flex;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* ---- 多选模式 ---- */
+/* (多选工具栏由独立 .multi-select-bar 浮层承载,见 _chat-multiselect.css,这里不再重复规则) */
+
+.app-shell[data-app-id="chat"] .chat-private .multi-select-btn, .app-shell[data-app-id="chat"] .chat-group .multi-select-btn {
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: none;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .multi-select-btn.forward, .app-shell[data-app-id="chat"] .chat-group .multi-select-btn.forward {
+    background: #E8F2FF;
+    color: #4A6FA5;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .multi-select-btn.delete, .app-shell[data-app-id="chat"] .chat-group .multi-select-btn.delete {
+    background: #FFE8F0;
+    color: #FF6B6B;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .multi-select-btn.star, .app-shell[data-app-id="chat"] .chat-group .multi-select-btn.star {
+    background: #FFF8E8;
+    color: #F59E0B;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .multi-select-btn:hover, .app-shell[data-app-id="chat"] .chat-group .multi-select-btn:hover {
+    transform: scale(1.05);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .multi-select-btn:active, .app-shell[data-app-id="chat"] .chat-group .multi-select-btn:active {
+    transform: scale(0.95);
+}

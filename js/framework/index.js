@@ -26,6 +26,11 @@ export { useCardMode } from './use-card-mode.js';
 export { useWidgetPicker } from './use-widget-picker.js';
 export { bootstrapSystemData } from './core-shim.js';
 
+// ★ v0.28 顶层预热:fire-and-forget 启动 settings-sdk
+//  import 副作用会让 settingsSdk 在 framework mount 之前就开始 hydrate,
+//  业务 app 打开 detail 时大概率已经就绪
+import { prewarmSettingsSdk, whenSettingsSdkReady } from './prewarm.js';
+
 // 兼容层：把 ESM 暴露的 framework 函数挂到 window，让"非 ESM 老代码"继续能用
 // （理想情况下未来会逐步移除这些挂载，目前是过渡期保留）
 import { UI_CONSTANTS as _UI_CONSTANTS } from './utils.js';
@@ -46,5 +51,8 @@ if (typeof window !== 'undefined') {
         useDesktopEdit: _useDesktopEdit,
         useCardMode: _useCardMode,
         useWidgetPicker: _useWidgetPicker,
+        // ★ v0.28 顶层 SDK 预热入口(暴露给业务 app)
+        whenSettingsSdkReady,
+        prewarmSettingsSdk,
     });
 }

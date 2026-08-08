@@ -1,0 +1,130 @@
+/* header 内部按钮始终保留 — 进入多选模式不动它们(.multi-select-bar 才是模式切换的 UI) */
+.app-shell[data-app-id="chat"] .header-actions {
+    display: flex;
+}
+
+/* 多选按钮 — 在多选模式下显示为「已激活」状态,背景填充 + 内描边高亮 */
+.app-shell[data-app-id="chat"] .multi-select-mode .header-btn[data-action="multiselect"] {
+    background: #4A6FA5;
+    border-color: #4A6FA5;
+    color: #ffffff;
+    box-shadow: 0 2px 6px rgba(74, 111, 165, 0.35);
+}
+
+.app-shell[data-app-id="chat"] .multi-select-mode .header-btn[data-action="multiselect"]:hover {
+    background: #3a5d8f;
+    border-color: #3a5d8f;
+}
+
+/* 多选模式浮层 — 始终位于同一位置,仅靠 .multi-select-mode 切换显隐 */
+.app-shell[data-app-id="chat"] .multi-select-bar {
+    display: none;
+    flex-shrink: 0;
+    padding: 7px 14px;
+    background: #e8f2ff;
+    border-bottom: 1px solid #d6e4ff;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    animation: multiSelectBarIn 0.3s ease;
+}
+
+@keyframes multiSelectBarIn {
+    from { transform: translateY(-100%); opacity: 0; }
+    to   { transform: translateY(0);     opacity: 1; }
+}
+
+.app-shell[data-app-id="chat"] .multi-select-mode .multi-select-bar {
+    display: flex;
+}
+
+.app-shell[data-app-id="chat"] .multi-select-count {
+    color: #4a6fa5;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="chat"] .multi-select-count strong {
+    color: #ed2541;
+    margin: 0 1px;
+}
+
+/* 容器(给按钮组用) */
+.app-shell[data-app-id="chat"] .multi-select-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.app-shell[data-app-id="chat"] .multi-select-action,
+.app-shell[data-app-id="chat"] .multi-select-cancel {
+    padding: 4px 10px;
+    border-radius: 14px;
+    border: 1px solid #d6e4ff;
+    background: #ffffff;
+    color: #4a6fa5;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.app-shell[data-app-id="chat"] .multi-select-action:hover,
+.app-shell[data-app-id="chat"] .multi-select-cancel:hover {
+    transform: scale(1.05);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* 消息左侧圆圈 — 仅多选模式出现,不影响普通气泡布局 */
+.app-shell[data-app-id="chat"] .message-select-button {
+    display: none;
+}
+
+.app-shell[data-app-id="chat"] .multi-select-mode .message-wrapper {
+    align-items: center;
+}
+
+.app-shell[data-app-id="chat"] .multi-select-mode .message-select-button {
+    display: flex;
+    flex: 0 0 22px;
+    width: 22px;
+    height: 22px;
+    margin-right: 8px;
+    align-self: center;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #cbd5e1;
+    border-radius: 50%;
+    background: #ffffff;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .message-select-check {
+    width: 8px;
+    height: 5px;
+    border-left: 2px solid transparent;
+    border-bottom: 2px solid transparent;
+    transform: rotate(-45deg) translate(1px, -1px);
+}
+
+.app-shell[data-app-id="chat"] .message-select-button[aria-checked="true"] {
+    background: #4a6fa5;
+    border-color: #4a6fa5;
+}
+
+.app-shell[data-app-id="chat"] .message-select-button[aria-checked="true"] .message-select-check {
+    border-color: #ffffff;
+}
+
+/* 选中态 — 气泡轻微描边 */
+.app-shell[data-app-id="chat"] .multi-select-mode .message-wrapper.selected .message-bubble {
+    box-shadow: 0 0 0 2px rgba(74, 111, 165, 0.32);
+}
+
+/* 多选模式时不要让 hover 浮出 .message-actions 跟圆圈重叠打架 */
+.app-shell[data-app-id="chat"] .multi-select-mode .message-wrapper .message-actions,
+.app-shell[data-app-id="chat"] .multi-select-mode .call-record-wrapper .call-record-actions {
+    display: none !important;
+}

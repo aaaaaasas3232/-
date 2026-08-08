@@ -1,5 +1,5 @@
 /**
- * settings-sdk · 人设日程 (Schedule) v0.19
+ * settings-sdk · 人设日程 (Schedule) v0.20
  *
  *   存储位置：sdkSchedules 表，keyPath = 'id'
  *   id 结构：`<entityType>:<entityId>:<YYYY-MM-DD>` —— 与 diary 共享粒度（一天一篇 / 人设）
@@ -74,8 +74,22 @@ export function createScheduleApi({ toolkit, cache, events, bump }) {
     };
 
     const get = (id) => cacheMap.get(id) || null;
-    const getDay = (entityType, entityId, date) =>
-        get(scheduleId(entityType, entityId, date));
+
+    /**
+     * 取某一天的日程。
+     */
+    const getDay = (entityType, entityId, date) => {
+        const base = get(scheduleId(entityType, entityId, date));
+        if (!base) return null;
+        const baseEvents = Array.isArray(base?.events) ? base.events : [];
+        return {
+            id: base.id,
+            entityType, entityId, date,
+            events: baseEvents,
+            createdAt: base.createdAt,
+            updatedAt: base.updatedAt,
+        };
+    };
 
     const list = () => Array.from(cacheMap.values());
 
@@ -171,7 +185,6 @@ export function createScheduleApi({ toolkit, cache, events, bump }) {
 
     const addEvent = async (entityType, entityId, date, payload = {}) => {
         if (!entityType || !entityId || !date) return null;
-        const day = await ensureDay(entityType, entityId, date);
         const event = {
             id: makeEventId(),
             title: clampText(payload.title, MAX_TITLE) || '未命名日程',
@@ -181,9 +194,9 @@ export function createScheduleApi({ toolkit, cache, events, bump }) {
             createdAt: now(),
             updatedAt: now(),
         };
+        const day = await ensureDay(entityType, entityId, date);
         const events = Array.isArray(day.events) ? day.events.slice() : [];
         events.push(event);
-        // 排序：开始时间升序，空时间排最后
         events.sort((a, b) => {
             const ax = a.startTime || '99:99';
             const bx = b.startTime || '99:99';
@@ -231,5 +244,178 @@ export function createScheduleApi({ toolkit, cache, events, bump }) {
         hydrate, _cache: cacheMap,
         MAX_TITLE, MAX_NOTE,
         scheduleId,
+    };
+}
+
+/**
+ * settings-sdk · 每周重复日程 (Weekly Schedule) v0.31
+ *
+ *   存储位置：sdkWeeklySchedules 表，keyPath = 'id'
+ *   id 结构：`<entityType>:<entityId>:<dayOfWeek>` —— 0=周日 ~ 6=周六
+ *
+ *   WeeklyDay 形状：
+ *     {
+ *       id: "user:user0:5",          // keyPath
+ *       entityType: "user",
+ *       entityId: "user0",
+ *       dayOfWeek: 5,                // 0=周日,1=周一,...,6=周六（JS Date.getDay() 一致）
+ *       events: [WeeklyEvent, ...],
+ *       createdAt, updatedAt
+ *     }
+ *
+ *   WeeklyEvent 形状：
+ *     {
+ *       id: 'evt-<timestamp>-<rand>',
+ *       title: string,                  // 标题（必填，<= 32 字符）
+ *       startTime: 'HH:MM',             // 开始时间（24h，可选；空 = 全天）
+ *       endTime:   'HH:MM',             // 结束时间（可选）
+ *       note: string,                   // 备注（可选，<= 120 字符）
+ *       createdAt, updatedAt,
+ *     }
+ *
+ *   API：getByDay / listForEntity / addEvent / updateEvent / removeEvent / hydrate
+ */
+export function createWeeklyScheduleApi({ toolkit, cache, events, bump }) {
+    const storeName = SDK_STORES.weeklySchedules;
+    const persist = createPersister(toolkit, storeName);
+    const cacheMap = new Map();
+    cache.weeklySchedules = cacheMap;
+
+    function weeklyId(entityType, entityId, dayOfWeek) {
+        return `${entityType}:${entityId}:${Number(dayOfWeek)}`;
+    }
+
+    function makeEventId() {
+        return `evt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    }
+
+    function clampText(v, max) {
+        if (v == null) return '';
+        const s = String(v).trim();
+        return s.length > max ? s.slice(0, max) : s;
+    }
+
+    function normalizeTime(v) {
+        if (v == null || v === '') return '';
+        const s = String(v).trim();
+        return TIME_RE.test(s) ? s : '';
+    }
+
+    const ensureDay = async (entityType, entityId, dayOfWeek) => {
+        const dow = Number(dayOfWeek);
+        const id = weeklyId(entityType, entityId, dow);
+        const existing = cacheMap.get(id);
+        if (existing) return existing;
+        const next = {
+            id,
+            entityType,
+            entityId,
+            dayOfWeek: dow,
+            events: [],
+            createdAt: now(),
+            updatedAt: now(),
+        };
+        cacheMap.set(next.id, next);
+        await persist(next);
+        return next;
+    };
+
+    const get = (id) => cacheMap.get(id) || null;
+
+    /** 按「周几」取某人某天的每周重复日程。*/
+    const getByDay = (entityType, entityId, dayOfWeek) => {
+        const dow = Number(dayOfWeek);
+        const base = get(weeklyId(entityType, entityId, dow));
+        if (!base) return null;
+        return {
+            id: base.id,
+            entityType, entityId,
+            dayOfWeek: base.dayOfWeek,
+            events: Array.isArray(base.events) ? base.events : [],
+            createdAt: base.createdAt,
+            updatedAt: base.updatedAt,
+        };
+    };
+
+    const list = () => Array.from(cacheMap.values());
+
+    const listForEntity = (entityType, entityId) =>
+        list()
+            .filter(d => d.entityType === entityType && d.entityId === entityId)
+            .sort((a, b) => (a.dayOfWeek ?? 0) - (b.dayOfWeek ?? 0));
+
+    const upsertDay = async (day) => {
+        const next = { ...day, updatedAt: now() };
+        cacheMap.set(next.id, next);
+        await persist(next);
+        bump('weeklySchedules', 'upsert', next);
+        return next;
+    };
+
+    /** 添加一条每周重复日程。*/
+    const addEvent = async (entityType, entityId, dayOfWeek, payload = {}) => {
+        if (!entityType || !entityId || dayOfWeek === undefined) return null;
+        const dow = Number(dayOfWeek);
+        if (isNaN(dow) || dow < 0 || dow > 6) return null;
+        const event = {
+            id: makeEventId(),
+            title: clampText(payload.title, MAX_TITLE) || '未命名日程',
+            startTime: normalizeTime(payload.startTime),
+            endTime: normalizeTime(payload.endTime),
+            note: clampText(payload.note, MAX_NOTE),
+            createdAt: now(),
+            updatedAt: now(),
+        };
+        const day = await ensureDay(entityType, entityId, dow);
+        const events = Array.isArray(day.events) ? day.events.slice() : [];
+        events.push(event);
+        events.sort((a, b) => {
+            const ax = a.startTime || '99:99';
+            const bx = b.startTime || '99:99';
+            return ax.localeCompare(bx);
+        });
+        return upsertDay({ ...day, events });
+    };
+
+    /** 更新一条每周重复日程。*/
+    const updateEvent = async (entityType, entityId, dayOfWeek, eventId, patch = {}) => {
+        const day = getByDay(entityType, entityId, dayOfWeek);
+        if (!day) return null;
+        const events = (day.events || []).map((e) => {
+            if (e.id !== eventId) return e;
+            return {
+                ...e,
+                title: clampText(patch.title ?? e.title, MAX_TITLE) || e.title,
+                startTime: patch.startTime !== undefined ? normalizeTime(patch.startTime) : e.startTime,
+                endTime:   patch.endTime   !== undefined ? normalizeTime(patch.endTime)   : e.endTime,
+                note:      patch.note      !== undefined ? clampText(patch.note, MAX_NOTE) : e.note,
+                updatedAt: now(),
+            };
+        });
+        return upsertDay({ ...day, events });
+    };
+
+    /** 删除一条每周重复日程。*/
+    const removeEvent = async (entityType, entityId, dayOfWeek, eventId) => {
+        const day = getByDay(entityType, entityId, dayOfWeek);
+        if (!day) return null;
+        const events = (day.events || []).filter((e) => e.id !== eventId);
+        return upsertDay({ ...day, events });
+    };
+
+    const hydrate = async () => {
+        if (!toolkit?.db) return;
+        const records = await toolkit.db.getAll(storeName);
+        cacheMap.clear();
+        for (const r of records || []) if (r?.id) cacheMap.set(r.id, r);
+    };
+
+    return {
+        list, listForEntity, listByDateForEntity: listForEntity,
+        get, getByDay, ensureDay,
+        addEvent, updateEvent, removeEvent,
+        hydrate, _cache: cacheMap,
+        MAX_TITLE, MAX_NOTE,
+        weeklyId,
     };
 }

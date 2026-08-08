@@ -72,7 +72,8 @@ function getActiveId(sdk, entityType) {
 
 /**
  * 把 DOM 中所有 data-persona-field 的值收集成 patch。
- *   data-persona-field="entityType|groupKey|fieldKey"
+ *   data-persona-field="entityType|fieldKey"            (base / meta 顶层字段)
+ *   data-persona-field="entityType|groupKey|fieldKey"   (嵌套模块字段，如 preferences.hobbies)
  */
 function collectFieldsFromDom(entityType) {
     const prefix = `${entityType}|`;
@@ -83,13 +84,14 @@ function collectFieldsFromDom(entityType) {
         if (!attr || !attr.startsWith(prefix)) return;
         const parts = attr.slice(prefix.length).split('|');
         const raw = (el.value ?? '').toString();
-        // 模块字段（如 memory|text）需要合并到父对象
+        // 模块字段（如 preferences|hobbies）需要合并到父对象
         if (parts.length >= 2) {
-            // parts[0] = groupKey (如 memory), parts[1] = fieldKey (如 text)
+            // parts[0] = groupKey (如 preferences), parts[1] = fieldKey (如 hobbies)
             const [groupKey, fieldKey] = parts;
             patch[groupKey] = patch[groupKey] || {};
             patch[groupKey][fieldKey] = raw;
         } else {
+            // base / meta 顶层字段直接写到 patch[fieldKey]
             patch[parts[0]] = raw;
         }
     });
@@ -192,6 +194,11 @@ export function buildPersonaMethods() {
                 onConfirm: async () => {
                     const api = sdk[apiKey(entityType)];
                     await api.remove(id);
+                    // ★ v0.23：如果是默认卡被删，自动 fallback 到当前 activeUser
+                    //   保持「总有一个默认」语义，否则社媒 App 读不到「我」
+                    if (entityType === 'user' && sdk.defaultUserCard) {
+                        try { await sdk.defaultUserCard.onUserRemoved(id); } catch {}
+                    }
                     this.toolkit?.island?.notify?.('success', '已删除', name);
 
                     // 删除后切换到列表视图
@@ -224,14 +231,46 @@ export function buildPersonaMethods() {
 
         async personaSave(payload = {}) {
             const sdk = window.settingsSdk;
-            if (!sdk) return null;
+            console.log('[personaSave] called', { payload, hasSdk: !!sdk });
+            if (!sdk) { console.warn('[personaSave] no sdk'); return null; }
             const entityType = payload.entityType || 'ai';
             const id = getActiveId(sdk, entityType);
-            if (!id) return null;
+            console.log('[personaSave] resolved', { entityType, activeId: id });
+            if (!id) {
+                console.warn('[personaSave] no active id for entityType=', entityType);
+                this.toolkit?.island?.notify?.('error', '保存失败：未选中人设');
+                return null;
+            }
             const api = sdk[apiKey(entityType)];
+            const active = api.get(id);
+            console.log('[personaSave] before', {
+                id,
+                name: active?.name,
+                updatedAt: active?.updatedAt,
+                preferences: active?.preferences,
+                memory: active?.memory,
+            });
             const patch = collectFieldsFromDom(entityType);
+            console.log('[personaSave] patch collected', JSON.parse(JSON.stringify(patch)));
+            const fieldCount = document.querySelectorAll(`[data-persona-field^="${entityType}|"]`).length;
+            console.log('[personaSave] DOM field count =', fieldCount, '(collected keys=', Object.keys(patch).length, ')');
             // 同步切换 profile level
             const next = await api.update(id, patch);
+            console.log('[personaSave] api.update returned', {
+                id: next?.id,
+                name: next?.name,
+                updatedAt: next?.updatedAt,
+                preferences: next?.preferences,
+                memory: next?.memory,
+            });
+            const after = api.get(id);
+            console.log('[personaSave] api.get after', {
+                id: after?.id,
+                name: after?.name,
+                updatedAt: after?.updatedAt,
+                preferences: after?.preferences,
+                memory: after?.memory,
+            });
             this.toolkit?.island?.notify?.('success', '已保存', next.name || id);
             refresh();
             return next;
@@ -1160,6 +1199,58 @@ export function buildPersonaMethods() {
             const prev = persona.boundResources || {};
             const ids = (Array.isArray(prev.promptIds) ? prev.promptIds : []).filter(p => p !== payload.promptId);
             await api.update(id, { boundResources: { ...prev, promptIds: ids } });
+            refresh();
+            bumpDetailRenderTick();
+            return true;
+        },
+
+        // ============================================
+        // ★ v0.23 默认用户卡
+        //   只对 entityType === 'user' 生效，AI 卡没有这个字段
+        //   SDK 的 defaultUserCard.setDefault 会自动清除其他 user 的标记
+        // ============================================
+        async personaSetDefault(payload = {}) {
+            const sdk = window.settingsSdk;
+            if (!sdk?.defaultUserCard) return null;
+            const entityType = payload.entityType || 'user';
+            if (entityType !== 'user') {
+                this.toolkit?.island?.notify?.('warning', 'AI 卡没有默认字段');
+                return null;
+            }
+            // 优先用 payload.userId（明确指定），否则用当前 active
+            const userId = payload.userId || getActiveId(sdk, 'user');
+            if (!userId) {
+                this.toolkit?.island?.notify?.('error', '未指定用户');
+                return null;
+            }
+            const user = sdk.users.get(userId);
+            if (!user) {
+                this.toolkit?.island?.notify?.('error', '用户不存在', userId);
+                return null;
+            }
+            try {
+                await sdk.defaultUserCard.setDefault(userId);
+                this.toolkit?.island?.notify?.('success', '已设为默认', user.name || userId);
+            } catch (err) {
+                this.toolkit?.island?.notify?.('error', '设置失败', err?.message || '');
+                return null;
+            }
+            // 派发 settings-sdk:change + 触发刷新（让 persona-card 上的 badge 重画）
+            refresh();
+            bumpDetailRenderTick();
+            return true;
+        },
+
+        async personaUnsetDefault(payload = {}) {
+            const sdk = window.settingsSdk;
+            if (!sdk?.defaultUserCard) return null;
+            try {
+                await sdk.defaultUserCard.clearDefault();
+                this.toolkit?.island?.notify?.('info', '已取消默认');
+            } catch (err) {
+                this.toolkit?.island?.notify?.('error', '取消失败', err?.message || '');
+                return null;
+            }
             refresh();
             bumpDetailRenderTick();
             return true;

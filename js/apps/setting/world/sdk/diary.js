@@ -155,6 +155,7 @@ export function createDiaryApi({ toolkit, cache, events, bump }) {
         if (payload.moodIntensity !== undefined) patch.moodIntensity = Math.max(0, Math.min(1, Number(payload.moodIntensity)));
         if (payload.isPositive !== undefined) patch.isPositive = !!payload.isPositive;
         if (payload.diary !== undefined) patch.diary = String(payload.diary || '').slice(0, 200);
+        if (payload.todaySchedule !== undefined) patch.todaySchedule = payload.todaySchedule;
         return upsert(patch);
     };
 
@@ -248,6 +249,7 @@ export function createDiaryApi({ toolkit, cache, events, bump }) {
     return {
         list, listForEntity, get, getToday,
         ensureDay, addSegment, updateSegment, removeSegment, setMood, setMoodDetail,
+        upsert,
         getMonthDiaries, getDateDiary, removeDay, getDateRange,
         regenerate, hydrate, _cache: cacheMap,
         MOOD_PRESETS, MOOD_LABELS, getMoodIsPositive, getMoodDefaultIntensity,

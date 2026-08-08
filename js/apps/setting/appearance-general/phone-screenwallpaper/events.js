@@ -223,12 +223,9 @@ function handleChange(e) {
 }
 
 function handleInput(e) {
-    const target = e.target;
-
-    if (target.matches('.sw-slider') && target.dataset?.field === 'blur') {
-        handleBlurInput(target);
-        return;
-    }
+    // 用户要求：拖动期间不渲染，只在 change 时再渲染。
+    // 屏幕墙纸 blur 滑条同理——拖动时不动 state、不调 applyLightweight，避免 Vue 重渲染。
+    return;
 }
 
 // ============================================

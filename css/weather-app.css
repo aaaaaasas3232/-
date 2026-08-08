@@ -1,0 +1,756 @@
+/* ============================================
+ * 天气 App - 样式（搜索栏 / 城市卡片 / 详情页）
+ * 配色：清新蓝 (#4A90D9 → #67B8DE 渐变) + 白底文字
+ * ============================================ */
+
+/* ---------- 颜色变量 ---------- */
+:root {
+    --wth-primary: #4A90D9;
+    --wth-primary-2: #67B8DE;
+    --wth-text: #ffffff;
+    --wth-bg-card: rgba(255, 255, 255, 0.16);
+    --wth-divider: rgba(255, 255, 255, 0.18);
+    --wth-sub: rgba(255, 255, 255, 0.85);
+    --wth-sub2: rgba(255, 255, 255, 0.6);
+}
+
+/* ---------- 搜索栏 ---------- */
+.wth-search {
+    margin-bottom: 18px;
+    position: relative;
+    z-index: 100;
+}
+
+.wth-search-bar {
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
+    padding: 10px 14px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    min-height: 48px;
+    box-sizing: border-box;
+    border: 0.5px solid rgba(255, 255, 255, 0.15);
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.wth-search-icon {
+    color: rgba(255, 255, 255, 0.85);
+    margin-right: 10px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+}
+
+.wth-search-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 15px;
+    outline: none;
+    color: var(--wth-text);
+    min-width: 0;
+    padding: 0 6px;
+    caret-color: rgba(255, 255, 255, 0.9);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.wth-search-input::placeholder {
+    color: rgba(255, 255, 255, 0.55);
+    font-weight: 400;
+}
+
+.wth-search-btn {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.18));
+    border: none;
+    padding: 8px 18px;
+    border-radius: 10px;
+    color: var(--wth-text);
+    font-size: 14px;
+    cursor: pointer;
+    flex-shrink: 0;
+    white-space: nowrap;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.wth-search-btn:active {
+    transform: scale(0.97);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.25));
+}
+
+/* ---------- 城市列表 ---------- */
+.wth-cities {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* ---------- 城市卡片 ---------- */
+.wth-card {
+    border-radius: 20px;
+    padding: 20px;
+    color: var(--wth-text);
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.18s ease;
+}
+
+.wth-card:active {
+    transform: scale(0.985);
+}
+
+.wth-card-bg {
+    position: absolute;
+    inset: 0;
+    background-position: center;
+    background-size: cover;
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+.wth-card-body {
+    position: relative;
+    z-index: 1;
+}
+
+.wth-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 14px;
+}
+
+.wth-card-name {
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.wth-card-mapped {
+    font-size: 12px;
+    opacity: 0.8;
+    margin-top: 2px;
+}
+
+.wth-card-desc {
+    font-size: 13px;
+    opacity: 0.85;
+    margin-top: 4px;
+}
+
+.wth-card-primary {
+    background: rgba(255, 255, 255, 0.3);
+    padding: 4px 10px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.wth-card-temp {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.wth-temp {
+    font-size: 56px;
+    font-weight: 300;
+    line-height: 1;
+    letter-spacing: -0.02em;
+}
+
+.wth-temp-loading {
+    font-size: 28px;
+    font-weight: 300;
+    opacity: 0.7;
+}
+
+.wth-temp-icon {
+    text-align: right;
+}
+
+.wth-temp-icon svg {
+    width: 56px;
+    height: 56px;
+}
+
+.wth-card-hl {
+    font-size: 12px;
+    opacity: 0.85;
+    margin-top: 6px;
+}
+
+/* ---------- 空状态 ---------- */
+.wth-empty {
+    text-align: center;
+    padding: 30px 16px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.wth-empty-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: center;
+    opacity: 0.55;
+}
+
+.wth-empty-text {
+    font-size: 14px;
+    color: var(--wth-text);
+    opacity: 0.85;
+}
+
+.wth-empty-sub {
+    font-size: 12px;
+    margin-top: 8px;
+    opacity: 0.65;
+}
+
+/* ---------- 搜索结果页 ---------- */
+.wth-result-page {
+    padding: 16px 16px 24px;
+}
+
+.wth-result-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--wth-text);
+    margin-bottom: 18px;
+}
+
+.wth-result-card {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
+    padding: 20px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: var(--wth-text);
+}
+
+.wth-result-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+.wth-result-name {
+    font-size: 22px;
+    font-weight: 600;
+}
+
+.wth-result-desc {
+    font-size: 14px;
+    opacity: 0.8;
+    margin-top: 4px;
+}
+
+.wth-result-temp {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+}
+
+.wth-result-big-temp {
+    font-size: 48px;
+    font-weight: 300;
+    line-height: 1;
+}
+
+.wth-result-hl {
+    text-align: right;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.wth-result-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 18px;
+}
+
+.wth-result-cell {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 12px 8px;
+    text-align: center;
+}
+
+.wth-result-cell-label {
+    font-size: 11px;
+    opacity: 0.7;
+}
+
+.wth-result-cell-val {
+    font-size: 16px;
+    margin-top: 4px;
+    font-weight: 500;
+}
+
+.wth-result-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.wth-result-btn {
+    flex: 1;
+    padding: 13px 0;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.18s ease;
+}
+
+.wth-result-btn:active {
+    transform: scale(0.97);
+}
+
+.wth-result-btn--ghost {
+    background: rgba(255, 255, 255, 0.28);
+    color: var(--wth-text);
+}
+
+.wth-result-btn--solid {
+    background: var(--wth-text);
+    color: var(--wth-primary);
+}
+
+.wth-result-btn--danger {
+    background: rgba(255, 59, 48, 0.3);
+    color: var(--wth-text);
+}
+
+.wth-result-empty {
+    text-align: center;
+    padding: 28px 16px;
+    opacity: 0.8;
+    color: var(--wth-text);
+}
+
+.wth-result-loading {
+    text-align: center;
+    padding: 28px 16px;
+    color: var(--wth-text);
+    opacity: 0.8;
+}
+
+/* AI 绑定区域 */
+.wth-bind-card {
+    margin-top: 16px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 16px;
+    color: var(--wth-text);
+}
+
+.wth-bind-title {
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.wth-bind-sub {
+    font-size: 12px;
+    opacity: 0.75;
+    margin-bottom: 12px;
+    line-height: 1.5;
+}
+
+.wth-bind-select {
+    width: 100%;
+    padding: 11px 12px;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    background: rgba(255, 255, 255, 0.2);
+    color: var(--wth-text);
+    box-sizing: border-box;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.wth-bind-select option {
+    color: #1d1d1f;
+    background: #ffffff;
+}
+
+.wth-bind-btn {
+    width: 100%;
+    padding: 11px 0;
+    background: rgba(255, 255, 255, 0.22);
+    color: var(--wth-text);
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    cursor: pointer;
+    margin-top: 10px;
+    font-weight: 500;
+}
+
+.wth-bind-btn:active {
+    transform: scale(0.98);
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.wth-bind-empty {
+    font-size: 12px;
+    opacity: 0.65;
+    margin-top: 10px;
+}
+
+/* ---------- 城市详情页 ----------
+ * v0.30 全屏背景回归方案 C：
+ *   业务层 .wth-detail-page transparent，渐变由 framework 的 .app-background-layer
+ *   一张铺满。getBackground(state)（weather-app.js）跟随 detailCity 切到对应天气的
+ *   渐变 —— openCityDetail 时 ++__detailRenderTick.value，触发 activeAppBackgroundStyle
+ *   computed 重算。状态栏颜色由 framework currentStatusBarColor 注入（全屏渐变默认白字）。
+ *   业务层不再 inline style、不再画渐变，避免与框架层叠加形成「三张渐变拼接」。
+ */
+.app-detail-page[data-app-id="weather-app"] .app-detail-header {
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    /* v0.30.2：去掉白半透分隔线，整张渐变完全连贯(header 只靠字号和留白
+       区分，不靠 1px 线断开)。 */
+    border-bottom: 0;
+    color: #ffffff;
+}
+.app-detail-page[data-app-id="weather-app"] .app-detail-title,
+.app-detail-page[data-app-id="weather-app"] .app-detail-subtitle {
+    color: #ffffff;
+}
+.app-detail-page[data-app-id="weather-app"] .detail-back-button {
+    color: #ffffff;
+}
+
+/* v0.30.1：framework 默认 .app-detail-surface 有 background: #f5f5f7（iOS
+   detail 页灰底），但我们走全屏背景方案 .app-background-layer 一张渐变——
+   .app-detail-surface 是 .app-background-layer 的兄弟节点，灰底会盖住
+   渐变透出来。在 weather-app 下让它 transparent，让整张屏幕只剩一张渐变。 */
+.app-detail-page[data-app-id="weather-app"] .app-detail-surface {
+    background: transparent;
+}
+
+.app-detail-page[data-app-id="weather-app"] .wth-detail-page,
+.app-detail-page[data-app-id="weather-app"] .weather-app.wth-detail-page {
+    background: transparent;
+    padding: 0 0 24px;
+    color: #ffffff;
+    min-height: 100%;
+}
+
+/* 详情页里的 hero 文字（城市 / 温度）—— 沿用 wth-text 变量，无视背景 */
+.wth-detail-head {
+    text-align: center;
+    padding: 24px 20px 12px;
+    color: #ffffff;
+}
+
+.wth-detail-city {
+    font-size: 24px;
+    font-weight: 500;
+    margin-bottom: 6px;
+    line-height: 1.2;
+    color: #ffffff;
+}
+
+.wth-detail-mapped {
+    font-size: 12px;
+    opacity: 0.7;
+    margin-top: 2px;
+    color: #ffffff;
+}
+
+.wth-detail-big-temp {
+    font-size: 80px;
+    font-weight: 200;
+    margin: 6px 0;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    color: #ffffff;
+}
+
+.wth-detail-desc {
+    font-size: 18px;
+    opacity: 0.9;
+    color: #ffffff;
+}
+
+.wth-detail-hl {
+    font-size: 13px;
+    opacity: 0.7;
+    margin-top: 6px;
+    color: #ffffff;
+}
+
+/* 小时预报 */
+.wth-hourly {
+    padding: 18px 20px;
+    /* v0.29：详情页用更明显的半透白（0.18），在统一渐变上清晰漂浮 */
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 16px;
+    margin: 0 20px;
+    color: #ffffff;
+}
+
+.wth-hourly-scroll {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 14px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    gap: 4px;
+}
+
+.wth-hourly-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.wth-hour-cell {
+    flex-shrink: 0;
+    width: 56px;
+    text-align: center;
+    margin-right: 8px;
+}
+
+.wth-hour-time {
+    font-size: 13px;
+    opacity: 0.85;
+    color: #ffffff;
+}
+
+.wth-hour-icon {
+    font-size: 22px;
+    margin: 8px 0;
+    line-height: 1;
+}
+
+
+.wth-hour-temp {
+    font-size: 15px;
+    font-weight: 500;
+    color: #ffffff;
+}
+
+/* 7 天预报 */
+.wth-forecast {
+    margin: 18px 20px 0;
+    padding: 16px 18px;
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 16px;
+    color: #ffffff;
+}
+
+.wth-forecast-title {
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 12px;
+    opacity: 0.95;
+    color: #ffffff;
+}
+
+.wth-forecast-row {
+    display: flex;
+    align-items: center;
+    padding: 9px 0;
+    color: #ffffff;
+}
+
+.wth-forecast-row + .wth-forecast-row {
+    border-top: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.wth-forecast-day {
+    width: 56px;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.wth-forecast-icon {
+    font-size: 22px;
+    margin: 0 14px;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.wth-forecast-bar {
+    flex: 1;
+    display: flex;
+    align-items: center;
+}
+
+.wth-forecast-low {
+    opacity: 0.65;
+    margin-right: 8px;
+    font-size: 13px;
+    width: 30px;
+    text-align: right;
+}
+
+.wth-forecast-track {
+    flex: 1;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+}
+
+.wth-forecast-high {
+    margin-left: 8px;
+    font-size: 13px;
+    width: 30px;
+}
+
+/* 详细网格 */
+.wth-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    padding: 18px 20px 0;
+}
+
+.wth-detail-cell {
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 16px;
+    padding: 14px 16px;
+    color: #ffffff;
+}
+
+.wth-detail-cell-label {
+    font-size: 12px;
+    opacity: 0.75;
+    color: #ffffff;
+}
+
+.wth-detail-cell-val {
+    font-size: 28px;
+    font-weight: 500;
+    margin-top: 6px;
+    line-height: 1.1;
+    color: #ffffff;
+}
+
+.wth-detail-cell-unit {
+    font-size: 14px;
+    opacity: 0.8;
+    margin-left: 2px;
+    color: #ffffff;
+}
+
+/* 详情页操作按钮 */
+.wth-detail-actions {
+    padding: 18px 20px 0;
+    display: flex;
+    gap: 10px;
+}
+
+.wth-detail-btn {
+    flex: 1;
+    padding: 14px 0;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: 500;
+    /* v0.29：详情页统一渐变后，按钮文字用白 */
+    color: #ffffff;
+    transition: all 0.18s ease;
+}
+
+.wth-detail-btn:active {
+    transform: scale(0.97);
+}
+
+.wth-detail-btn--ghost {
+    background: rgba(255, 255, 255, 0.22);
+}
+
+.wth-detail-btn--danger {
+    background: rgba(255, 59, 48, 0.5);
+}
+
+.wth-detail-bg-btn {
+    padding: 0 20px 20px;
+}
+
+.wth-detail-bg-btn button {
+    width: 100%;
+    padding: 11px 0;
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.wth-detail-bg-btn button:active {
+    background: rgba(255, 255, 255, 0.22);
+}
+
+/* ---------- Widget 适配 ---------- */
+.wth-widget {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 100%;
+    padding: 10px 14px;
+    color: var(--wth-text);
+    border-radius: inherit;
+    box-sizing: border-box;
+}
+
+.wth-widget-city {
+    font-size: 12px;
+    opacity: 0.85;
+}
+
+.wth-widget-temp {
+    font-size: 22px;
+    font-weight: 500;
+    line-height: 1.1;
+}
+
+.wth-widget-temp-large {
+    font-size: 36px;
+    font-weight: 300;
+    line-height: 1;
+}
+
+.wth-widget-icon {
+    font-size: 28px;
+    line-height: 1;
+}
+
+.wth-widget-icon svg {
+    width: 1em;
+    height: 1em;
+}
+
+.wth-widget-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 12px;
+    border-radius: inherit;
+}

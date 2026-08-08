@@ -1,0 +1,517 @@
+================================================================================
+v0.65 实施总结 - 2026-08-08
+================================================================================
+
+项目: 小听启动 / chat-app
+本次主题: 日历模式分级记忆系统 + UI 调整
+开发位置: c:\Users\Administrator\Desktop\小听启动
+
+================================================================================
+一、整体改动一览
+================================================================================
+
+【核心新增】
+1. 分级记忆系统 SDK (memory-summaries.js)
+2. 层级管理页 (memory-management-page.js + CSS)
+3. 历史消息页重写 (memory-history-page.js + CSS)
+
+【UI 调整】
+1. 日历视图「上下文加载方式」三个按钮 → 改成 textarea 文本框
+2. 日历视图顶栏「生成概要」按钮 → 仍删除(已挪到层级管理)
+3. 日历视图当天面板「当日概要」+「生成概要」按钮 → 恢复
+4. 聊天设置 → 「历史消息」入口 → 改成「层级管理」入口
+
+【SDK / 服务集成】
+1. settings-sdk.js 挂载 sdk.memorySummaries
+2. prompt-builder.js 注入「分级记忆」段到 systemPrompt
+
+================================================================================
+二、文件改动清单
+================================================================================
+
+【新增文件 - 4 个】
+--------------------------------------------------------------------------------
+1. js/apps/setting/world/sdk/memory-summaries.js (~510 行)
+   - SDK 核心: getConfig / setLevels / addLevel / removeLevel / updateLevelCycle
+              list / listByLevel / listAvailableForLayer / get / add / update / remove
+              setActive / setOrder
+              generateLevelSummary(满 N 消 N) / buildPlaceholderFromLowerLevel
+              buildMemoryContext(给 prompt-builder 注入用) / validateCycleConstraints
+
+2. js/apps/chat-app/pages/memory-management-page.js (~190 行)
+   - 层级管理页: 列出 L1~L4 / 改周期(内联 input + 保存按钮)/ 删层级(弹确认)
+               / 加层级(弹表单弹窗)
+
+3. css/apps/chat/_chat-memory-management.css (~370 行)
+   - 层级管理页样式: 蓝色主 #4A6FA5 / 白色辅 / 简洁大方
+   - 含弹窗样式(添加层级 / 确认删除)
+
+4. js/apps/chat-app/pages/memory-history-page.js (~210 行)
+   - 历史消息页(上下结构): 顶部层级 tab 切换器 + 下方概要列表
+                         + 浮动「+ 新建概要」按钮(L1 专属)
+                         + 「生成概要」按钮(L2+ 专属)
+
+5. css/apps/chat/_chat-memory-history.css (~330 行)
+   - 历史消息页样式: 蓝色主 / 白色辅 / 简洁大方
+
+【修改文件 - 6 个】
+--------------------------------------------------------------------------------
+1. js/apps/setting/world/sdk/settings-sdk.js
+   - +18 行
+   - import + 挂载 sdk.memorySummaries
+
+2. js/apps/chat-app/pages/calendar-view-page.js
+   - 「上下文加载方式」三个按钮 → textarea
+   - 删除残留变量 contextMode = 'none'
+   - 恢复「当日概要」+「生成概要」按钮
+   - 顶栏右上「生成概要」按钮删除(v0.65 早期版本)
+
+3. css/apps/chat/_chat-calendar-view.css
+   - +.calendar-prompt-textarea 样式(替代三按钮)
+   - +.cdd-summary / .cdd-summary-btn / .cdd-summary-content 系列样式(回归)
+   - +.cdd-section-label / .cdd-section-icon 样式
+   - -删掉 .calendar-context-modes / .context-mode-btn / .context-mode-name / .context-mode-desc
+
+4. js/apps/chat-app/pages/chat-settings-page.js
+   - 「聊天记录管理」卡片里「历史消息」入口 → 改为「层级管理」入口
+   - 入口 pageId: memory-management-{aiPersonId}-{mode}
+   - 图标: 时钟 svg → 三层汉堡 svg
+
+5. js/apps/chat-app/index.js
+   - +13 个 method:
+     - openMemoryManagement / openMemoryHistory
+     - switchMemoryHistoryLevel
+     - openMemoryHistoryCreateModal
+     - editMemorySummary / rerollMemorySummary / deleteMemorySummary
+     - generateMemorySummaryManually
+     - openAddLevelModal / openRemoveLevelModal / saveUpdateLevelCycle
+     - openDaySummaryRangeModal(新!日历视图当天「生成概要」入口)
+   - 路由分发: memory-management- / memory-history- 前缀
+   - initCalendarViewInteractions 加 textarea input/blur 监听 → 持久化到 localStorage
+   - CHAT_SCROLL_SELECTORS 加 .memory-mgmt / .memory-history 滚动容器
+
+6. js/apps/chat-app/components/chat-modal-registry.js
+   - openSummaryEdit 新增 promptPrefix 参数:
+     把日历视图 textarea 内容作为 prefix + --- + 占位概要,拼到 content 顶部
+     用户在编辑弹窗里可以直接改 prompt 模板 + 真实概要一起
+
+7. js/apps/chat-app/services/prompt-builder.js
+   - build() 末尾在 replyFormatBlock 之后注入 memoryContext
+   - 调用 sdk.memorySummaries.buildMemoryContext(aiPersonId)
+   - L1~L4 全部 active=true 的概要按层级从大到小拼到 systemPrompt 末尾
+   - 加 parts.memorySummaries / stats 字段
+
+8. css/apps/chat/index.css
+   - +2 个 @import 链入新 CSS
+
+================================================================================
+三、SDK 数据模型详解
+================================================================================
+
+【层级配置】
+aiPerson.socialProfiles.chat.memoryConfig = {
+  version: '1.0',
+  levels: [
+    { id: 'L1', name: '日概要', cycle: 1,   order: 1, editable: false, deletable: false },
+    { id: 'L2', name: '周概要', cycle: 7,   order: 2, editable: true,  deletable: true  },
+    { id: 'L3', name: '月概要', cycle: 30,  order: 3, editable: true,  deletable: true  },
+    { id: 'L4', name: '年概要', cycle: 360, order: 4, editable: true,  deletable: true  },
+  ]
+}
+
+【概要记录】
+aiPerson.socialProfiles.chat.memorySummaries[] = [
+  {
+    id: 'ms-{ts}-{rand}',
+    storageLevel: 'L1' | 'L2' | ...    // 存在哪层
+    title: '8月1日 聊天概要',
+    content: '...',
+    sourceLevel: 'L0' | 'L1' | ...,    // 由哪层合并而来(L0=原始消息)
+    sourceIds: ['ms-xxx', ...],        // 消耗的下层概要 id
+    sourceDates: ['2026-08-01', ...],  // 涉及的日期
+    cycle: 7,                          // 生成时的周期值
+    consumed: false,                   // 是否被上层消耗(软标记)
+    deleted: false,                    // 软删
+    generatedAt: ts,
+    messageCount: 12,
+    originalDateRange: { start: '2026-08-01', end: '2026-08-07' },
+    asPrompt: { active: true, order: 999, source: 'memory-summary' },
+    createdAt: ts, updatedAt: ts,
+  },
+  ...
+]
+
+【硬约束】
+- L4.cycle > L3.cycle > L2.cycle > L1.cycle
+- 上层周期 > 下层周期(数组中 idx+1 = 下层)
+- 所有 cycle >= 1
+- L1 永远存在 + 永远是 order=1 + 永远 editable=false + deletable=false
+
+【满 N 消 N 规则】
+- L2 周概要: 当 L1 存量 ≥ 7 时可点「生成」
+- L3 月概要: 当 L2 存量 ≥ 30 时可点「生成」
+- L4 年概要: 当 L3 存量 ≥ 360 时可点「生成」
+- 生成后: 消耗的 N 条下层标 consumed=true(不再被新生成看到)
+          新增 1 条上层概要(默认 active=true)
+
+【改周期后果】
+- 校验新周期满足硬约束
+- 通过后: 该层所有 consumed=true 的概要回退为 consumed=false
+          下层概要数据完全不变(下一层概要本身依然存在)
+
+【删层级后果】
+- 软删该层所有概要(deleted=true, 数据保留可恢复)
+- 该层 order 从数组移除,上层概要自动降级(order 重排)
+- 上层概要里 storageLevel=L3 的字段不会因为「降级」而变成 storageLevel=L2
+  sourceLevel 引用依然是 id,不是 order → 软删允许将来「恢复」
+
+【加层级后果】
+- id 自动生成 L5/L6...(默认 L1~L4 已存在)
+- 临时加入列表 → 重新分配整型 order 1..N → 校验约束 → 通过后写回
+- 该层初始存量为 0(没有任何概要)
+- 已有概要的 sourceLevel 引用不变(因为增层不影响已有数据)
+
+================================================================================
+四、SDK 完整 API 列表
+================================================================================
+
+【配置层】
+- getConfig(aiPersonId) → { version, levels }
+- setLevels(aiPersonId, levels[]) → Promise<{ok, error?, levels?}>
+- addLevel(aiPersonId, {name, cycle, position}) → Promise<{ok, error?, level?}>
+- removeLevel(aiPersonId, levelId) → Promise<{ok, error?}>
+- updateLevelCycle(aiPersonId, levelId, newCycle) → Promise<{ok, error?, clearedCount?}>
+- validateCycleConstraints(levels[]) → {ok, error?}
+
+【数据层】
+- list(aiPersonId, levelId?) → Array
+- listByLevel(aiPersonId) → {L1: [...], L2: [...], ...}
+- listAvailableForLayer(aiPersonId, levelId) → Array
+- get(aiPersonId, summaryId) → Summary | null
+- add(aiPersonId, patch) → Promise<Summary | null>
+- update(aiPersonId, summaryId, patch) → Promise<Summary | null>
+- remove(aiPersonId, summaryId) → Promise<boolean>  // 软删
+- setActive(aiPersonId, summaryId, active) → Promise
+- setOrder(aiPersonId, summaryIdsInOrder[]) → Promise
+
+【生成层】
+- generateLevelSummary(aiPersonId, levelId, opts) → Promise<{ok, error?, summary?, consumedIds?}>
+  opts: { generateSummary?: async (lowerSummaries, info) => {ok, summary, title}, force?: boolean }
+- buildPlaceholderFromLowerLevel(lowerSummaries, opts) → {title, content, messageCount, dateRange}
+
+【工具】
+- buildMemoryContext(aiPersonId) → string  // 给 prompt-builder 注入用
+- DEFAULT_LEVELS  // 暴露给 UI 用
+
+================================================================================
+五、UI 路径(进入流程)
+================================================================================
+
+【路径 1: 聊天设置 → 层级管理】
+1. chat-app 主页 → 任一私聊/群聊 → 右上角「...」按钮
+2. → 聊天设置详情页(chat-settings-{aiPersonId}-{mode})
+3. → 「聊天记录管理」卡片 → 「层级管理」按钮
+4. → memory-management-{aiPersonId}-{mode} 层级管理页
+5. 可选操作:
+   - 改周期: 内联 input 改数字 → 点 ✓ 按钮 → 弹确认弹窗 → 确认
+   - 删层级: 点 × 按钮 → 弹确认弹窗 → 确认
+   - 加层级: 点底部「+ 添加层级」按钮 → 弹表单弹窗 → 选位置/填名称/填周期 → 添加
+6. → 「历史消息」入口(顶部卡片) → 跳历史消息页
+
+【路径 2: 聊天设置 → 层级管理 → 历史消息页】
+1. 同路径 1 步骤 1-5
+2. → 点「历史消息」入口
+3. → memory-history-{aiPersonId}-{mode} 历史消息页
+4. 顶部层级 tab 切换(L1/L2/L3/L4/... 按层级顺序)
+5. 当前层概要列表展示
+6. L1 层独有: 右下角浮动「+ 新建概要」按钮 → 弹 SummaryRangeModal
+   L2+ 层独有: 顶部「生成概要」按钮(enable/disable 取决于下层存量)
+7. 概要卡片操作:
+   - 编辑 → 弹 SummaryEditModal
+   - 重 Roll → 用下层概要重新拼内容
+   - 删除 → 弹顶层确认弹窗 → 软删
+
+【路径 3: 聊天设置 → 日历视图 → 当天「生成概要」】
+1. chat-app 主页 → 任一私聊 → 「...」按钮 → 聊天设置
+2. → 「聊天记录管理」卡片 → 「日历视图」按钮
+3. → calendar-view-{aiPersonId}-{mode} 日历视图详情页
+4. 顶部「发给 AI Prompt(用于概要整理)」textarea:
+   - 默认模板含 {{aiName}} {{userName}} {{dateRange}} {{messages}} 占位符
+   - 输入/失焦自动持久化到 localStorage
+   - key: xiaoting::calendar-prompt-template-{aiPersonId}-{mode}
+5. 点某天 → 展开当天面板
+6. 当天面板里:
+   - 顶部: 日期 + 「共 N 条消息」 + 关闭按钮
+   - 「当日概要」+「生成概要」按钮(已恢复)
+   - 「聊天记录」气泡列表
+7. 点「生成概要」→ 弹 SummaryRangeModal(只含当天)
+8. 确认 → 弹 SummaryEditModal(content 顶部自动拼 textarea prompt + --- + 占位概要)
+9. 编辑 → 保存 → sdk.memorySummaries.add(L1) → 灵动岛「已保存」
+
+================================================================================
+六、UI 视觉规范(用户指定)
+================================================================================
+
+【配色】
+- 主色: #4A6FA5(蓝)
+- 辅色: #FFFFFF(白) / #F5F7FA(浅灰背景)
+- 文字: #1F2937 / #6B7280 / #9CA3AF
+- 边框: #E9ECEF / #F0F2F5
+- 强调: #A8C8EC(浅蓝)/ #DC2626(红,用于删除)
+
+【风格】
+- 蓝色主、白色辅、简洁大方
+- 无 emoji,全部用 SVG icon
+- 圆角: 卡片 14px / 按钮 8~10px / 输入框 6~10px
+- 阴影: 仅 modal 用 box-shadow
+- 字号: 标题 16px / 正文 13~14px / 注释 11~12px
+
+【典型组件尺寸】
+- 顶栏: 高度 28px(按钮),padding 50px 12px 8px
+- 卡片: padding 14px 16px,border-radius 14px,border 1px solid #E9ECEF
+- 输入框: padding 8px 12px,border-radius 6~10px,字号 12~13px
+- 主按钮: padding 10px 16px,背景 #4A6FA5,白字,圆角 10px
+- 浮动按钮(右下角): 48×48,圆形,背景 #4A6FA5,box-shadow 0 4px 16px rgba(74,111,165,0.4)
+- 弹窗: max-width 320px,圆角 16px,白底
+
+================================================================================
+七、index.js 新增 method 完整签名
+================================================================================
+
+// 入口方法
+async openMemoryManagement(payload)
+async openMemoryHistory(payload)
+
+// 历史消息页 tab 切换
+switchMemoryHistoryLevel(payload)  // { aiPersonId, levelId }
+                                  // 写 window.__memoryHistoryActiveLevel + syncNow
+
+// L1 新建概要
+async openMemoryHistoryCreateModal(payload)  // { aiPersonId, mode, levelId }
+                                            // 弹 SummaryRangeModal + EditModal
+
+// 日历视图当天生成概要
+async openDaySummaryRangeModal(payload)  // { dateKey }
+                                        // 弹 SummaryRangeModal(只含当天)+ EditModal
+                                        // content 自动拼 textarea prompt prefix
+
+// 概要卡片操作
+async editMemorySummary(payload)  // { aiPersonId, mode, summaryId }
+async rerollMemorySummary(payload)  // { aiPersonId, mode, summaryId }
+async deleteMemorySummary(payload)  // { aiPersonId, mode, summaryId }
+                                   // 弹顶层确认弹窗 → 软删
+
+// L2+ 生成概要
+async generateMemorySummaryManually(payload)  // { aiPersonId, mode, levelId }
+                                             // 调 sdk.memorySummaries.generateLevelSummary
+
+// 层级管理 - 添加
+async openAddLevelModal(payload)  // 弹表单弹窗(选位置/填名称/填周期)
+                                  // 实时校验约束 → 调 sdk.memorySummaries.addLevel
+
+// 层级管理 - 删除
+async openRemoveLevelModal(payload)  // { levelId }
+                                    // 弹顶层确认弹窗 → 调 sdk.memorySummaries.removeLevel
+
+// 层级管理 - 改周期
+async saveUpdateLevelCycle(payload)  // { aiPersonId, levelId }
+                                    // 从 DOM 读 input.value
+                                    // 弹顶层确认弹窗 → 调 sdk.memorySummaries.updateLevelCycle
+
+================================================================================
+八、prompt-builder 集成
+================================================================================
+
+位置: js/apps/chat-app/services/prompt-builder.js
+
+build() 末尾在 replyFormatBlock 之后插入:
+```js
+let memoryContext = '';
+try {
+    if (opts.memoryInject?.enabled !== false && sdk.memorySummaries?.buildMemoryContext) {
+        memoryContext = sdk.memorySummaries.buildMemoryContext(aiPersonId) || '';
+    }
+} catch (err) {
+    console.warn('[prompt-builder] buildMemoryContext failed', err);
+}
+if (memoryContext) parts.push(memoryContext);
+```
+
+buildMemoryContext 输出格式:
+```
+# 分级记忆(用户启用)
+
+## 年概要(共 N 条)
+
+### 1. 标题 日期范围
+概要内容
+
+## 月概要(共 N 条)
+...
+
+## 周概要(共 N 条)
+...
+
+## 日概要(共 N 条)
+...
+```
+
+特性:
+- 按层级从大到小(L4 → L3 → L2 → L1)排列
+- 每层内按 generatedAt 降序
+- 只包含 asPrompt.active !== false 的概要
+- 没有任何 active 概要时返回空字符串
+
+================================================================================
+九、localStorage 持久化 key 清单
+================================================================================
+
+1. xiaoting::calendar-prompt-template-{aiPersonId}-{mode}
+   - 日历视图 textarea 内容(发给 AI 的 prompt 模板)
+   - 持久化时机: textarea input / blur 事件
+   - 读取时机: 渲染日历视图时
+
+================================================================================
+十、事件机制
+================================================================================
+
+业务事件:
+- chat:memory-summary-updated
+  - 派发时机: sdk.memorySummaries.generateLevelSummary 成功后
+  - detail: { aiPersonId, levelId, summaryId, consumedIds, source: 'memory-summaries' }
+  - 监听方: 暂无(预留)
+
+- chat:summary-updated(旧,继续保留)
+  - 派发时机: 日历概要 / 故事概要 / memory 概要 add/update/remove 成功后
+  - detail: { aiPersonId, summaryId, source }
+
+================================================================================
+十一、踩坑记录(重要)
+================================================================================
+
+1. ★ 修改变量名 - 不要重复声明 const
+   - 早期 patch 用了两次 `const upper / lower`,导致浏览器抛
+     `Identifier 'lower' has already been declared`
+   - 已修复: 合并为 `const upperLevel = prevLevel; const lowerLevel = nextLevel;`
+
+2. ★ v-html 里禁止用 addEventListener / appendChild
+   - 业务 DOM 操作只走 data-app-action 派发(framework 顶层 click 委托)
+   - 例外: modal 弹窗(挂到 document.body 上,framework 外)可以用 addEventListener
+
+3. ★ async renderMode detail 重画走二段式
+   - 不用 window.__detailRenderTick.value++(会被缓存拦截 + 死循环)
+   - 用 window.__appRendererBridge.syncNow({ force: true })
+
+4. ★ 数据持久化
+   - 业务 state 不持久化,必须显式写 localStorage / IndexedDB
+   - 例: textarea 内容走 localStorage
+        memorySummaries 走 aiPerson.socialProfiles.chat 顶层字段(自动 IndexedDB 落盘)
+
+5. ★ cycle 校验
+   - 改/增/删 周期必须满足「上层周期 > 下层周期」硬约束
+   - 校验失败时 SDK 返回 {ok: false, error: "..."},method 弹灵动岛警告
+
+================================================================================
+十二、待验证清单
+================================================================================
+
+【基础】
+[ ] 日历视图「上下文加载方式」三个按钮已替换成 textarea(蓝色边框,蓝字标题)
+[ ] 日历视图 textarea 默认含 {{aiName}} {{userName}} {{dateRange}} {{messages}} 占位符
+[ ] 日历视图 textarea 输入/失焦 → 刷新页面后内容保留
+[ ] 日历视图当天面板「当日概要」+「生成概要」按钮 + 聊天记录 三段结构
+[ ] 日历视图点「生成概要」→ 弹 SummaryRangeModal(只含当天 1 天)
+[ ] 日历视图 confirm 弹 SummaryEditModal(content 顶部有 prompt prefix)
+[ ] 日历视图保存 → 灵动岛「已保存概要」→ 列表显示新概要
+
+【聊天设置 → 层级管理】
+[ ] 聊天设置「聊天记录管理」第一个入口是「层级管理」(不是「历史消息」)
+[ ] 点「层级管理」→ 层级管理页
+[ ] 层级管理页: 默认显示 L1/L2/L3/L4 四层
+[ ] L1 显示「固定」badge,周期 input disabled
+[ ] L2/L3/L4 周期 input 可改,旁边有 ✓ 保存按钮 + × 删除按钮
+[ ] 改周期 input: 点 ✓ → 弹确认弹窗「修改后该层所有存量清零」→ 确认 → 灵动岛「已修改周期」
+[ ] 删层级: 点 × → 弹确认弹窗「删除后该层概要软删,上层自动降级」→ 确认 → 灵动岛「已删除层级」
+[ ] 加层级: 点「+ 添加层级」→ 弹表单弹窗(选位置/名称/周期)
+[ ] 加层级实时校验: 输入周期不合法时「确认」按钮变灰 + 红字提示
+[ ] 改/删/加 完成后层级管理页自动重画
+
+【层级管理 → 历史消息页】
+[ ] 层级管理页顶部「历史消息」入口
+[ ] 点 → 历史消息页(上下结构)
+[ ] 顶部层级 tab 切换器(L1 日 / L2 周 / L3 月 / L4 年 缩写)
+[ ] 默认激活 L1 tab,显示 L1 概要列表
+[ ] L1 tab 下: 右下角浮动「+」按钮(蓝色圆形)
+[ ] L1 tab: 点「+」→ 弹 SummaryRangeModal(选日期范围)→ 弹 SummaryEditModal → 保存 → 列表多 1 条
+[ ] L2 tab 下: 顶部「生成概要」按钮(蓝色长条)
+[ ] L2 tab: 当 L1 存量 < 7 时按钮灰态 + 文案「还需 X 条 L1」
+[ ] L2 tab: 当 L1 存量 >= 7 时按钮启用,文案「生成概要」
+[ ] L2 tab 点「生成概要」→ sdk.generateLevelSummary → L1 那 7 条消失(L1 tab 下看不到)+ L2 多 1 条
+[ ] 概要卡片三按钮: 编辑 / 重 Roll / 删除
+[ ] 编辑 → SummaryEditModal → 保存
+[ ] 重 Roll → 用下层概要重新拼内容 → 灵动岛「已重新生成」
+[ ] 删除 → 顶层确认弹窗 → 软删 → 灵动岛「已删除」
+
+【prompt 注入】
+[ ] SDK 写至少 1 条 active=true 的 memorySummaries
+[ ] 调用 promptBuilder.build(aiPersonId, mode, historyLimit)
+[ ] 检查返回的 systemPrompt 末尾有「# 分级记忆(用户启用)」段
+[ ] 检查层级按 L4 → L3 → L2 → L1 顺序排列
+[ ] 检查 active=false 的概要不在 systemPrompt 里
+
+【数据持久化】
+[ ] 写 1 条概要 → 刷新页面 → 数据保留(IndexedDB)
+[ ] 改 L2 周期 → 刷新页面 → 周期保留
+[ ] 删 L2 层级 → 刷新页面 → 该层概要标 deleted=true(数据保留)
+[ ] 加 L5 → 刷新页面 → L5 存在 + order 正确
+
+【滚动行为】
+[ ] 层级管理页 / 历史消息页: 滚动 → 切换 tab / 改周期后 滚动位置保留(CHAT_SCROLL_SELECTORS)
+[ ] 日历视图: textarea 滚动 → 切月后滚动位置保留
+
+【UI 风格】
+[ ] 颜色主调: #4A6FA5(蓝)/ #FFFFFF(白)/ #F5F7FA(浅灰)
+[ ] 全部用 SVG icon,无 emoji
+[ ] 圆角: 卡片 14px / 按钮 8~10px / 输入框 6~10px
+[ ] 字号: 标题 16px / 正文 13~14px / 注释 11~12px
+
+================================================================================
+十三、关键文件位置速查
+================================================================================
+
+SDK:
+- js/apps/setting/world/sdk/memory-summaries.js              # SDK 主体
+- js/apps/setting/world/sdk/settings-sdk.js                 # 挂载点(第 50 行 import,第 405 行挂载)
+
+页面:
+- js/apps/chat-app/pages/memory-management-page.js          # 层级管理页
+- js/apps/chat-app/pages/memory-history-page.js             # 历史消息页
+- js/apps/chat-app/pages/calendar-view-page.js              # 日历视图(改了)
+- js/apps/chat-app/pages/chat-settings-page.js              # 聊天设置(改了)
+
+CSS:
+- css/apps/chat/_chat-memory-management.css                 # 层级管理样式
+- css/apps/chat/_chat-memory-history.css                    # 历史消息样式
+- css/apps/chat/_chat-calendar-view.css                     # 日历视图(改了)
+- css/apps/chat/index.css                                   # 链入(第 81~82 行)
+
+集成:
+- js/apps/chat-app/index.js                                  # 入口(第 62~64 行 import,methods 加在 _saveStorySummary 后)
+- js/apps/chat-app/services/prompt-builder.js                # prompt 注入(第 757 行)
+- js/apps/chat-app/components/chat-modal-registry.js        # 弹窗(promptPrefix 第 705 行)
+
+================================================================================
+十四、剩余工作(可选)
+================================================================================
+
+[ ] chat迁移/README.md 加完整 v0.65 段(目前只写了一部分)
+[ ] AGENTS.md 加 §38「分级记忆系统」沉淀
+[ ] 真实 AI 接入 generateSummary 回调(目前是占位版)
+[ ] ai-service.js 加 generateKChainSummary 同款的 generateMemorySummary 入口
+[ ] memory-history-page 的滚动位置保留实测
+[ ] 修复任何你手动验证时发现的 bug
+
+================================================================================
+完成时间: 2026-08-08 17:30 (UTC+8)
+实施版本: v0.65.1
+================================================================================

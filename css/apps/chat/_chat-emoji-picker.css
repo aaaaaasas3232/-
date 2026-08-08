@@ -1,0 +1,330 @@
+/* ============================================
+ * chat-app · 表情选择器 (emoji picker panel)
+ *
+ *  v0.49 表情包库绑定 → 私聊/群聊表情贯通
+ *
+ *  触发流程:
+ *    1. 用户在私聊/群聊页点输入区右侧 #emojiBtn 笑脸
+ *    2. .chat-private[data-emoji-open="1"] 状态切到「开」
+ *    3. .input-toolbar 默认隐藏,.chat-emoji-picker 显示
+ *    4. 网格里点某个表情 → 触发 sdk.chatMessages.add(type='sticker') + 关 picker
+ *    5. 再次点 #emojiBtn → 切回「关」,恢复工具栏
+ *
+ *  数据源:
+ *    - 当前用户 (user persona) 的 boundResources.stickerGroupIds
+ *    - 图库 gallery_db.groups / images
+ *    - 缩略图:images.thumbnail (200x200 base64) — 优先读
+ *    - 原图:images.source — 点击发送时按需懒加载
+ *
+ *  样式规范(遵守 AGENTS.md §A.6 + 项目约定):
+ *    - 全部用 .app-shell[data-app-id="chat"] 前缀锁定
+ *    - 不写 #phone 守卫
+ *    - 动态数据 (表情 src / 名称) 由 JS 通过 escapeHtml 写入
+ *    - 状态位用 data-emoji-open 属性,不要 v-html 重画
+ * ============================================ */
+
+/* ---------- 状态切换 ---------- */
+
+/* 默认:picker 隐藏,工具栏显示 */
+.app-shell[data-app-id="chat"] .chat-private .chat-emoji-picker,
+.app-shell[data-app-id="chat"] .chat-group .chat-emoji-picker {
+    display: none;
+}
+
+/* 开:picker 显示,工具栏隐藏 */
+.app-shell[data-app-id="chat"] .chat-private[data-emoji-open="1"] .chat-emoji-picker,
+.app-shell[data-app-id="chat"] .chat-group[data-emoji-open="1"] .chat-emoji-picker {
+    display: flex;
+    flex-direction: column;
+}
+
+.app-shell[data-app-id="chat"] .chat-private[data-emoji-open="1"] .input-toolbar,
+.app-shell[data-app-id="chat"] .chat-group[data-emoji-open="1"] .input-toolbar {
+    display: none;
+}
+
+/* #emojiBtn 笑脸高亮 — 开状态 */
+.app-shell[data-app-id="chat"] .chat-private[data-emoji-open="1"] .emoji-btn,
+.app-shell[data-app-id="chat"] .chat-group[data-emoji-open="1"] .emoji-btn {
+    background: #FFE6F0;
+    color: #FF6B9D;
+}
+
+.app-shell[data-app-id="chat"] .chat-private[data-emoji-open="1"] .emoji-btn svg,
+.app-shell[data-app-id="chat"] .chat-group[data-emoji-open="1"] .emoji-btn svg {
+    stroke: #FF6B9D;
+}
+
+/* ---------- 面板容器 ---------- */
+
+.app-shell[data-app-id="chat"] .chat-private .chat-emoji-picker,
+.app-shell[data-app-id="chat"] .chat-group .chat-emoji-picker {
+    flex-shrink: 0;
+    background: #FAFAFC;
+    border-top: 1px solid rgba(0, 0, 0, 0.04);
+    padding: 12px 8px 8px;
+    box-sizing: border-box;
+    max-height: 220px;
+    overflow: hidden;
+    position: relative;
+}
+
+/* 头部条:「表情包」标题 + 关闭按钮 */
+.app-shell[data-app-id="chat"] .chat-private .chat-emoji-picker__head,
+.app-shell[data-app-id="chat"] .chat-group .chat-emoji-picker__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 6px 8px;
+    font-size: 12px;
+    color: #8E8E8E;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .chat-emoji-picker__title,
+.app-shell[data-app-id="chat"] .chat-group .chat-emoji-picker__title {
+    font-weight: 600;
+    color: #4A6FA5;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .chat-emoji-picker__close,
+.app-shell[data-app-id="chat"] .chat-group .chat-emoji-picker__close {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #B0B8C4;
+    padding: 4px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .chat-emoji-picker__close:hover,
+.app-shell[data-app-id="chat"] .chat-group .chat-emoji-picker__close:hover {
+    background: #F0F0F0;
+    color: #4A6FA5;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .chat-emoji-picker__close svg,
+.app-shell[data-app-id="chat"] .chat-group .chat-emoji-picker__close svg {
+    width: 14px;
+    height: 14px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+}
+
+/* ---------- 表情网格 ---------- */
+
+.app-shell[data-app-id="chat"] .chat-private .chat-emoji-grid,
+.app-shell[data-app-id="chat"] .chat-group .chat-emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-auto-rows: 56px;
+    gap: 6px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0 4px 4px;
+    max-height: 168px;
+    scrollbar-width: thin;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .chat-emoji-grid::-webkit-scrollbar,
+.app-shell[data-app-id="chat"] .chat-group .chat-emoji-grid::-webkit-scrollbar {
+    width: 4px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .chat-emoji-grid::-webkit-scrollbar-thumb,
+.app-shell[data-app-id="chat"] .chat-group .chat-emoji-grid::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 2px;
+}
+
+/* 单个表情格 */
+.app-shell[data-app-id="chat"] .chat-private .chat-emoji-cell,
+.app-shell[data-app-id="chat"] .chat-group .chat-emoji-cell {
+    width: 100%;
+    height: 56px;
+    border-radius: 10px;
+    background: #FFFFFF;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    cursor: pointer;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .chat-emoji-cell:hover,
+.app-shell[data-app-id="chat"] .chat-group .chat-emoji-cell:hover {
+    transform: scale(1.05);
+    border-color: #A8C8EC;
+    box-shadow: 0 2px 8px rgba(168, 200, 236, 0.3);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .chat-emoji-cell:active,
+.app-shell[data-app-id="chat"] .chat-group .chat-emoji-cell:active {
+    transform: scale(0.95);
+    background: #F0F6FF;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .chat-emoji-cell img,
+.app-shell[data-app-id="chat"] .chat-group .chat-emoji-cell img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+/* 加载态占位 */
+.app-shell[data-app-id="chat"] .chat-private .chat-emoji-cell.is-loading,
+.app-shell[data-app-id="chat"] .chat-group .chat-emoji-cell.is-loading {
+    background: linear-gradient(90deg, #F0F0F0 0%, #F8F8F8 50%, #F0F0F0 100%);
+    background-size: 200% 100%;
+    animation: chatEmojiShimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes chatEmojiShimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* 加载失败态 */
+.app-shell[data-app-id="chat"] .chat-private .chat-emoji-cell.is-error,
+.app-shell[data-app-id="chat"] .chat-group .chat-emoji-cell.is-error {
+    background: #FFF0F0;
+    color: #FF6B6B;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+/* ---------- 空状态 ---------- */
+
+.app-shell[data-app-id="chat"] .chat-private .chat-emoji-empty,
+.app-shell[data-app-id="chat"] .chat-group .chat-emoji-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    text-align: center;
+    color: #8E8E8E;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .chat-emoji-empty__icon,
+.app-shell[data-app-id="chat"] .chat-group .chat-emoji-empty__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #F0F6FF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #A8C8EC;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .chat-emoji-empty__icon svg,
+.app-shell[data-app-id="chat"] .chat-group .chat-emoji-empty__icon svg {
+    width: 24px;
+    height: 24px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.5;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .chat-emoji-empty__text,
+.app-shell[data-app-id="chat"] .chat-group .chat-emoji-empty__text {
+    font-size: 13px;
+    color: #6B7280;
+    line-height: 1.4;
+    max-width: 240px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .chat-emoji-empty__sub,
+.app-shell[data-app-id="chat"] .chat-group .chat-emoji-empty__sub {
+    font-size: 11px;
+    color: #B0B8C4;
+    margin-top: 2px;
+}
+
+/* 「去设置」按钮 */
+.app-shell[data-app-id="chat"] .chat-private .chat-emoji-empty__cta,
+.app-shell[data-app-id="chat"] .chat-group .chat-emoji-empty__cta {
+    margin-top: 8px;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #FFB6C1 0%, #FF8FAB 100%);
+    color: #FFFFFF;
+    border: none;
+    border-radius: 18px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(255, 107, 157, 0.25);
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .chat-emoji-empty__cta:hover,
+.app-shell[data-app-id="chat"] .chat-group .chat-emoji-empty__cta:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 107, 157, 0.35);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .chat-emoji-empty__cta:active,
+.app-shell[data-app-id="chat"] .chat-group .chat-emoji-empty__cta:active {
+    transform: translateY(0) scale(0.97);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .chat-emoji-empty__cta svg,
+.app-shell[data-app-id="chat"] .chat-group .chat-emoji-empty__cta svg {
+    width: 12px;
+    height: 12px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+}
+
+/* ---------- 滑动分页指示器(可选 — 当前用网格 scroll,先不实现) ---------- */
+/* 预留:如果未来表情数 > 16 个,可以加分页 dot */
+
+/* ---------- 加载中占位 ---------- */
+.app-shell[data-app-id="chat"] .chat-private .chat-emoji-loading,
+.app-shell[data-app-id="chat"] .chat-group .chat-emoji-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+    color: #B0B8C4;
+    font-size: 12px;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .chat-emoji-loading__spinner,
+.app-shell[data-app-id="chat"] .chat-group .chat-emoji-loading__spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(168, 200, 236, 0.3);
+    border-top-color: #A8C8EC;
+    border-radius: 50%;
+    animation: chatEmojiSpin 0.8s linear infinite;
+}
+
+@keyframes chatEmojiSpin {
+    to { transform: rotate(360deg); }
+}
+
+/* ---------- 群聊同款 ---------- */
+/* (上面 .chat-group 已经覆盖了所有规则,无需重复写) */

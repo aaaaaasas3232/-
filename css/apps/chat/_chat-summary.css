@@ -1,0 +1,776 @@
+/* ============================================
+ * chat-app · 概要系统 (v0.61.3) 弹窗样式
+ *
+ *   - .summary-range-modal-*       概要范围选择弹窗
+ *   - .summary-edit-modal-*        概要编辑/确认弹窗
+ *   - .chat-history-*              历史消息页
+ *   - .chat-calendar-generate-btn  日历视图顶栏「生成概要」按钮
+ *   - .story-archive-summary-btn   故事存档页「故事概要」按钮
+ *
+ *   作用域约定:统一以 .app-shell[data-app-id="chat"] 开头,
+ *   跟项目其他 chat-app 模块同款。
+ * ============================================ */
+
+/* ===== 通用弹窗遮罩 + 卡片 ===== */
+.app-shell[data-app-id="chat"] .summary-range-modal-overlay,
+.app-shell[data-app-id="chat"] .summary-edit-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 16px;
+    box-sizing: border-box;
+}
+
+.app-shell[data-app-id="chat"] .summary-range-modal,
+.app-shell[data-app-id="chat"] .summary-edit-modal {
+    background: #FFFFFF;
+    border-radius: 18px;
+    width: 100%;
+    max-width: 420px;
+    max-height: 60vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.18);
+    padding: 16px 14px;
+    box-sizing: border-box;
+    /* ★ v0.66 隐藏滚动条但保持滚动功能 */
+    scrollbar-width: none;       /* Firefox */
+    -ms-overflow-style: none;     /* IE/Edge */
+}
+/* WebKit 浏览器隐藏滚动条 */
+.app-shell[data-app-id="chat"] .summary-range-modal::-webkit-scrollbar,
+.app-shell[data-app-id="chat"] .summary-edit-modal::-webkit-scrollbar {
+    display: none;
+}
+
+/* ===== 概要范围选择弹窗 ===== */
+.app-shell[data-app-id="chat"] .summary-range-modal-header {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 12px;
+    position: relative;
+}
+.app-shell[data-app-id="chat"] .summary-range-modal-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: #222;
+    padding-right: 32px;
+}
+.app-shell[data-app-id="chat"] .summary-range-modal-subtitle {
+    font-size: 12px;
+    color: #8E8E93;
+}
+.app-shell[data-app-id="chat"] .summary-range-modal-close {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 14px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+}
+.app-shell[data-app-id="chat"] .summary-range-modal-close svg {
+    width: 16px;
+    height: 16px;
+}
+.app-shell[data-app-id="chat"] .summary-range-modal-body {
+    margin: 8px 0 12px;
+}
+
+/* 故事模式块 */
+.app-shell[data-app-id="chat"] .summary-range-mode-block {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: linear-gradient(135deg, rgba(255, 230, 240, 0.6), rgba(244, 241, 255, 0.6));
+    border-radius: 12px;
+}
+.app-shell[data-app-id="chat"] .summary-range-mode-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 18px;
+    background: #FFFFFF;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #D4728A;
+}
+.app-shell[data-app-id="chat"] .summary-range-mode-icon svg {
+    width: 20px;
+    height: 20px;
+}
+.app-shell[data-app-id="chat"] .summary-range-mode-icon[data-kind="story"] {
+    color: #D4728A;
+}
+.app-shell[data-app-id="chat"] .summary-range-mode-text { flex: 1; min-width: 0; }
+.app-shell[data-app-id="chat"] .summary-range-mode-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #222;
+}
+.app-shell[data-app-id="chat"] .summary-range-mode-desc {
+    font-size: 12px;
+    color: #666;
+    margin-top: 2px;
+}
+
+/* 日历模式预设按钮 */
+.app-shell[data-app-id="chat"] .summary-range-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.app-shell[data-app-id="chat"] .summary-range-preset-chip {
+    padding: 6px 12px;
+    font-size: 12px;
+    color: #4A6FA5;
+    background: rgba(168, 200, 236, 0.16);
+    border: 1px solid rgba(168, 200, 236, 0.4);
+    border-radius: 14px;
+    cursor: pointer;
+}
+.app-shell[data-app-id="chat"] .summary-range-preset-chip:active {
+    background: rgba(168, 200, 236, 0.32);
+}
+
+/* 月份 + 日期方块 */
+.app-shell[data-app-id="chat"] .summary-range-months { display: flex; flex-direction: column; gap: 12px; }
+.app-shell[data-app-id="chat"] .summary-range-month-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #4A6FA5;
+    margin-bottom: 6px;
+}
+.app-shell[data-app-id="chat"] .summary-range-day-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+}
+.app-shell[data-app-id="chat"] .summary-range-day-btn {
+    aspect-ratio: 1 / 1;
+    min-height: 32px;
+    border: 1px solid rgba(168, 200, 236, 0.4);
+    background: rgba(168, 200, 236, 0.16);
+    border-radius: 8px;
+    cursor: pointer;
+    position: relative;
+    color: #4A6FA5;
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: background 0.15s, border-color 0.15s;
+}
+.app-shell[data-app-id="chat"] .summary-range-day-btn:hover {
+    background: rgba(168, 200, 236, 0.3);
+}
+.app-shell[data-app-id="chat"] .summary-range-day-btn.is-selected {
+    background: linear-gradient(135deg, #A8C8EC, #F4A6CD);
+    border-color: transparent;
+    color: #FFFFFF;
+    font-weight: 700;
+}
+.app-shell[data-app-id="chat"] .summary-range-day-num { font-size: 13px; line-height: 1; }
+.app-shell[data-app-id="chat"] .summary-range-day-dot {
+    position: absolute;
+    bottom: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    border-radius: 2px;
+    background: #D4728A;
+}
+.app-shell[data-app-id="chat"] .summary-range-day-btn.is-selected .summary-range-day-dot { background: #FFFFFF; }
+.app-shell[data-app-id="chat"] .summary-range-empty {
+    text-align: center;
+    padding: 24px 8px;
+    color: #8E8E93;
+    font-size: 13px;
+}
+
+/* footer */
+.app-shell[data-app-id="chat"] .summary-range-modal-footer {
+    margin-top: 8px;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    padding-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.app-shell[data-app-id="chat"] .summary-range-modal-hint {
+    font-size: 12px;
+    color: #8E8E93;
+}
+.app-shell[data-app-id="chat"] .summary-range-modal-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+.app-shell[data-app-id="chat"] .summary-range-btn {
+    padding: 8px 16px;
+    font-size: 13px;
+    border-radius: 14px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-weight: 600;
+}
+.app-shell[data-app-id="chat"] .summary-range-btn-cancel {
+    background: rgba(0, 0, 0, 0.05);
+    color: #666;
+}
+.app-shell[data-app-id="chat"] .summary-range-btn-confirm {
+    background: linear-gradient(135deg, #A8C8EC, #F4A6CD);
+    color: #FFFFFF;
+}
+.app-shell[data-app-id="chat"] .summary-range-btn-confirm.is-disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* ★ v0.66 错误提示 */
+.app-shell[data-app-id="chat"] .summary-edit-error {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(229, 72, 77, 0.10);
+    color: #E5484D;
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: 12px;
+    margin-bottom: 8px;
+}
+.app-shell[data-app-id="chat"] .summary-edit-error svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+/* ★ v0.66 按钮 loading spinner */
+@keyframes summary-edit-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+.app-shell[data-app-id="chat"] .summary-edit-spinner {
+    width: 14px;
+    height: 14px;
+    display: inline-block;
+    animation: summary-edit-spin 0.8s linear infinite;
+    vertical-align: middle;
+}
+
+/* ===== 概要编辑/确认弹窗 ===== */
+.app-shell[data-app-id="chat"] .summary-edit-modal-header {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+    position: relative;
+}
+.app-shell[data-app-id="chat"] .summary-edit-modal-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: #222;
+    padding-right: 32px;
+}
+.app-shell[data-app-id="chat"] .summary-edit-modal-subtitle {
+    font-size: 12px;
+    color: #4A6FA5;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.app-shell[data-app-id="chat"] .summary-edit-modal-subtitle svg {
+    width: 14px;
+    height: 14px;
+}
+.app-shell[data-app-id="chat"] .summary-edit-modal-close {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 14px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+}
+.app-shell[data-app-id="chat"] .summary-edit-modal-close svg {
+    width: 16px;
+    height: 16px;
+}
+.app-shell[data-app-id="chat"] .summary-edit-modal-hint {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 8px;
+    background: rgba(168, 200, 236, 0.12);
+    color: #4A6FA5;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 12px;
+    line-height: 1.5;
+    margin-bottom: 10px;
+}
+.app-shell[data-app-id="chat"] .summary-edit-modal-hint svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+/* ★ v0.66 人设信息折叠区 */
+.app-shell[data-app-id="chat"] .summary-edit-persona-section {
+    background: rgba(244, 241, 255, 0.5);
+    border: 1px solid rgba(168, 200, 236, 0.35);
+    border-radius: 10px;
+    margin-bottom: 10px;
+    overflow: hidden;
+}
+.app-shell[data-app-id="chat"] .summary-edit-persona-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    color: #4A6FA5;
+}
+.app-shell[data-app-id="chat"] .summary-edit-persona-toggle svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+.app-shell[data-app-id="chat"] .summary-edit-persona-toggle span {
+    flex: 1;
+    text-align: left;
+}
+.app-shell[data-app-id="chat"] .summary-edit-persona-chevron {
+    width: 14px;
+    height: 14px;
+    transition: transform 0.2s;
+    flex-shrink: 0;
+}
+.app-shell[data-app-id="chat"] .summary-edit-persona-chevron.open {
+    transform: rotate(180deg);
+}
+.app-shell[data-app-id="chat"] .summary-edit-persona-body {
+    padding: 0 12px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.app-shell[data-app-id="chat"] .summary-edit-persona-row {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.app-shell[data-app-id="chat"] .summary-edit-persona-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #4A6FA5;
+    opacity: 0.8;
+}
+.app-shell[data-app-id="chat"] .summary-edit-persona-content {
+    font-size: 12px;
+    color: #444;
+    line-height: 1.6;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 8px;
+    padding: 8px 10px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 120px;
+    overflow-y: auto;
+}
+.app-shell[data-app-id="chat"] .summary-edit-modal-field {
+    margin-bottom: 12px;
+}
+.app-shell[data-app-id="chat"] .summary-edit-modal-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #4A6FA5;
+    margin-bottom: 4px;
+}
+.app-shell[data-app-id="chat"] .summary-edit-modal-required {
+    color: #D4728A;
+    margin-left: 2px;
+}
+.app-shell[data-app-id="chat"] .summary-edit-modal-input {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid rgba(168, 200, 236, 0.4);
+    background: #FAFAFA;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 14px;
+    color: #222;
+    outline: none;
+}
+.app-shell[data-app-id="chat"] .summary-edit-modal-input:focus {
+    border-color: #A8C8EC;
+    background: #FFFFFF;
+}
+.app-shell[data-app-id="chat"] .summary-edit-modal-textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid rgba(168, 200, 236, 0.4);
+    background: #FAFAFA;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #222;
+    resize: vertical;
+    min-height: 80px;
+    outline: none;
+    font-family: inherit;
+    line-height: 1.5;
+}
+.app-shell[data-app-id="chat"] .summary-edit-modal-textarea:focus {
+    border-color: #A8C8EC;
+    background: #FFFFFF;
+}
+.app-shell[data-app-id="chat"] .summary-edit-modal-counter {
+    margin-top: 4px;
+    font-size: 11px;
+    color: #8E8E93;
+    text-align: right;
+}
+
+/* toggle */
+.app-shell[data-app-id="chat"] .summary-edit-modal-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: rgba(244, 241, 255, 0.5);
+    border-radius: 10px;
+    margin-bottom: 12px;
+}
+.app-shell[data-app-id="chat"] .summary-edit-modal-toggle-text { flex: 1; min-width: 0; }
+.app-shell[data-app-id="chat"] .summary-edit-modal-toggle-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #222;
+}
+.app-shell[data-app-id="chat"] .summary-edit-modal-toggle-desc {
+    font-size: 11px;
+    color: #8E8E93;
+    margin-top: 2px;
+}
+.app-shell[data-app-id="chat"] .summary-edit-modal-toggle {
+    width: 44px;
+    height: 24px;
+    border-radius: 12px;
+    border: none;
+    background: rgba(0, 0, 0, 0.12);
+    cursor: pointer;
+    padding: 0;
+    position: relative;
+    transition: background 0.18s;
+}
+.app-shell[data-app-id="chat"] .summary-edit-modal-toggle.on {
+    background: linear-gradient(135deg, #A8C8EC, #F4A6CD);
+}
+.app-shell[data-app-id="chat"] .summary-edit-modal-toggle-track {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+.app-shell[data-app-id="chat"] .summary-edit-modal-toggle-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    background: #FFFFFF;
+    transition: transform 0.18s;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+}
+.app-shell[data-app-id="chat"] .summary-edit-modal-toggle.on .summary-edit-modal-toggle-thumb {
+    transform: translateX(20px);
+}
+
+/* actions */
+.app-shell[data-app-id="chat"] .summary-edit-modal-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+}
+.app-shell[data-app-id="chat"] .summary-edit-modal-actions-right {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+}
+.app-shell[data-app-id="chat"] .summary-edit-btn {
+    padding: 8px 14px;
+    font-size: 13px;
+    border-radius: 14px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.app-shell[data-app-id="chat"] .summary-edit-btn svg {
+    width: 14px;
+    height: 14px;
+}
+.app-shell[data-app-id="chat"] .summary-edit-btn-cancel {
+    background: rgba(0, 0, 0, 0.05);
+    color: #666;
+}
+.app-shell[data-app-id="chat"] .summary-edit-btn-reroll {
+    background: rgba(168, 200, 236, 0.16);
+    color: #4A6FA5;
+    border-color: rgba(168, 200, 236, 0.4);
+}
+.app-shell[data-app-id="chat"] .summary-edit-btn-save {
+    background: linear-gradient(135deg, #A8C8EC, #F4A6CD);
+    color: #FFFFFF;
+}
+.app-shell[data-app-id="chat"] .summary-edit-btn-save:disabled,
+.app-shell[data-app-id="chat"] .summary-edit-btn-save.saving {
+    opacity: 0.6;
+}
+
+/* ===== 历史消息页 ===== */
+.app-shell[data-app-id="chat"] .chat-history {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(180deg, #F8FAFC 0%, #FFFFFF 100%);
+}
+.app-shell[data-app-id="chat"] .chat-history-topbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    /* ★ v0.61.8 修复:顶部 50px 预留状态栏 + 12px 上下间距,避免被状态栏遮住 */
+    padding: 50px 16px 12px;
+    background: rgba(248, 250, 252, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* ★ v0.61.8 新增:历史消息页返回按钮(同 chat-settings / pm-topbar 同款) */
+.app-shell[data-app-id="chat"] .chat-history .chat-back-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+    color: #4A6FA5;
+}
+.app-shell[data-app-id="chat"] .chat-history .chat-back-btn:hover {
+    background: #E9ECEF;
+}
+.app-shell[data-app-id="chat"] .chat-history .chat-back-btn:active {
+    background: rgba(168, 200, 236, 0.25);
+    transform: scale(0.92);
+}
+.app-shell[data-app-id="chat"] .chat-history .chat-back-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: #4A6FA5;
+    stroke-width: 2;
+}
+.app-shell[data-app-id="chat"] .chat-history-topbar-title {
+    flex: 1;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 700;
+    color: #222;
+    margin-right: 32px;
+}
+.app-shell[data-app-id="chat"] .chat-history-generate-btn {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 14px;
+    border: none;
+    background: linear-gradient(135deg, #A8C8EC, #F4A6CD);
+    color: #FFFFFF;
+    cursor: pointer;
+    font-weight: 600;
+}
+.app-shell[data-app-id="chat"] .chat-history-generate-btn svg {
+    width: 14px;
+    height: 14px;
+}
+.app-shell[data-app-id="chat"] .chat-history-page {
+    padding: 14px 16px;
+    overflow-y: auto;
+}
+.app-shell[data-app-id="chat"] .chat-history-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: #FFFFFF;
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    margin-bottom: 14px;
+}
+.app-shell[data-app-id="chat"] .chat-history-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #FFFFFF;
+    font-weight: 600;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+.app-shell[data-app-id="chat"] .chat-history-avatar-text { line-height: 1; }
+.app-shell[data-app-id="chat"] .chat-history-header-text { flex: 1; min-width: 0; }
+.app-shell[data-app-id="chat"] .chat-history-header-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #222;
+    margin-bottom: 2px;
+}
+.app-shell[data-app-id="chat"] .chat-history-header-sub {
+    font-size: 12px;
+    color: #8E8E93;
+}
+
+.app-shell[data-app-id="chat"] .chat-history-day-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.app-shell[data-app-id="chat"] .chat-history-day-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: #FFFFFF;
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+.app-shell[data-app-id="chat"] .chat-history-day-card-left { min-width: 0; }
+.app-shell[data-app-id="chat"] .chat-history-day-card-date {
+    font-size: 14px;
+    font-weight: 600;
+    color: #222;
+}
+.app-shell[data-app-id="chat"] .chat-history-day-card-count {
+    font-size: 12px;
+    color: #8E8E93;
+    margin-top: 2px;
+}
+.app-shell[data-app-id="chat"] .chat-history-day-card-arrow {
+    color: #C7C7CC;
+}
+.app-shell[data-app-id="chat"] .chat-history-day-card-arrow svg {
+    width: 18px;
+    height: 18px;
+}
+
+.app-shell[data-app-id="chat"] .chat-history-empty {
+    text-align: center;
+    padding: 40px 20px;
+}
+.app-shell[data-app-id="chat"] .chat-history-empty-icon {
+    margin-bottom: 12px;
+}
+.app-shell[data-app-id="chat"] .chat-history-empty-title {
+    font-size: 14px;
+    color: #666;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+.app-shell[data-app-id="chat"] .chat-history-empty-sub {
+    font-size: 12px;
+    color: #8E8E93;
+}
+
+/* ===== 日历视图「生成概要」按钮 ===== */
+.app-shell[data-app-id="chat"] .chat-calendar-generate-btn {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 14px;
+    border: none;
+    background: linear-gradient(135deg, #A8C8EC, #F4A6CD);
+    color: #FFFFFF;
+    cursor: pointer;
+    font-weight: 600;
+}
+.app-shell[data-app-id="chat"] .chat-calendar-generate-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* ===== 故事存档「故事概要」按钮(与封存按钮并排) ===== */
+.app-shell[data-app-id="chat"] .story-archive-actions-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+.app-shell[data-app-id="chat"] .story-archive-summary-btn {
+    flex: 1 1 auto;
+    min-width: 140px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border: 1px solid rgba(212, 114, 138, 0.32);
+    background: rgba(255, 230, 240, 0.6);
+    color: #D4728A;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.app-shell[data-app-id="chat"] .story-archive-summary-btn svg {
+    width: 16px;
+    height: 16px;
+}
+.app-shell[data-app-id="chat"] .story-archive-summary-btn:active {
+    background: rgba(255, 230, 240, 0.9);
+}

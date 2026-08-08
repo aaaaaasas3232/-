@@ -42,6 +42,7 @@
 @import url("./settings/_persona-v2.css");
 @import url("./settings/_persona-home.css"); /* ★ v0.18 人设主页 */
 @import url("./settings/_persona-circle.css"); /* ★ v0.21 人设圈子 section */
+@import url("./settings/_persona-space.css"); /* ★ v0.30 人设主页·空间模块 + 双日记 */
 @import url("./settings/_case-diy-old.css");
 @import url("./settings/_case-diy-new.css");
 @import url("./settings/_wallpaper.css");
@@ -58,4 +59,7 @@
 @import url("./settings/_world-color-row.css");
 @import url("./settings/_world-flow.css");
 @import url("./settings/_api-manager.css");
+@import url("./settings/_database.css");
+@import url("./settings/_import-export.css");
+@import url("./settings/_software.css");
 @import url("./settings/_prompt.css");

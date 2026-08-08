@@ -19,26 +19,48 @@ import { createSettingsSdk, setSettingsSdk } from './settings-sdk.js';
 import { SYSTEM_TAG_GROUPS } from './defaults.js';
 
 export async function bootstrapSettingsSdk({ toolkit }) {
+    // ★ 兼容预热场景：prewarm 调用时没有 toolkit，直接用 window.myDb 构造一个最小化 wrapper
+    if (!toolkit || !toolkit.db) {
+        console.warn('[bootstrap] 未传入 toolkit，使用 window.myDb 替代');
+        if (typeof window !== 'undefined' && window.myDb) {
+            toolkit = { db: window.myDb };
+        } else {
+            console.error('[bootstrap] window.myDb 也不可用，SDK 将无法持久化');
+            toolkit = { db: null };
+        }
+    }
+
     const sdk = createSettingsSdk({ toolkit });
 
     // ★ v0.18.1 启动前强制保证 db schema 已升级（处理历史 db 没建新 store 的情况）
     // 注意：toolkit.db 是 createAppDbApi 的闭包，没有 ensureSchema()，必须直接走 window.myDb
     const realDb = typeof window !== 'undefined' ? window.myDb : null;
-    if (realDb?.ensureSchema) {
+    if (realDb) {
         try {
-            const beforeStores = realDb.db ? Array.from(realDb.db.objectStoreNames || []) : [];
-            const wanted = (realDb._baseStores || []).map(s => s.name);
-            const missing = wanted.filter(n => !beforeStores.includes(n));
-            console.log('[settings-sdk.bootstrap] db version=', realDb.db?.version,
-                '| stores=', beforeStores.length, '/ wanted', wanted.length,
-                '| missing=', missing);
-            await realDb.ensureSchema();
+            // ★ 修复：确保数据库已打开完成（等待 ready promise）
+            if (realDb.ready) {
+                await realDb.ready;
+            }
+            await realDb.ensureSchema?.();
+
             const afterStores = realDb.db ? Array.from(realDb.db.objectStoreNames || []) : [];
             console.log('[settings-sdk.bootstrap] ensureSchema 后 version=', realDb.db?.version,
-                '| stores=', afterStores.length);
+                '| stores=', afterStores.length,
+                '| store names=', afterStores.slice(0, 10), afterStores.length > 10 ? '...' : '');
+
+            // 验证关键 store 是否存在
+            if (afterStores.length > 0) {
+                const criticalStores = ['sdkUsers', 'sdkAiPersons', 'sdkWorlds'];
+                const missingCritical = criticalStores.filter(s => !afterStores.includes(s));
+                if (missingCritical.length > 0) {
+                    console.error('[settings-sdk.bootstrap] 严重错误：关键 store 缺失!', missingCritical);
+                }
+            }
         } catch (err) {
             console.warn('[settings-sdk] ensureSchema 失败', err);
         }
+    } else {
+        console.warn('[settings-sdk.bootstrap] realDb 不存在');
     }
 
     // 1. 顺序 hydrate（顺序很重要：user/ai/world 先 → group/tag/geo/snapshot → profile）
@@ -55,6 +77,12 @@ export async function bootstrapSettingsSdk({ toolkit }) {
     await sdk.drafts.hydrate();
     await sdk.diary.hydrate();   // ★ v0.18 人设日记
     await sdk.schedule.hydrate(); // ★ v0.19 人设日程
+    await sdk.weeklySchedule.hydrate(); // ★ v0.31 每周重复日程
+    await sdk.chatMessages.hydrate();   // ★ v0.30 chat-app 真实消息
+    await sdk.chatArchive.hydrate();   // ★ v0.61 chat-app 消息归档
+    await sdk.storyArchives.hydrate();  // ★ v0.42 chat-app 故事存档
+    await sdk.chatFavorites.hydrate();  // ★ v0.43 chat-app 单条收藏
+    await sdk.appPrompts.hydrate();    // ★ v0.61.5 第三方 App Prompt 用户状态
 
     // ★ v0.23 旧嵌套 lifePhases / parOs 一次性迁移为顶级独立卡。
     await sdk.persona.variants.migrateLegacy();

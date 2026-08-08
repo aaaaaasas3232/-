@@ -127,6 +127,7 @@ export const DEFAULT_USER_INSTANCE = Object.freeze({
     mood:          { enabled: false, injectMode: 'current' },
     memory:        { enabled: false, injectMode: 'none', text: '' },
     worldview:     { enabled: false, injectMode: 'none', text: '' },
+    space:         { enabled: false, injectMode: 'none' },
     mbti:          { enabled: false, injectMode: 'none', type: '', description: '' },
     psychological: { enabled: false, injectMode: 'none', text: '' },
     moral:         { enabled: false, injectMode: 'none', text: '' },
@@ -211,6 +212,7 @@ export const DEFAULT_AI_INSTANCE = Object.freeze({
     mood:           { enabled: false, injectMode: 'current' },
     memory:         { enabled: false, injectMode: 'none', text: '' },
     worldview:      { enabled: false, injectMode: 'none', text: '' },
+    space:          { enabled: false, injectMode: 'none' },
     mbti:           { enabled: false, injectMode: 'none', type: '', description: '' },
     psychological:   { enabled: false, injectMode: 'none', text: '' },
     moral:          { enabled: false, injectMode: 'none', text: '' },
@@ -337,9 +339,19 @@ export const SDK_STORES = Object.freeze({
     snapshots: 'sdkSnapshots',
     active: 'sdkActive',
     drafts: 'sdkDrafts',
-    diaries: 'sdkDiaries',          // ★ v0.18 人设日记
-    schedules: 'sdkSchedules',      // ★ v0.19 人设日程（id = `${entityType}:${entityId}:${date}`）
+    diaries: 'sdkDiaries',            // ★ v0.18 人设日记
+    schedules: 'sdkSchedules',          // ★ v0.19 人设日程（id = `${entityType}:${entityId}:${date}`）
+    weeklySchedules: 'sdkWeeklySchedules', // ★ v0.31 每周重复日程（id = `${entityType}:${entityId}:${dayOfWeek}`）
+    chatContacts: '__deprecated__', // v0.27 联系人删除该表,字段保留防历史代码 import 报错
+    chatMessages: 'chatMessages',   // ★ v0.30 chat-app 真实消息存储
+    storyArchives: 'sdkStoryArchives', // ★ v0.42 chat-app 故事存档
+    chatFavorites: 'sdkChatFavorites', // ★ v0.43 chat-app 单条收藏
+    chatArchiveMessages: 'chatArchiveMessages', // ★ v0.61 chat-app 消息归档(昨天及更早的消息)
+    appPromptStates: 'appPromptStates',       // ★ v0.61.5 第三方 App Prompt 用户状态(key = `${appId}::${promptId}`)
 });
+
+// 默认用户卡持久化 key（存在 sdkActive 表里）
+export const ACTIVE_DEFAULT_USER_KEY = 'activeDefaultUser';
 
 // ============================================
 // ID 生成工具

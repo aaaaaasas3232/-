@@ -72,7 +72,20 @@ export const setPromptCache = (patch) => Object.assign(_cache, patch);
 const _invalidate = () => {
     _cache._lastRenderKey = Date.now();
     if (typeof window !== 'undefined') {
-        window.refreshPhoneApps?.();
+        // ★ v0.49.1 修复:点击「新建 Prompt」等弹窗不显示,需切出再切回才显示
+        //   根因:_invalidate 只调 refreshPhoneApps() 改 apps.value,
+        //   但 apps.value 不在 framework bridge 的 watch sources 里,
+        //   bridge.syncRenderer 看 detailKey 没变 + tickChanged=false → 不重画 detail。
+        //   修复:同时 ++detailRenderTick + bridge.syncNow({force:true}) 双保险
+        //   (settings-app renderDetailPage 是 sync 函数,不会撞 v0.38 死循环)
+        if (window.__detailRenderTick && typeof window.__detailRenderTick.value === 'number') {
+            window.__detailRenderTick.value++;
+        }
+        const bridge = window.__appRendererBridge;
+        if (bridge && typeof bridge.syncNow === 'function') {
+            try { bridge.syncNow({ force: true }); } catch (_) {}
+        }
+        try { window.refreshPhoneApps?.(); } catch (_) {}
     }
 };
 

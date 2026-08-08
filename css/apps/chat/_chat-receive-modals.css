@@ -1,0 +1,469 @@
+/**
+ * chat-app / 接收弹窗 & 通话概要弹窗样式
+ *
+ * v0.67 — 红包/转账接收确认弹窗 + 通话结束概要弹窗样式
+ *   - RedpacketReceiveModal  (.redpacket-receive-modal)
+ *   - TransferReceiveModal   (.transfer-receive-modal)
+ *   - CallSummaryModal       (.call-summary-modal)
+ */
+
+/* ============================================
+   红包接收确认弹窗
+   ============================================ */
+
+.app-shell[data-app-id="chat"] .redpacket-receive-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease;
+}
+
+.app-shell[data-app-id="chat"] .redpacket-receive-modal {
+    background: linear-gradient(180deg, #FFF5F7 0%, #FFFAFC 100%);
+    border-radius: 18px;
+    width: 86%;
+    max-width: 360px;
+    padding: 28px 24px 24px;
+    box-sizing: border-box;
+    box-shadow: 0 12px 48px rgba(255, 107, 138, 0.18);
+    animation: popIn 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.app-shell[data-app-id="chat"] .redpacket-receive-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.app-shell[data-app-id="chat"] .redpacket-receive-icon {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 12px;
+    background: rgba(255, 107, 138, 0.12);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="chat"] .redpacket-receive-greeting {
+    font-size: 14px;
+    color: #6B7280;
+    margin-bottom: 8px;
+}
+
+.app-shell[data-app-id="chat"] .redpacket-receive-amount {
+    font-size: 32px;
+    font-weight: 700;
+    color: #FF6B8A;
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+}
+
+.app-shell[data-app-id="chat"] .redpacket-receive-from {
+    font-size: 12px;
+    color: #9CA3AF;
+}
+
+.app-shell[data-app-id="chat"] .redpacket-receive-warning {
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: rgba(255, 152, 0, 0.12);
+    color: #FF9800;
+    font-size: 12px;
+    border-radius: 8px;
+}
+
+.app-shell[data-app-id="chat"] .redpacket-receive-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="chat"] .redpacket-receive-btn {
+    flex: 1;
+    height: 44px;
+    border-radius: 22px;
+    font-size: 15px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+}
+
+.app-shell[data-app-id="chat"] .redpacket-receive-btn--reject {
+    background: rgba(120, 120, 128, 0.12);
+    color: #6B7280;
+}
+
+.app-shell[data-app-id="chat"] .redpacket-receive-btn--accept {
+    background: linear-gradient(135deg, #FF6B8A 0%, #FF8FA8 100%);
+    color: white;
+    box-shadow: 0 4px 14px rgba(255, 107, 138, 0.32);
+}
+
+.app-shell[data-app-id="chat"] .redpacket-receive-btn:active {
+    transform: scale(0.97);
+}
+
+.app-shell[data-app-id="chat"] .redpacket-receive-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* ============================================
+   转账收款确认弹窗
+   ============================================ */
+
+.app-shell[data-app-id="chat"] .transfer-receive-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease;
+}
+
+.app-shell[data-app-id="chat"] .transfer-receive-modal {
+    background: linear-gradient(180deg, #F0F7FF 0%, #FAFCFF 100%);
+    border-radius: 18px;
+    width: 86%;
+    max-width: 360px;
+    padding: 28px 24px 24px;
+    box-sizing: border-box;
+    box-shadow: 0 12px 48px rgba(74, 158, 247, 0.18);
+    animation: popIn 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.app-shell[data-app-id="chat"] .transfer-receive-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.app-shell[data-app-id="chat"] .transfer-receive-icon {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 12px;
+    background: rgba(74, 158, 247, 0.12);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="chat"] .transfer-receive-title {
+    font-size: 14px;
+    color: #6B7280;
+    margin-bottom: 8px;
+}
+
+.app-shell[data-app-id="chat"] .transfer-receive-amount {
+    font-size: 32px;
+    font-weight: 700;
+    color: #4A9EF7;
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+}
+
+.app-shell[data-app-id="chat"] .transfer-receive-note {
+    font-size: 13px;
+    color: #4B5563;
+    background: rgba(74, 158, 247, 0.08);
+    padding: 6px 12px;
+    border-radius: 12px;
+    display: inline-block;
+    margin-bottom: 8px;
+}
+
+.app-shell[data-app-id="chat"] .transfer-receive-from {
+    font-size: 12px;
+    color: #9CA3AF;
+    margin-top: 6px;
+}
+
+.app-shell[data-app-id="chat"] .transfer-receive-warning {
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: rgba(255, 152, 0, 0.12);
+    color: #FF9800;
+    font-size: 12px;
+    border-radius: 8px;
+}
+
+.app-shell[data-app-id="chat"] .transfer-receive-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="chat"] .transfer-receive-btn {
+    flex: 1;
+    height: 44px;
+    border-radius: 22px;
+    font-size: 15px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+}
+
+.app-shell[data-app-id="chat"] .transfer-receive-btn--return {
+    background: rgba(120, 120, 128, 0.12);
+    color: #6B7280;
+}
+
+.app-shell[data-app-id="chat"] .transfer-receive-btn--accept {
+    background: linear-gradient(135deg, #4A9EF7 0%, #6BB5FF 100%);
+    color: white;
+    box-shadow: 0 4px 14px rgba(74, 158, 247, 0.32);
+}
+
+.app-shell[data-app-id="chat"] .transfer-receive-btn:active {
+    transform: scale(0.97);
+}
+
+.app-shell[data-app-id="chat"] .transfer-receive-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* ============================================
+   通话结束概要弹窗
+   ============================================ */
+
+.app-shell[data-app-id="chat"] .call-summary-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease;
+}
+
+.app-shell[data-app-id="chat"] .call-summary-modal {
+    background: white;
+    border-radius: 18px;
+    width: 86%;
+    max-width: 380px;
+    padding: 28px 24px 24px;
+    box-sizing: border-box;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.18);
+    animation: popIn 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.app-shell[data-app-id="chat"] .call-summary-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 14px;
+    background: rgba(76, 175, 80, 0.12);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="chat"] .call-summary-type {
+    text-align: center;
+    font-size: 17px;
+    font-weight: 600;
+    color: #1F2937;
+    margin-bottom: 6px;
+}
+
+.app-shell[data-app-id="chat"] .call-summary-duration {
+    text-align: center;
+    font-size: 13px;
+    color: #6B7280;
+    margin-bottom: 6px;
+}
+
+.app-shell[data-app-id="chat"] .call-summary-status {
+    text-align: center;
+    font-size: 12px;
+    color: #FF9800;
+    margin-bottom: 6px;
+}
+
+.app-shell[data-app-id="chat"] .call-summary-divider {
+    height: 1px;
+    background: rgba(0, 0, 0, 0.06);
+    margin: 14px 0;
+}
+
+.app-shell[data-app-id="chat"] .call-summary-content {
+    font-size: 14px;
+    line-height: 1.55;
+    color: #374151;
+    max-height: 180px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.app-shell[data-app-id="chat"] .call-summary-content--empty {
+    color: #9CA3AF;
+    text-align: center;
+    font-style: italic;
+}
+
+.app-shell[data-app-id="chat"] .call-summary-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.app-shell[data-app-id="chat"] .call-summary-btn {
+    flex: 1;
+    height: 42px;
+    border-radius: 21px;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+}
+
+.app-shell[data-app-id="chat"] .call-summary-btn--ghost {
+    background: rgba(120, 120, 128, 0.12);
+    color: #6B7280;
+}
+
+.app-shell[data-app-id="chat"] .call-summary-btn--primary {
+    background: linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.28);
+}
+
+.app-shell[data-app-id="chat"] .call-summary-btn:active {
+    transform: scale(0.97);
+}
+
+/* ============================================
+   入站来电弹窗(常驻顶部,等用户接/挂)
+   ============================================ */
+
+.app-shell[data-app-id="chat"] .incoming-call-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(160deg, rgba(74, 158, 247, 0.95), rgba(156, 39, 176, 0.85));
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    animation: fadeIn 0.3s ease;
+}
+
+.app-shell[data-app-id="chat"] .incoming-call-avatar {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.18);
+    overflow: hidden;
+    margin-bottom: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    animation: pulseRing 2s ease infinite;
+}
+
+.app-shell[data-app-id="chat"] .incoming-call-avatar img {
+    width: 100%; height: 100%; object-fit: cover;
+}
+
+.app-shell[data-app-id="chat"] .incoming-call-caller {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.app-shell[data-app-id="chat"] .incoming-call-type {
+    font-size: 14px;
+    opacity: 0.85;
+    margin-bottom: 4px;
+}
+
+.app-shell[data-app-id="chat"] .incoming-call-subtitle {
+    font-size: 12px;
+    opacity: 0.7;
+    margin-bottom: 48px;
+}
+
+.app-shell[data-app-id="chat"] .incoming-call-actions {
+    display: flex;
+    gap: 48px;
+}
+
+.app-shell[data-app-id="chat"] .incoming-call-btn {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+    transition: transform 0.1s;
+}
+
+.app-shell[data-app-id="chat"] .incoming-call-btn--reject {
+    background: #FF453A;
+    color: white;
+}
+
+.app-shell[data-app-id="chat"] .incoming-call-btn--accept {
+    background: #34C759;
+    color: white;
+    animation: ringPulse 1.4s ease infinite;
+}
+
+.app-shell[data-app-id="chat"] .incoming-call-btn:active {
+    transform: scale(0.92);
+}
+
+.app-shell[data-app-id="chat"] .incoming-call-btn-label {
+    margin-top: 8px;
+    font-size: 12px;
+    opacity: 0.9;
+    text-align: center;
+}
+
+/* ============================================
+   Animations
+   ============================================ */
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes popIn {
+    from { transform: scale(0.94); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes pulseRing {
+    0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.45); }
+    70% { box-shadow: 0 0 0 14px rgba(255, 255, 255, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+}
+
+@keyframes ringPulse {
+    0% { box-shadow: 0 0 0 0 rgba(52, 199, 89, 0.45); }
+    70% { box-shadow: 0 0 0 16px rgba(52, 199, 89, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(52, 199, 89, 0); }
+}

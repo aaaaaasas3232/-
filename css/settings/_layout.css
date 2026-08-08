@@ -12,14 +12,15 @@
 
 /* ----- 用户ID卡----- */
 .settings-app .settings-profile {
+    position: relative;
     display: block;
     width: 100%;
     margin: 6px 0 16px;
     padding: 16px 14px 14px;
     border-radius: 16px;
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(236, 72, 153, 0.15) 60%, rgba(56, 189, 248, 0.15) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.65);
-    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.07);
+    background: #F2F2F7;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
     text-align: center;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
@@ -27,6 +28,41 @@
     font: inherit;
     color: inherit;
     transition: transform 0.12s ease, filter 0.18s ease;
+    overflow: hidden;
+    isolation: isolate;
+}
+
+.settings-app .settings-profile__background,
+.settings-app .settings-profile__veil {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    border-radius: inherit;
+    pointer-events: none;
+}
+
+.settings-app .settings-profile__background {
+    z-index: -2;
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+}
+
+.settings-app .settings-profile__veil {
+    z-index: -1;
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.settings-app .settings-profile.has-background {
+    border-color: rgba(255, 255, 255, 0.72);
+}
+
+.settings-app .settings-profile.has-background .settings-profile__name,
+.settings-app .settings-profile.has-background .settings-profile__sub,
+.settings-app .settings-profile.has-background .settings-profile__hint {
+    text-shadow: 0 1px 3px rgba(255, 255, 255, 0.85);
 }
 
 .settings-app .settings-profile:active {
@@ -39,8 +75,8 @@
     height: 56px;
     margin: 0 auto 8px;
     border-radius: 50%;
-    background: linear-gradient(145deg, #ffffff 0%, #e5e7eb 100%);
-    border: 2px solid rgba(255, 255, 255, 0.9);
+    background: #FFFFFF;
+    border: 2px solid rgba(10, 132, 255, 0.16);
     box-shadow: 0 4px 10px rgba(15, 23, 42, 0.1);
     display: flex;
     align-items: center;
@@ -434,6 +470,20 @@
     background: var(--settings-color-blue);
     color: #ffffff;
     box-shadow: 0 2px 8px rgba(10, 132, 255, 0.28);
+}
+/* ----- ChipGroup · 方形变体（数字按钮）----- */
+.settings-app .settings-chip-row--square {
+    gap: 6px;
+}
+.settings-app .settings-chip-row--square .settings-chip {
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    justify-content: center;
+    gap: 0;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
 }
 .settings-app .settings-chip__swatch {
     display: inline-block;

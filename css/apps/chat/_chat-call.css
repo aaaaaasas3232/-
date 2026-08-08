@@ -1,0 +1,379 @@
+/**
+ * chat-app / 通话页面样式
+ *
+ * Phase 11 UI 复原
+ *
+ * 全屏深色渐变背景 + 精致通话界面
+ */
+
+/* ========== 通话页面容器 ========== */
+.app-shell[data-app-id="chat"] .call-page {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+    overflow: hidden;
+}
+
+/* ========== 动态背景装饰 ========== */
+.app-shell[data-app-id="chat"] .call-bg-decor {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.app-shell[data-app-id="chat"] .call-bg-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(40px);
+}
+
+.app-shell[data-app-id="chat"] .call-bg-orb-1 {
+    top: -100px;
+    right: -100px;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
+    animation: floatBg 8s ease-in-out infinite;
+}
+
+.app-shell[data-app-id="chat"] .call-bg-orb-2 {
+    bottom: -50px;
+    left: -50px;
+    width: 250px;
+    height: 250px;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, transparent 70%);
+    animation: floatBg 10s ease-in-out infinite reverse;
+}
+
+.app-shell[data-app-id="chat"] .call-bg-orb-3 {
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(236, 72, 153, 0.08) 0%, transparent 60%);
+    animation: pulseBg 4s ease-in-out infinite;
+}
+
+@keyframes floatBg {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(20px, 20px); }
+}
+
+@keyframes pulseBg {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.08; }
+    50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.15; }
+}
+
+/* ========== 视频通话背景 ========== */
+.app-shell[data-app-id="chat"] .call-video-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 0;
+}
+
+.app-shell[data-app-id="chat"] .call-video-blur {
+    width: 100%;
+    height: 100%;
+}
+
+.app-shell[data-app-id="chat"] .call-video-gradient {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(180deg,
+        rgba(0, 0, 0, 0.5) 0%,
+        transparent 20%,
+        transparent 60%,
+        rgba(0, 0, 0, 0.7) 100%);
+    z-index: 1;
+}
+
+.app-shell[data-app-id="chat"] .call-local-video {
+    position: absolute;
+    top: 50px;
+    right: 16px;
+    width: 90px;
+    height: 130px;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+    z-index: 20;
+    background: #1a1a1a;
+}
+
+.app-shell[data-app-id="chat"] .call-local-avatar {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ========== 顶部信息区域 ========== */
+.app-shell[data-app-id="chat"] .call-info-area {
+    position: relative;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 50px 20px 20px;
+}
+
+/* ========== 头像 ========== */
+.app-shell[data-app-id="chat"] .call-avatar-container {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.app-shell[data-app-id="chat"] .call-avatar-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 140px;
+    height: 140px;
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.4) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: avatarPulse 3s ease-in-out infinite;
+}
+
+@keyframes avatarPulse {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.4; }
+    50% { transform: translate(-50%, -50%) scale(1.15); opacity: 0.2; }
+}
+
+.app-shell[data-app-id="chat"] .call-avatar {
+    position: relative;
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    overflow: hidden;
+    box-shadow: 0 16px 50px rgba(0, 0, 0, 0.4), 0 0 0 3px rgba(255, 255, 255, 0.1);
+}
+
+.app-shell[data-app-id="chat"] .call-avatar-video {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 0 2px rgba(255, 255, 255, 0.15);
+}
+
+.app-shell[data-app-id="chat"] .call-avatar-inner {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 44px;
+    font-weight: 600;
+    color: white;
+}
+
+/* ========== 通话信息 ========== */
+.app-shell[data-app-id="chat"] .call-name {
+    font-size: 24px;
+    font-weight: 600;
+    color: white;
+    margin-bottom: 6px;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+
+.app-shell[data-app-id="chat"] .call-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.app-shell[data-app-id="chat"] .call-status-dot {
+    width: 8px;
+    height: 8px;
+    background: #4ade80;
+    border-radius: 50%;
+    animation: statusPulse 1.5s ease-in-out infinite;
+    box-shadow: 0 0 6px #4ade80;
+}
+
+@keyframes statusPulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 6px #4ade80; }
+    50% { opacity: 0.6; box-shadow: 0 0 3px #4ade80; }
+}
+
+.app-shell[data-app-id="chat"] .call-duration {
+    font-size: 32px;
+    font-weight: 200;
+    color: white;
+    margin-top: 12px;
+    font-family: 'SF Mono', 'Menlo', monospace;
+    letter-spacing: 2px;
+    display: none;
+}
+
+.app-shell[data-app-id="chat"] .call-duration.visible {
+    display: block;
+}
+
+/* ========== 消息对话区域 ========== */
+.app-shell[data-app-id="chat"] .call-chat-area {
+    position: relative;
+    z-index: 5;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin: 0 16px;
+    border-radius: 20px;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+}
+
+.app-shell[data-app-id="chat"] .call-messages-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.app-shell[data-app-id="chat"] .call-messages-container::-webkit-scrollbar {
+    display: none;
+}
+
+.app-shell[data-app-id="chat"] .call-input-area {
+    padding: 12px 14px;
+    background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.3));
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.app-shell[data-app-id="chat"] .call-message-input {
+    flex: 1;
+    padding: 12px 18px;
+    border: none;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
+    font-size: 14px;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .call-message-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.app-shell[data-app-id="chat"] .call-message-input:focus {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.app-shell[data-app-id="chat"] .call-send-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #4ade80, #22c55e);
+    border: none;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(74, 222, 128, 0.35);
+    transition: all 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .call-send-btn:hover {
+    transform: scale(1.05);
+}
+
+.app-shell[data-app-id="chat"] .call-send-btn:active {
+    transform: scale(0.95);
+}
+
+/* ========== 底部控制按钮 ========== */
+.app-shell[data-app-id="chat"] .call-controls-area {
+    position: relative;
+    z-index: 10;
+    padding: 16px 20px 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 24px;
+}
+
+.app-shell[data-app-id="chat"] .call-control-btn {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: all 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .call-control-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.05);
+}
+
+.app-shell[data-app-id="chat"] .call-control-btn:active {
+    transform: scale(0.95);
+}
+
+.app-shell[data-app-id="chat"] .call-control-btn.active {
+    background: linear-gradient(135deg, #4ade80, #22c55e);
+    border-color: #4ade80;
+}
+
+.app-shell[data-app-id="chat"] .call-end-btn {
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    border: none;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
+    transition: all 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .call-end-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 10px 30px rgba(239, 68, 68, 0.5);
+}
+
+.app-shell[data-app-id="chat"] .call-end-btn:active {
+    transform: scale(0.95);
+}

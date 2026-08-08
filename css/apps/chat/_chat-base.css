@@ -1,0 +1,25 @@
+/* ============================================
+ * chat-app 基础样式 — 暂留空
+ *
+ * 计划:Phase 1.2 抽出 chat.js 内联样式 → 子文件
+ *   - _chat-private.css    (私聊详情页)
+ *   - _chat-group.css      (群聊详情页)
+ *   - _chat-bubble.css     (消息气泡)
+ *   - _chat-input.css      (输入区域)
+ *   - _chat-call.css       (通话 UI)
+ *   - _chat-emoji.css      (表情包)
+ *   - _chat-history.css    (历史记录)
+ *   - _chat-summary.css    (摘要)
+ *   - _chat-game.css       (游戏)
+ *   - _chat-responsive.css (响应式)
+ *
+ * 偏差说明(2026-08-04 02:18):
+ *   - chat.js 原版 nav-tab 用 22×22 SVG icon
+ *   - framework 强制 pages[].icon 是单字符文本(AGENTS.md §16.11)
+ *   - 因此 chat-app 复刻版 nav-tab icon 用 emoji 字符,
+ *     若想用 SVG,需在 renderPage 内部手画(代价大,暂不做)
+ *
+ * 作用域约定:
+ *   - 所有规则用 `.chat-app` 类名前缀,假设自己已在 #phone 内
+ *   - 不写 #phone 守卫(项目其他 app 都不写)
+ * ============================================ */

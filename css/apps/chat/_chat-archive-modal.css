@@ -1,0 +1,392 @@
+/* ============================================
+ * chat-app / 故事存档弹窗 (v0.42)
+ *
+ *   包括三大弹窗:
+ *     - archive-save        封存弹窗(输入标题+简介)
+ *     - archive-confirm     通用确认弹窗(警告 + 危险两类)
+ *       - --warning        恢复存档前覆盖确认
+ *       - --danger          删除存档确认
+ *
+ *   样式规范照搬 ai-remark / chat-background 路线:
+ *     - overlay 用 position: fixed + 半透明黑色
+ *     - modal 卡片用白底圆角 + 阴影
+ *     - 按钮区域 hover/active 都给反馈
+ * ============================================ */
+
+/* ============================================
+ * archive-save 弹窗
+ * ============================================ */
+
+.archive-save-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: archiveSaveFadeIn 0.2s ease;
+}
+
+@keyframes archiveSaveFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.archive-save-modal {
+    background: #FFFFFF;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 360px;
+    max-height: 86%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    animation: archiveSaveSlideUp 0.3s ease;
+    box-shadow: 0 12px 36px rgba(212, 114, 138, 0.22);
+}
+
+@keyframes archiveSaveSlideUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.archive-save-header {
+    background: linear-gradient(135deg, #FFE4EC 0%, #FFF0F5 100%);
+    padding: 14px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+    border-bottom: 1px solid rgba(212, 114, 138, 0.12);
+}
+
+.archive-save-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #D4728A;
+}
+
+.archive-save-close {
+    border: none;
+    background: none;
+    cursor: pointer;
+    padding: 4px;
+    color: #D4728A;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.archive-save-close:hover {
+    opacity: 1;
+}
+
+.archive-save-close svg {
+    width: 18px;
+    height: 18px;
+}
+
+.archive-save-body {
+    padding: 16px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.archive-save-hint {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    background: #FFF0F5;
+    border-radius: 10px;
+    margin-bottom: 14px;
+    font-size: 13px;
+}
+
+.archive-save-hint-name {
+    color: #D4728A;
+    font-weight: 600;
+}
+
+.archive-save-hint-count {
+    color: #999;
+    font-size: 12px;
+}
+
+.archive-save-hint-desc {
+    font-size: 12px;
+    color: #999;
+    line-height: 1.6;
+    margin-bottom: 16px;
+    padding: 0 4px;
+}
+
+.archive-save-field {
+    margin-bottom: 14px;
+}
+
+.archive-save-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 6px;
+}
+
+.archive-save-required {
+    color: #DC2626;
+    margin-left: 2px;
+}
+
+.archive-save-input,
+.archive-save-textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 1px solid #FFE0EC;
+    border-radius: 10px;
+    background: #FFF8FB;
+    font-family: inherit;
+    font-size: 14px;
+    color: #333;
+    transition: border-color 0.2s, background 0.2s;
+    resize: none;
+}
+
+.archive-save-input:focus,
+.archive-save-textarea:focus {
+    outline: none;
+    border-color: #FF96A8;
+    background: #FFFFFF;
+}
+
+.archive-save-textarea {
+    min-height: 70px;
+    line-height: 1.5;
+}
+
+.archive-save-count {
+    text-align: right;
+    font-size: 11px;
+    color: #999;
+    margin-top: 4px;
+}
+
+.archive-save-count.warning {
+    color: #F59E0B;
+}
+
+.archive-save-actions {
+    padding: 12px 16px;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+    background: #FAFBFC;
+}
+
+.archive-save-btn {
+    flex: 1;
+    padding: 11px;
+    border: none;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.archive-save-btn-cancel {
+    background: #FFFFFF;
+    color: #666;
+    border: 1px solid #E8ECF0;
+}
+
+.archive-save-btn-cancel:hover {
+    background: #F8F9FA;
+}
+
+.archive-save-btn-cancel:active {
+    background: #F0F2F5;
+}
+
+.archive-save-btn-confirm {
+    background: linear-gradient(135deg, #FFB3D1, #FF96A8);
+    color: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(255, 150, 168, 0.3);
+}
+
+.archive-save-btn-confirm:hover {
+    box-shadow: 0 4px 12px rgba(255, 150, 168, 0.4);
+}
+
+.archive-save-btn-confirm:active {
+    transform: scale(0.98);
+}
+
+.archive-save-btn-confirm.saving {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.archive-save-btn-confirm.disabled {
+    background: #F0F2F5;
+    color: #C7CCD3;
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+/* ============================================
+ * archive-confirm 通用确认弹窗
+ *   - warning: 黄色图标 / 橙色按钮(恢复存档)
+ *   - danger:  红色图标 / 红色按钮(删除存档)
+ * ============================================ */
+
+.archive-confirm-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: archiveConfirmFadeIn 0.2s ease;
+}
+
+@keyframes archiveConfirmFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.archive-confirm-modal {
+    background: #FFFFFF;
+    border-radius: 14px;
+    width: 88%;
+    max-width: 320px;
+    padding: 22px 20px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    animation: archiveConfirmSlideUp 0.3s ease;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+}
+
+.archive-confirm-modal--warning {
+    box-shadow: 0 8px 28px rgba(245, 158, 11, 0.18);
+}
+
+.archive-confirm-modal--danger {
+    box-shadow: 0 8px 28px rgba(220, 38, 38, 0.18);
+}
+
+@keyframes archiveConfirmSlideUp {
+    from { opacity: 0; transform: translateY(12px) scale(0.96); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.archive-confirm-icon {
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.archive-confirm-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.archive-confirm-text {
+    font-size: 13px;
+    color: #555;
+    line-height: 1.6;
+    margin-bottom: 18px;
+    word-break: break-word;
+}
+
+.archive-confirm-line {
+    margin-bottom: 6px;
+}
+
+.archive-confirm-line b {
+    color: #333;
+    font-weight: 600;
+}
+
+.archive-confirm-hint {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #999;
+}
+
+.archive-confirm-hint--danger {
+    color: #DC2626;
+}
+
+.archive-confirm-actions {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+}
+
+.archive-confirm-btn {
+    flex: 1;
+    padding: 11px;
+    border: none;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.archive-confirm-btn-cancel {
+    background: #F8F9FA;
+    color: #666;
+    border: 1px solid #E8ECF0;
+}
+
+.archive-confirm-btn-cancel:hover {
+    background: #F0F2F5;
+}
+
+.archive-confirm-btn-cancel:active {
+    background: #E8ECF0;
+}
+
+.archive-confirm-btn-danger {
+    background: linear-gradient(135deg, #FFB3D1, #FF96A8);
+    color: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(255, 150, 168, 0.3);
+}
+
+.archive-confirm-modal--warning .archive-confirm-btn-danger {
+    background: linear-gradient(135deg, #FCD34D, #F59E0B);
+    color: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+}
+
+.archive-confirm-modal--warning .archive-confirm-btn-danger:hover {
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+}
+
+.archive-confirm-modal--danger .archive-confirm-btn-danger {
+    background: linear-gradient(135deg, #FCA5A5, #DC2626);
+    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+}
+
+.archive-confirm-modal--danger .archive-confirm-btn-danger:hover {
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+}
+
+.archive-confirm-btn-danger:active {
+    transform: scale(0.98);
+}

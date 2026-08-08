@@ -3,42 +3,38 @@
  * editor 紧凑型 row / checkgroup / 标签增强 / 阶段 / sub-phase / transitions
  * ============================================ */
 
-/* editor 通用容器（凹陷内嵌风格） */
+/* editor 通用容器（白底 + 内阴影凹陷，统一紧凑版） */
 .settings-app .wv-editor {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 14px;
-    background: #E8E8ED;
+    gap: 0;
+    padding: 10px 12px;
+    background: #FFFFFF;
     border-radius: 12px;
     box-shadow:
-        inset 0 2px 6px rgba(0, 0, 0, 0.12),
-        inset 0 -1px 2px rgba(255, 255, 255, 0.7);
+        inset 0 2px 4px rgba(0, 0, 0, 0.10),
+        inset 0 -1px 2px rgba(255, 255, 255, 0.6);
 }
 
-/* 编辑器 section 分组卡片（浮出感） */
+/* 编辑器 section 分组卡片：去掉白底浮起，和外层凹陷融为一体 */
 .settings-app .wv-editor__section {
-    background: #fff;
-    border-radius: 10px;
-    padding: 12px 14px;
+    background: transparent;
+    border-radius: 0;
+    padding: 0;
     display: flex;
     flex-direction: column;
     gap: 10px;
-    box-shadow:
-        0 1px 3px rgba(0, 0, 0, 0.08),
-        0 1px 1px rgba(0, 0, 0, 0.04);
+    box-shadow: none;
 }
 
 /* Section 标题（小标签风格） */
 .settings-app .wv-editor__section-title {
-    font-size: 10px;
-    text-transform: uppercase;
+    font-size: 13px;
     font-weight: 600;
-    color: var(--settings-color-blue);
-    letter-spacing: 0.08em;
-    margin-bottom: 4px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid rgba(10, 132, 255, 0.15);
+    color: #6b7280;
+    text-align: center;
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
 }
 
 /* 地点/场所编辑器专属样式 */
@@ -48,25 +44,27 @@
     padding: 12px;
 }
 
-/* 编辑器行样式 */
+/* 编辑器行样式（紧凑垂直布局） */
 .settings-app .wv-editor__row {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    margin-bottom: 10px;
 }
 
 /* 标签样式 */
 .settings-app .wv-editor__row .wv-editor__label {
     font-size: 12px;
-    font-weight: 500;
-    color: var(--settings-color-label);
-    min-width: 52px;
-    padding-top: 6px;
+    font-weight: 400;
+    color: #374151;
+    min-width: auto;
+    padding-top: 0;
     flex-shrink: 0;
+    text-align: left;
 }
 
-/* 输入框样式（凹陷内嵌） */
+/* 输入框样式（紧凑） */
 .settings-app .wv-editor__input,
 .settings-app .wv-editor__textarea,
 .settings-app .wv-editor__select {
@@ -74,14 +72,12 @@
     flex: 1;
     min-width: 0;
     background: #F2F2F7;
-    border: none;
+    border: 1px solid rgba(120, 120, 128, 0.12);
     border-radius: 8px;
-    padding: 8px 10px;
-    font-size: 14px;
+    padding: 6px 8px;
+    font-size: 12px;
     color: var(--settings-color-label);
-    box-shadow:
-        inset 0 1.5px 3px rgba(0, 0, 0, 0.08),
-        inset 0 -0.5px 1px rgba(255, 255, 255, 0.9);
+    box-shadow: none;
     transition: all 0.2s ease;
 }
 
@@ -91,17 +87,15 @@
 .settings-app .wv-editor__select:focus {
     outline: none;
     background: #fff;
-    box-shadow:
-        inset 0 1.5px 3px rgba(0, 0, 0, 0.08),
-        inset 0 -0.5px 1px rgba(255, 255, 255, 0.9),
-        0 0 0 2px rgba(10, 132, 255, 0.3);
+    border-color: rgba(10, 132, 255, 0.4);
+    box-shadow: none;
 }
 
 /* textarea 样式 */
 .settings-app .wv-editor__textarea {
     resize: vertical;
-    min-height: 70px;
-    line-height: 1.5;
+    min-height: 28px;
+    line-height: 1.4;
     font-family: inherit;
 }
 
@@ -109,8 +103,8 @@
 .settings-app .wv-editor__select {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%238E8E93' d='M5 6L0 0h10z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right 10px center;
-    padding-right: 28px;
+    background-position: right 8px center;
+    padding-right: 24px;
     cursor: pointer;
 }
 
@@ -118,18 +112,86 @@
 .settings-app .wv-editor__row--inline {
     flex-direction: row;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
+    flex-wrap: wrap;
 }
 
 .settings-app .wv-editor__row--inline .wv-editor__label {
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--settings-color-secondary);
+    font-size: 12px;
+    font-weight: 400;
+    color: #374151;
     width: auto;
     min-width: auto;
     padding-top: 0;
     flex-shrink: 0;
     margin-bottom: 0;
+}
+
+/* 行内配对布局 */
+.settings-app .wv-editor__row--inline-pairs {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+/* 字段配对 */
+.settings-app .wv-editor__field-pair {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 100px;
+}
+
+/* 堆叠布局 */
+.settings-app .wv-editor__row--stacked {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    align-items: flex-start;
+}
+
+.settings-app .wv-editor__row--stacked .wv-editor__label {
+    display: block;
+    margin-bottom: 4px;
+    text-align: left;
+    width: auto;
+    min-width: auto;
+    padding-top: 0;
+    flex-shrink: 0;
+}
+
+/* 标签块级样式 */
+.settings-app .wv-editor__label--block {
+    display: block;
+    margin-bottom: 4px;
+    text-align: left;
+}
+
+/* 紧凑输入 */
+.settings-app .wv-editor__input--compact {
+    font-size: 12px;
+    padding: 6px 8px;
+    flex: 1;
+    min-width: 0;
+}
+
+/* textarea 紧凑 */
+.settings-app .wv-editor__textarea--compact {
+    font-size: 11px;
+    padding: 6px 8px;
+    min-height: 28px;
+    resize: none;
+    flex: 1;
+    min-width: 0;
+}
+
+/* select 紧凑 */
+.settings-app .wv-editor__select--compact {
+    font-size: 11px;
+    padding: 4px 6px;
+    min-width: 60px;
 }
 
 .settings-app .wv-editor__select--sm { max-width: 100px; flex: 0 0 auto; }
@@ -170,7 +232,8 @@
 .settings-app .wv-editor__actions {
     display: flex;
     gap: 6px;
-    margin-top: 4px;
+    padding-top: 8px;
+    justify-content: flex-end;
 }
 
 .settings-app .wv-editor__checkgroup {
@@ -302,7 +365,7 @@
 .settings-app .wv-timeline-event__actions { display: flex; gap: 4px; }
 .settings-app .wv-timeline-ai { background: var(--wv-card-bg); border-radius: 10px; padding: 8px 10px; }
 .settings-app .wv-timeline-ai summary { font-weight: 700; cursor: pointer; }
-.settings-app .wv-timeline-add { padding: 8px 10px; background: rgba(10,132,255,0.05); border: 1px dashed rgba(10,132,255,0.3); border-radius: 10px; }
+.settings-app .wv-timeline-add { padding: 8px 10px; border-radius: 10px; }
 
 
 /* 坐标输入专用宽度 */
@@ -382,14 +445,15 @@
 
 .settings-app .wv-place-editor .wv-editor__section-title,
 .settings-app .wv-location-editor .wv-editor__section-title {
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--settings-color-blue);
-    margin-bottom: 8px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid rgba(10, 132, 255, 0.15);
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: none;
+    color: #6b7280;
+    text-align: center;
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+    padding-bottom: 0;
+    border-bottom: none;
 }
 
 /* 图标输入框特殊样式 */

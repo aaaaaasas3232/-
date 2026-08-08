@@ -1,0 +1,183 @@
+.prompt-survey-app .prompt-chip {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.72);
+    padding: 8px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #6b21a8;
+    border: 1px solid rgba(255,255,255,0.55);
+}
+
+.prompt-survey-app .prompt-list-card {
+    border-radius: 20px;
+    background: rgba(255,255,255,0.72);
+    border: 1px solid rgba(255,255,255,0.55);
+    padding: 14px 15px;
+}
+
+.prompt-survey-app .prompt-list-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.prompt-survey-app .prompt-list-text {
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.75;
+    color: #64748b;
+}
+
+.prompt-survey-app .prompt-hero-card,
+.prompt-survey-app .prompt-result-hero {
+    background: linear-gradient(135deg, rgba(255,255,255,0.82) 0%, rgba(250,245,255,0.9) 52%, rgba(239,246,255,0.88) 100%);
+}
+
+.prompt-survey-app .prompt-question-card.muted {
+    opacity: 0.76;
+}
+
+.prompt-survey-app .prompt-question-card.active {
+    box-shadow: 0 18px 36px rgba(124, 58, 237, 0.12);
+    border-color: rgba(216, 180, 254, 0.85);
+}
+
+.prompt-survey-app .prompt-section-title {
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: #7c3aed;
+}
+
+.prompt-survey-app .prompt-input,
+.prompt-survey-app .prompt-textarea {
+    width: 100%;
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    background: rgba(255,255,255,0.85);
+    color: #0f172a;
+    border-radius: 18px;
+    padding: 13px 15px;
+    font-size: 13px;
+    line-height: 1.6;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.prompt-survey-app .prompt-textarea {
+    min-height: 92px;
+    resize: vertical;
+}
+
+.prompt-survey-app .prompt-input:focus,
+.prompt-survey-app .prompt-textarea:focus {
+    border-color: rgba(168, 85, 247, 0.9);
+    box-shadow: 0 0 0 4px rgba(233, 213, 255, 0.8);
+}
+
+.prompt-survey-app .prompt-choice-card,
+.prompt-survey-app .prompt-select-card {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    border-radius: 18px;
+    background: rgba(255,255,255,0.74);
+    border: 1px solid rgba(255,255,255,0.6);
+    color: #334155;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 0 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.prompt-survey-app .prompt-select-card {
+    justify-content: flex-start;
+    padding: 12px 14px;
+}
+
+.prompt-survey-app .prompt-choice-card.active,
+.prompt-survey-app .prompt-select-card.active {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.14), rgba(236, 72, 153, 0.12));
+    border-color: rgba(168, 85, 247, 0.55);
+    color: #6b21a8;
+    box-shadow: 0 10px 24px rgba(168, 85, 247, 0.14);
+}
+
+.prompt-survey-app .prompt-pill,
+.prompt-survey-app .prompt-mini-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.55);
+    background: rgba(255,255,255,0.8);
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #4c1d95;
+    cursor: pointer;
+}
+
+.prompt-survey-app .prompt-mini-chip {
+    color: #475569;
+}
+
+.prompt-survey-app .prompt-step-dot {
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.65);
+    background: rgba(255,255,255,0.75);
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.prompt-survey-app .prompt-step-dot.active {
+    background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+    color: white;
+    box-shadow: 0 10px 24px rgba(139, 92, 246, 0.25);
+}
+
+.prompt-survey-app .prompt-nav-btn,
+.prompt-survey-app .prompt-island-preview {
+    flex: 1;
+    min-height: 48px;
+    border: none;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+    color: white;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 14px 28px rgba(168, 85, 247, 0.22);
+}
+
+.prompt-survey-app .prompt-island-preview {
+    flex: 0 0 auto;
+    padding: 0 14px;
+    min-height: 40px;
+    border-radius: 14px;
+    font-size: 12px;
+}
+
+.prompt-survey-app .prompt-nav-btn.secondary {
+    background: rgba(255,255,255,0.82);
+    color: #6b21a8;
+    box-shadow: none;
+    border: 1px solid rgba(221, 214, 254, 0.95);
+}
+
+.prompt-survey-app .prompt-result-pre {
+    margin-top: 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: 12px;
+    line-height: 1.8;
+    color: rgba(255,255,255,0.88);
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}

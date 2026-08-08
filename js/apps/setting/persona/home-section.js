@@ -25,6 +25,8 @@
 import { escapeHtml } from '@/src/core/escape.js';
 import { formatDate } from '@/src/core/mood.js';
 import { MOOD_LABELS, getMoodIsPositive, getMoodColor, getMoodBorderColor, getMoodIntensityStyle } from '@/src/core/mood.js';
+import { renderSpaceBlock } from './space-block.js';
+import { getAccessibleLocationsForPersona } from './space-sdk.js';
 import {
     computePersonaBalance,
     nextOccurrence,
@@ -125,6 +127,61 @@ function pickEntityId(app) {
     }
 }
 
+function renderAvatarContent(persona) {
+    const avatar = typeof persona?.avatar === 'string' ? persona.avatar.trim() : '';
+    if (avatar) {
+        return `<img class="persona-avatar-image" src="${escapeHtml(avatar)}" alt="" />`;
+    }
+    return escapeHtml(getInitial(persona?.name));
+}
+
+function renderAvatarPicker(app, persona) {
+    const route = app.state.personaHome || {};
+    if (!route.avatarPickerOpen) return '';
+
+    const mode = route.mediaPickerMode === 'background' ? 'background' : 'avatar';
+    const images = Array.isArray(route.avatarPickerImages) ? route.avatarPickerImages : [];
+    const selectedCode = mode === 'background' ? persona?.profileBackgroundCode : persona?.avatarCode;
+    const blur = Math.max(0, Math.min(24, Number(persona?.profileBackgroundBlur) || 0));
+    const options = images.map(image => `
+        <button class="phome-avatar-picker__option ${mode === 'background' ? 'is-background' : ''} ${image.code === selectedCode ? 'is-active' : ''}"
+                ${wvAction(mode === 'background' ? 'personaBackgroundSelect' : 'personaAvatarSelect', { code: image.code })}
+                aria-label="选择${mode === 'background' ? '背景' : '头像'} ${escapeHtml(image.name || image.code)}">
+            <img src="${escapeHtml(image.src)}" alt="" />
+        </button>
+    `).join('');
+    const onBlurInput = "this.parentElement.querySelector('[data-background-blur-value]').textContent=this.value+' px'";
+    const onBlurChange = "window.dispatchEvent(new CustomEvent('settings:slider-change',{detail:{field:'profileBackgroundBlur',value:Number(this.value),appId:'settings',method:'personaBackgroundBlurSet'}}))";
+
+    return `
+        <div class="phome-avatar-picker ${route.avatarPickerLoading ? 'is-loading' : ''}">
+            <div class="phome-media-tabs">
+                <button class="phome-media-tab ${mode === 'avatar' ? 'is-active' : ''}" ${wvAction('personaMediaPickerMode', { mode: 'avatar' })}>头像</button>
+                <button class="phome-media-tab ${mode === 'background' ? 'is-active' : ''}" ${wvAction('personaMediaPickerMode', { mode: 'background' })}>卡片背景</button>
+            </div>
+            <div class="phome-avatar-picker__head">
+                <div>
+                    <div class="phome-avatar-picker__title">选择当前人设${mode === 'background' ? '背景' : '头像'}</div>
+                    <div class="phome-avatar-picker__hint">从已绑定的头像库中选择</div>
+                </div>
+                ${(mode === 'avatar' ? persona?.avatar : persona?.profileBackground) ? `<button class="phome-avatar-picker__clear" ${wvAction(mode === 'background' ? 'personaBackgroundSelect' : 'personaAvatarSelect', { code: '' })}>恢复默认</button>` : ''}
+            </div>
+            <div class="phome-avatar-picker__options ${mode === 'background' ? 'is-backgrounds' : ''}">
+                ${route.avatarPickerLoading
+                    ? '<div class="phome-avatar-picker__empty">正在读取图片库</div>'
+                    : options || '<div class="phome-avatar-picker__empty">暂无可选图片，请先在人设资源中绑定头像库</div>'}
+            </div>
+            ${mode === 'background' ? `
+                <label class="phome-background-blur">
+                    <span>背景模糊</span>
+                    <input class="settings-range" type="range" min="0" max="24" step="1" value="${blur}" oninput="${onBlurInput}" onchange="${onBlurChange}" />
+                    <span data-background-blur-value>${blur} px</span>
+                </label>
+            ` : ''}
+        </div>
+    `;
+}
+
 // ============================================
 // 顶部概览
 // ============================================
@@ -146,18 +203,22 @@ function renderTopBlock(app, persona) {
     ].filter(Boolean).join(' · ');
 
     return `
-        <div class="phome-hero">
-            <div class="phome-hero__avatar">${escapeHtml(getInitial(persona?.name))}</div>
-            <div class="phome-hero__body">
-                <div class="phome-hero__name">${escapeHtml(persona?.name || persona?.id || '未命名')}</div>
-                ${meta ? `<div class="phome-hero__meta">${escapeHtml(meta)}</div>` : ''}
-                <div class="phome-hero__chips">
-                    <span class="phome-chip">${entityType === 'user' ? '用户人设' : 'AI 人设'}</span>
-                    ${boundWorld
-                        ? `<span class="phome-chip phome-chip--world">${escapeHtml(boundWorld.name || boundWorld.id)}</span>`
-                        : ''}
+        <div class="phome-hero-wrap ${app.state.personaHome?.avatarPickerOpen ? 'is-open' : ''}">
+            <button class="phome-hero" ${wvAction('personaAvatarPickerToggle')} aria-expanded="${app.state.personaHome?.avatarPickerOpen ? 'true' : 'false'}">
+                <div class="phome-hero__avatar">${renderAvatarContent(persona)}</div>
+                <div class="phome-hero__body">
+                    <div class="phome-hero__name">${escapeHtml(persona?.name || persona?.id || '未命名')}</div>
+                    ${meta ? `<div class="phome-hero__meta">${escapeHtml(meta)}</div>` : ''}
+                    <div class="phome-hero__chips">
+                        <span class="phome-chip">${entityType === 'user' ? '用户人设' : 'AI 人设'}</span>
+                        ${boundWorld
+                            ? `<span class="phome-chip phome-chip--world">${escapeHtml(boundWorld.name || boundWorld.id)}</span>`
+                            : ''}
+                    </div>
                 </div>
-            </div>
+                <span class="phome-hero__avatar-hint">更换</span>
+            </button>
+            ${renderAvatarPicker(app, persona)}
         </div>
     `;
 }
@@ -311,9 +372,13 @@ function renderMoodBlock(app, persona) {
     // 只有编辑今天时才用 route.moodEditRecord（AI生成/重roll后的待保存数据）
     const pendingData = route.moodEditRecord;
     const effectiveRecord = (pendingData && !isEditingOtherDate) ? pendingData : todayRecord;
-    const mood = effectiveRecord?.mood || persona?.dailyMood || '平静';
-    const moodIntensity = effectiveRecord?.moodIntensity ?? 0.5;
-    const isPositive = effectiveRecord?.isPositive !== undefined ? effectiveRecord.isPositive : getMoodIsPositive(mood);
+    // ★ v0.30 不再 fallback 到 persona.dailyMood —— 心情按日记记录,跨日必须刷新
+    const hasTodayMood = !!(effectiveRecord?.mood);
+    const mood = hasTodayMood ? effectiveRecord.mood : '';
+    const moodIntensity = hasTodayMood ? (effectiveRecord.moodIntensity ?? 0.5) : 0.5;
+    const isPositive = hasTodayMood
+        ? (effectiveRecord.isPositive !== undefined ? effectiveRecord.isPositive : getMoodIsPositive(mood))
+        : true;
     const diary = effectiveRecord?.diary || '';
 
     const hasWeights = persona?.moodProbability?.enabled
@@ -332,20 +397,20 @@ function renderMoodBlock(app, persona) {
         ? moodPresets
         : moodPresets.map(m => typeof m === 'string' ? m : m.label);
 
-    // 检查是否在编辑模式
-    const isEditing = route.moodEditMode;
-    
-    // 编辑模式下的数据源：编辑其他日期时从 moodEditRecord 读取
+    // 检查是否在编辑模式（仅当编辑的是今天时才在今日卡片显示编辑表单）
+    const isEditingToday = route.moodEditMode && editDate === today;
+
+    // 编辑模式下的数据源：编辑今天时用 pendingData，编辑其他日期时保持显示今天的心情
     const editRecord = route.moodEditRecord;
-    const editingMood = isEditing && editRecord ? (editRecord.mood || '') : mood;
-    const editingIntensity = isEditing && editRecord ? (editRecord.moodIntensity ?? 0.5) : moodIntensity;
-    const editingDiary = isEditing && editRecord ? (editRecord.diary || '') : diary;
-    const editingIsPositive = isEditing && editRecord 
-        ? editRecord.isPositive 
+    const editingMood = isEditingToday && editRecord ? (editRecord.mood || '') : mood;
+    const editingIntensity = isEditingToday && editRecord ? (editRecord.moodIntensity ?? 0.5) : moodIntensity;
+    const editingDiary = isEditingToday && editRecord ? (editRecord.diary || '') : diary;
+    const editingIsPositive = isEditingToday && editRecord
+        ? editRecord.isPositive
         : (effectiveRecord?.isPositive !== undefined ? effectiveRecord.isPositive : getMoodIsPositive(mood));
 
-    // 编辑模式下的编辑表单
-    if (isEditing) {
+    // 编辑模式下的编辑表单（仅编辑今天时才显示）
+    if (isEditingToday) {
         const editIntensity = Math.round(editingIntensity * 100);
         const editColor = getMoodColor(editingIsPositive, editingIntensity);
         const editStyle = `width: ${editIntensity}%`;
@@ -399,7 +464,7 @@ function renderMoodBlock(app, persona) {
             </header>
             <div class="phome-card__body phome-mood">
                 <div class="phome-mood__display">
-                    <div class="phome-mood__mood-name" style="color: ${displayColor};">${escapeHtml(displayMood || '点击下方按钮生成心情')}</div>
+                    <div class="phome-mood__mood-name ${!displayMood ? 'is-placeholder' : ''}" ${displayMood ? `style="color: ${displayColor};"` : ''}>${escapeHtml(displayMood || '点击下方按钮生成心情')}</div>
                     ${displayDiary ? `<div class="phome-mood__diary">${escapeHtml(displayDiary)}</div>` : ''}
                     <div class="phome-mood__intensity-bar">
                         <div class="phome-mood__intensity-track">
@@ -427,6 +492,53 @@ function renderMoodBlock(app, persona) {
     `;
 }
 
+// ============================================
+// 选中日期的「今日日程」详情
+// ============================================
+
+function getChronoHourNamesForPersona(persona) {
+    const sdk = (typeof window !== 'undefined' ? window.settingsSdk : null);
+    const worldId = persona?.boundWorldId;
+    const world = worldId && sdk?.worlds?.get ? sdk.worlds.get(worldId) : null;
+    const custom = world?.chronologySettings?.customHours;
+    return {
+        customHours: Array.isArray(custom) ? custom : [],
+        enabled: !!world?.chronologySettings?.enabled,
+    };
+}
+
+function renderScheduleDetail(diary, persona) {
+    const sched = Array.isArray(diary?.todaySchedule) ? diary.todaySchedule : [];
+    const chrono = getChronoHourNamesForPersona(persona);
+    const fmt = (h) => formatHourLabelForDiary(h, chrono);
+    const rows = sched.length === 0 ? '' : sched.map(seg => {
+        const phaseTag = seg.phase === 'past'
+            ? `<span class="phome-mood-detail__sched-phase phome-mood-detail__sched-phase--past">已发生</span>`
+            : (seg.phase === 'future'
+                ? `<span class="phome-mood-detail__sched-phase phome-mood-detail__sched-phase--future">即将</span>`
+                : '');
+        return `
+        <div class="phome-mood-detail__sched-row${seg.phase === 'past' ? ' is-past' : (seg.phase === 'future' ? ' is-future' : '')}">
+            <div class="phome-mood-detail__sched-time">${fmt(seg.fromHour)}–${fmt(seg.toHour)}</div>
+            <div class="phome-mood-detail__sched-main">
+                <div class="phome-mood-detail__sched-name">${escapeHtml(seg.locationName || seg.locationId)}${seg.placeName ? ` · ${escapeHtml(seg.placeName)}` : ''} ${phaseTag}</div>
+                ${seg.activity ? `<div class="phome-mood-detail__sched-activity">${escapeHtml(seg.activity)}</div>` : ''}
+            </div>
+        </div>
+    `;
+    }).join('');
+    const tag = diary.todayScheduleSource === 'manual' ? '手动' : 'AI';
+    return `
+        <div class="phome-mood-detail__sched">
+            <div class="phome-mood-detail__sched-head">
+                <span class="phome-mood-detail__sched-title">今日日程</span>
+                <span class="phome-mood-detail__sched-tag">${tag}</span>
+            </div>
+            ${rows}
+        </div>
+    `;
+}
+
 /**
  * 渲染选中日期的心情详情
  */
@@ -441,11 +553,73 @@ function renderMoodDetailPanel(app, persona) {
     const entityId = pickEntityId(app);
     const diary = sdk?.diary?.getDateDiary?.(entityType, entityId, selectedDate);
 
+    // 格式化日期
+    const dateObj = new Date(selectedDate + 'T00:00:00');
+    const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月',
+                       '7月', '8月', '9月', '10月', '11月', '12月'];
+    const weekdayLabels = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+    const dateLabel = `${dateObj.getMonth() + 1}月${dateObj.getDate()}日 ${weekdayLabels[dateObj.getDay()]}`;
+
+    // 检查是否在编辑此日期的心情
+    const isEditingMoodDetail = route.moodEditMode && route.moodEditDate === selectedDate;
+    const editRecord = route.moodEditRecord;
+    const today = formatDate();
+    const isEditingToday = isEditingMoodDetail && selectedDate === today;
+
+    // 编辑模式：使用 moodEditRecord（AI生成/重roll后的待保存数据优先）
+    if (isEditingMoodDetail) {
+        const editMood = editRecord?.mood || '';
+        const editIntensity = editRecord?.moodIntensity ?? 0.5;
+        const editDiary = editRecord?.diary || '';
+        const editIsPositive = editRecord?.isPositive ?? true;
+        const editColor = getMoodColor(editIsPositive, editIntensity);
+        const editIntensityPercent = Math.round(editIntensity * 100);
+        // 实时更新强度 badge 的 script
+        const intensityOnInput = `var badge=this.closest('.phome-mood-detail__edit-section').querySelector('.phome-mood-detail__intensity-badge');var v=parseInt(this.value)||0;badge.textContent=v+'%';var p=v/100;var isP=p>0.5;var r=isP?Math.max(30,180-p*120)|0:Math.max(20,30+p*80)|0;var g=isP?Math.max(60,180-p*100)|0:Math.max(80,180-p*120)|0;var b=isP?Math.max(70,220-p*100)|0:Math.max(180,255-p*60)|0;badge.style.background='rgba('+r+','+g+','+b+',0.2)';badge.style.color='rgb('+r+','+g+','+b+')';`;
+
+        return `
+            <div class="phome-mood-detail">
+                <div class="phome-mood-detail__header">
+                    <span class="phome-mood-detail__date">${dateLabel}</span>
+                </div>
+                <div class="phome-mood-detail__edit-section">
+                    <div class="phome-mood-detail__edit-label">编辑心情</div>
+                    <label class="phome-mood-detail__edit-field">
+                        <span class="phome-mood-detail__edit-field-label">心情</span>
+                        <input type="text" class="phome-mood-detail__edit-input" data-edit-mood value="${escapeHtml(editMood)}" placeholder="如：平静、开心、焦虑">
+                    </label>
+                    <label class="phome-mood-detail__edit-field">
+                        <span class="phome-mood-detail__edit-field-label">
+                            强度 <span class="phome-mood-detail__intensity-badge" id="detail-intensity-badge" style="background: ${editColor}20; color: ${editColor};">${editIntensityPercent}%</span>
+                        </span>
+                        <input type="range" class="phome-mood-detail__edit-range" data-edit-intensity min="0" max="100" value="${editIntensityPercent}" oninput="${intensityOnInput}">
+                    </label>
+                    <label class="phome-mood-detail__edit-field">
+                        <span class="phome-mood-detail__edit-field-label">日记</span>
+                        <textarea class="phome-mood-detail__edit-textarea" data-edit-diary rows="3" placeholder="记录今天的心情...">${escapeHtml(editDiary)}</textarea>
+                    </label>
+                    <label class="phome-mood-detail__edit-field">
+                        <span class="phome-mood-detail__edit-field-label">日程</span>
+                        <textarea class="phome-mood-detail__edit-textarea" data-edit-schedule rows="3" placeholder="可选，描述今天的日程安排...">${escapeHtml(editRecord?.todaySchedule ? editRecord.todaySchedule.map(s => `${s.fromHour}:00-${s.toHour}:00 ${s.locationName || s.locationId}${s.activity ? ' ' + s.activity : ''}`).join('\n') : '')}</textarea>
+                    </label>
+                </div>
+                <div class="phome-mood-detail__edit-actions">
+                    <button class="phome-mood-detail__edit-btn phome-mood-detail__edit-btn--cancel" ${wvAction('personaCancelMoodEdit', {})}>
+                        取消
+                    </button>
+                    <button class="phome-mood-detail__edit-btn phome-mood-detail__edit-btn--save" ${wvAction('personaSaveMoodEdit', {})}>
+                        保存
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
     if (!diary || !diary.mood) {
         return `
             <div class="phome-mood-detail">
                 <div class="phome-mood-detail__empty">
-                    <div class="phome-mood-detail__date">${selectedDate}</div>
+                    <div class="phome-mood-detail__date">${dateLabel}</div>
                     <div class="phome-mood-detail__no-mood">暂无心情记录</div>
                     <button class="persona-btn persona-btn--small persona-btn--ghost" ${wvAction('personaEditMood', { date: selectedDate })}>
                         添加心情
@@ -462,13 +636,6 @@ function renderMoodDetailPanel(app, persona) {
     const moodColor = getMoodColor(isPositive, intensity);
     const intensityStyle = getMoodIntensityStyle(isPositive, intensity);
 
-    // 格式化日期
-    const dateObj = new Date(selectedDate + 'T00:00:00');
-    const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月',
-                       '7月', '8月', '9月', '10月', '11月', '12月'];
-    const weekdayLabels = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-    const dateLabel = `${dateObj.getMonth() + 1}月${dateObj.getDate()}日 ${weekdayLabels[dateObj.getDay()]}`;
-
     return `
         <div class="phome-mood-detail">
             <div class="phome-mood-detail__header">
@@ -484,6 +651,9 @@ function renderMoodDetailPanel(app, persona) {
                 <span class="phome-mood-detail__intensity-label">${Math.round(intensity * 100)}%</span>
             </div>
             ${diaryText ? `<div class="phome-mood-detail__diary">${escapeHtml(diaryText)}</div>` : ''}
+
+            ${renderScheduleDetail(diary, persona)}
+
             <div class="phome-mood-detail__actions">
                 <button class="persona-btn persona-btn--small persona-btn--ghost" ${wvAction('personaEditMood', { date: selectedDate })}>
                     编辑
@@ -523,20 +693,22 @@ function renderWeekBlock(app, persona) {
 
     const items = days.map(d => {
         const date = formatDate(d);
+        const dow = d.getDay();
         const isToday = date === todayStr;
-        const day = sdk?.schedule?.getDay?.(entityType, entityId, date);
-        const events = Array.isArray(day?.events) ? day.events : [];
+        // ★ v0.31：只从 weeklySchedule 读，badge 也只显示每周重复数量
+        const weeklyDay = sdk?.weeklySchedule?.getByDay?.(entityType, entityId, dow);
+        const weeklyCount = Array.isArray(weeklyDay?.events) ? weeklyDay.events.length : 0;
         const isOpen = openDate === date;
 
         const cls = [
             'phome-week__day',
             isToday ? 'is-today' : '',
-            events.length ? 'has-events' : '',
+            weeklyCount ? 'has-events' : '',
             isOpen ? 'is-open' : '',
         ].filter(Boolean).join(' ');
 
-        const badge = events.length
-            ? `<span class="phome-week__badge">${events.length}</span>`
+        const badge = weeklyCount
+            ? `<span class="phome-week__badge">${weeklyCount}</span>`
             : '';
 
         return `
@@ -552,7 +724,7 @@ function renderWeekBlock(app, persona) {
         <section class="phome-card">
             <header class="phome-card__head">
                 <div class="phome-card__title">本周日程</div>
-                <div class="phome-card__sub">点击某天查看 / 新增日程</div>
+                <div class="phome-card__sub">点击某天查看 / 新增每周重复日程</div>
                 <button class="phome-rhythm__inject-btn" ${injectAction} title="点击切换注入模式：${injectLabel}">
                     <span class="phome-rhythm__inject-label">${injectLabel}</span>
                 </button>
@@ -562,7 +734,6 @@ function renderWeekBlock(app, persona) {
                 ${openDate ? renderSchedulePanel(app, openDate) : ''}
             </div>
         </section>
-        ${renderRhythmBlock(app)}
     `;
 }
 
@@ -590,6 +761,20 @@ function getRhythmModule(persona) {
 function getChronoLabel(hour, hourNames) {
     if (hour == null || !hourNames?.length) return '';
     return hourNames[Math.floor((hour + 1) / 2) % 12] || '';
+}
+
+/**
+ * 心情详情面板里的日程时段标签:遵循当前世界观的纪时制。
+ *   - 时辰制(12 项):显示「戌时」「亥时」…
+ *   - 24 时制或未开启:显示「19 时」「20 时」…
+ */
+function formatHourLabelForDiary(hour, chrono) {
+    const safeHour = Math.max(0, Math.min(23, Number.parseInt(hour, 10) || 0));
+    if (chrono?.enabled && Array.isArray(chrono.customHours) && chrono.customHours.length === 12) {
+        const idx = Math.floor((safeHour + 1) / 2) % 12;
+        return chrono.customHours[idx] || `${safeHour} 时`;
+    }
+    return `${safeHour} 时`;
 }
 
 /**
@@ -958,28 +1143,34 @@ function renderSchedulePanel(app, date) {
     const entityType = pickEntityType(app);
     const entityId = pickEntityId(app);
 
-    const day = sdk?.schedule?.getDay?.(entityType, entityId, date) || { events: [] };
-    const events = sortScheduleEvents(Array.isArray(day.events) ? day.events : []);
+    const dateObj = parseYmd(date);
+    const dow = dateObj instanceof Date ? dateObj.getDay() : 0;
+
+    // ★ v0.31：始终从 weeklySchedule 读取（按周几存储）
+    const weeklyDay = sdk?.weeklySchedule?.getByDay?.(entityType, entityId, dow);
+    const events = sortScheduleEvents(Array.isArray(weeklyDay?.events) ? weeklyDay.events : []);
     const hourNames = getHomeHourNames(app);
+    const weekNames = getChronoWeekNames(app);
 
     const eventsHtml = events.length === 0
-        ? `<div class="phome-schedule__empty">这天还没有日程 · 点下方「添加日程」开始安排</div>`
+        ? `<div class="phome-schedule__empty">这周还没有重复日程 · 点下方添加</div>`
         : events.map(e => renderScheduleItem(e, date, app, hourNames)).join('');
 
-    const dateObj = parseYmd(date);
-
-    // 优先使用世界观纪时系统的周名称映射
-    const weekNames = getChronoWeekNames(app);
-    const dateLabel = isNaN(dateObj)
-        ? date
-        : `${dateObj.getMonth() + 1} 月 ${dateObj.getDate()} 日 · ${
+    // 日期标签：显示具体日期 + 如果有世界时间映射则显示时段
+    let dateLabel = '';
+    if (!isNaN(dateObj)) {
+        const baseLabel = `${dateObj.getMonth() + 1} 月 ${dateObj.getDate()} 日 · ${
             weekNames
                 ? weekNames[(dateObj.getDay() + 6) % 7]
                 : ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][dateObj.getDay()]
-          }`;
+        }`;
+        dateLabel = baseLabel;
+    } else {
+        dateLabel = date;
+    }
 
     return `
-        <div class="phome-schedule">
+        <div class="phome-schedule" data-schedule-date="${escapeHtml(date)}">
             <div class="phome-schedule__head">
                 <div class="phome-schedule__date">${escapeHtml(dateLabel)}</div>
             </div>
@@ -989,7 +1180,7 @@ function renderSchedulePanel(app, date) {
             <div class="phome-schedule__compose">
                 <div class="phome-schedule__compose-title">
                     <input type="text" class="phome-schedule__input phome-schedule__title-input"
-                        data-schedule-field="title" placeholder="日程标题（必填）" maxlength="32" />
+                        data-schedule-field="title" placeholder="每周重复日程标题（必填）" maxlength="32" />
                 </div>
                 <label class="phome-schedule__time-toggle">
                     <input type="checkbox" data-schedule-field="hasTime" />
@@ -1005,7 +1196,7 @@ function renderSchedulePanel(app, date) {
                 <textarea class="phome-schedule__textarea"
                     data-schedule-field="note" placeholder="备注（可选）" rows="2" maxlength="120"></textarea>
                 <div class="phome-schedule__compose-actions">
-                    <button class="persona-btn persona-btn--small" data-schedule-add>添加日程</button>
+                    <button class="persona-btn persona-btn--small" data-schedule-add>添加每周重复</button>
                 </div>
             </div>
         </div>
@@ -1307,26 +1498,344 @@ function renderBalanceEditForm(currentBalance) {
 }
 
 // ============================================
-// 社媒今日动态（v0.18 仅占位）
+// 社媒形象配置（v0.19 murmur/博客/日记）
 // ============================================
 
+import { getSocialProfile, isOnline, formatOnlineHours } from './social-profile.js';
+
+/**
+ * 渲染单个社媒软件配置卡片
+ */
+function renderSocialAppCard(app, persona, appId, appInfo) {
+    const profile = getSocialProfile(persona, appId);
+    const route = app.state.personaHome || {};
+    const isExpanded = route.socialProfileExpanded === appId;
+    const pending = route.socialProfilePending || {};
+
+    // 当前配置状态（考虑 pending）
+    const effectiveNickname = pending.nickname || profile.nickname || '';
+    const effectiveAvatarCode = pending.avatarCode || profile.avatarCode || '';
+    const effectiveBackgroundCode = pending.backgroundCode || profile.backgroundCode || '';
+    const effectiveOnlineHours = pending.onlineHours || profile.onlineHours;
+
+    const hasNickname = !!effectiveNickname;
+    const hasAvatar = !!effectiveAvatarCode;
+    const hasBackground = !!effectiveBackgroundCode;
+    const hasOnlineHours = !!(effectiveOnlineHours?.start || effectiveOnlineHours?.end);
+    const onlineStatus = isOnline(effectiveOnlineHours);
+
+    // 在线状态图标
+    const onlineBadge = onlineStatus
+        ? '<span class="phome-social__online-badge phome-social__online-badge--online">在线</span>'
+        : '<span class="phome-social__online-badge phome-social__online-badge--offline">离线</span>';
+
+    // 配置状态摘要
+    const configParts = [];
+    if (hasNickname) configParts.push(`网名: ${escapeHtml(effectiveNickname)}`);
+    if (hasAvatar) configParts.push('已选头像');
+    if (hasBackground) configParts.push('已选背景');
+    if (hasOnlineHours) configParts.push(formatOnlineHours(effectiveOnlineHours));
+
+    const configSummary = configParts.length > 0
+        ? configParts.join(' · ')
+        : '点击配置';
+
+    return `
+        <div class="phome-social__app-card ${isExpanded ? 'is-expanded' : ''}">
+            <div class="phome-social__app-header" ${wvAction('socialProfileToggle', { appId })}>
+                <div class="phome-social__app-icon">
+                    ${appInfo.icon}
+                </div>
+                <div class="phome-social__app-info">
+                    <div class="phome-social__app-name">${escapeHtml(appInfo.name)}</div>
+                    <div class="phome-social__app-status">${onlineBadge} · ${escapeHtml(configSummary)}</div>
+                </div>
+                <div class="phome-social__app-chevron">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="m6 9 6 6 6-6"/>
+                    </svg>
+                </div>
+            </div>
+            ${isExpanded ? renderSocialAppPanel(app, persona, appId, appInfo, profile) : ''}
+        </div>
+    `;
+}
+
+/**
+ * 渲染社媒配置面板
+ */
+function renderSocialAppPanel(app, persona, appId, appInfo, profile) {
+    const route = app.state.personaHome || {};
+    const imagePickerOpen = route.socialImagePickerOpen === appId;
+    const imagePickerMode = route.socialImagePickerMode || 'avatar';
+    const images = Array.isArray(route.socialImagePickerImages) ? route.socialImagePickerImages : [];
+    const loading = route.socialImagePickerLoading || false;
+
+    // 当前选中的 code（考虑 pending 状态）
+    const pending = route.socialProfilePending || {};
+    const effectiveAvatarCode = pending.avatarCode || profile.avatarCode || '';
+    const effectiveBackgroundCode = pending.backgroundCode || profile.backgroundCode || '';
+    const effectiveAvatar = pending.avatar || profile.avatar || '';
+    const effectiveBackground = pending.background || profile.background || '';
+
+    // 获取头像预览 src：优先从选择器缓存找，否则用 URL
+    const avatarPreviewSrc = images.find(i => i.code === effectiveAvatarCode)?.src || effectiveAvatar;
+    const backgroundPreviewSrc = images.find(i => i.code === effectiveBackgroundCode)?.src || effectiveBackground;
+
+    // 当前选中的 code
+    const selectedAvatarCode = effectiveAvatarCode;
+    const selectedBackgroundCode = effectiveBackgroundCode;
+
+    // 在线时间段
+    const startHour = profile.onlineHours?.start?.split(':')[0] || '09';
+    const startMinute = profile.onlineHours?.start?.split(':')[1] || '00';
+    const endHour = profile.onlineHours?.end?.split(':')[0] || '22';
+    const endMinute = profile.onlineHours?.end?.split(':')[1] || '00';
+
+    const avatarOptions = images.length > 0 ? images.map(img => `
+        <button class="phome-social__image-option ${img.code === selectedAvatarCode ? 'is-active' : ''}"
+                ${wvAction('socialImageSelect', { appId, type: 'avatar', code: img.code })}>
+            <img src="${escapeHtml(img.src)}" alt="" />
+        </button>
+    `).join('') : '<div class="phome-social__image-empty">暂无头像库图片</div>';
+
+    const backgroundOptions = images.length > 0 ? images.map(img => `
+        <button class="phome-social__image-option phome-social__image-option--bg ${img.code === selectedBackgroundCode ? 'is-active' : ''}"
+                ${wvAction('socialImageSelect', { appId, type: 'background', code: img.code })}>
+            <img src="${escapeHtml(img.src)}" alt="" />
+        </button>
+    `).join('') : '<div class="phome-social__image-empty">暂无背景库图片</div>';
+
+    return `
+        <div class="phome-social__app-panel">
+            <!-- 网名 -->
+            <div class="phome-social__config-row">
+                <label class="phome-social__config-label">网名</label>
+                <input class="phome-social__config-input"
+                       type="text"
+                       value="${escapeHtml(profile.nickname || '')}"
+                       placeholder="设置在此软件的显示名称"
+                       data-social-nickname="${escapeHtml(appId)}" />
+            </div>
+
+            <!-- 拍一拍后缀 (murmur/chat 专用,给 AI 回复拍一拍时用) -->
+            <div class="phome-social__config-row">
+                <label class="phome-social__config-label">拍一拍</label>
+                <input class="phome-social__config-input"
+                       type="text"
+                       value="${escapeHtml(profile.patSetting || '')}"
+                       placeholder="对方拍你时的文案,例如「揉了揉我的脑袋」"
+                       maxlength="30"
+                       data-social-pat-setting="${escapeHtml(appId)}" />
+            </div>
+
+            <!-- 头像选择 -->
+            <div class="phome-social__config-row">
+                <label class="phome-social__config-label">头像</label>
+                <div class="phome-social__image-picker-wrap">
+                    <button class="phome-social__picker-btn" ${wvAction('socialImagePickerToggle', { appId, mode: 'avatar' })}>
+                        ${avatarPreviewSrc
+                            ? `<img class="phome-social__preview-img" src="${escapeHtml(avatarPreviewSrc)}" alt="" />`
+                            : '<span class="phome-social__preview-placeholder">选择头像</span>'
+                        }
+                    </button>
+                    ${selectedAvatarCode ? `<button class="phome-social__clear-btn" ${wvAction('socialImageSelect', { appId, type: 'avatar', code: '' })}>清除</button>` : ''}
+                </div>
+            </div>
+
+            <!-- 头像选择面板 -->
+            ${imagePickerOpen && imagePickerMode === 'avatar' ? `
+                <div class="phome-social__image-grid">
+                    ${loading ? '<div class="phome-social__image-empty">加载中...</div>' : avatarOptions}
+                </div>
+            ` : ''}
+
+            <!-- 背景选择 -->
+            <div class="phome-social__config-row">
+                <label class="phome-social__config-label">背景</label>
+                <div class="phome-social__image-picker-wrap">
+                    <button class="phome-social__picker-btn phome-social__picker-btn--bg" ${wvAction('socialImagePickerToggle', { appId, mode: 'background' })}>
+                        ${backgroundPreviewSrc
+                            ? `<img class="phome-social__preview-img" src="${escapeHtml(backgroundPreviewSrc)}" alt="" />`
+                            : '<span class="phome-social__preview-placeholder">选择背景</span>'
+                        }
+                    </button>
+                    ${selectedBackgroundCode ? `<button class="phome-social__clear-btn" ${wvAction('socialImageSelect', { appId, type: 'background', code: '' })}>清除</button>` : ''}
+                </div>
+            </div>
+
+            <!-- 背景选择面板 -->
+            ${imagePickerOpen && imagePickerMode === 'background' ? `
+                <div class="phome-social__image-grid">
+                    ${loading ? '<div class="phome-social__image-empty">加载中...</div>' : backgroundOptions}
+                </div>
+            ` : ''}
+
+            ${appId === 'chat' ? `
+            <!-- 在线时间段 (仅 chat) -->
+            <div class="phome-social__config-row">
+                <label class="phome-social__config-label">在线时间</label>
+                <div class="phome-social__time-range">
+                    <select class="phome-social__time-select" data-social-time="${appId}-start-h">
+                        ${Array.from({length: 24}, (_, i) => `<option value="${String(i).padStart(2, '0')}" ${String(i).padStart(2, '0') === startHour ? 'selected' : ''}>${String(i).padStart(2, '0')}</option>`).join('')}
+                    </select>
+                    <span>:</span>
+                    <select class="phome-social__time-select" data-social-time="${appId}-start-m">
+                        ${Array.from({length: 60}, (_, i) => `<option value="${String(i).padStart(2, '0')}" ${String(i).padStart(2, '0') === startMinute ? 'selected' : ''}>${String(i).padStart(2, '0')}</option>`).join('')}
+                    </select>
+                    <span class="phome-social__time-sep">至</span>
+                    <select class="phome-social__time-select" data-social-time="${appId}-end-h">
+                        ${Array.from({length: 24}, (_, i) => `<option value="${String(i).padStart(2, '0')}" ${String(i).padStart(2, '0') === endHour ? 'selected' : ''}>${String(i).padStart(2, '0')}</option>`).join('')}
+                    </select>
+                    <span>:</span>
+                    <select class="phome-social__time-select" data-social-time="${appId}-end-m">
+                        ${Array.from({length: 60}, (_, i) => `<option value="${String(i).padStart(2, '0')}" ${String(i).padStart(2, '0') === endMinute ? 'selected' : ''}>${String(i).padStart(2, '0')}</option>`).join('')}
+                    </select>
+                </div>
+            </div>
+            ` : ''}
+
+            <!-- 操作按钮 -->
+            <div class="phome-social__config-actions">
+                <button class="persona-btn persona-btn--small persona-btn--ghost" ${wvAction('socialProfileGenerate', { appId })}>AI 生成</button>
+                <button class="persona-btn persona-btn--small" ${wvAction('socialProfileSave', { appId })}>保存配置</button>
+            </div>
+        </div>
+    `;
+}
+
+// ============================================
+// 资金流水卡片（v0.67 私聊红包/转账流水记录）
+// ============================================
+
+const TRANSACTION_HISTORY_LIMIT = 50;
+
+/**
+ * 渲染单条流水
+ */
+function renderTransactionFlowItem(entry, personaType) {
+    const isIn = entry.direction === 'in';
+    const sign = isIn ? '+' : '-';
+    const amountClass = isIn ? 'phome-tx__amount--in' : 'phome-tx__amount--out';
+    const amountText = `${sign}${formatAmount(entry.amount || 0)}`;
+
+    // 来源文案
+    const typeMap = {
+        'redpacket': isIn ? '收到红包' : '发红包',
+        'transfer': isIn ? '收到转账' : '转账',
+        'income-settle': '定时收入到账',
+        'manual': '手动调整',
+        'unknown': '其他',
+    };
+    const typeLabel = typeMap[entry.type] || entry.type || '其他';
+
+    const counterparty = entry.counterpartyName ? escapeHtml(entry.counterpartyName) : '';
+    const note = entry.note ? escapeHtml(entry.note) : '';
+
+    const date = new Date(entry.timestamp || Date.now());
+    const dateText = `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+
+    return `
+        <article class="phome-tx__item ${isIn ? 'is-in' : 'is-out'}">
+            <div class="phome-tx__item-main">
+                <div class="phome-tx__item-title">${typeLabel}${counterparty ? ` · ${counterparty}` : ''}</div>
+                ${note ? `<div class="phome-tx__item-note">${note}</div>` : ''}
+                <div class="phome-tx__item-meta">${dateText}</div>
+            </div>
+            <div class="phome-tx__item-amount ${amountClass}">${amountText}</div>
+        </article>
+    `;
+}
+
+/**
+ * 渲染资金流水卡片（最近 50 条 + 查看全部按钮）
+ *
+ * ★ v0.67 私聊红包/转账的水滴,展示在哪里？
+ *   - 用户卡 (defaultUserCard): 只展示 user 自己的钱包(资产 + 流水)
+ *   - AI 人设卡: 展示 AI 钱包(由用户给 AI 发红包/转账 + 用户从 AI 收红包/转账)
+ *   - 流水按 timestamp 倒序
+ */
+function renderTransactionHistoryBlock(app, persona) {
+    const sdk = window.settingsSdk;
+    if (!sdk?.assetFlow) {
+        return ''; // sdk 未就绪,跳过
+    }
+
+    // 判断 entityType
+    //   app.state.personaHome.entityType 决定这是 user 还是 ai
+    const route = app.state.personaHome || {};
+    const entityType = route.entityType || 'user';
+    const entityId = route.entityId || '';
+
+    // 默认 user 卡:取默认用户卡 id
+    let resolvedId = entityId;
+    if (entityType === 'user' && !resolvedId) {
+        try {
+            resolvedId = sdk?.defaultUserCard?.getDefault?.()?.id || sdk?.users?.getActive?.()?.id || '';
+        } catch (_) { resolvedId = ''; }
+    }
+    if (!resolvedId) return '';
+
+    // 读流水(限制 50 条)
+    const flows = sdk.assetFlow.list(entityType, resolvedId, { limit: TRANSACTION_HISTORY_LIMIT });
+
+    const listHtml = flows.length === 0
+        ? `<div class="phome-tx__empty">还没有流水记录 · 在私聊中收/发红包、转账就会出现在这里</div>`
+        : flows.map((e) => renderTransactionFlowItem(e, entityType)).join('');
+
+    // "查看全部" 按钮:只有当实际数量 >= 50 才显示
+    const showAllBtn = flows.length >= TRANSACTION_HISTORY_LIMIT
+        ? `<button class="persona-btn persona-btn--small persona-btn--ghost" ${wvAction('openTransactionHistory', { entityType, entityId: resolvedId })}>查看全部</button>`
+        : '';
+
+    return `
+        <section class="phome-card phome-card--tx">
+            <header class="phome-card__head">
+                <div class="phome-card__title">钱包流水</div>
+                <div class="phome-card__sub">最近 ${flows.length} 条</div>
+            </header>
+            <div class="phome-card__body phome-tx">
+                <div class="phome-tx__list">
+                    ${listHtml}
+                </div>
+                ${showAllBtn ? `<div class="phome-tx__footer">${showAllBtn}</div>` : ''}
+            </div>
+        </section>
+    `;
+}
+
 function renderSocialBlock(app, persona) {
+    // 社媒软件列表
+    const socialApps = [
+        {
+            id: 'chat',
+            name: 'murmur',
+            icon: '<svg viewBox="0 0 60 60" style="width:36px;height:36px;"><path d="M0,-22 Q2.5,-4 15,0 Q2.5,4 0,22 Q-2.5,4 -15,0 Q-2.5,-4 0,-22Z" fill="#4a9eca" transform="translate(15, 12) scale(1.5)"/><path d="M0,-22 Q2.5,-4 15,0 Q2.5,4 0,22 Q-2.5,4 -15,0 Q-2.5,-4 0,-22Z" fill="#3d8ab8" transform="translate(45, 49) scale(1.5)"/></svg>',
+        },
+        {
+            id: 'blog',
+            name: '博客',
+            icon: '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#FF6B6B" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+        },
+        {
+            id: 'diary',
+            name: '日记',
+            icon: '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#9B59B6" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
+        },
+    ];
+
+    const cardsHtml = socialApps.map(appInfo =>
+        renderSocialAppCard(app, persona, appInfo.id, appInfo)
+    ).join('');
+
     return `
         <section class="phome-card">
             <header class="phome-card__head">
-                <div class="phome-card__title">社媒 · 今日</div>
-                <div class="phome-card__sub">博客 / 聊天 / 日记中的上下文</div>
+                <div class="phome-card__title">社媒形象</div>
+                <div class="phome-card__sub">配置 AI 在各软件的展示形象</div>
             </header>
             <div class="phome-card__body phome-social">
-                <div class="phome-social__item">
-                    <div class="phome-social__src">博客 App</div>
-                    <div class="phome-social__msg">可在博客 App 里发布 · 这里会汇总今日上下文</div>
-                </div>
-                <div class="phome-social__item">
-                    <div class="phome-social__src">日记 App</div>
-                    <div class="phome-social__msg">发布/编辑后自动回流到社媒</div>
-                </div>
-                <div class="phome-social__empty">后续将在「社媒」app 中提供完整编辑器（详情待续）</div>
+                ${cardsHtml}
             </div>
         </section>
     `;
@@ -1794,6 +2303,70 @@ export function buildContextFromPersona(persona, entityType) {
         sections.push('');
     }
 
+    // 20. 空间（人设主页的「空间」卡：绑定的世界观 / 当前所在 / 可去场所 / 今日日程）
+    //     injectMode: none | current
+    //     空间模块只承载「当天」的数据(没有「本周/全部」概念),
+    //     所以只给两档:关 / 注入当日的全部空间上下文。
+    const spaceInject = persona?.space?.injectMode || 'none';
+    if (spaceInject === 'current' && persona?.boundWorldId) {
+        const worldId = persona.boundWorldId;
+        const world = sdk?.worlds?.get?.(worldId);
+        const accessible = getAccessibleLocationsForPersona(sdk, worldId, persona.id, { includeRare: false });
+        const entityId = persona.id;
+        const todayDiary = sdk?.diary?.getToday?.(entityType, entityId) || null;
+        const todaySchedule = Array.isArray(todayDiary?.todaySchedule) ? todayDiary.todaySchedule : [];
+        const hourNames = sdk?.chronology?.getHourNames?.(worldId) || [];
+
+        sections.push('# 20. 空间');
+        sections.push('space:');
+        if (world?.name) sections.push(`  world: ${world.name}`);
+        if (world?.description) sections.push(`  world_desc: ${world.description}`);
+
+        // 当前主要地点(取可去场所中第一个有 place 的)
+        const primaryPlace = accessible.find(a => a.place)?.place || null;
+        if (primaryPlace?.name) sections.push(`  current_place: ${primaryPlace.name}`);
+
+        // 当前时段所在(用 getCurrentLocationBySchedule,跟空间卡一致)
+        //   字段是 fromHour / toHour(整数小时,不是字符串 startTime)
+        const curSeg = todaySchedule.find(seg => {
+            const now = new Date();
+            const cur = now.getHours() * 60 + now.getMinutes();
+            const fromH = Number(seg?.fromHour);
+            const toH = Number(seg?.toHour);
+            if (!Number.isFinite(fromH) || !Number.isFinite(toH)) return false;
+            return cur >= fromH * 60 && cur <= toH * 60 + 59;
+        }) || null;
+        if (curSeg) {
+            const locName = curSeg.locationName || curSeg.placeName || '';
+            sections.push(`  current_schedule: [${curSeg.fromHour}-${curSeg.toHour}${hourNames[Math.floor(curSeg.fromHour / 2) % 12] ? ' ' + hourNames[Math.floor(curSeg.fromHour / 2) % 12] : ''}] ${locName} · ${curSeg.activity || ''}`);
+        } else {
+            sections.push('  current_schedule: （当前空闲）');
+        }
+
+        // 今日完整日程(按 fromHour 升序,字段是 fromHour/toHour/locationName/activity)
+        const sortedEvents = [...todaySchedule].sort((a, b) => (a.fromHour || 0) - (b.fromHour || 0));
+        if (sortedEvents.length > 0) {
+            sections.push('  today_schedule:');
+            sortedEvents.forEach(e => {
+                const chrono = hourNames[Math.floor((Number(e.fromHour) || 0) / 2) % 12] || '';
+                const locName = e.locationName || e.placeName || '';
+                sections.push(`    - [${e.fromHour}-${e.toHour}${chrono ? ' ' + chrono : ''}] ${locName} · ${e.activity || ''}`);
+            });
+        } else {
+            sections.push('  today_schedule: （今日未规划）');
+        }
+
+        // 可去场所(accessible 是 [{place, location, ...}],用 place.name)
+        if (accessible.length > 0) {
+            sections.push('  accessible_places:');
+            accessible.forEach(a => {
+                const name = a.place?.name || a.location?.name || '';
+                if (name) sections.push(`    - ${name}`);
+            });
+        }
+        sections.push('');
+    }
+
     return sections.filter(s => s !== '').join('\n');
 }
 
@@ -2008,7 +2581,10 @@ export function renderPersonaHome(app) {
             ${renderMoodDetailPanel(app, persona)}
             ${renderMoodBlock(app, persona)}
             ${renderWeekBlock(app, persona)}
+            ${renderRhythmBlock(app)}
+            ${renderSpaceBlock(app, persona)}
             ${renderAssetBlock(app, persona)}
+            ${renderTransactionHistoryBlock(app, persona)}
             ${renderSocialBlock(app, persona)}
             ${renderContextBlock(app)}
         </div>

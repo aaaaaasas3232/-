@@ -1,0 +1,347 @@
+/* ============================================
+ * chat-app 通话记录详情页样式
+ *
+ * 仿妆原则: 用 framework 的脸，画 chat.js 的妆
+ * 效果参考: 参考/chat.js openCallRecordDetail()
+ *
+ * 进入路径:点击消息流里的 .call-record-card → 派发 detail action
+ *          → pageId = call-record-<callRecordId>
+ *
+ * 布局:
+ *   - 顶部 header 圆角卡(64px 头像 + AI 名字 + 通话类型 · 时长 + 时间)
+ *   - 通话摘要卡(摘要文本)
+ *   - 消息记录(N 条消息,用户绿色气泡 / AI 浅色气泡)
+ *
+ * ============================================ */
+
+/* ---- 详情页整体 — 主题色按类型切换 ---- */
+.app-shell[data-app-id="chat"] .call-record-detail-page {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    height: 100%;
+    background: linear-gradient(180deg, #F0F5FF 0%, #E8F0FF 50%, #FFFFFF 100%);
+}
+
+.app-shell[data-app-id="chat"] .call-record-detail-page[data-call-type="video"] {
+    background: linear-gradient(180deg, #FFF5F7 0%, #FFECF0 50%, #FFFFFF 100%);
+}
+
+/* ---- 顶部 topbar(返回按钮 + 标题)— 跟 chat-settings 同款策略 ---- */
+.app-shell[data-app-id="chat"] .call-record-detail-page .call-record-topbar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    padding: 50px 12px 8px 4px;
+    background: rgba(237, 242, 253, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    z-index: 10;
+}
+
+/* 视频通话 topbar 浅粉主题 */
+.app-shell[data-app-id="chat"] .call-record-detail-page[data-call-type="video"] .call-record-topbar {
+    background: rgba(255, 240, 245, 0.7);
+}
+
+.app-shell[data-app-id="chat"] .call-record-detail-page .call-record-topbar .chat-back-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #3D5A80;
+    flex-shrink: 0;
+    transition: all 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .call-record-detail-page[data-call-type="video"] .call-record-topbar .chat-back-btn {
+    color: #C2185B;
+}
+
+.app-shell[data-app-id="chat"] .call-record-detail-page .call-record-topbar .chat-back-btn:hover {
+    background: rgba(74, 111, 165, 0.08);
+}
+
+.app-shell[data-app-id="chat"] .call-record-detail-page .call-record-topbar .chat-back-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+}
+
+.app-shell[data-app-id="chat"] .call-record-detail-page .call-record-topbar-title {
+    flex: 1;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 600;
+    color: #3D5A80;
+    margin-right: 36px; /* 抵消返回按钮宽度,让标题视觉居中 */
+}
+
+.app-shell[data-app-id="chat"] .call-record-detail-page[data-call-type="video"] .call-record-topbar-title {
+    color: #C2185B;
+}
+
+/* ---- 滚动区 — 隐藏滚动条 ---- */
+.app-shell[data-app-id="chat"] .call-record-detail-page .call-record-body {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0 0 24px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.app-shell[data-app-id="chat"] .call-record-detail-page .call-record-body::-webkit-scrollbar,
+.app-shell[data-app-id="chat"] .call-record-detail-page .call-record-body::-webkit-scrollbar-thumb,
+.app-shell[data-app-id="chat"] .call-record-detail-page .call-record-body::-webkit-scrollbar-track {
+    width: 0;
+    height: 0;
+    background: transparent;
+    display: none;
+}
+
+.app-shell[data-app-id="chat"] .call-record-detail-page .call-record-body {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+/* ---- 顶部头部卡(蓝粉渐变圆角卡) ---- */
+.app-shell[data-app-id="chat"] .call-record-detail-page .call-record-hero {
+    margin: 10px;
+    padding: 24px 20px;
+    text-align: center;
+    background: #E8F2FF;
+    border-radius: 24px;
+    box-shadow: 0 0 1px 1px #fff;
+}
+
+.app-shell[data-app-id="chat"] .call-record-detail-page[data-call-type="video"] .call-record-hero {
+    background: #FFEEF2;
+}
+
+.app-shell[data-app-id="chat"] .call-record-detail-page .call-record-hero-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    margin: 0 auto 14px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    border: 3px solid white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    color: white;
+    background: linear-gradient(135deg, #A8C8EC, #95B8E0);
+}
+
+.app-shell[data-app-id="chat"] .call-record-detail-page .call-record-hero-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.app-shell[data-app-id="chat"] .call-record-detail-page .call-record-hero-name {
+    color: #3D5A80;
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.app-shell[data-app-id="chat"] .call-record-detail-page[data-call-type="video"] .call-record-hero-name {
+    color: #C2185B;
+}
+
+.app-shell[data-app-id="chat"] .call-record-detail-page .call-record-hero-meta {
+    color: #4A6FA5;
+    font-size: 14px;
+}
+
+.app-shell[data-app-id="chat"] .call-record-detail-page[data-call-type="video"] .call-record-hero-meta {
+    color: #E91E63;
+}
+
+.app-shell[data-app-id="chat"] .call-record-detail-page .call-record-hero-time {
+    color: rgba(61, 90, 128, 0.5);
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.app-shell[data-app-id="chat"] .call-record-detail-page[data-call-type="video"] .call-record-hero-time {
+    color: rgba(194, 24, 91, 0.5);
+}
+
+/* 未接通 → 红色提示 */
+.app-shell[data-app-id="chat"] .call-record-detail-page[data-connected="false"] .call-record-hero-meta {
+    color: #FF6B6B;
+}
+
+/* ---- 通话摘要卡 ---- */
+.app-shell[data-app-id="chat"] .call-record-detail-page .call-record-summary-card {
+    padding: 16px 18px;
+    background: white;
+    margin: 14px;
+    border-radius: 14px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.app-shell[data-app-id="chat"] .call-record-detail-page .call-record-summary-label {
+    color: rgba(61, 90, 128, 0.5);
+    font-size: 12px;
+    margin-bottom: 8px;
+}
+
+.app-shell[data-app-id="chat"] .call-record-detail-page[data-call-type="video"] .call-record-summary-label {
+    color: rgba(194, 24, 91, 0.5);
+}
+
+.app-shell[data-app-id="chat"] .call-record-detail-page .call-record-summary-text {
+    color: #333;
+    font-size: 14px;
+    line-height: 1.7;
+    word-break: break-word;
+}
+
+/* ---- 消息记录区块 ---- */
+.app-shell[data-app-id="chat"] .call-record-detail-page .call-record-message-section {
+    padding: 0 14px 20px;
+}
+
+.app-shell[data-app-id="chat"] .call-record-detail-page .call-record-message-label {
+    color: rgba(61, 90, 128, 0.5);
+    font-size: 12px;
+    margin: 14px 4px 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.app-shell[data-app-id="chat"] .call-record-detail-page[data-call-type="video"] .call-record-message-label {
+    color: rgba(194, 24, 91, 0.5);
+}
+
+.app-shell[data-app-id="chat"] .call-record-detail-page .call-record-message-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: white;
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+/* 消息项(用户靠右 / AI 靠左) */
+.app-shell[data-app-id="chat"] .call-record-detail-page .call-record-msg {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="chat"] .call-record-detail-page .call-record-msg.user {
+    justify-content: flex-end;
+    flex-direction: row-reverse;
+}
+
+.app-shell[data-app-id="chat"] .call-record-detail-page .call-record-msg.ai {
+    justify-content: flex-start;
+}
+
+/* AI 头像小圆 */
+.app-shell[data-app-id="chat"] .call-record-detail-page .call-record-msg-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 10px;
+    overflow: hidden;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: white;
+    background: linear-gradient(135deg, #A8C8EC, #95B8E0);
+}
+
+.app-shell[data-app-id="chat"] .call-record-detail-page .call-record-msg-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* 用户气泡 — 绿色 (跟旧版 chat.js 一致) */
+.app-shell[data-app-id="chat"] .call-record-detail-page .call-record-msg-bubble.user {
+    max-width: 80%;
+    background: linear-gradient(135deg, #4ade80, #22c55e);
+    color: white;
+    padding: 10px 14px;
+    border-radius: 16px 16px 4px 16px;
+    font-size: 14px;
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+/* AI 气泡 — 主题浅色 */
+.app-shell[data-app-id="chat"] .call-record-detail-page .call-record-msg-bubble.ai {
+    max-width: 75%;
+    background: rgba(74, 111, 165, 0.06);
+    color: #333;
+    padding: 10px 14px;
+    border-radius: 16px 16px 16px 4px;
+    font-size: 14px;
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.app-shell[data-app-id="chat"] .call-record-detail-page[data-call-type="video"] .call-record-msg-bubble.ai {
+    background: rgba(233, 30, 99, 0.06);
+}
+
+/* 消息项时间(可选) */
+.app-shell[data-app-id="chat"] .call-record-detail-page .call-record-msg-time {
+    font-size: 10px;
+    color: #C4C4C4;
+    margin: 4px 8px 0;
+}
+
+/* ---- 空消息占位 ---- */
+.app-shell[data-app-id="chat"] .call-record-detail-page .call-record-empty {
+    text-align: center;
+    padding: 30px;
+    color: rgba(61, 90, 128, 0.4);
+    background: white;
+    border-radius: 14px;
+    font-size: 13px;
+}
+
+.app-shell[data-app-id="chat"] .call-record-detail-page[data-call-type="video"] .call-record-empty {
+    color: rgba(194, 24, 91, 0.4);
+}
+
+/* ---- 隐藏 app-detail-header(自己已经有 hero 区) ---- */
+.app-shell[data-app-id="chat"] .app-detail-page:has(.call-record-detail-page) .app-detail-header {
+    display: none !important;
+}
+
+/* ---- 详情页 body padding 去掉,自己管 ---- */
+.app-shell[data-app-id="chat"] .app-detail-page:has(.call-record-detail-page) .app-detail-body {
+    padding: 0;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="chat"] .app-detail-page:has(.call-record-detail-page) .app-detail-panel {
+    padding: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}

@@ -1,0 +1,189 @@
+# `.pm-empty` 空状态卡片 — 设计规范
+
+> 适用对象:`chat-app / prompt-manager / 可用 Prompt section 空状态`
+> 文件:`css\apps\chat\_chat-prompt-manager.css` (`.pm-empty` 选择器)
+> v0.56 (2026-08-07)
+
+---
+
+## 1. 一句话
+
+这个卡片叫 **"Dashed-Bordered Empty State Card"** —— **虚线边框空状态卡**。
+
+它是 **"Empty State Pattern"**(空状态模式) 在 **iOS / Material** 设计系统里的一种典型变体,业内常见叫法还有:
+
+- **Skeleton Card / Placeholder Card**(骨架卡 / 占位卡) —— 形态相似
+- **Empty State Card**(空状态卡) —— 学术叫法
+- **Dashed Border Container**(虚线边框容器) —— 描述视觉特征
+- **Soft Container / Ghost Container**(幽灵容器) —— Figma 社区叫法
+
+**专业归类**:
+- 设计模式:**Empty State Pattern**(Nielsen Norman Group 1999 年提出)
+- 视觉子类型:**Dashed / Outlined Container**(描边容器)
+- 行业出处:Apple iOS Reminders / Things 3 的"分组容器空状态"
+
+---
+
+## 2. 为什么这个卡片"明明没数据还有框"
+
+普通"空状态"只用居中的图标 + 标题 + 描述,看起来像"飘在背景上的文字"。这种卡片化空状态的设计意图是:
+
+| 设计意图 | 业务价值 |
+|---|---|
+| **保留区域感** | 用户一眼知道"这里将来会有内容",不是"页面出错了" |
+| **视觉锚点** | 即使没数据,布局/间距/对齐都跟有数据时一致,避免抖动 |
+| **行动引导** | 卡片边缘的虚线 + 顶部小标签("空卡片") 暗示"这里可填" |
+| **降低认知负担** | 用户不用找"东西去哪了" —— 它就在这块卡片里 |
+
+---
+
+## 3. 设计 Token(逐字段)
+
+### 3.1 容器(`.pm-empty`)
+
+| 字段 | 值 | 说明 |
+|---|---|---|
+| `padding` | `36px 24px 28px` | 上 36 / 左右 24 / 下 28,给图标 + 标题 + 描述留呼吸 |
+| `text-align` | `center` | 内部全部水平居中 |
+| `color` | `#8E8E93` | iOS 系统灰,正文 fallback |
+| `background` | `#FFFFFF` | **实色白底**,跟外层 `.pm-card` 一致(同色实底 + 虚线描边是 iOS Reminders 的典型) |
+| `border` | `2px dashed rgba(74, 111, 165, 0.45)` | **2px 蓝色虚线**(不是 1px),更显眼 |
+| `border-radius` | `16px` | 跟 `.pm-card` 圆角一致 |
+| `margin` | `12px 14px 6px` | 上 12 / 左右 14(让出页面内边距)/ 下 6 |
+| `min-height` | `140px` | **强制最小高度**,保证卡片有"块"感 |
+| `display` | `flex; flex-direction: column;` | 内部按列排 |
+| `align-items` | `center` | 水平居中 |
+| `justify-content` | `center` | 垂直居中 |
+| `box-shadow` | `0 2px 6px rgba(168, 200, 236, 0.18)` | **轻量蓝色阴影**,跟卡片融合 |
+| `position` | `relative` | 给 `::before` 标签定位用 |
+
+### 3.2 顶部小标签(`::before` 伪元素)
+
+| 字段 | 值 | 说明 |
+|---|---|---|
+| `content` | `'空卡片'` | 标签文字 |
+| `position` | `absolute; top: -10px; left: 16px;` | **贴在卡片左边缘**,盖住虚线 |
+| `padding` | `2px 10px` | 紧凑的小标签 |
+| `background` | `#FFFFFF` | **跟卡片底色一致**,视觉上"切断"虚线 |
+| `border` | `1px solid rgba(74, 111, 165, 0.20)` | 浅蓝描边 |
+| `border-radius` | `8px` | 小圆角 |
+| `font-size` | `10px` | **极小字号** —— 不是信息层 |
+| `font-weight` | `600` | 半粗 |
+| `color` | `#4A6FA5` | 蓝色文字,跟边框同色系 |
+| `letter-spacing` | `0.3px` | 微调字距 |
+
+**这是"Floating Badge / Floating Tag Pattern"**(浮动徽标),常见于 iOS Notification Settings、Things 3 的列表分组头。
+
+### 3.3 图标(`.pm-empty-icon`)
+
+| 字段 | 值 | 说明 |
+|---|---|---|
+| `width / height` | `48 × 48` | 适中,不大不小 |
+| `margin` | `4px auto 10px` | 上 4 / 下 10,水平 auto 居中 |
+| `background` | `linear-gradient(135deg, rgba(168, 200, 236, 0.20), rgba(244, 166, 205, 0.20))` | **蓝粉对角渐变**(本项目主色),圆形背景 |
+| `border-radius` | `50%` | 圆形 |
+| `display` | `flex; align-items: center; justify-content: center;` | svg 居中 |
+| `color` | `#4A6FA5` | 蓝色 icon |
+
+### 3.4 图标 SVG(`.pm-empty-icon svg`)
+
+| 字段 | 值 | 说明 |
+|---|---|---|
+| `width / height` | `24 × 24` | 占圆形 50% |
+
+### 3.5 标题(`.pm-empty-title`)
+
+| 字段 | 值 | 说明 |
+|---|---|---|
+| `font-size` | `14px` | 比正文大 |
+| `font-weight` | `600` | 半粗 |
+| `color` | `#4A4A4A` | 深灰 |
+| `margin` | `4px 0 6px` | 上 4 / 下 6 |
+| `line-height` | `1.4` | 紧凑 |
+
+### 3.6 描述(`.pm-empty-desc`)
+
+| 字段 | 值 | 说明 |
+|---|---|---|
+| `font-size` | `12px` | 最小字号 |
+| `color` | `#8E8E93` | iOS 系统灰 |
+| `line-height` | `1.5` | 宽松,易读 |
+| `max-width` | `280px` | 防止大屏上一行字太长 |
+
+---
+
+## 4. 配色 Token(可复用)
+
+```
+蓝粉主题色:
+- 主蓝:        #4A6FA5 (边框、文字)
+- 浅蓝背景:    rgba(168, 200, 236, 0.20)
+- 浅粉背景:    rgba(244, 166, 205, 0.20)
+- 浅蓝阴影:    rgba(168, 200, 236, 0.18)
+
+iOS 系统灰:
+- 正文:        #4A4A4A (深灰)
+- 描述:        #8E8E93 (中灰)
+- 备用灰:      #6E6E73
+```
+
+---
+
+## 5. 何时使用这个卡片
+
+✅ 适合:
+- 列表 / 集合的空状态(如 prompt 列表、好友列表、消息列表为空)
+- 表单 / 设置项的空状态(如「暂无自定义回复」)
+- 需要"保留区域感"的占位场景
+
+❌ 不适合:
+- 整页加载失败的错误状态(用 `.pm-error` + 红色)
+- 纯 loading 占位(用 Skeleton Loader 骨架屏)
+- 单行提示性 empty state(用纯文字 + 居中图标即可)
+
+---
+
+## 6. 改字段前的影响评估
+
+| 改什么 | 影响 |
+|---|---|
+| `border` 改成实线 | 失去"空"暗示,变成普通卡片 |
+| `background` 改成灰色 | 跟正文融为一体,失去"区域感" |
+| `border-radius` 改小 | 视觉风格跟外层 `.pm-card`(16px)不一致,出现层级错位 |
+| 删掉 `::before` 标签 | 用户看不到"这是个可填的空卡片",只剩图标文字 |
+| `min-height` 改小 | 在 iPad 等大屏上卡片变成"一坨小字",失去呼吸感 |
+
+---
+
+## 7. 灵感来源(对照参考)
+
+- **Apple iOS Reminders** —— "列表为空"也保留容器框
+- **Things 3** —— 分组标题浮动在容器边缘上
+- **Material Design 3** —— "Empty State" pattern 文档
+- **Figma Empty State Kit** —— 业内通用 placeholder 卡片模板
+
+---
+
+## 8. 验收清单(自检)
+
+- [x] 外层 `.pm-card` 有白底 + 圆角 + 阴影(本项目 `.pm-card` 通用样式)
+- [x] 内层 `.pm-empty` 有白底 + 蓝色 2px 虚线 + 圆角 + 蓝色轻阴影
+- [x] 顶部 "空卡片" 浮动小标签贴在左上
+- [x] 圆形渐变图标 + 深灰标题 + 灰描述,垂直居中
+- [x] 最小高度 140px,任何时候都有"块"感
+- [x] 在「当前上下文」section 没数据时也用相同卡片(保持一致)
+
+---
+
+## 9. 复用到其他页面
+
+把这个 `.pm-empty` 抽出来做成 `<empty-state-card>` hybrid 组件,适用:
+
+- `chat-app` 联系人列表为空
+- `chat-app` 朋友圈空状态
+- `chat-app` 收藏为空
+- `setting-app` 任意子模块空状态
+- `weather-app` 无搜索结果
+- `focus-app` 无历史记录
+
+(待做,目前只有 prompt-manager 用到。)

@@ -1,0 +1,518 @@
+/**
+ * chat-app / 模拟图片组件样式
+ *
+ * 包含:
+ * - 模拟图片详情弹窗样式
+ * - 模拟图片发送弹窗样式
+ * - 聊天消息中的模拟图片卡片样式
+ * - 动态页面的 AI 图片样式
+ */
+
+/* ========================================
+   模拟图片详情弹窗
+   ======================================== */
+
+.desc-image-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease;
+}
+
+.desc-image-modal-overlay--closing {
+    animation: fadeOut 0.2s ease forwards;
+}
+
+.desc-image-modal {
+    position: relative;
+    width: 85%;
+    max-width: 280px;
+    display: flex;
+    flex-direction: column;
+    animation: slideUp 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.desc-image-modal--closing .desc-image-modal {
+    animation: slideDown 0.2s ease forwards;
+}
+
+/* 图片卡片区域 */
+.desc-image-modal-card {
+    border-radius: 16px;
+    padding: 32px 24px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 145px;
+
+    overflow: hidden;
+}
+
+.desc-image-modal-icon {
+    margin-bottom: 16px;
+}
+
+.desc-image-modal-label {
+    font-size: 11px;
+    opacity: 0.7;
+}
+
+/* 描述文字区域 */
+.desc-image-modal-content {
+    border-radius: 16px;
+    padding: 20px 24px;
+}
+
+.desc-image-modal-desc {
+    font-size: 12px;
+    color: white;
+    line-height: 1.6;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.desc-image-modal-footer {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255,255,255,0.2);
+    text-align: center;
+}
+
+.desc-image-modal-hint {
+    font-size: 11px;
+    color: rgba(255,255,255,0.7);
+}
+
+.desc-image-modal-subhint {
+    font-size: 10px;
+    color: rgba(255,255,255,0.5);
+    margin-top: 4px;
+}
+
+/* ---- 图片描述弹窗操作按钮 ---- */
+.desc-image-modal-actions {
+    display: flex;
+    gap: 12px;
+    padding: 12px 16px;
+}
+
+.desc-image-modal-action-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 6px 8px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: white;
+    color: #333;
+}
+
+.desc-image-modal-action-btn:hover {
+    background: #f5f5f5;
+    transform: translateY(-1px);
+}
+
+.desc-image-modal-action-btn:active {
+    transform: translateY(0);
+}
+
+.desc-image-modal-action-btn svg {
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+}
+
+/* ---- 卡片内图片内容区域 ---- */
+.desc-image-modal-card-img {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.desc-image-modal-card-label {
+    margin-top: 8px;
+    font-size: 11px;
+    opacity: 0.7;
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes scaleOut {
+    from {
+        opacity: 1;
+        transform: scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+}
+
+/* ========================================
+   模拟图片发送弹窗
+   ======================================== */
+
+.desc-image-send-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 9998;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease;
+}
+
+.desc-image-send-overlay--closing {
+    animation: fadeOut 0.2s ease forwards;
+}
+
+.desc-image-send-modal {
+    background: white;
+    border-radius: 20px;
+    width: 70%;
+    max-width: 280px;
+    padding-bottom: env(safe-area-inset-bottom, 10px);
+    animation: scaleIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.desc-image-send-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px 16px 8px;
+}
+
+.desc-image-send-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    text-align: center;
+}
+
+.desc-image-send-body {
+    padding: 12px 16px;
+    position: relative;
+    z-index: 1;
+}
+
+.desc-image-send-hint {
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.desc-image-send-textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    font-size: 13px;
+    resize: none;
+    outline: none;
+    box-sizing: border-box;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.desc-image-send-textarea:focus {
+    border-color: #A8C8EC;
+    box-shadow: 0 0 0 2px rgba(168, 200, 236, 0.2);
+}
+
+.desc-image-send-textarea::placeholder {
+    color: #bbb;
+}
+
+.desc-image-send-colors {
+    margin-top: 12px;
+    position: relative;
+    z-index: 1;
+}
+
+.desc-image-send-colors-label {
+    font-size: 11px;
+    color: #999;
+    margin-bottom: 8px;
+}
+
+.desc-image-send-colors-grid {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    pointer-events: auto;
+    justify-content: center;
+}
+
+.desc-image-send-color-btn {
+    padding: 6px 14px;
+    border: 2px solid transparent;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 12px;
+    font-weight: 500;
+    user-select: none;
+    -webkit-user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.desc-image-send-color-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.7;
+}
+
+.desc-image-send-color-btn:hover {
+    transform: scale(1.05);
+}
+
+.desc-image-send-color-btn:active {
+    transform: scale(0.95);
+}
+
+.desc-image-send-color-btn.active {
+    border-color: currentColor;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* ========== 发送图片弹窗底部按钮 ========== */
+.desc-image-send-footer {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    padding: 10px 12px 14px;
+}
+
+.desc-image-send-cancel,
+.desc-image-send-confirm {
+    padding: 7px 20px;
+    border: none;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 16px;
+    transition: all 0.2s;
+}
+
+.desc-image-send-cancel {
+    background: #F5F5F5;
+    color: #666;
+}
+
+.desc-image-send-cancel:hover {
+    background: #EBEBEB;
+}
+
+.desc-image-send-cancel:active {
+    transform: scale(0.98);
+}
+
+.desc-image-send-confirm {
+    background: #4A6FA5;
+    color: white;
+}
+
+.desc-image-send-confirm:hover {
+    background: #3A5F95;
+}
+
+.desc-image-send-confirm:active {
+    transform: scale(0.98);
+}
+
+/* ========================================
+   聊天消息中的模拟图片卡片
+   ======================================== */
+
+.desc-image-card {
+    cursor: pointer;
+}
+
+.desc-image-card-inner {
+    background: #FFE4EC;
+    border-radius: 12px;
+    overflow: hidden;
+    padding: 0;
+    width: 200px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.desc-image-card-inner:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.desc-image-card-icon {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+}
+
+.desc-image-card-text-group {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-right: 12px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+}
+
+.desc-image-card-text {
+    font-size: 12px;
+    line-height: 1.3;
+    text-align: left;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.desc-image-card-hint {
+    font-size: 9px;
+    opacity: 0.5;
+    text-align: left;
+}
+
+/* ========================================
+   动态页面的 AI 图片样式
+   ======================================== */
+
+/* 单图大卡片样式 */
+.ai-image-display {
+    transition: transform 0.2s;
+}
+
+.ai-image-display:active {
+    transform: scale(0.98);
+}
+
+/* 网格小卡片样式 */
+.ai-image-grid-item {
+    border-radius: 8px;
+    overflow: hidden;
+    transition: transform 0.2s;
+}
+
+.ai-image-grid-item:active {
+    transform: scale(0.95);
+}
+
+/* 点击态效果 */
+.clickable-desc-image {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.clickable-desc-image:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.clickable-desc-image:active {
+    transform: scale(0.98);
+}
+
+/* ========================================
+   动画
+   ======================================== */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+}
+
+/* ========================================
+   响应式适配
+   ======================================== */
+
+@media (max-width: 360px) {
+    .desc-image-modal {
+        width: 90%;
+    }
+
+    .desc-image-send-modal {
+        border-radius: 16px 16px 0 0;
+    }
+
+    .desc-image-send-color-btn {
+        padding: 6px 10px;
+        font-size: 11px;
+    }
+}

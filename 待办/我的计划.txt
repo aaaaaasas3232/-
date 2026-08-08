@@ -1,0 +1,917 @@
+=====================================================
+// ★ 问卷题目清单（来自计划.md §5 — 共 19 题，id 0~18）
+//   改这一段即可；下方 spec 模板里的【问题；xx 的答案】按这份清单对应
+//   字段值映射见底部「mapping 表」
+=====================================================
+
+id  标题  主要字段 key（来自问卷表单 / answers JSON）
+
+ --  -----------  ------  ----------------------------------------
+  0   basicInfo     基本    appName / appId / appDesc
+  1   pages         页面    structure / pages[]
+  2   style         视觉风格  style
+  3   palette       色彩    palette / customBg / customPrim / customAccent
+  4   typo          字体    typoFamily / typoScale / typoWeight / lineHeight
+  5   corner        圆角    corner
+  6   cardDesign    卡片设计  cardDesign
+  7   button        按钮风格  button
+  8   modal         弹窗风格  modal
+  9   listLayout    列表布局  listLayout
+  10  tabBar        底部 Tab  tabBar
+  11  nav           导航    navStyle
+  12  iconStyle     图标风格  iconStyle
+  13  motion        动效    motion
+  14  densityTheme  密度主题  density
+  15  features      核心能力  features[]（多选：db / island / widget）
+  16  widget        小组件   needWidget / widgetTypes[]
+  17  island        灵动岛   needIsland / islandTemplate
+  18  done          完成页  （仅 UI，不输出 prompt）
+
+──────────────────────────────────────────────────────
+★ App 类别（appType）问题  *新加*
+──────────────────────────────────────────────────────
+id 19  appType          App 类别   requiresInstall: 系统级 App = false（设置/商店/...）；业务 App = true（需要先在 App Store 下载）
+该字段同时决定 distribution.requiresInstall / distribution.appStore 是否生成。
+
+=====================================================
+   ★★★ 从这里开始就是给 LLM 喂的完整 prompt 模板 ★★★
+=====================================================
+
+你是一个【问题：希望ai扮演的软件工程师风格】的软件工程师。下面我将给你一份新的工作内容指导方案，请你根据这份方案编写一个完整的可以使用的软件。
+
+首先在技术层面上，本项目使用js/vendor/vue.global.prod.js浏览器全局，你需要使用：Vue 3.5+ 与 现代ECMAScript语法（es2015+覆盖到ES2024引入的新特性）。
+
+在不影响可读性的前提下请善用语法糖，但在使用语法糖时，请注意本项目中的 app 注册配置`appConfig`上，有 3 个 framework 直接调用、并会被注入 `this` 的函数字段：
+1. `methods: { ... }` 用户的按钮、计算、改状态都走这里
+2. `services: { ... }` 给别的 App 调用的对外接口
+3. `renderPage(content, page, app)` 把页面渲染成 HTML 字符串
+
+这3个函数字段内部必须写成方法简写形 —— `name() { this.xxx }`；禁止使用 `=>` 箭头语法写成 `name: () => { this.xxx }`，因为箭头函数会忽略 framework 注入的 this。
+
+> 注意：上面说的是"framework 直接调用那层函数" —— 这 3 个函数字段内部嵌套的回调函数（setTimeout / forEach / Promise.then / 数组方法链的回调）可以用箭头语法，因为这些回调函数不需要 framework 注入的 this。
+
+其次文件格式是JavaScript ESM ，不是 Vue SFC。
+
+还有一些注意事项：
+1.因为 `renderPage` 返回字符串会走vue的HTML插值指令`v-html`注入，所以 UI 用内联 HTML + Tailwind 类名（项目已经预编译 Tailwind 到 css/main.css）。
+2.如果要用`v-if`等Vue指令，需要把 appConfig 里的 `renderMode` 渲染模式字段对应的值改为`hybrid`（默认值是 `template`）。
+3. 导入方式用 ESM：`import { escapeHtml } from '@/src/core/escape.js'`（路径别名 `@` 指项目根）。
+4.不要写 `target="_blank"` 不带 `rel="noopener noreferrer"`；不要 `eval`；不要把用户输入/DB 字段直接拼 HTML（必须 `escapeHtml`）。
+
+项目真实版本：`vite@^5.4.10` + `tailwindcss@^3.4.19` + Vue 是浏览器全局（`js/vendor/vue.global.prod.js`），不是 npm 依赖。
+
+你要做的 App 叫「【问题；appName 的答案】」，App ID 是「【问题；appId 的答案】」。
+功能描述是「【问题；appDesc 的答案】」。
+
+
+【接入方式 — 两种任选其一】
+  方式 A · 静态 import（推荐，永久生效）：
+    1. 把生成好的代码存为 `js/apps/<appId>.js`，默认导出一个工厂函数。
+    2. 在 `js/apps/index.js` 静态 import 这个工厂函数 + 加进 `appFactories` 数组。
+    3. 刷新浏览器，桌面上出现新图标。
+
+  方式 B · 管理 App 上传（适合用户自己不手动改文件）：
+    未来会有一个「管理 App」提供"上传 .js 文件 → 自动注入到 `js/apps/`"的能力；
+    你生成的代码只要满足方式 A 第 1 步的文件格式（命名 `xxx.js`、默认导出 `createXxxApp`）
+    就能直接被上传使用，无需改任何其它文件。
+
+// ───────────── 接入清单（3 步，必走） ─────────────
+//
+//   1. 在 js/apps/<appId>.js 写 default export（return createXxxApp）
+//   2. 在 js/apps/index.js 静态 import + 加进 appFactories 数组
+//   3. 刷新浏览器，桌面应该出新图标
+//   （不需要改 index.html / src/index.js）
+//
+=====================================================
+★★★ 下面是 AppConfig 完整模板 ★★★
+=====================================================
+
+=====================================================
+renderMode 说明：
+默认 / 不写    → renderPage 返回纯字符串，v-html 注入
+'hybrid'       → 字符串里可写 <component-island name="..." />，框架自动挂 Vue 组件
+'vue'          → renderPage 返回完整 Vue 组件定义，整体 mount 成 Vue app
+=====================================================
+
+renderMode 三模式对比（决策表）：
+
+┌──────────┬────────────────────────────┬──────────────────────────────┐
+│ 模式     │ renderPage 返回             │ 适用场景                      │
+├──────────┼────────────────────────────┼──────────────────────────────┤
+│ template │ HTML 字符串                 │ 静态页 / 纯展示 / 旧 App      │
+│ (默认)   │                            │ 全部交互走 action 字符串       │
+├──────────┼────────────────────────────┼──────────────────────────────┤
+│ hybrid   │ HTML + <component-island />│ 80% 的半交互 App              │
+│          │ 标签，自动 mount 成 Vue     │ 想用受控输入/开关/滑块/列表    │
+│          │                            │ 又不想写完整 Vue 组件          │
+├──────────┼────────────────────────────┼──────────────────────────────┤
+│ vue      │ 完整 Vue 组件配置           │ 状态复杂、组件多、需要复用     │
+│          │ （template+data+methods+…） │ computed/watch/lifecycle      │
+│          │ 整块 createApp() mount      │ 一次性交互特别多的页面         │
+└──────────┴────────────────────────────┴──────────────────────────────┘
+
+★ 硬性约束（methods / services / renderPage 内部都不能用 this 来自 appConfig）：
+  - renderPage 是从 appConfig 上拿出来当独立函数调用的，this 已丢失
+  - 渲染逻辑必须拆成模块顶层函数，renderPage 只做路由分发
+  - methods / services 内部必须用方法简写 name() { this.xxx }，不能用箭头
+  - vue 模式不受影响：组件内的 this 是 Vue 代理
+
+=====================================================
+
+=====================================================
+需要的 import（加到 js/apps/<appId>.js 顶部）
+=====================================================
+import { createActionAttr } from '@/src/core/actions.js';
+import { escapeHtml } from '@/src/core/escape.js';
+
+export default function createAppSpec() {
+    return {
+
+        // 基础信息
+        id: `【问题：appId的答案】`,
+        name: `【问题：appName的答案】`,
+        icon: `【问题：appicon的答案】`,
+        iconBg: `【问题：appiconBg的答案】`,
+
+        // =====================================================
+        // distribution — 是否从 App Store 下载 + 是否已下载 + 商店展示
+        //   requiresInstall: 系统级 App（设置/商店/...）填 false；业务 App 填 true
+        //   installed:       运行时由 installApp / uninstallApp 维护，**默认 false**
+        //   appStore:        App Store 卡片元数据（subtitle / category / rating / accent ...）
+        // =====================================================
+        distribution: {
+            requiresInstall: `【问题；appType 的答案】`,        // true / false
+            installed: false,                                  // 运行时字段，**不要**在这里写 true
+            ...(requiresInstall ? {
+                appStore: {
+                    subtitle: '一句话介绍',
+                    category: '工具',
+                    rating: 4.8,
+                    ratingsCount: '新上架',
+                    size: '28 MB',
+                    age: '4+',
+                    version: '1.0.0',
+                    whatsNew: '优化使用体验。',
+                    description: '适配小听系统，可从 App Store 直接打开。',
+                    accent: 'linear-gradient(145deg, #A6C0FE, #F68084)',
+                },
+            } : {}),
+        },
+
+        // App主题颜色
+        background: '',
+        homeIndicatorColor: '',
+
+        // App是否出现在dock栏
+        dock: { visible: true, order: 1 },   // order 越小越靠左，0 为最左
+
+        // App头部区域
+        topbar: {
+            visible: true,                           // 是否显示顶栏（false 时整条隐藏）
+            type: 'standard',                        // 'standard' | 'title-only' | 'search' | 'segmented' | 'large-title' | 'buttons-only'
+            title: '',                     // 顶栏主标题
+            subtitle: '',                // 仅 standard 时显示在主标题下方
+            fontSize: 17,                            // 主标题字号（px）
+            fontWeight: 600,                         // 主标题字重（300 / 400 / 600 / 700）
+            titleColor: 'auto',                      // 主标题颜色：'auto' | 'white' | '#xxxxxx'
+            searchPlaceholder: '搜索',                // 仅 type='search' 时显示
+            segments: ['选项一', '选项二'],            // 仅 type='segmented' 时显示
+            activeSegment: 0,                        // 仅 type='segmented' 时高亮段索引
+        },
+
+        // App导航栏
+        nav: {
+            type: 'tab',                              // 'tab'（底部 Tab 栏）| 'orb'（圆形 orb 入口）| 不写 = 无导航
+            order: 0,                                 // 多个 tab 时的排序（越小越靠左）
+        },                                            // 可同时用 page.nav: true 标记页面出现在导航中
+
+        // App导航起点
+        pages: [
+            { id: 'home', label: '首页', icon: '◦', nav: true },
+            { id: 'about', label: '关于', icon: '◎', nav: true },
+        ],
+        defaultRootPageId: 'home',
+
+        // App子页面内容
+        detailContent: {},
+
+        // App根页数据
+        pageContent: {},
+
+        // App数据表
+        // stores: [{ name: 'appIdItems', keyPath: 'id' }],
+
+        // App初始 state
+        state: {},
+
+        // App运行时 setup
+        setup({ toolkit, app }) {
+            return {};
+        },
+
+        // App方法
+        //   说明：
+        //   - 字段里直接写方法简写，不要写箭头函数（this 由 framework 注入）。
+        //   - 用户输入 / 数据库字段必须 escapeHtml。
+        //   - 完整可调用 API 索引见本文件下方「项目可调用方法大全」一节。
+        methods: {
+            // --- 示例：灵动岛通知（自动 3.5s 消失）---
+            demoIsland() {
+                this.toolkit.island.notify('success', '操作成功', '数据已保存');
+            },
+
+            // --- 示例：带 widgetSlots 的 mini 灵动岛 ---
+            demoIslandWithWidgets() {
+                this.toolkit.island.show('mini', {
+                    type: 'info',
+                    title: '小组件',
+                    widgetSlots: [
+                        { qualifiedId: 'my-app::counter', icon: '➕', iconBg: '#007AFF', label: '计数器' },
+                        { qualifiedId: 'my-app::timer',   icon: '⏱',  iconBg: '#FF9500', label: '计时器' },
+                    ],
+                });
+            },
+
+            // --- 示例：内置弹窗（5 种 modalType 见下方大全）---
+            // async demoConfirm() {
+            //     this.toolkit.actions.modal('confirm', {
+            //         title: '确认操作',
+            //         text: '确定要执行此操作吗？',
+            //         confirmLabel: '确定',
+            //         danger: false,
+            //         onConfirm: () => {
+            //             this.toolkit.island.notify('success', '已确认');
+            //         },
+            //     });
+            // },
+
+            // --- 示例：数据库操作 ---
+            // async addItem(text) {
+            //     await this.toolkit.db.add('appIdItems', { id: `item-${Date.now()}`, text });
+            //     this.toolkit.island.notify('success', '已添加', text);
+            // },
+
+            // --- 示例：安装 / 卸载自己（一般在设置页「管理我的 App」提供）---
+            // async selfInstall() {
+            //     const { installApp } = await import('@/src/core/app-installation.js');
+            //     installApp(this.app.id, this.app);
+            //     this.toolkit.island.notify('success', '已下载', `${this.app.name} 已添加到桌面`);
+            // },
+            // async selfUninstall() {
+            //     const { uninstallApp } = await import('@/src/core/app-installation.js');
+            //     uninstallApp(this.app.id, this.app);
+            //     this.toolkit.island.notify('info', '已删除', `${this.app.name} 已从桌面移除`);
+            // },
+        },
+
+        // App外部服务接口
+        services: {
+            // async ping(payload) { return { ok: true, payload }; },
+        },
+
+        // App渲染
+        // renderMode: 'template' | 'hybrid' | 'vue'   ← 默认 'template'
+        renderMode: 'template',
+
+        renderPage(content, page, app) {
+            if (page.id === 'home') {
+                return `<div class="app-card bg-white/76">
+  <div class="text-[20px] font-bold text-slate-900">首页</div>
+  <!-- 触发灵动岛 -->
+  <button class="btn-primary mt-4" ${createActionAttr({ action: 'appMethod', method: 'demoIsland' }, app.id)}>
+    演示灵动岛
+  </button>
+</div>`;
+            }
+            return window.createDefaultPageRenderer(content, page, app);
+        },
+
+        renderDetailPage(content, page, app) {
+            return window.createDefaultDetailRenderer(content, page, app);
+        },
+
+        // App桌面小组件
+        widgets: [
+            {
+                id: 'quick-counter',
+                label: '计数器',
+                icon: `<svg viewBox="0 0 60 60" width="60" height="60" fill="none">
+                    <rect x="6" y="6" width="48" height="48" rx="14" fill="#007AFF"/>
+                    <text x="30" y="38" text-anchor="middle" fill="white" font-size="24" font-weight="bold">+</text>
+                </svg>`,
+                iconBg: '#007AFF',
+                defaultSize: 'S',            // 'S' | 'M' | 'L'
+                defaultOrientation: 'h',    // 'h'(2x1) 或 'v'(1x2)，仅 S 有效
+                // render(size, payload) 返回值直接被 v-html 注入，必须自己 escapeHtml
+                render(size, payload = {}) {
+                    const label = escapeHtml(payload.label || '计数');
+                    const count = payload.count ?? 0;
+                    if (size === 'S') {
+                        return `<div class="flex items-center gap-2 p-3">
+                            <span class="text-2xl font-bold text-blue-500">${count}</span>
+                            <span class="text-sm text-gray-500">${label}</span>
+                        </div>`;
+                    }
+                    return `<div class="p-4">
+                        <div class="text-gray-500 text-sm mb-1">${label}</div>
+                        <div class="text-3xl font-bold text-blue-500">${count}</div>
+                    </div>`;
+                },
+            },
+        ],
+    };
+}
+
+这里
+=====================================================
+项目可调用方法大全（methods / services 内部通过 this.toolkit.xxx 调用）
+  每个条目格式：<命名空间>.<方法签名>  —  说明
+=====================================================
+
+─── 1. toolkit.island（灵动岛）─────────────────────────────────────────────
+  .show(size, payload)            在指定尺寸弹出岛（推荐：mini/medium/large）
+  .info(size, payload)            同上，alias
+  .notify(type, title, msg, opts) 弹出 mini 通知；自动 time 模式，默认 3500ms 消失
+      type: 'success' | 'error' | 'info' | 'warning'
+      opts.lifecycle: 'manual' | 'time'
+      opts.duration: 毫秒（仅 time 模式）
+  .toggle(size, payload)          同 view 再调一次会自动关闭
+  .dismiss()                      主动关岛
+  .setSize(size)                  动态改变岛尺寸
+  .isActive()                     返回布尔，是否有岛在屏
+  .getState()                     返回 { mode, size, active, content }
+  .setCallbacks({ onKicked, onLongPress, onClosed })
+                                 给当前岛替换回调（每次 show/toggle 会重置）
+  .startIdleTimer(ms)             启动无操作倒计时（ms 后自动关岛）
+  .clearIdleTimer()               清除上面那个倒计时
+  .registerWidget(widgetConfig)   注册当前 app 的 widget 到全局表（framework 启动时也会自动注册）
+  .previewWidget(qualifiedId, opts)
+                                 以 mini 岛预览某个 widget（qualifiedId 形如 'appId::widgetId'）
+  .showWidgetSlots({ title, icon, widgets: [{ qualifiedId, icon, iconBg, label }] })
+                                 弹出多 widget 槽位岛
+
+  island.show / notify / toggle 的 payload 字段：
+    type, title, message, detail, icon, islandTemplate, payload,
+    lifecycle: 'manual' | 'time'
+    duration: 毫秒数（lifecycle='time' 时有效）
+    maxSize: 'mini' | 'medium' | 'large'   // 防误升级
+    onKicked, onLongPress, onClosed: 回调函数
+    widgetSlots: [{ qualifiedId, icon, iconBg, label }]   // 小组件槽位
+
+─── 2. toolkit.actions（动作 / 跳转 / 弹窗）────────────────────────────────
+  .detail(pageId)                 返回打开「子页面」的 action 对象（拼到 data-app-action）
+  .modal(modalType, payload)      返回打开「内置弹窗」的 action 对象；payload.onConfirm(inputValue) 仅 prompt 类型有 inputValue
+  .method(name, payload)          返回「调用本 app 自身 methods」action 对象（用于跨 app 调用）
+  .openApp(targetAppId, pageId?, payload?)
+                                 返回「打开另一个 app」的 action 对象
+  .deepLink(url|payload)          返回「深链打开」action 对象（语义同 openApp，但走 services.handleDeepLink）
+  .share(record)                  返回「分享共享记录」action 对象
+
+  ── ★ 内置弹窗 modalType 全集（css/main.css 已配齐 5 套样式）──
+  'center'    居中标准弹窗（标题 + 正文 + 确认/取消）
+  'prompt'    带 textarea 输入框的弹窗；onConfirm 回调第一参 = 用户输入文本
+  'sheet'     底部抽屉样式（适合选项列表）
+  'toast'     顶部轻提示（适合轻量反馈）
+  'confirm'   居中确认弹窗（与 center 视觉接近，语义独立）
+
+  payload 通用字段：
+    title:        标题
+    text:         正文
+    content:      HTML 片段（prompt 类型承载输入区，sheet 类型承载选项）
+    placeholder:  prompt 输入框占位文字
+    confirmLabel / cancelLabel:  按钮文案（默认「确定」/「取消」）
+    danger:       true → 确认按钮变红（删除类场景）
+    onConfirm:    回调；prompt 类型签名 onConfirm(inputValue)
+
+─── 3. toolkit.db（IndexedDB，需先在 appConfig.stores 声明数据表）─────────
+  .stores                                  当前 app 已声明的 store 列表
+  .add(name, data)                         插入（自动生成 id 仅当 keyPath 为 'id' 且未提供）
+  .get(name, key)                          按主键读
+  .getAll(name, query?)                    读全部（或按 query 过滤）
+  .getAllRecords(name)                     读全部（无 query）
+  .put(name, data)                         按主键覆盖
+  .remove(name, key)                       按主键删
+  .clear(name)                             清空整表
+  .count(name)                             计数
+  .bulkPut(name, records[])                批量写入
+  .bulkRemove(name, keys[])                批量删除
+
+─── 4. toolkit.shared（跨 App 共享记录）───────────────────────────────────
+  .storeName                               共享表名（固定 'sharedRecords'）
+  .normalizeRecord(record)                 规范化一条共享记录（不落库）
+  .put(record)                             写入共享记录（自动补全 id/sourceApp/targetApp/createdAt/...）
+  .get(recordId)                           按 id 读
+  .getAll(query?)                          读全部
+  .listByTarget(targetApp?)                按目标 app 过滤
+
+─── 5. 顶层 import 的动作构造器 ────────────────────────────────────────────
+  import { createActionAttr, createDetailAction, createOpenAppAction,
+           createAppMethodAction, createModalAction, createDeepLinkAction,
+           createShareRecordAction, serializeAction } from '@/src/core/actions.js';
+  createActionAttr(action, appId)          生成 data-app-action='...' 字符串（最常用）
+  serializeAction(action, appId)           生成已 escape 的 JSON 字符串
+  createActionObject(action, appId)        规范化对象（自动补 appId）
+
+─── 6. toolkit.builders（设置页构造器）─────────────────────────────────────
+  toolkit.builders.settings.detail(pageId)              → 详情 action
+  toolkit.builders.settings.modal(type, payload)        → 弹窗 action
+  toolkit.builders.settings.method(name, payload)       → 方法调用 action
+  toolkit.builders.settings.share(target, type, id, p)  → 分享 action
+  toolkit.builders.settings.row({ title, iconName, description, action, rowId, dataRole })
+                                                        → 设置行配置（自动解析 iconName）
+  toolkit.builders.settings.group({ rows, ... })        → 设置组 HTML
+
+─── 7. toolkit.renderers（HTML 片段渲染器）─────────────────────────────────
+  .renderActionButton(action, appId?)         标准「查看」按钮
+  .renderChevronRow(opts, appId?)             带 chevron 的可点行
+  .renderSettingsGroup(opts, appId?)          设置组容器
+  .renderSurfaceCard(opts)                    通用卡片
+  .renderSectionShell(opts)                   通用 section 外壳
+
+─── 8. toolkit.templates（内置页面模板，HTML 字符串）──────────────────────
+  toolkit.templates.render('hero', { badge, title, description, actions, meta })
+  toolkit.templates.render('info-list', { title, items: [{title, text}] })
+  toolkit.templates.render('quick-actions', { title, actions, appId })
+  toolkit.templates.render('profile-hero', { badge, title, description, meta, action, appId, avatar })
+  toolkit.templates.render('group-list', { rows, appId })          // = renderSettingsGroup
+  toolkit.templates.render('share-card', { title, summary, sourceApp, targetApp, action, cover, meta })
+  toolkit.templates.render('glass-action-card', { id, title, description, action, icon, panelClassName, ... })
+  toolkit.templates.render('settings-note', { title, text, sectionId })
+  模板注册：appTemplates.register(name, renderFn)（注册器全局，谨慎）
+
+─── 9. 图标 / 设计 token（只读对象）────────────────────────────────────────
+  toolkit.icons                       APP_ICONS: spark / grid / layers / bell（SVG 字符串）
+  toolkit.uiIcons                     UI_ICONS: chevronRight / heart / heartOutline / play / pause / prev / next / musicNote / send / plus / back
+  toolkit.uiSymbols                   UI_SYMBOLS: settingsBlue / privacyBlue / avatarListen（emoji / 单字符）
+  toolkit.iconLibrary.get(name)       共享图标库：heart / play / pause / send / plus / back / settingsBlue / privacyBlue
+  toolkit.tokens.radius               { card, group, tile, chip }（Tailwind class）
+  toolkit.tokens.shadow               { card, tile, soft }（Tailwind class）
+  toolkit.tokens.surface              { card, muted, soft }（Tailwind class）
+
+─── 10. 顶层 import 的辅助工具 ─────────────────────────────────────────────
+  import { escapeHtml, renderTextBlock, normalizeTextList } from '@/src/core/escape.js';
+    escapeHtml(str)                   必用于用户输入 / 数据库字段
+    renderTextBlock(text, classes)    带 class 的安全文本块（空值自动短路）
+    normalizeTextList(x)              把字符串 / 数组 / 逗号串统一成数组
+
+  import { registerIslandComponent, listIslandComponents } from '@/src/core/app-renderer.js';
+    registerIslandComponent(name, component, defaults?)
+           注册一个 component-island 组件；hybrid 模式下 renderPage 返回的
+           HTML 字符串里写 `<component-island name="my-card" label="..." :value="true" />`
+           即可被自动替换为对应的 Vue 组件。
+    listIslandComponents()             返回当前所有已注册的 island 名（调试用）
+
+  ★ framework 启动时已自动注册 7 个内置 island 组件（hybrid 模式直接可用）：
+       toggle / slider / input / textarea / select / list / counter
+       用法示例：`<component-island name="toggle" label="Wi-Fi" :value="true"></component-island>`
+       属性语法：字符串直接写 label="昵称"；布尔/数字带冒号 :value="true" / :count="3"；
+                JSON 数组用单引号包 :options='[{"value":"a","label":"A"}]'
+
+  ★★ 内置 island 组件 props / emits / 典型用法速查：
+
+  ─ island-toggle ─ iOS 风格开关
+    props:  value:Boolean (默认 false) / label:String / disabled:Boolean
+    emits: 'update:value' | 'change'           ← 两个都派发，值相同
+    用法:
+      <component-island name="toggle" label="Wi-Fi" :value="true"></component-island>
+      <component-island name="toggle" label="飞行模式" :value="false" :disabled="false"></component-island>
+
+  ─ island-slider ─ 滑块
+    props:  value:Number (默认 0) / min:Number (0) / max:Number (100) /
+            step:Number (1) / label:String
+    emits: 'update:value' | 'change'
+    用法:
+      <component-island name="slider" label="亮度" :value="70" :min="0" :max="100"></component-island>
+      <component-island name="slider" label="音量" :value="50" :step="5"></component-island>
+
+  ─ island-input ─ 受控输入框
+    props:  value:String / label:String / placeholder:String /
+            type:String (默认 'text', 也可 'password'/'number'/...) / maxlength:Number (0=不限)
+    emits: 'update:value' (每次输入) | 'change' | 'submit' (回车)
+    用法:
+      <component-island name="input" label="昵称" placeholder="请输入" :value="nickname"></component-island>
+      <component-island name="input" type="password" :maxlength="20"></component-island>
+
+  ─ island-textarea ─ 受控文本域
+    props:  value:String / label:String / placeholder:String /
+            rows:Number (默认 4) / maxlength:Number
+    emits: 'update:value' | 'change'
+    用法:
+      <component-island name="textarea" label="备注" :value="note" :rows="3" :maxlength="200"></component-island>
+    注：设了 maxlength 会自动显示「当前 / 上限」计数器。
+
+  ─ island-select ─ 下拉选择
+    props:  value:String|Number / options:Array<{value, label}> / label:String
+    emits: 'update:value' | 'change'
+    用法:
+      <component-island name="select" label="主题"
+          :value="theme"
+          :options='[{"value":"light","label":"浅色"},{"value":"dark","label":"深色"}]'>
+      </component-island>
+
+  ─ island-list ─ 列表（点选 + 删除）
+    props:  items:Array (默认 []) / labelKey:String (默认 'label') /
+            valueKey:String (默认 'value') / emptyText:String (默认 '暂无数据')
+    emits: 'select' (整条 item) | 'delete' (整条 item)
+    用法:
+      <component-island name="list"
+          :items='[{"value":"a","label":"A"},{"value":"b","label":"B","description":"副标题"}]'>
+      </component-island>
+    注：每条 item 上有 deletable:false 可隐藏删除按钮。
+
+  ─ island-counter ─ 数字加减
+    props:  value:Number (默认 0) / min:Number (0) / max:Number (999) /
+            step:Number (1) / label:String
+    emits: 'update:value' | 'change'
+    用法:
+      <component-island name="counter" label="数量" :value="qty" :min="1" :max="99"></component-island>
+
+  ★ 重要：island 组件派发的事件（'update:value' / 'select' / 'delete' ...）
+         不会自动同步到 app.state；需要自己在 hybrid 渲染层包一个监听回调，
+         或者直接在 methods 里通过 this.toolkit.xxx 维护状态。
+
+─── 11. window.* 全局钩子（业务方法里可直接调）────────────────────────────
+  window.refreshPhoneApps()          重渲所有 App（mutate state 后强制 Vue 刷新）
+  window.refreshPhoneWidgets()       刷新桌面 widget 选择面板
+  window.__phoneConfirm.request({ title, text, confirmLabel, danger, onConfirm, onCancel })
+                                     全局二次确认弹窗（脱离 activeApp 的 modal-layer）
+  window.__phoneConfirm.close()      关闭全局二次确认弹窗
+  window.__phoneAppsRef.value = [...window.__phoneAppsRef.value]
+                                     强制 apps 数组重新触发 reactive（连同 .refreshPhoneApps 用）
+  window.__detailRenderTick.value++  强制当前 detail view 重渲（mutate plain-object state 后用）
+  window.myDynamicIsland              灵动岛底层 API（一般走 toolkit.island，不要直接用）
+  window.myDb                         IndexedDB 底层（一般走 toolkit.db）
+
+─── 12. 跨 App 调用（services 给别人用 / methods 给自己用）────────────────
+  toolkit.actions.method(methodName, payload)
+       生成调本 app method 的 action；其他 App 通过 action 触发本 app
+  toolkit.actions.deepLink(targetAppId, pageId, payload)
+       深链打开另一 app，并触发其 services.handleDeepLink(payload)
+  toolkit.actions.share({ targetApp, entityType, entityId, title, summary, cover, payload, action, tags })
+       把记录写入 sharedRecords；其他 App 通过 toolkit.shared.listByTarget(targetApp) 拉取
+
+=====================================================
+AppConfig 字段索引（完整版）
+=====================================================
+必填：id / name / icon / pages / defaultRootPageId / renderPage
+可选全部：
+  身份       iconBg
+  外观       background / statusBarColor / homeIndicatorColor
+  Dock       dock: { visible, order }     // order 越小越靠左
+  顶部条     topbar: { visible, type, title, subtitle, fontSize, fontWeight, titleColor, searchPlaceholder, segments, activeSegment }
+  导航       nav: { type }        // 'tab' | 'orb' | 不写 = 无
+  页面       pages[] / defaultRootPageId / pageContent / detailContent
+  数据       stores[] / state / setup()
+  逻辑       methods{} / services{}（exports 是 services 的别名）
+  渲染       renderPage() / renderDetailPage() / renderMode
+  小组件     widgets[]
+  island组件 registerIslandComponent('name', comp) // 需先 import
+
+  ★ 详细方法签名见上方「项目可调用方法大全」（toolkit.island / actions / db / shared / builders / renderers / templates / icons / tokens / window.*）
+
+widget 配置项：
+  id / label / icon / iconBg / defaultSize ('S'|'M'|'L') / defaultOrientation ('h'|'v')
+  render(size, payload) → HTML 字符串（直接 v-html，必须 escapeHtml 防 XSS）
+  size 传参：'S' | 'M' | 'L'
+
+（renderMode 三模式对比表见文件顶部「renderMode 三模式对比」一节）
+
+window.* 钩子（精简版；完整用法见上方方法大全 §11）：
+  refreshPhoneApps() / refreshPhoneWidgets()
+  __phoneConfirm.request() / __phoneAppsRef / __detailRenderTick
+
+动态加载：loadScript(url) / loadExternalApps(urls)
+
+XSS 安全：renderPage 里任何用户输入/数据库字段必须 escapeHtml
+import { escapeHtml, renderTextBlock } from '@/src/core/escape.js';
+
+
+=====================================================
+App 接入步骤
+=====================================================
+1. 存为 js/apps/【appId】.js，默认导出工厂函数
+2. 在 js/apps/index.js 静态 import + 加进 appFactories 数组
+   ★ 若 App 有 stores[]（写 IndexedDB），必须 import registerPhoneAppAsync 并 await 它；
+     否则「添加成功 → 刷新变空」（详见已知 Bug #3）。
+3. 刷新浏览器
+（不需要改 index.html / src/index.js）
+
+
+=====================================================
+已知 Bug / 待修复（框架层）
+=====================================================
+
+─── Bug #1: 顶栏视觉断层 ──────────────────────
+症状：appConfig.topbar.bg 设为非透明色（solid / gradient / rgba...）时，
+      状态栏悬浮在 nav bar 上方，与 nav bar 形成视觉断层。
+      违反 iOS HIG 「Continuous Background」原则。
+相关代码：
+  - js/framework/use-app-navigation.js  L45-58    topbarStyle 计算
+  - js/framework/use-app-navigation.js  L109-148  statusBar*（颜色 / 样式 / 可见性）
+  - app-shell 组件                            statusbar + navbar 渲染顺序
+术语：Status bar / nav bar discontinuity / "Status bar floats above navbar"
+修复方向（三选一）：
+  A. statusbar 容器与 navbar 共享同一父节点 + 同一背景
+  B. statusbar 不再独立容器，挪进 navbar 顶部内嵌
+  C. CSS 变量 --topbar-bg 同时驱动 statusbar + navbar 的 background
+状态：未修复，等待开工
+
+─── Bug #2: __detailRenderTick 双 ref 重复声明 ────
+症状：设置 app（或所有 xxxRoute({ sub: 'edit' }) 类业务方法）切子页 / 改 state 后，
+      当前 detail 页不立即重渲。必须「切走再切回」或「关闭再打开」才生效。
+      app 端写的 window.__detailRenderTick.value++ 与 __phoneAppsRef 强制刷新
+      看起来跑了但 computed 不动。
+根因（两处同名 ref，互相看不见）：
+  - core-shim.js         L158  声明 const detailRenderTick = Vue.ref(0)
+  - use-app-navigation.js L29  声明 const detailRenderTick = Vue.ref(0)
+  - syncRegisteredApps 自增的是 core-shim 自己闭包里的 ref
+  - useAppNavigation 里 currentDetailView（computed, L95）依赖的是它自己闭包里的 ref
+  - 两个 ref 不是同一对象 → __detailRenderTick.value++ 不通知 computed
+  - 「切走再切回」能恢复：靠 activeAppId / currentDetailPage 变化触发 computed 重算，不靠 tick
+修复（确保全局只 Vue.ref(0) 一次）：
+  1. use-app-navigation.js    return 里暴露 detailRenderTick
+  2. core-shim.js             删掉自己的 ref；把 useAppNavigation 调用提前到 syncRegisteredApps 之前
+  3. syncRegisteredApps        改成 navigation.detailRenderTick.value++
+  4. appConfig bridge（L498）   改成 detailRenderTick: navigation.detailRenderTick
+关键教训 / 给 AI 编程助手：
+  - window.__xxx 暴露 ref 时保证整个项目只有一处 Vue.ref(0)
+  - Vue computed 的依赖靠闭包内的变量名解析，不是 ref 引用本身——同名变量遮蔽 = 依赖丢失
+  - 诊断信号：tick.value++ 跑了但 computed 不重算 → 多半两个 ref 不是同一个
+  - 优先通过 return 暴露而非 window.__xxx；后者是最后手段，需要中央登记避免重复声明
+状态：根因分析完成，修复方案已出，待落实
+
+─── Bug #3: IndexedDB 持久化「表面写成功但实际丢」──────────────
+症状（用户视角，典型——天气 App 真实出现过）：
+  - App 内点「添加」→ 灵动岛弹「添加成功」通知，列表里立刻看到新城市
+  - 关掉 App / 切到桌面 / F5 刷新 → 再打开 → 列表空了
+  - DevTools → Application → IndexedDB → listen_db → weatherCities → 「(empty)」
+根因（三段叠加，少一段不会丢）：
+  1. 注册竞态：apps/index.js 顶层用同步 registerPhoneApp 把 app 推到 apps 数组，
+     框架内 window.myDb.registerStore() 把缺的 store fire-and-forget 升级（close + reopen）。
+     升级 done 之前，如果该 app 的 _saveCities 已经 await db.put()，
+     报 NotFoundError（store 不存在） → try/catch 吞掉 → UI 弹「成功」。
+  2. _hydrated 锁死：renderPage 同步设 app.state._hydrated = true，
+     即使第一次 hydrate 啥也没拿到，下次 renderPage 也跳过 → 永远不会再尝试。
+  3. IndexedDB 还没 ready：app 启动后立刻调 hydrate，db.open() 的 success handler 还没回，
+     db.get() 抛错 → 只 catch 一次 → 永远 null。
+
+修复方向（必须三件都做，单做一件都还会偶发丢数据）：
+  A. apps/index.js：用 registerPhoneAppAsync，await ensureSchema() 等 store 升级完再 push
+     到 apps 数组（让 UI 显示等到 store 就绪）。
+  B. weather App 内：_saveCities try/catch 失败时通知用户（不要静默）；
+     renderPage 不预置 _hydrated=true；hydrate 用 _hydrating 锁；
+     get 重试 200ms × 3；只有真拿到 data 才标记 _hydrated=true。
+  C. 兜底双写：_saveCities 先同步写 localStorage（永不失败），
+     hydrate 先 IndexedDB，没数据时回退 localStorage。
+     再写一份 window.__weatherDebug / __weatherDumpLs 给 DevTools 调试。
+
+关键教训 / 给 AI 编程助手（生成新 App 时必看）：
+  - App 有 stores[] → js/apps/index.js 必须 await registerPhoneAppAsync(cfg)，不能 sync。
+  - App 内 _saveCities 必须用 try/catch，且失败要弹岛通知用户（不能静默）。
+  - renderPage 调 hydrate 时，**不要预置 _hydrated = true**，
+    让 hydrate 自己根据「真正拿到 data」才标记，否则失败就永远锁死。
+  - IndexedDB.get / .put 都要重试机制（IndexedDB.open 是异步，启动期操作经常撞 open 中）。
+  - 可考虑「双写 localStorage 兜底」——5 行代码换一个「数据一定不丢」的承诺。
+诊断信号（与 Bug #2 对照）：
+  - 添加操作 console 没报 save 失败，但刷新后数据就是没了 → 静默吞错
+  - 启动期只看到 _saveCities OK，但 hydrate() START 永远不出现 → renderPage 没触发 hydrate
+  - DevTools IndexedDB 里有 key 但 hydrate console 显示 db.get => null → 时序或 store 名错位
+状态：天气 App 修复验证通过；待推广到 settings / todo 等所有带 stores[] 的 App
+
+
+=====================================================
+v0.30 · 人设主页空间模块 + AI 日程生成 + 心情日记双写
+=====================================================
+本节是「人设主页-空间模块与AI日程生成.txt」的总结。
+原文分 10 节（原话复述 / 现状摸底 / 需求拆分 / 数据结构 / 文件改动 / 端到端流程 /
+对齐 AGENTS.md / 未决问题 / 最小可交付 / 最后一句），完整内容请直接读那份 txt。
+
+────────────────────────────────────────
+┌─ 需求摘要（10 条原话）────────────────
+│ 1) 人设主页「作息」div 与「资产」div 之间新增「空间」div
+│ 2) 「空间」= 某人设被某场所勾选为「可以去」后的全部候选场所
+│ 3) 世界观两级结构：地点 → 场所；地点可绑定天气 App 城市（realCityRef）
+│ 4) 示例：人设 A 绑世界 X → X 下的「A 城」有「医院」「A 的家」两个场所
+│ 5) 把「北京」天气映射给「A 城」后，回到 A 主页能看到当天天气
+│ 6) 「生成 AI 今日日程」按钮 → 真实调 API → 返回结构化行程 → 解析保存
+│ 7) AI 上下文维度：人设卡 / 世界空间 / 纪时 / 作息 / 本周日程 / 心情
+│ 8) 复杂例子：6 个时间段的纪时（白/黄/红/绿/黑/粉/蓝时间），AI 按段生成行程
+│ 9) 「今日日程」写到心情日历
+│ 10) 心情日历每日两次日记：开场（首屏自动）+ 结束（用户主动 / 跨日）
+└────────────────────────────────────────
+
+────────────────────────────────────────
+┌─ 现状摸底（六处关键发现）────────────
+│ 1) Place.realCityRef 已存在 → 直接复用
+│ 2) Location.accessNotes.visitors 已覆盖「勾选人设可以去」语义
+│    → 不需要新加字段，只读 + 汇总即可
+│ 3) sdk.places / sdk.locations 已可用，但缺「按 persona 反查全部场所」
+│    → 新增 helper: getAccessibleLocationsForPersona(sdk, worldId, personaId)
+│ 4) 人设主页布局：renderWeekBlock 末尾挂 renderRhythmBlock
+│    → 需把 renderRhythmBlock 拎出来，并插入新模块
+│    建议新顺序：... → renderWeekBlock → renderRhythmBlock → renderSpaceBlock
+│                → renderAssetBlock → ...
+│ 5) sdk.diary 一人一天一篇：id = `${entityType}:${entityId}:${YYYY-MM-DD}`
+│    → 新增 todaySchedule / openingDiary / closingDiary 三个字段即可
+│ 6) personaGenerateMood 已经走完 LLM 全链路 → 抽出 callAiJson 通用化
+│    → mood / todaySchedule / diary 三处共用
+│ 7) 频率取值：always / often / sometimes / rarely / never（geo-constants.js）
+│    → AI 候选范围 = enabled && frequency != never；rarely 默认不喂
+└────────────────────────────────────────
+
+────────────────────────────────────────
+┌─ 决策汇总（5 条）────────────────────
+│ D1. 访问频率  → 沿用 ACCESS_FREQUENCIES，不新加字段
+│ D2. todaySchedule 字段位置 → 挂在 sdk.diary 一人一天一篇里，不新建 store
+│ D3. 空间列表顺序 → 按 place.name 字典序 → location 字典序
+│     当前最有可能在的场所标 ★（按 todaySchedule 命中）
+│ D4. 现实 ↔ 纪时段 → AI 只输出 24h 整数 fromHour/toHour
+│     渲染时再换算成 phase 名（sdk.chronology.getHourNames）
+│ D5. 手动 vs AI → source 字段区分：'ai' | 'manual' | 'none'
+│     source='manual' 时 confirm 后才能覆盖
+└────────────────────────────────────────
+
+────────────────────────────────────────
+┌─ 新增字段（diary 记录结构）──────────
+│ {
+│   id, entityType, entityId, date,
+│   mood, moodIntensity, isPositive,
+│   diary: string,                  // 现有
+│   todaySchedule: [{               // 新增：今日日程
+│     id, fromHour, toHour,
+│     locationId, locationName, placeName,
+│     activity, reason, confidence,
+│     generatedAt
+│   }],
+│   todayScheduleGeneratedAt: ts,   // 新增
+│   todayScheduleSource: 'ai'|'manual'|null,
+│   segments: [...],                // 现有
+│   openingDiary: { text, generatedAt, source },  // 新增
+│   closingDiary: { text, generatedAt, source }   // 新增
+│ }
+│ 迁移：旧记录缺字段 → undefined；UI 兼容空字段
+└────────────────────────────────────────
+
+────────────────────────────────────────
+┌─ 文件改动清单 ──────────────────────
+│ 新增 3 个文件：
+│   1) js/apps/setting/persona/space-block.js
+│      - renderSpaceBlock / renderSpaceWeatherCard / renderSpaceLocationsList
+│      - renderSpaceSchedulePreview / renderOpeningDiaryBlock / renderClosingDiaryBlock
+│   2) js/apps/setting/persona/space-ai.js
+│      - resolveApiKeyIdForPersona / callAiJson
+│      - buildWorldSpaceContext / buildTodayScheduleSystemPrompt / buildTodayScheduleUserPrompt
+│      - buildOpeningDiarySystemPrompt / buildOpeningDiaryUserPrompt
+│      - buildClosingDiarySystemPrompt / buildClosingDiaryUserPrompt
+│      - parseAiJsonOrFallback
+│   3) js/apps/setting/persona/space-sdk.js
+│      - getAccessibleLocationsForPersona(sdk, worldId, personaId)
+│      - getPlaceWeather(weatherAppState, place)
+│      - getCurrentLocationBySchedule(todaySchedule, now)
+│
+│ 修改 5 个文件：
+│   1) js/apps/setting/persona/home-section.js
+│      - renderPersonaHome 调序，renderWeekBlock 末尾不再调 renderRhythmBlock
+│      - 插入 renderRhythmBlock + renderSpaceBlock 在 renderAssetBlock 之前
+│      - renderMoodDetailPanel 增加今日日程 + 两次日记区块
+│      - renderMoodCalendar 格子双日记完整度 dot
+│   2) js/apps/setting/persona/home-methods.js
+│      - 加 personaSpaceGenerateTodaySchedule / OpeningDiary / ClosingDiary / RefreshWeather
+│      - callMoodApi 重构为 callAiJson 薄封装
+│   3) js/apps/setting/world/sdk/diary.js
+│      - 字段透传即可
+│      - 文档注释说明 todaySchedule / openingDiary / closingDiary
+│   4) css/main.css 或 新建 css/space-block.css
+│      - .phome-card--space / .phome-space__weather / __locations / __schedule
+│      - .phome-space__location-row / .phome-space__schedule-row / .phome-diary-pair
+│   5) js/apps/setting/world/sdk/form-renderer.js
+│      - 不需要改（已有 location-access 字段支持 visitors + frequency）
+└────────────────────────────────────────
+
+────────────────────────────────────────
+┌─ 风险与边界 ────────────────────────
+│ R1. AI 不知道 phase 名 ↔ 现实小时换算
+│     → systemPrompt 写明 chrono 映射；fromHour/toHour 始终是 24h 整数
+│ R2. 场所 ID 漂移
+│     → prompt 里严格枚举 location.id；解析时白名单校验，不在候选 → 丢弃整段
+│ R3. 没有 API Key → 复用 personaGenerateMood 降级路径
+│     → 弹灵动岛「请先在资源管理中添加 API Key」
+│     → 未来可降级到本地模板（按作息 + 频率硬编几段），先不做
+│ R4. 一天多次点生成
+│     → source='manual' confirm 后才能覆盖；source='ai'/null 直接覆盖
+│ R5. closingDiary 的「结束」触发
+│     → 不绑 beforeunload（浏览器不友好）
+│     → 1) 主页「结束今日」按钮 → 主动生成
+│     → 2) 跨日检测：进入主页若 date 已变 → 把昨天 closingDiary 强制写一次
+└────────────────────────────────────────
+
+────────────────────────────────────────
+┌─ 未决问题（留给你决定）──────────────
+│ Q1. openingDiary 自动触发：默认开启？
+│     → 默认开，挂 persona.space.openingDiaryAuto = true/false 开关
+│ Q2. closingDiary 触发时机
+│     → a. 手动按钮（最简单）；b. 跨日检测；c. idle > 30min
+│     → 建议 a,b 先做；c 框架支持不够
+│ Q3. AI 没返回合法 JSON
+│     → 弹「生成失败,重试」；保留 retry 钩子
+│ Q4. 现实小时 ↔ 纪时段换算
+│     → hoursRatio.base=7 real=24 → 段宽 ≈ 3.43h
+│     → 0~3:25 蓝色 / 3:25~6:50 白色 / 6:50~10:15 黄色 / 10:15~13:40 红色
+│     → 13:40~17:05 绿色 / 17:05~20:30 黑色 / 20:30~24:00 粉色
+│     → 比例逻辑放 space-ai.js helper
+│ Q5. 「用户没绑 API」 → 灵动岛通知 + TODO 降级本地模板
+│ Q6. 场所 visitors 没勾选某人设
+│     → 空间列表默认隐藏 rarely/never + 未勾选 enabled
+│     → AI 候选范围：enabled && frequency != never
+│     → 加「纳入 rarely/never」开关（默认关）
+│ Q7. 地点没映射 realCityRef
+│     → 「暂无天气映射」+ 跳转「地点编辑器」按钮（先不做）
+│ Q8. 手动 + AI 冲突
+│     → source='manual' → confirm 后覆盖；永远保留手动段
+└────────────────────────────────────────
+
+────────────────────────────────────────
+┌─ 端到端流程（用户例走一遍）──────────
+│ 前置：人设 A = ai0，绑世界 X
+│   X.chronologySettings.enabled = true
+│   X.places = [place-a-city（realCityRef=北京）]
+│   X.locations = [
+│     loc-home（accessNotes.visitors.ai0.frequency=often, note=起居室有钢琴）,
+│     loc-hospital（frequency=sometimes, note=季度体检）
+│   ]
+│ 当前现实时间：2026-08-02 15:32
+│
+│ 步骤：
+│   1) 进入人设主页 → 看到「空间」卡片
+│      - 世界 X · 1 地点 · 2 场所
+│      - 当前地点：A 城 / 北京 22°C 晴
+│      - 当前场所：医院（按 todaySchedule 命中时段）
+│      - 可去场所列表：A 的家（经常）/ 医院（偶尔）
+│   2) 点 [生成今日日程]
+│      - AI 返回 3 段行程 → 落 todaySchedule → 主页自动刷新
+│      - 渲染：黄色时间(10-12) A 的家 · 在家吃午饭
+│               红色时间(13-16) 医院 · 常规复诊
+│               黑色时间(20-22) A 的家 · 回家休息
+│   3) 点 [结束今日]
+│      - 拼 prompt + 调 AI → 写 closingDiary
+│      - 心情日历今天格子变「完整」（双日记 dot）
+└────────────────────────────────────────
+
+────────────────────────────────────────
+┌─ 实施进度（v0.30）─────────────────
+│
+│ Phase 1 — 基础设施（已完成 2026-08-03 早晨）
+│   [x] space-sdk.js + space-ai.js (callAiJson 通用化 + helper)
+│   [x] space-block.js 静态渲染
+│   [x] home-section.js 调序
+│   [x] home-methods.js personaSpaceGenerateTodaySchedule 空实现
+│   [x] css/_persona-space.css 容器样式
+│   [x] 持久化字段：todaySchedule / todayScheduleGeneratedAt / todayScheduleSource
+│
+│ Phase 2 — AI 行程生成（已完成 2026-08-03 早晨）
+│   [x] callAiJson 重构 + prompt 拼装系统
+│   [x] 调 AI → locationId 白名单校验 → 写入 todaySchedule
+│   [x] renderSpaceSchedulePreview 渲染今日日程
+│   [x] 写入后 refresh() 刷新主页
+│   [x] 天气优先读 window.weatherAppState，缺失时回退 localStorage 镜像
+│   [x] weather-app.js 注册时同步还原 cities / weatherCache
+│   [x] apps/index.js 后台主动 hydrateWeatherApp
+│
+│ Phase 2.5 — 问题修复（进行中 2026-08-03 凌晨）
+│   [x] 灵动岛 medium 锁定滚动 → 改用 mini + notify
+│   [x] callAiRaw 增加详细诊断日志（status / finishReason / usage / preview）
+│   [x] _personaSpacePrepare 去掉每次调用的动态 import
+│   [x] readWeatherAppState 抽到 space-sdk.js 复用
+│   [ ] 等待用户复测，定位 callAiRaw 返回「长度 0」的真实原因
+│       诊断信号：日志应包含 [space-ai] callAiRaw start / done 两行
+│
+│ Phase 3 — 日记双写（未开始）
+│   [ ] openingDiary：主页 mount 检测 → 自动触发
+│   [ ] closingDiary：手动按钮 + 跨日检测
+│   [ ] renderMoodDetailPanel 加对应区块
+│   [ ] 心情日历格子 dot
+│
+│ Phase 4 — 打磨（未开始）
+│   [ ] 「重 roll」按钮
+│   [ ] 「结束今日」按钮 + 跨日逻辑
+│   [ ] 异常降级（无 API / JSON 解析失败 / 场所 ID 漂移）
+│   [ ] 灵动岛更友好的提示
+│
+│ ★ 当前阻塞：
+│   callAiRaw 返回 content 长度 0 的根因（用户复测后看日志确认）
+│   可能原因（优先级排序）：
+│     1) API Key 失效 / 过期（最常见）
+│     2) baseUrl 指向了别的代理，返回结构被改造
+│     3) provider 字段不对，走了错误分支
+│     4) max_tokens 被截断（已加 finishReason=length 警告）
+│     5) 模型本身回了空（极少见）
+│   下次按按钮时把 [space-ai] callAiRaw start / done 两行完整 log 截图发我
+└────────────────────────────────────────
+
+────────────────────────────────────────
+┌─ 关键索引 ─────────────────────────
+│ 原文：待办/人设主页-空间模块与AI日程生成.txt（共 602 行，10 节）
+│ 摘要：待办/我的计划.txt（本节，约 200 行）
+│ 状态：Phase 1 + Phase 2 + Phase 2.5 已完成，Phase 3 + 4 未开始
+│ 阻塞：callAiRaw 返回空待用户复测
+└────────────────────────────────────────

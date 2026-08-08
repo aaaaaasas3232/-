@@ -13,7 +13,24 @@ import { PROVIDER_PRESETS } from './api-key-sdk.js';
 // ============================================
 
 export function buildApiManagerMethods() {
+    /**
+     * 触发 detail 重画 ——
+     *   ★ v0.49.1 修复:点击「新建 API」等弹窗不显示,需切出再切回才显示
+     *   根因:之前只调 refreshPhoneApps() 改 apps.value,
+     *   但 apps.value 不在 framework bridge 的 watch sources 里,
+     *   bridge.syncRenderer 看 detailKey 没变 + tickChanged=false → 不重画 detail。
+     *   修复:同时 ++detailRenderTick + bridge.syncNow({force:true}) 双保险
+     *   (settings-app renderDetailPage 是 sync 函数,不会撞 v0.38 死循环)
+     */
     function refresh() {
+        if (typeof window === 'undefined') return;
+        if (window.__detailRenderTick && typeof window.__detailRenderTick.value === 'number') {
+            window.__detailRenderTick.value++;
+        }
+        const bridge = window.__appRendererBridge;
+        if (bridge && typeof bridge.syncNow === 'function') {
+            try { bridge.syncNow({ force: true }); } catch (_) {}
+        }
         try { window.refreshPhoneApps?.(); } catch (_) {}
     }
     return {
@@ -155,7 +172,7 @@ export function buildApiManagerMethods() {
             }
 
             this.app.toolkit.island.notify('info', '已删除', key.label || 'API 密钥');
-            window.refreshPhoneApps?.();
+            refresh();
         },
 
         apiKeyToggle({ id, enabled }) {
@@ -165,7 +182,7 @@ export function buildApiManagerMethods() {
             if (!key) return;
             key.enabled = enabled;
             sdk.apiKeySdk.put(key);
-            window.refreshPhoneApps?.();
+            refresh();
         },
 
         // ============================================
@@ -251,10 +268,10 @@ export function buildApiManagerMethods() {
             }
 
             this.app.toolkit.island.notify('info', '已删除', group.name || 'API 组');
-            window.refreshPhoneApps?.();
+            refresh();
         },
 
-        apiTestKey({ id }) {
+        async apiTestKey({ id }) {
             const sdk = window.__apiSdk;
             if (!sdk) return;
 
@@ -295,76 +312,78 @@ export function buildApiManagerMethods() {
             const start = Date.now();
             this.app.toolkit.island.notify('info', '测试中…', key.label || key.id);
 
-            fetch(finalUrl, {
-                method: 'POST',
-                headers,
-                body,
-                signal: AbortSignal.timeout((key.timeout || 60) * 1000),
-            })
-                .then(async resp => {
-                    const latency = Date.now() - start;
-                    let inputTokens = 0;
-                    let outputTokens = 0;
-                    let success = resp.ok;
-                    let error = null;
-                    if (resp.ok) {
-                        try {
-                            const data = await resp.json();
-                            inputTokens = data.usage?.prompt_tokens || 0;
-                            outputTokens = data.usage?.completion_tokens || 0;
-                        } catch (_) {
-                            // 解析失败但 HTTP 成功
-                        }
-                    } else {
-                        try {
-                            const txt = await resp.text();
-                            error = `${resp.status} ${txt.slice(0, 120)}`;
-                        } catch (_) {
-                            error = `HTTP ${resp.status}`;
-                        }
-                    }
-
-                    sdk.apiUsageSdk.log({
-                        apiKeyId: key.id,
-                        endpoint: '/chat/completions',
-                        method: 'POST',
-                        model: key.model,
-                        inputTokens,
-                        outputTokens,
-                        totalTokens: inputTokens + outputTokens,
-                        latency,
-                        success,
-                        error,
-                        statusCode: resp.status,
-                        note: '手动测试',
-                    });
-
-                    if (success) {
-                        this.app.toolkit.island.notify('success', '测试成功', `${latency}ms · ${key.label || key.id}`);
-                    } else {
-                        this.app.toolkit.island.notify('error', '测试失败', error || `HTTP ${resp.status}`);
-                    }
-                    try { window.refreshPhoneApps?.(); } catch (_) {}
-                })
-                .catch(err => {
-                    const latency = Date.now() - start;
-                    sdk.apiUsageSdk.log({
-                        apiKeyId: key.id,
-                        endpoint: '/chat/completions',
-                        method: 'POST',
-                        model: key.model,
-                        inputTokens: 0,
-                        outputTokens: 0,
-                        totalTokens: 0,
-                        latency,
-                        success: false,
-                        error: err?.message || String(err),
-                        statusCode: 0,
-                        note: '手动测试',
-                    });
-                    this.app.toolkit.island.notify('error', '测试失败', err?.message || '网络错误');
-                    try { window.refreshPhoneApps?.(); } catch (_) {}
+            let resp;
+            try {
+                resp = await fetch(finalUrl, {
+                    method: 'POST',
+                    headers,
+                    body,
+                    signal: AbortSignal.timeout((key.timeout || 60) * 1000),
                 });
+            } catch (err) {
+                const latency = Date.now() - start;
+                sdk.apiUsageSdk.log({
+                    apiKeyId: key.id,
+                    endpoint: '/chat/completions',
+                    method: 'POST',
+                    model: key.model,
+                    inputTokens: 0,
+                    outputTokens: 0,
+                    totalTokens: 0,
+                    latency,
+                    success: false,
+                    error: err?.message || String(err),
+                    statusCode: 0,
+                    note: '手动测试',
+                });
+                this.app.toolkit.island.notify('error', '测试失败', err?.message || '网络错误');
+                refresh();
+                return;
+            }
+
+            const latency = Date.now() - start;
+            let inputTokens = 0;
+            let outputTokens = 0;
+            let success = resp.ok;
+            let error = null;
+            if (resp.ok) {
+                try {
+                    const data = await resp.json();
+                    inputTokens = data.usage?.prompt_tokens || 0;
+                    outputTokens = data.usage?.completion_tokens || 0;
+                } catch (_) {
+                    // 解析失败但 HTTP 成功
+                }
+            } else {
+                try {
+                    const txt = await resp.text();
+                    error = `${resp.status} ${txt.slice(0, 120)}`;
+                } catch (_) {
+                    error = `HTTP ${resp.status}`;
+                }
+            }
+
+            sdk.apiUsageSdk.log({
+                apiKeyId: key.id,
+                endpoint: '/chat/completions',
+                method: 'POST',
+                model: key.model,
+                inputTokens,
+                outputTokens,
+                totalTokens: inputTokens + outputTokens,
+                latency,
+                success,
+                error,
+                statusCode: resp.status,
+                note: '手动测试',
+            });
+
+            if (success) {
+                this.app.toolkit.island.notify('success', '测试成功', `${latency}ms · ${key.label || key.id}`);
+            } else {
+                this.app.toolkit.island.notify('error', '测试失败', error || `HTTP ${resp.status}`);
+            }
+            refresh();
         },
 
         apiTestGroup({ id }) {
@@ -399,7 +418,7 @@ export function buildApiManagerMethods() {
             });
 
             this.app.toolkit.island.notify('success', '测试记录', testKey.label || testKey.id);
-            window.refreshPhoneApps?.();
+            refresh();
         },
 
         // ============================================
@@ -422,7 +441,7 @@ export function buildApiManagerMethods() {
 
             sdk.apiUsageSdk.clearAll();
             this.app.toolkit.island.notify('info', '已清空', '调用记录');
-            window.refreshPhoneApps?.();
+            refresh();
         },
     };
 }

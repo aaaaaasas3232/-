@@ -73,6 +73,12 @@ function renderTabs(activeSub) {
     `;
 }
 
+function renderAvatarContent(persona) {
+    const avatar = typeof persona?.avatar === 'string' ? persona.avatar.trim() : '';
+    if (avatar) return `<img class="persona-avatar-image" src="${escapeHtml(avatar)}" alt="" />`;
+    return escapeHtml(getInitial(persona?.name));
+}
+
 function renderOverview(activeUser) {
     if (!activeUser) {
         return `
@@ -94,13 +100,14 @@ function renderOverview(activeUser) {
         `更新于 ${formatDateTime(activeUser.updatedAt)}`,
     ].filter(Boolean).join(' · ');
     const homeAction = wvAction('personaHomeOpen', { entityType: 'user', entityId: activeUser.id });
+    const isDefaultUser = activeUser.id === (sdk?.defaultUserCard?.getDefaultId?.() || null);
     return `
         <div class="persona-overview persona-overview--clickable" ${homeAction}>
-            <div class="persona-overview__avatar">${escapeHtml(getInitial(activeUser.name))}</div>
+            <div class="persona-overview__avatar">${renderAvatarContent(activeUser)}</div>
             <div class="persona-overview__body">
                 <div class="persona-overview__name">${escapeHtml(activeUser.name || activeUser.id)}</div>
                 ${meta ? `<div class="persona-overview__meta">${escapeHtml(meta)}</div>` : ''}
-                <span class="persona-overview__badge">当前用户 · 主页</span>
+                <span class="persona-overview__badge">当前用户 · 主页${isDefaultUser ? ' · 默认' : ''}</span>
             </div>
             <span class="persona-overview__chevron" aria-hidden="true">›</span>
         </div>
@@ -108,6 +115,8 @@ function renderOverview(activeUser) {
 }
 
 function renderUserList(app, users, activeId) {
+    const sdk = window.settingsSdk;
+    const defaultId = sdk?.defaultUserCard?.getDefaultId?.() || null;
     return `
         <div class="persona-list-head">
             <div class="persona-list-head__title">
@@ -127,11 +136,14 @@ function renderUserList(app, users, activeId) {
             <div class="persona-grid">
                 ${users.map(item => {
                     const isActive = item.id === activeId;
+                    const isDefault = item.id === defaultId;
+                    const badges = [];
+                    if (isActive) badges.push('<span class="persona-card__badge persona-card__badge--active">当前</span>');
                     return `
-                        <div class="persona-card ${isActive ? 'is-active' : ''}" ${wvAction('userSetActive', { id: item.id })}>
-                            ${isActive ? '<span class="persona-card__badge">当前</span>' : ''}
+                        <div class="persona-card ${isActive ? 'is-active' : ''} ${isDefault ? 'is-default' : ''}" ${wvAction('userSetActive', { id: item.id })}>
+                            ${badges.join('')}
                             <div class="persona-card__head">
-                                <div class="persona-card__avatar">${escapeHtml(getInitial(item.name))}</div>
+                                <div class="persona-card__avatar">${renderAvatarContent(item)}</div>
                                 <div class="persona-card__name">${escapeHtml(item.name || item.id)}</div>
                             </div>
                             <div class="persona-card__meta">

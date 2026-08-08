@@ -155,8 +155,10 @@ export function renderSwitch({ on = false, action = null } = {}) {
  * @param {boolean} [opts.showSwatch]     是否显示色块（默认 false）
  * @param {(preset, currentValue)=>boolean} [opts.isActive]  自定义判断"是否选中"的回调；
  *           默认按 String(currentValue) === String(preset.value) 判断。
+ * @param {string} [opts.mod]             容器修饰类（如 'square'），用于切换样式变体。
+ *           'square' —— 小方块正方形（用于行数/列数等数字按钮选择器）。
  */
-export function renderChipGroup({ presets = [], currentValue, toAction, showSwatch = false, isActive }) {
+export function renderChipGroup({ presets = [], currentValue, toAction, showSwatch = false, isActive, mod }) {
     const checkActive = typeof isActive === 'function'
         ? isActive
         : preset => String(currentValue) === String(preset.value);
@@ -172,7 +174,8 @@ export function renderChipGroup({ presets = [], currentValue, toAction, showSwat
             </button>
         `;
     }).join('');
-    return `<div class="settings-chip-row">${chips}</div>`;
+    const modClass = mod ? ` settings-chip-row--${mod}` : '';
+    return `<div class="settings-chip-row${modClass}">${chips}</div>`;
 }
 
 // ============================================
@@ -376,6 +379,9 @@ export function renderSaveBar({
 
 export function renderProfileCard({
     initial = '听',
+    avatar = '',
+    background = '',
+    backgroundBlur = 0,
     name = '',
     subtitle = '',
     hint = '',
@@ -384,9 +390,18 @@ export function renderProfileCard({
     const actionAttr = action
         ? ` data-app-action='${escapeHtml(JSON.stringify({ ...action, appId: action.appId || APP_ID }))}'`
         : '';
+    const avatarHtml = avatar
+        ? `<img class="persona-avatar-image" src="${escapeHtml(avatar)}" alt="" />`
+        : escapeHtml(initial);
+    const safeBlur = Math.max(0, Math.min(24, Number(backgroundBlur) || 0));
+    const backgroundHtml = background
+        ? `<span class="settings-profile__background" style="background-image:url('${escapeHtml(background)}');filter:blur(${safeBlur}px);transform:scale(${1 + safeBlur / 100})"></span>`
+        : '';
     return `
-        <button class="settings-profile"${actionAttr} role="button">
-            <div class="settings-profile__avatar">${escapeHtml(initial)}</div>
+        <button class="settings-profile ${background ? 'has-background' : ''}"${actionAttr} role="button">
+            ${backgroundHtml}
+            <span class="settings-profile__veil"></span>
+            <div class="settings-profile__avatar">${avatarHtml}</div>
             <div class="settings-profile__name">${escapeHtml(name || '未命名')}</div>
             <div class="settings-profile__sub">${escapeHtml(subtitle || '')}</div>
             <div class="settings-profile__hint">${escapeHtml(hint || 'Apple ID、iCloud、媒体与购买项目')}</div>

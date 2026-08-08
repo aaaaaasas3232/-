@@ -27,6 +27,9 @@ const MAIN_ENTRIES = [
     { id: 'gallery',    label: '图库',     desc: '收藏 · 灵感 · 参考',           glyph: '▣', tint: T.color.purple,               pageId: 'gallery' },
     { id: 'prompt',     label: 'Prompt',   desc: '提示词模板与变量',             glyph: '✎', tint: T.color.indigo,               pageId: 'prompt' },
     { id: 'api',        label: 'API',      desc: '当前提供方 · Key · 模型',      glyph: '◇', tint: ENTRY_GLYPH_TINT.api,        pageId: 'api' },
+    { id: 'importExport', label: '导入与导出', desc: '角色卡 · AI · 世界观 · Prompt', glyph: '↔', tint: '#FF9800',                 pageId: 'importExport' },
+    { id: 'database',   label: '数据库管理', desc: '数据表浏览 · 数据库检查',     glyph: '⊞', tint: '#2196F3',                    pageId: 'database' },
+    { id: 'software',   label: '软件管理',   desc: '插件安装 · JS 文件注册',      glyph: '⚙', tint: '#607D8B',                    pageId: 'software' },
 ];
 
 function pickInitial(text) {
@@ -55,6 +58,9 @@ export function renderMainSection(app) {
     // 顶部 profile 卡：点击进入「用户」详情
     const profile = renderProfileCard({
         initial,
+        avatar: user?.avatar || '',
+        background: user?.profileBackground || '',
+        backgroundBlur: user?.profileBackgroundBlur || 0,
         name: displayName,
         subtitle,
         hint: 'Apple ID · iCloud · 媒体与购买项目',

@@ -1,0 +1,298 @@
+/* ============================================
+ * chat-app / 发布新动态详情页样式
+ *
+ * Phase 11 — UI 1:1 复原
+ *
+ * 来源:旧版 chat.js `ChatApp.prototype.openPostMoment()`
+ * 风格:浅蓝粉渐变背景 + 白底卡片(同 chat-settings 一脉相承)
+ *
+ * 引用:index.css @import './_chat-post.css'
+ * 作用域:.app-shell[data-app-id="chat"] 后代
+ *
+ * 样式规范:
+ *   - 所有样式写到本文件
+ *   - JS 只放动态数据属性(data-*)和无法预知的动态颜色
+ * ============================================ */
+
+/* ============================================
+ * 隐藏 framework 自带的 detail header
+ * ★ 同 chat-private / chat-settings 一脉相承
+ * ============================================ */
+.app-shell[data-app-id="chat"] .chat-post ~ .app-detail-header,
+.app-shell[data-app-id="chat"] .app-detail-body:has(.chat-post) .app-detail-header {
+    display: none !important;
+}
+
+/* app-detail-body 去掉框架默认 padding,由 chat-post 自接管 */
+.app-shell[data-app-id="chat"] .app-detail-body:has(.chat-post) {
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-shell[data-app-id="chat"] .app-detail-panel:has(.chat-post) {
+    padding: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* ============================================
+ * 页面容器(接管 detail-page 整个布局)
+ * ============================================ */
+.app-shell[data-app-id="chat"] .chat-post {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: linear-gradient(180deg, #E8F2FF 0%, #FFF5F7 50%, #FFFFFF 100%);
+}
+
+/* ============================================
+ * 顶部 topbar(返回按钮 + 居中标题)
+ * ============================================ */
+.app-shell[data-app-id="chat"] .chat-post-topbar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 70px 12px 18px;
+    background: rgba(237, 242, 253, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    z-index: 10;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* 返回按钮 */
+.app-shell[data-app-id="chat"] .chat-post .chat-back-btn {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-top: 25px; /* 抵消 topbar 顶部 padding 让按钮居中 */
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    color: #4A6FA5;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .chat-post .chat-back-btn:hover {
+    background: #E9ECEF;
+}
+
+.app-shell[data-app-id="chat"] .chat-post .chat-back-btn:active {
+    background: rgba(168, 200, 236, 0.25);
+    transform: translateY(calc(-50% + 25px)) scale(0.92);
+}
+
+.app-shell[data-app-id="chat"] .chat-post .chat-back-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: #4A6FA5;
+    stroke-width: 2;
+}
+
+/* 居中标题 */
+.app-shell[data-app-id="chat"] .chat-post-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    line-height: 1;
+}
+
+/* ============================================
+ * 内容滚动区
+ * ============================================ */
+.app-shell[data-app-id="chat"] .chat-post .chat-post-page {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 16px 40px;
+    box-sizing: border-box;
+    scrollbar-width: none;
+}
+
+.app-shell[data-app-id="chat"] .chat-post .chat-post-page::-webkit-scrollbar {
+    display: none;
+}
+
+/* ============================================
+ * 内容输入卡片(文本域 + 图片预览 + 工具栏)
+ * ============================================ */
+.app-shell[data-app-id="chat"] .chat-post-card {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border: 1px solid #F0F0F0;
+}
+
+/* 文本域 */
+.app-shell[data-app-id="chat"] .chat-post-textarea {
+    width: 100%;
+    padding: 0;
+    border: none;
+    font-size: 15px;
+    min-height: 100px;
+    resize: none;
+    outline: none;
+    box-sizing: border-box;
+    line-height: 1.6;
+    color: #333;
+    background: transparent;
+    font-family: inherit;
+}
+
+.app-shell[data-app-id="chat"] .chat-post-textarea::placeholder {
+    color: #B0B8C4;
+}
+
+/* 图片预览网格(空态默认 auto,加图后变 grid) */
+.app-shell[data-app-id="chat"] .chat-post-images-preview {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.app-shell[data-app-id="chat"] .chat-post-images-preview:empty {
+    display: none;
+}
+
+/* 图片 / AI 按钮组 */
+.app-shell[data-app-id="chat"] .chat-post-toolbar {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #F0F0F0;
+}
+
+.app-shell[data-app-id="chat"] .chat-post-toolbar-btn {
+    padding: 8px 14px;
+    background: #F5F5F5;
+    border: 1px solid #E8E8E8;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #666;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.app-shell[data-app-id="chat"] .chat-post-toolbar-btn:hover {
+    background: #ECECEC;
+}
+
+.app-shell[data-app-id="chat"] .chat-post-toolbar-btn:active {
+    transform: scale(0.95);
+}
+
+.app-shell[data-app-id="chat"] .chat-post-toolbar-btn svg {
+    flex-shrink: 0;
+}
+
+/* AI 按钮:粉色款 */
+.app-shell[data-app-id="chat"] .chat-post-toolbar-btn--ai {
+    background: #FFF5F7;
+    border-color: #FFE4EC;
+    color: #D4728A;
+}
+
+.app-shell[data-app-id="chat"] .chat-post-toolbar-btn--ai:hover {
+    background: #FFE9EE;
+}
+
+/* ============================================
+ * 设置行(位置 / 可见范围)
+ * ============================================ */
+.app-shell[data-app-id="chat"] .chat-post-row {
+    background: white;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border: 1px solid #F0F0F0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .chat-post-row:hover {
+    background: #FAFBFC;
+}
+
+.app-shell[data-app-id="chat"] .chat-post-row:active {
+    background: #F2F4F6;
+}
+
+.app-shell[data-app-id="chat"] .chat-post-row-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="chat"] .chat-post-row-icon {
+    width: 16px;
+    height: 16px;
+    fill: #A8C8EC;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .chat-post-row-label {
+    font-size: 14px;
+    color: #333;
+}
+
+.app-shell[data-app-id="chat"] .chat-post-row-value {
+    color: #999;
+    font-size: 13px;
+}
+
+/* ============================================
+ * 发布按钮
+ * ============================================ */
+.app-shell[data-app-id="chat"] .chat-post-publish-btn {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #A8C8EC, #B8D4F0);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(168, 200, 236, 0.4);
+    transition: all 0.2s;
+    font-family: inherit;
+    margin-top: 8px;
+}
+
+.app-shell[data-app-id="chat"] .chat-post-publish-btn:hover {
+    box-shadow: 0 4px 12px rgba(168, 200, 236, 0.5);
+    transform: translateY(-1px);
+}
+
+.app-shell[data-app-id="chat"] .chat-post-publish-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(168, 200, 236, 0.3);
+}

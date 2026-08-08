@@ -1,0 +1,188 @@
+/**
+ * chat-app / 个人页面样式
+ *
+ * Phase 11 — UI 复原
+ *
+ * 旧版:ChatApp.prototype.renderProfilePage
+ * 风格:韩风蓝粉渐变背景 + 毛玻璃卡片
+ *
+ * 样式规范:
+ *   - 所有样式写到本文件
+ *   - JS 只放动态数据属性(data-*)和无法预知的动态颜色
+ *   - 动态颜色通过 CSS 属性选择器设置
+ */
+
+/* ── 页面容器 ─────────────────────────────────────────────── */
+.profile-page {
+    min-height: 100%;
+    padding-bottom: 20px;
+}
+
+/* ── 个人信息卡片 ──────────────────────────────────────────── */
+.app-shell[data-app-id="chat"] .profile-info-card {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 20px;
+    padding: 20px;
+    margin: 50px 12px 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(168, 200, 236, 0.2);
+    display: flex;
+    align-items: center;
+}
+
+/* 头像 */
+.app-shell[data-app-id="chat"] .profile-avatar-wrap {
+    width: 72px;
+    height: 72px;
+    border-radius: 20px;
+    background: #A8C8EC;
+    padding: 3px;
+    margin-right: 16px;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(168, 200, 236, 0.4);
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .profile-avatar-inner {
+    width: 100%;
+    height: 100%;
+    border-radius: 17px;
+    overflow: hidden;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="chat"] .profile-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.app-shell[data-app-id="chat"] .profile-avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #F8F9FA;
+}
+
+.app-shell[data-app-id="chat"] .profile-avatar-placeholder svg {
+    width: 28px;
+    height: 28px;
+}
+
+/* 名字+ID */
+.app-shell[data-app-id="chat"] .profile-user-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="chat"] .profile-user-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: #333;
+}
+
+.app-shell[data-app-id="chat"] .profile-user-id {
+    font-size: 12px;
+    color: #A8C8EC;
+    margin-top: 6px;
+    font-weight: 500;
+}
+
+/* 箭头 */
+.app-shell[data-app-id="chat"] .profile-info-card .card-arrow {
+    color: #D6E4FF;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .profile-info-card .card-arrow svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* ── 功能列表卡片 ──────────────────────────────────────────── */
+.app-shell[data-app-id="chat"] .profile-group-card {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 20px;
+    overflow: hidden;
+    margin: 0 12px 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(168, 200, 236, 0.2);
+}
+
+/* 菜单项 */
+.app-shell[data-app-id="chat"] .profile-menu-item {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    color: inherit;
+}
+
+.app-shell[data-app-id="chat"] .profile-menu-item:not(:last-child) {
+    border-bottom: 1px solid rgba(168, 200, 236, 0.15);
+}
+
+.app-shell[data-app-id="chat"] .profile-menu-item:active {
+    background: rgba(168, 200, 236, 0.08);
+}
+
+/* 图标 */
+.app-shell[data-app-id="chat"] .profile-menu-icon {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, #7ad9ff, #ffe6fa);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 14px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .profile-menu-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* 标签 */
+.app-shell[data-app-id="chat"] .profile-menu-label {
+    flex: 1;
+    font-size: 15px;
+    color: #333;
+    font-weight: 500;
+}
+
+/* 副标签（余额/状态等） */
+.app-shell[data-app-id="chat"] .profile-menu-sub {
+    font-size: 13px;
+    margin-right: 8px;
+    font-weight: 500;
+}
+
+.app-shell[data-app-id="chat"] .profile-menu-sub.green { color: #10B981; }
+.app-shell[data-app-id="chat"] .profile-menu-sub.purple { color: #8B5CF6; }
+.app-shell[data-app-id="chat"] .profile-menu-sub.pink { color: #F472B6; }
+.app-shell[data-app-id="chat"] .profile-menu-sub.blue { color: #3B82F6; }
+.app-shell[data-app-id="chat"] .profile-menu-sub.gray { color: #8E8E8E; }
+
+/* 箭头 */
+.app-shell[data-app-id="chat"] .profile-menu-item .card-arrow {
+    color: #D6E4FF;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .profile-menu-item .card-arrow svg {
+    width: 14px;
+    height: 14px;
+}

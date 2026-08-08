@@ -1,0 +1,340 @@
+/* ============================================
+ * chat-app 消息列表页样式
+ *
+ * 仿妆原则: 用 framework 的脸，画 chat.js 的妆
+ * 效果参考: 参考/chat.js renderChatList()
+ *
+ * 样式规范:
+ *   - 所有样式写到本文件
+ *   - JS 只放动态数据属性(data-*)和无法预知的动态颜色(bgColor)
+ *   - 动态颜色通过 CSS 属性选择器 [data-color="xxx"] 设置
+ *   - 动态 class 通过 JS 拼接
+ * ============================================ */
+
+/* ---- 页面容器 (聊天列表页) ---- */
+.app-shell[data-app-id="chat"] .chat-messages-list-page .chat-messages {
+    height: 100%;
+}
+
+/* ---- ★ v0.23 消息列表页背景（仅此页） ---- */
+.app-shell[data-app-id="chat"] .chat-messages-list-page.is-calendar-mode {
+    background: #FFFFFF;
+}
+
+
+.app-shell[data-app-id="chat"] .chat-messages-list-page.is-story-mode .chat-item {
+    background: rgba(255, 255, 255, 0.78);
+    backdrop-filter: blur(6px);
+    border-radius: 14px;
+    margin: 6px 10px;
+    border-bottom: none;
+}
+.app-shell[data-app-id="chat"] .chat-messages-list-page.is-story-mode .chat-item:hover {
+    background: rgba(255, 255, 255, 0.92);
+}
+
+
+.app-shell[data-app-id="chat"] .chat-mode-toggle-btn:hover {
+    background: rgba(74, 111, 165, 0.2);
+}
+.app-shell[data-app-id="chat"] .chat-mode-toggle-btn.is-story-mode {
+    background: rgba(255, 107, 157, 0.18);
+    color: #FF6B9D;
+    border-color: rgba(255, 107, 157, 0.4);
+}
+.app-shell[data-app-id="chat"] .chat-mode-toggle-btn.is-story-mode:hover {
+    background: rgba(255, 107, 157, 0.28);
+}
+.app-shell[data-app-id="chat"] .chat-mode-toggle-btn svg {
+    flex-shrink: 0;
+    display: block;
+}
+
+/* ---- 聊天项 (chat.js: .chat-item .chat-item-card) ---- */
+.app-shell[data-app-id="chat"] .chat-messages .chat-item {
+    display: flex;
+    align-items: center;
+    padding: 14px 16px;
+    border-bottom: 1px solid #F0F0F0;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    animation: chatItemIn 0.4s ease backwards;
+}
+
+.app-shell[data-app-id="chat"] .chat-messages .chat-item:hover {
+    background: #F8FBFF;
+    transform: translateX(4px);
+}
+
+.app-shell[data-app-id="chat"] .chat-messages .chat-item:active {
+    transform: scale(0.98);
+}
+
+.app-shell[data-app-id="chat"] .chat-messages .chat-item--pinned {
+    background: #F8FBFF;
+}
+
+/* 动画延迟 - nth-child 选择器实现 */
+.app-shell[data-app-id="chat"] .chat-messages .chat-item:nth-child(1) { animation-delay: 0ms; }
+.app-shell[data-app-id="chat"] .chat-messages .chat-item:nth-child(2) { animation-delay: 50ms; }
+.app-shell[data-app-id="chat"] .chat-messages .chat-item:nth-child(3) { animation-delay: 100ms; }
+.app-shell[data-app-id="chat"] .chat-messages .chat-item:nth-child(4) { animation-delay: 150ms; }
+.app-shell[data-app-id="chat"] .chat-messages .chat-item:nth-child(5) { animation-delay: 200ms; }
+.app-shell[data-app-id="chat"] .chat-messages .chat-item:nth-child(6) { animation-delay: 250ms; }
+.app-shell[data-app-id="chat"] .chat-messages .chat-item:nth-child(7) { animation-delay: 300ms; }
+.app-shell[data-app-id="chat"] .chat-messages .chat-item:nth-child(8) { animation-delay: 350ms; }
+.app-shell[data-app-id="chat"] .chat-messages .chat-item:nth-child(9) { animation-delay: 400ms; }
+.app-shell[data-app-id="chat"] .chat-messages .chat-item:nth-child(10) { animation-delay: 450ms; }
+
+/* ---- 头像容器 (chat.js: .avatar-container) ---- */
+.app-shell[data-app-id="chat"] .chat-messages .chat-avatar-wrap {
+    position: relative;
+    margin-right: 14px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .chat-messages .chat-avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 22px;
+    font-weight: 500;
+    overflow: hidden;
+}
+
+/* 动态头像背景色 */
+.app-shell[data-app-id="chat"] .chat-messages .chat-avatar[data-color="#FF6B6B"] { background: #FF6B6B; }
+.app-shell[data-app-id="chat"] .chat-messages .chat-avatar[data-color="#4ECDC4"] { background: #4ECDC4; }
+.app-shell[data-app-id="chat"] .chat-messages .chat-avatar[data-color="#45B7D1"] { background: #45B7D1; }
+.app-shell[data-app-id="chat"] .chat-messages .chat-avatar[data-color="#96CEB4"] { background: #96CEB4; }
+.app-shell[data-app-id="chat"] .chat-messages .chat-avatar[data-color="#FFEAA7"] { background: #FFEAA7; color: #333; }
+.app-shell[data-app-id="chat"] .chat-messages .chat-avatar[data-color="#DDA0DD"] { background: #DDA0DD; }
+.app-shell[data-app-id="chat"] .chat-messages .chat-avatar[data-color="#98D8C8"] { background: #98D8C8; }
+.app-shell[data-app-id="chat"] .chat-messages .chat-avatar[data-color="#F8B500"] { background: #F8B500; color: #333; }
+.app-shell[data-app-id="chat"] .chat-messages .chat-avatar[data-color="#6C5CE7"] { background: #6C5CE7; }
+.app-shell[data-app-id="chat"] .chat-messages .chat-avatar[data-color="#A29BFE"] { background: #A29BFE; }
+
+/* 群聊头像 — 2x2 网格 (与 chat-group-page.js 一致) */
+.app-shell[data-app-id="chat"] .chat-messages .chat-item--group .chat-avatar-wrap {
+    /* 网格头像有自己的 border-radius,不需要额外样式 */
+}
+
+/* 置顶头像边框 */
+.app-shell[data-app-id="chat"] .chat-messages .chat-item--pinned .chat-avatar-wrap {
+    /* 网格头像已有边框,不再重复添加 */
+}
+
+/* ---- 在线状态点 (chat.js: 右下角绿点) ---- */
+.app-shell[data-app-id="chat"] .chat-messages .chat-online-dot {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 12px;
+    height: 12px;
+    background: #4ade80;
+    border-radius: 50%;
+    border: 2px solid white;
+}
+
+/* ---- 未读角标 (chat.js: .avatar-unread-badge 右上角粉角标) ---- */
+.app-shell[data-app-id="chat"] .chat-messages .chat-unread-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 20px;
+    height: 20px;
+    background: linear-gradient(135deg, #FF96A8, #FF6B9D);
+    color: white;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 6px;
+    box-shadow: 0 2px 8px rgba(255, 107, 157, 0.4);
+    border: 2px solid white;
+}
+
+/* ---- 内容区 (chat.js: .chat-content) ---- */
+.app-shell[data-app-id="chat"] .chat-messages .chat-content {
+    flex: 1;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="chat"] .chat-messages .chat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.app-shell[data-app-id="chat"] .chat-messages .chat-row:last-child {
+    margin-top: 4px;
+}
+
+.app-shell[data-app-id="chat"] .chat-messages .chat-name-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.app-shell[data-app-id="chat"] .chat-messages .chat-name {
+    font-weight: 600;
+    font-size: 15px;
+    color: #333;
+    max-width: 140px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ---- 置顶图标 (chat.js: #A8C8EC 色的 pin 图标) ---- */
+.app-shell[data-app-id="chat"] .chat-messages .chat-pin-icon {
+    width: 12px;
+    height: 12px;
+    color: #A8C8EC;
+    display: flex;
+    align-items: center;
+}
+
+/* ---- 群聊人数标签 (chat.js: #F0F0F0 背景灰标签) ---- */
+.app-shell[data-app-id="chat"] .chat-messages .chat-tag {
+    font-size: 11px;
+    color: #999;
+    background: #F0F0F0;
+    padding: 1px 6px;
+    border-radius: 8px;
+}
+
+/* ---- 时间 (chat.js: #A8C8EC 淡蓝色) ---- */
+.app-shell[data-app-id="chat"] .chat-messages .chat-time {
+    font-size: 11px;
+    color: #A8C8EC;
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+
+/* ---- 消息预览 (chat.js: 默认灰色，正在输入蓝色) ---- */
+.app-shell[data-app-id="chat"] .chat-messages .chat-preview-text {
+    font-size: 13px;
+    color: #8E8E8E;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 200px;
+}
+
+.app-shell[data-app-id="chat"] .chat-messages .chat-preview-default {
+    font-size: 13px;
+    color: #C4C4C4;
+}
+
+/* ---- 右箭头 (chat.js: #D6E4FF 浅蓝箭头) ---- */
+.app-shell[data-app-id="chat"] .chat-messages .chat-arrow {
+    color: #D6E4FF;
+    margin-left: 8px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .chat-messages .chat-arrow svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* ---- 空状态 (chat.js: 圆角图标 + 蓝灰文字) ---- */
+.app-shell[data-app-id="chat"] .chat-messages .chat-empty {
+    text-align: center;
+    padding: 60px 30px;
+    /* 始终白底:即使父级是故事模式的粉色渐变,空状态也保持白卡,
+     * 与故事模式下 .chat-item 白卡视觉一致,不与背景混淆。 */
+    background: #FFFFFF;
+    border-radius: 14px;
+    margin: 6px 10px;
+}
+
+.app-shell[data-app-id="chat"] .chat-messages .chat-empty-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 20px;
+    background: linear-gradient(135deg, #E8F2FF, #D6E4FF);
+    border-radius: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="chat"] .chat-messages .chat-empty-icon svg {
+    width: 36px;
+    height: 36px;
+    color: #A8C8EC;
+}
+
+.app-shell[data-app-id="chat"] .chat-messages .chat-empty-title {
+    font-size: 16px;
+    font-weight: 500;
+    color: #4A6FA5;
+    margin-bottom: 8px;
+}
+
+.app-shell[data-app-id="chat"] .chat-messages .chat-empty-sub {
+    font-size: 13px;
+    color: #A8C8EC;
+}
+
+/* ---- 动画 (chat.js: chatItemIn 滑入) ---- */
+@keyframes chatItemIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes typingDot {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-3px);
+    }
+}
+
+/* ---- 悬浮新建聊天按钮 ---- */
+/* 位置:消息列表页右下角 fixed 定位(不随滚动移动) */
+.app-shell[data-app-id="chat"] .chat-new-chat-btn {
+    position: fixed;
+    bottom: 140px;
+    right: 28px;
+    width: 52px;
+    height: 52px;
+    background: linear-gradient(135deg, #A8C8EC, #95B8E0);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(168, 200, 236, 0.5);
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    z-index: 100;
+}
+
+.app-shell[data-app-id="chat"] .chat-new-chat-btn:hover {
+    transform: scale(1.08) rotate(90deg);
+    box-shadow: 0 8px 25px rgba(168, 200, 236, 0.6);
+}
+
+.app-shell[data-app-id="chat"] .chat-new-chat-btn:active {
+    transform: scale(0.95);
+}
+
+.app-shell[data-app-id="chat"] .chat-new-chat-btn svg {
+    width: 22px;
+    height: 22px;
+}

@@ -1,0 +1,698 @@
+/* ============================================
+ * App Store · CSS（独立样式文件，不污染 main.css）
+ *
+ * 视觉风格：
+ *  - Apple Store 风格 / iOS 系统列表
+ *  - 选粉 + 蓝配色（#FF69B4 / #FF8FAB / #007AFF）
+ *  - 圆角 14-20px / 玻璃感 / 柔阴影
+ *  - 完全自包含，不与 main.css 类名冲突
+ * ============================================ */
+
+/* ---------- 颜色变量 ---------- */
+:root {
+    --appstore-bg: #F2F2F7;
+    --appstore-card: #FFFFFF;
+    --appstore-pink-1: #FF69B4;
+    --appstore-pink-2: #FF8FAB;
+    --appstore-blue: #007AFF;
+    --appstore-green: #34C759;
+    --appstore-text: #000000;
+    --appstore-sub: #8E8E93;
+    --appstore-divider: #E5E5EA;
+    --appstore-muted: #C7C7CC;
+    --appstore-star: #FF69B4;
+    --appstore-star-off: #D1D1D6;
+    --appstore-chip: #F2F2F7;
+}
+
+/* ---------- 总容器 ---------- */
+.appstore-app {
+    background: var(--appstore-bg);
+    color: var(--appstore-text);
+    min-height: 100%;
+    -webkit-font-smoothing: antialiased;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+    padding-bottom: 80px;
+}
+
+/* ---------- 顶栏 ---------- */
+.appstore-topbar {
+    padding: 40px 20px 8px;
+    background: transparent;
+    position: relative;
+    z-index: 10;
+}
+
+.appstore-date {
+    font-size: 11px;
+    color: var(--appstore-sub);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-bottom: 2px;
+}
+
+.appstore-title {
+    font-size: 34px;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.5px;
+}
+
+/* ---------- 通用板块 ---------- */
+.appstore-section {
+    padding: 0 20px 22px;
+}
+
+.appstore-section-head {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.2;
+    margin: 8px 0 12px;
+}
+
+/* ---------- 大特色卡 ---------- */
+.appstore-featured {
+    background: var(--appstore-card);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.07);
+    cursor: pointer;
+    margin-bottom: 18px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.appstore-featured:active {
+    transform: scale(0.985);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+}
+
+.appstore-featured-cover {
+    height: 230px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    background-size: cover;
+    background-position: center;
+}
+
+.appstore-featured-icon {
+    width: 96px;
+    height: 96px;
+    border-radius: 22px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+
+.appstore-featured-tag {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: #FFFFFF;
+    background: rgba(0, 0, 0, 0.28);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.appstore-featured-meta {
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.appstore-featured-meta-img {
+    width: 48px;
+    height: 48px;
+    border-radius: 11px;
+    flex-shrink: 0;
+}
+
+.appstore-featured-meta-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.appstore-featured-meta-title {
+    font-size: 15px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-bottom: 2px;
+}
+
+.appstore-featured-meta-sub {
+    font-size: 13px;
+    color: var(--appstore-sub);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ---------- 获取 / 打开按钮 ---------- */
+.appstore-btn {
+    padding: 6px 18px;
+    border: none;
+    border-radius: 15px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    min-width: 70px;
+    text-align: center;
+    transition: transform 0.12s ease, filter 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.appstore-btn:active {
+    transform: scale(0.95);
+}
+
+.appstore-btn-get {
+    background: linear-gradient(135deg, var(--appstore-pink-1), var(--appstore-pink-2));
+    color: #FFFFFF;
+    box-shadow: 0 2px 6px rgba(255, 105, 180, 0.32);
+}
+
+.appstore-btn-open {
+    background: #E5E5EA;
+    color: var(--appstore-pink-1);
+}
+
+.appstore-btn-large {
+    padding: 9px 32px;
+    border-radius: 18px;
+    font-size: 16px;
+    min-width: 110px;
+}
+
+.appstore-btn-loading {
+    background: linear-gradient(135deg, var(--appstore-pink-1), var(--appstore-pink-2));
+    color: #FFFFFF;
+    position: relative;
+}
+
+.appstore-btn-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-top-color: #FFFFFF;
+    border-radius: 50%;
+    animation: appstore-spin 0.9s linear infinite;
+}
+
+@keyframes appstore-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ---------- App 列表 ---------- */
+.appstore-list {
+    background: var(--appstore-card);
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.appstore-list-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 14px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.12s ease;
+}
+
+.appstore-list-item:not(:last-child) {
+    border-bottom: 0.5px solid var(--appstore-divider);
+}
+
+.appstore-list-item:active {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.appstore-list-rank {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--appstore-sub);
+    width: 26px;
+    text-align: center;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.appstore-list-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 14px;
+    margin-right: 12px;
+    flex-shrink: 0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.appstore-list-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.appstore-list-name {
+    font-size: 16px;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.appstore-list-sub {
+    font-size: 13px;
+    color: var(--appstore-sub);
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ---------- 详情页（header）---------- */
+.appstore-detail {
+    background: var(--appstore-bg);
+    color: var(--appstore-text);
+    min-height: 100%;
+    padding-bottom: 80px;
+}
+
+.appstore-detail-hero {
+    padding: 18px 18px 0;
+    display: flex;
+    gap: 16px;
+}
+
+.appstore-detail-hero-img {
+    width: 120px;
+    height: 120px;
+    border-radius: 28px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    flex-shrink: 0;
+}
+
+.appstore-detail-hero-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.appstore-detail-name {
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+.appstore-detail-sub {
+    font-size: 14px;
+    color: var(--appstore-sub);
+    margin-top: 5px;
+}
+
+.appstore-detail-cta {
+    margin-top: 14px;
+}
+
+/* ---------- 评分行 ---------- */
+.appstore-stats {
+    display: flex;
+    padding: 18px 16px;
+    border-bottom: 0.5px solid var(--appstore-divider);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.appstore-stats-cell {
+    flex: 1;
+    text-align: center;
+    min-width: 80px;
+    padding: 0 4px;
+}
+
+.appstore-stats-cell:not(:last-child) {
+    border-right: 0.5px solid var(--appstore-divider);
+}
+
+.appstore-stats-cell-cap {
+    font-size: 11px;
+    color: var(--appstore-sub);
+    margin-bottom: 4px;
+}
+
+.appstore-stats-cell-val {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.appstore-stats-cell-foot {
+    font-size: 11px;
+    color: var(--appstore-sub);
+    margin-top: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.appstore-stats-cell-icon {
+    font-size: 18px;
+    color: var(--appstore-sub);
+    margin-top: 0;
+}
+
+/* ---------- 预览 ---------- */
+.appstore-section-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.appstore-section-heading h3 {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0;
+}
+
+.appstore-section-heading-sub {
+    font-size: 14px;
+    color: var(--appstore-sub);
+}
+
+.appstore-screenshots {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 10px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.appstore-screenshots::-webkit-scrollbar {
+    display: none;
+}
+
+.appstore-shot {
+    flex-shrink: 0;
+    width: 220px;
+    height: 390px;
+    border-radius: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+}
+
+/* ---------- 文本块（更多 / 收起）---------- */
+.appstore-text {
+    font-size: 15px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.appstore-text.clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.appstore-text.clamp-4 {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.appstore-expand-btn {
+    color: var(--appstore-pink-1);
+    margin-top: 8px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 400;
+    display: inline-block;
+}
+
+/* ---------- 行（开发者 / 评分 / 大小 等）---------- */
+.appstore-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 0.5px solid var(--appstore-divider);
+}
+
+.appstore-row:last-child {
+    border-bottom: none;
+}
+
+.appstore-row-label {
+    font-size: 15px;
+    color: var(--appstore-text);
+}
+
+.appstore-row-value {
+    font-size: 15px;
+    color: var(--appstore-text);
+    text-align: right;
+    margin-left: auto;
+    max-width: 60%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.appstore-row-chevron {
+    color: var(--appstore-muted);
+    font-size: 18px;
+    line-height: 1;
+}
+
+/* ---------- 开发者卡（大图）---------- */
+.appstore-dev-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 0;
+    cursor: pointer;
+}
+
+.appstore-dev-icon {
+    width: 36px;
+    height: 36px;
+    background: var(--appstore-chip);
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.appstore-dev-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.appstore-dev-label {
+    font-size: 13px;
+    color: var(--appstore-sub);
+}
+
+.appstore-dev-value {
+    font-size: 15px;
+    color: var(--appstore-pink-1);
+    margin-top: 2px;
+}
+
+/* ---------- 空状态 ---------- */
+.appstore-empty {
+    background: var(--appstore-card);
+    border-radius: 12px;
+    padding: 28px 20px;
+    text-align: center;
+    color: var(--appstore-sub);
+}
+
+.appstore-empty svg {
+    margin-bottom: 10px;
+    color: var(--appstore-sub);
+}
+
+.appstore-empty-text {
+    font-size: 14px;
+}
+
+/* ---------- Section 间距 ---------- */
+.appstore-section:not(:last-child) {
+    border-bottom: 0.5px solid var(--appstore-divider);
+    padding-bottom: 22px;
+}
+
+/* ---------- 隐藏滚动条 ---------- */
+.appstore-screenshots,
+.appstore-stats {
+    scrollbar-width: none;
+}
+.appstore-screenshots::-webkit-scrollbar,
+.appstore-stats::-webkit-scrollbar {
+    display: none;
+}
+
+/* ---------- 简介 / 新功能 标题与版本 ---------- */
+.appstore-version {
+    font-size: 13px;
+    color: var(--appstore-sub);
+    margin-bottom: 8px;
+}
+
+/* ---------- 页面间切换的轻动效 ---------- */
+.appstore-fade-enter {
+    animation: appstore-fade 0.25s ease;
+}
+
+@keyframes appstore-fade {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- 响应式（手机宽度适配）---------- */
+@media (max-width: 380px) {
+    .appstore-featured-cover { height: 200px; }
+    .appstore-shot { width: 195px; height: 345px; }
+    .appstore-detail-hero-img { width: 100px; height: 100px; }
+}
+
+/* Vue 版 App Store：真实图标、下载进度与内置详情导航 */
+.appstore-icon-frame {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.appstore-icon-frame > svg,
+.appstore-icon-frame > div {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.appstore-vue-detail-bar {
+    padding: 42px 18px 8px;
+    background: rgba(242, 242, 247, 0.92);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+
+.appstore-back-button,
+.appstore-text-button {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: var(--appstore-blue);
+    font: inherit;
+    cursor: pointer;
+}
+
+.appstore-back-button {
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.appstore-btn:disabled {
+    cursor: default;
+    opacity: 0.9;
+}
+
+.appstore-download-ring {
+    width: 17px;
+    height: 17px;
+    padding: 2px;
+    border-radius: 50%;
+    display: inline-flex;
+    box-sizing: border-box;
+}
+
+.appstore-download-ring i {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    display: block;
+    background: var(--appstore-card);
+}
+
+.appstore-rating-stars {
+    color: var(--appstore-star);
+    font-size: 10px;
+    letter-spacing: -1px;
+    margin-top: 3px;
+}
+
+.appstore-stat-category {
+    font-size: 15px;
+    padding-top: 2px;
+}
+
+.appstore-detail-preview {
+    padding-top: 20px;
+}
+
+.appstore-preview-card {
+    min-height: 220px;
+    border-radius: 22px;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.appstore-preview-icon {
+    width: 88px;
+    height: 88px;
+    border-radius: 21px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+    margin-bottom: 5px;
+}
+
+.appstore-preview-card strong {
+    font-size: 22px;
+}
+
+.appstore-preview-card span {
+    font-size: 14px;
+    opacity: 0.88;
+}
+
+.appstore-text-button {
+    display: inline-block;
+    margin-top: 8px;
+    color: var(--appstore-pink-1);
+}
+
+.appstore-tab-spacer {
+    height: 80px;
+}

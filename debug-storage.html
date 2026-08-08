@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>存储调试工具</title>
+    <style>
+        body {
+            font-family: 'Monaco', 'Menlo', monospace;
+            background: #0f172a;
+            color: #f8fafc;
+            padding: 20px;
+            margin: 0;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { color: #38bdf8; margin-bottom: 10px; }
+        .controls { margin: 20px 0; }
+        button {
+            background: #38bdf8;
+            color: #0f172a;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        button:hover { background: #22d3ee; }
+        button.danger { background: #ef4444; color: white; }
+        button.danger:hover { background: #dc2626; }
+        .section {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        h2 { color: #22d3ee; margin-top: 0; font-size: 18px; }
+        pre {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 4px;
+            padding: 15px;
+            overflow-x: auto;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        .key { color: #a78bfa; }
+        .string { color: #4ade80; }
+        .number { color: #fb923c; }
+        .highlight { background: #fef08a; color: #0f172a; padding: 2px 4px; border-radius: 2px; }
+        .error { color: #f87171; }
+        .success { color: #4ade80; }
+        .info { color: #60a5fa; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📦 小听启动 - 存储调试工具</h1>
+        <p class="info" style="margin-top: 5px;">实时查看 localStorage 中的桌面配置</p>
+        
+        <div class="controls">
+            <button onclick="refresh()">🔄 刷新</button>
+            <button onclick="exportConfig()">📤 导出配置</button>
+            <button onclick="clearAll()" class="danger">🗑️ 清空存储</button>
+            <button onclick="location.href='http://localhost:5173'">← 返回主页</button>
+        </div>
+
+        <div class="section">
+            <h2>📊 当前存储概览</h2>
+            <pre id="overview">加载中...</pre>
+        </div>
+
+        <div class="section">
+            <h2>🏠 桌面配置 (xiaoting::desktop-config-v1)</h2>
+            <pre id="desktopConfig">加载中...</pre>
+        </div>
+
+        <div class="section">
+            <h2>🔧 Dock 配置详情</h2>
+            <pre id="dockDetail">加载中...</pre>
+        </div>
+
+        <div class="section">
+            <h2>📱 桌面 App 顺序</h2>
+            <pre id="appOrder">加载中...</pre>
+        </div>
+
+        <div class="section">
+            <h2>🧩 Widget 列表</h2>
+            <pre id="widgetList">加载中...</pre>
+        </div>
+
+        <div class="section">
+            <h2>🔍 旧版存储（如果有）</h2>
+            <pre id="legacyStorage">检查中...</pre>
+        </div>
+    </div>
+
+    <script>
+        function getConfig() {
+            const raw = localStorage.getItem('xiaoting::desktop-config-v1');
+            if (!raw) return null;
+            try {
+                return JSON.parse(raw);
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function formatJSON(obj, indent = 0) {
+            if (obj === null) return '<span class="error">null</span>';
+            if (obj === undefined) return '<span class="error">undefined</span>';
+            if (typeof obj === 'string') return `<span class="string">"${obj}"</span>`;
+            if (typeof obj === 'number') return `<span class="number">${obj}</span>`;
+            if (typeof obj === 'boolean') return `<span class="number">${obj}</span>`;
+            if (Array.isArray(obj)) {
+                if (obj.length === 0) return '[]';
+                const items = obj.map((item, i) => 
+                    '  '.repeat(indent + 1) + formatJSON(item, indent + 1)
+                ).join(',\n');
+                return `[\n${items}\n${'  '.repeat(indent)}]`;
+            }
+            if (typeof obj === 'object') {
+                const keys = Object.keys(obj);
+                if (keys.length === 0) return '{}';
+                const items = keys.map(key => 
+                    '  '.repeat(indent + 1) + 
+                    `<span class="key">"${key}"</span>: ${formatJSON(obj[key], indent + 1)}`
+                ).join(',\n');
+                return `{\n${items}\n${'  '.repeat(indent)}}`;
+            }
+            return String(obj);
+        }
+
+        function refresh() {
+            const config = getConfig();
+            
+            // 概览
+            const overview = document.getElementById('overview');
+            if (!config) {
+                overview.innerHTML = '<span class="error">❌ 未找到 desktop-config-v1 存储（可能是首次使用）</span>';
+            } else {
+                const stats = {
+                    '存储版本': config.version || 'unknown',
+                    '桌面页数': (config.pages || []).length,
+                    '总 App 数': (config.pages || []).reduce((sum, p) => sum + (p.apps || []).length, 0),
+                    'Dock 图标数': (config.dock?.order || []).length,
+                    'Widget 数': (config.widgets || []).length,
+                    '已安装 App 数': (config.installedApps || []).length,
+                };
+                overview.innerHTML = Object.entries(stats).map(([k, v]) => 
+                    `<span class="key">${k}</span>: <span class="number">${v}</span>`
+                ).join('\n');
+            }
+
+            // 完整配置
+            document.getElementById('desktopConfig').innerHTML = config 
+                ? formatJSON(config)
+                : '<span class="error">无配置数据</span>';
+
+            // Dock 详情
+            const dockDetail = document.getElementById('dockDetail');
+            if (config?.dock) {
+                const dockOrder = config.dock.order || [];
+                dockDetail.innerHTML = `<span class="key">visible</span>: <span class="number">${config.dock.visible !== false}</span>\n` +
+                    `<span class="key">order</span> (${dockOrder.length} 个):\n` +
+                    dockOrder.map((id, i) => `  ${i + 1}. <span class="highlight">${id}</span>`).join('\n');
+            } else {
+                dockDetail.innerHTML = '<span class="error">无 Dock 配置</span>';
+            }
+
+            // App 顺序
+            const appOrder = document.getElementById('appOrder');
+            if (config?.pages && config.pages.length > 0) {
+                const pages = config.pages.map((page, i) => {
+                    const apps = page.apps || [];
+                    return `<span class="key">页面 ${i + 1}</span> (${page.id}): ${apps.length} 个 App\n` +
+                        apps.map((id, j) => `  ${j + 1}. <span class="highlight">${id}</span>`).join('\n');
+                }).join('\n\n');
+                appOrder.innerHTML = pages;
+            } else {
+                appOrder.innerHTML = '<span class="error">无桌面页面数据</span>';
+            }
+
+            // Widget
+            const widgetList = document.getElementById('widgetList');
+            if (config?.widgets && config.widgets.length > 0) {
+                widgetList.innerHTML = config.widgets.map((w, i) => 
+                    `<span class="number">${i + 1}.</span> <span class="highlight">${w.qualifiedId || w.instanceId}</span>\n` +
+                    `   size: <span class="string">${w.size || 'S'}</span>, ` +
+                    `orientation: <span class="string">${w.orientation || 'h'}</span>, ` +
+                    `pos: (${w.gridX || 0}, ${w.gridY || 0})`
+                ).join('\n\n');
+            } else {
+                widgetList.innerHTML = '<span class="info">无 Widget</span>';
+            }
+
+            // 旧版存储
+            const legacy = document.getElementById('legacyStorage');
+            const oldKeys = [
+                'xiaoting::dock-layout-v1',
+                'xiaoting::installed-apps-v1',
+            ];
+            const found = oldKeys.filter(k => localStorage.getItem(k));
+            if (found.length > 0) {
+                legacy.innerHTML = '<span class="info">⚠️  发现旧版存储（可能需要迁移）:</span>\n\n' +
+                    found.map(key => {
+                        const val = localStorage.getItem(key);
+                        try {
+                            const parsed = JSON.parse(val);
+                            return `<span class="key">${key}</span>:\n${formatJSON(parsed, 1)}`;
+                        } catch (e) {
+                            return `<span class="key">${key}</span>:\n${val}`;
+                        }
+                    }).join('\n\n');
+            } else {
+                legacy.innerHTML = '<span class="success">✓ 无旧版存储</span>';
+            }
+        }
+
+        function exportConfig() {
+            const config = getConfig();
+            if (!config) {
+                alert('无配置可导出');
+                return;
+            }
+            const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `xiaoting-config-${new Date().getTime()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function clearAll() {
+            if (!confirm('确定清空所有 xiaoting:: 存储吗？此操作不可撤销！')) return;
+            
+            const keys = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('xiaoting::')) keys.push(key);
+            }
+
+            keys.forEach(k => localStorage.removeItem(k));
+            alert(`✓ 已清空 ${keys.length} 个存储项`);
+            refresh();
+        }
+
+        // 自动刷新
+        refresh();
+        setInterval(refresh, 2000);
+    </script>
+</body>
+</html>

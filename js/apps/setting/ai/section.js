@@ -126,8 +126,8 @@ function renderOverview(activeAi) {
             <div class="persona-overview__body">
                 <div class="persona-overview__name">${escapeHtml(activeAi.name || activeAi.id)}</div>
                 ${meta ? `<div class="persona-overview__meta">${escapeHtml(meta)}</div>` : ''}
-                <span class="persona-overview__badge">当前 AI · 主页</span>
             </div>
+            <span class="persona-overview__badge">当前 AI · 主页</span>
             <span class="persona-overview__chevron" aria-hidden="true">›</span>
         </div>
     `;

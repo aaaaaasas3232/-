@@ -6,13 +6,14 @@
  */
 
 import { bootstrapWorldSdk } from './bootstrap.js';
-import { renderWorldLibrary } from './library.js';
+import { renderWorldLibrary, __wvAttachTimelineDrag } from './library.js';
 import { buildWorldMethods } from './methods.js';
 import { initWorldEventHandlers, destroyWorldEventHandlers } from './events.js';
 
 export {
     bootstrapWorldSdk,
     renderWorldLibrary,
+    __wvAttachTimelineDrag,
     buildWorldMethods,
     initWorldEventHandlers,
     destroyWorldEventHandlers,

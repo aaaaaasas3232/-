@@ -1,0 +1,315 @@
+.pageDots {
+    position: absolute;
+    left: 50%;
+    bottom: 8px;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    justify-content: center;
+    z-index: 6;
+    pointer-events: auto;
+}
+
+.page-dot {
+    width: 6px;
+    height: 6px;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.45);
+    cursor: pointer;
+    transition: width 0.22s ease, background-color 0.22s ease, opacity 0.22s ease, transform 0.22s ease;
+}
+
+.page-dot.active {
+    width: 16px;
+    background: rgba(255,255,255,0.92);
+    transform: scale(1.02);
+}
+
+.statusBarContainer {
+    /* v0.29：颜色由框架的 currentStatusBarColor 注入（动态背景时自动白字）。
+        删掉写死的 color: #000，避免压过 inline :style。 */
+    color: inherit;
+}
+
+.statusBarLeft {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.statusBarRight {
+    /* v0.29：颜色由 inline 状态栏样式驱动（避免 css 写死颜色覆盖框架注入） */
+    color: inherit;
+}
+
+.status-battery {
+    border-radius: 4px;
+}
+
+.status-battery-cap {
+    border-radius: 0 2px 2px 0;
+}
+
+.status-battery-fill {
+    box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.18);
+}
+
+.app-dock {
+    position: absolute;
+    bottom: 15px;
+    left: 50%;
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 92%;
+    height: 60px;
+    padding: 0 10px;
+    border-radius: 50px;
+    background-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.3) inset, 0 8px 25px rgba(0, 0, 0, 0.15);
+    -webkit-backdrop-filter: blur(30px) saturate(180%);
+    backdrop-filter: blur(30px) saturate(180%);
+    transform: translateX(-50%);
+}
+
+.dock-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    margin: 0 10px;
+    cursor: pointer;
+    transition: transform 0.12s cubic-bezier(0.215, 0.61, 0.355, 1), box-shadow 0.12s ease;
+}
+
+.dock-item:hover {
+    transform: scale(1.05);
+}
+
+.dock-item:active {
+    transform: scale(0.96);
+}
+
+/* 编辑模式：dock icon 抖动 + 右上角 × */
+.desktop-edit-mode .dock-item {
+    animation: dock-shake 1.8s ease-in-out infinite;
+    transform-origin: center bottom;
+}
+.desktop-edit-mode .dock-item:active {
+    /* 编辑模式下按住拖拽时取消抖动，避免抖动 + 缩放叠加 */
+    animation: none;
+}
+/* 被 hover 收纳到的 dock item 在拖拽时也停掉抖动，避免 hit-test 抖动 */
+.dock-item.dock-drag-over {
+    animation: none;
+}
+.dock-edit-remove {
+    position: absolute;
+    top: -6px;
+    right: -8px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #FF3B30;
+    color: #fff;
+    font-size: 12px;
+    line-height: 18px;
+    text-align: center;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    cursor: pointer;
+    z-index: 3;
+    pointer-events: auto;
+    user-select: none;
+    -webkit-user-select: none;
+}
+.dock-edit-remove:hover {
+    background: #FF453A;
+    transform: scale(1.1);
+}
+.dock-item.dock-drag-over {
+    transform: scale(1.18);
+    box-shadow: 0 0 0 2px #007AFF inset;
+}
+.dock-add-hint {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    margin: 0 10px;
+    border-radius: 15px;
+    border: 1.5px dashed rgba(255, 255, 255, 0.55);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 11px;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+.dock-add-hint:hover {
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.85);
+}
+.dock-add-hint.dock-drag-over {
+    background: rgba(0, 122, 255, 0.4);
+    border-color: #007AFF;
+}
+.dock-add-plus {
+    font-size: 18px;
+    line-height: 1;
+    font-weight: 600;
+}
+.dock-add-label {
+    font-size: 9px;
+    line-height: 1;
+    margin-top: 2px;
+    opacity: 0.85;
+}
+
+/* Dock 添加面板 */
+.dock-adder-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 80;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 90px;     /* 留出 dock 位置 */
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+}
+.dock-adder-panel {
+    width: 88%;
+    max-width: 360px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 18px;
+    padding: 14px 14px 12px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+    color: #1c1c1e;
+}
+.dock-adder-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    text-align: center;
+}
+.dock-adder-empty {
+    font-size: 13px;
+    color: #8e8e93;
+    text-align: center;
+    padding: 24px 0;
+}
+.dock-adder-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 10px;
+    max-height: 280px;
+    overflow-y: auto;
+}
+.dock-adder-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 4px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.12s ease;
+}
+.dock-adder-item:hover {
+    background: rgba(0, 122, 255, 0.12);
+}
+.dock-adder-item-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
+}
+.dock-adder-item-name {
+    font-size: 11px;
+    color: #1c1c1e;
+    text-align: center;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    white-space: nowrap;
+}
+.dock-adder-close {
+    display: block;
+    margin: 0 auto;
+    padding: 6px 18px;
+    border: none;
+    background: #f2f2f7;
+    color: #1c1c1e;
+    font-size: 13px;
+    border-radius: 14px;
+    cursor: pointer;
+}
+.dock-adder-close:hover {
+    background: #e5e5ea;
+}
+@keyframes dock-shake {
+    0%, 100% { transform: rotate(-2deg) translateY(0); }
+    25%      { transform: rotate(2deg) translateY(-1px); }
+    50%      { transform: rotate(-1deg) translateY(0); }
+    75%      { transform: rotate(1deg) translateY(-1px); }
+}
+
+.dock-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 15px;
+    color: #fff;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+    position: relative;
+}
+
+.dock-icon .dock-icon-scaler {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform-origin: center center;
+    pointer-events: none;
+}
+
+.dock-icon .dock-icon-scaler > * {
+    pointer-events: auto;
+}
+
+.dock-icon svg {
+    display: block;
+}
+
+.dock-badge {
+    position: absolute;
+    top: -5px;
+    right: -6px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: #ff3b30;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(255, 59, 48, 0.32);
+}

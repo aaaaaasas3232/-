@@ -56,7 +56,8 @@
 
 .persona-overview__badge {
     display: inline-block;
-    margin-top: 6px;
+    flex-shrink: 0;
+    align-self: center;
     padding: 2px 8px;
     font-size: 10px;
     font-weight: 600;
@@ -238,6 +239,21 @@
     color: #FFFFFF;
 }
 
+/* ★ v0.23 默认卡按钮（用户卡专用） */
+.persona-btn--default {
+    background: rgba(10, 132, 255, 0.12);
+    color: #0A84FF;
+    border: 1px solid rgba(10, 132, 255, 0.3);
+}
+.persona-btn--default:hover {
+    background: rgba(10, 132, 255, 0.18);
+}
+.persona-btn--default.persona-btn--default-active {
+    background: #0A84FF;
+    color: #FFFFFF;
+    border-color: #0A84FF;
+}
+
 .persona-btn--small {
     padding: 5px 10px;
     font-size: 12px;
@@ -319,6 +335,22 @@
     font-size: 9.5px;
     font-weight: 600;
     letter-spacing: 0.04em;
+}
+
+/* ★ v0.23 默认用户卡 badge — 与「当前」并排，粉色系 */
+.persona-card__badge--default {
+    background: #FF6B9D;
+    color: #FFFFFF;
+}
+
+/* 当「当前」和「默认」同时出现时，用 order 控制视觉顺序：「默认」在左，「当前」在右 */
+.persona-card.is-active.is-default .persona-card__badge--active {
+    right: 8px;
+    order: 0;
+}
+.persona-card.is-active.is-default .persona-card__badge--default {
+    right: 33px;
+    order: -1;
 }
 
 .persona-card__meta {

@@ -21,6 +21,27 @@
  */
 
 import { applyDeviceTheme } from '../theme-bridge.js';
+import {
+    APPEARANCE_STORE_NAME,
+    APPEARANCE_DB_KEY,
+} from '../defaults.js';
+
+/**
+ * 通用：把当前 app.state.ui.appearance 写入 IndexedDB（deviceSettings::device-theme）。
+ */
+function persistAppearance(app) {
+    if (!app || !app.state || !app.state.ui || !app.state.ui.appearance) return;
+    const ui = { ...app.state.ui.appearance };
+    const db = app.toolkit && app.toolkit.db;
+    if (!db || !db.put) return;
+    db.put(APPEARANCE_STORE_NAME, {
+        key: APPEARANCE_DB_KEY,
+        ...ui,
+        updatedAt: Date.now(),
+    }).catch((err) => {
+        console.warn('[settings] 状态栏外观自动保存失败', err);
+    });
+}
 
 /**
  * 通知 framework「app 内部 state 已变化，需要重跑 computed」。
@@ -53,6 +74,7 @@ export function buildStatusBarMethods() {
             ui.showStatusBar = !ui.showStatusBar;
             applyDeviceTheme(ui);
             refreshPhoneSystem();
+            persistAppearance(this.app);
         },
 
         /**
@@ -69,6 +91,7 @@ export function buildStatusBarMethods() {
             ui.showStatusBar = next;
             applyDeviceTheme(ui);
             refreshPhoneSystem();
+            persistAppearance(this.app);
         },
     };
 }

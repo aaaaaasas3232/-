@@ -1,0 +1,253 @@
+/* ============================================
+ * 导入与导出模块样式
+ * 蓝色辅白色主，简洁大方，禁用渐变和emoji
+ * ============================================ */
+
+.ie-page {
+    padding: 0 16px 24px;
+}
+
+/* 标签导航 */
+.ie-tabs {
+    display: flex;
+    gap: 8px;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    margin-bottom: 16px;
+}
+
+.ie-tab {
+    flex: 1;
+    padding: 8px 12px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #666;
+    background: #f5f5f7;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.ie-tab:hover {
+    background: #e8e8ed;
+}
+
+.ie-tab.is-active {
+    color: #fff;
+    background: #FF9800;
+}
+
+/* 内容 */
+.ie-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* 分区 */
+.ie-section {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.ie-section-title {
+    font-size: 17px;
+    font-weight: 600;
+    color: #1d1d1f;
+    margin-bottom: 8px;
+}
+
+.ie-desc {
+    font-size: 13px;
+    color: #86868b;
+    margin: 0 0 16px 0;
+    line-height: 1.5;
+}
+
+/* ============ 业务分组卡片 ============ */
+.ie-group-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ie-group {
+    background: #f9f9fb;
+    border-left: 4px solid var(--ie-accent, #2196F3);
+    border-radius: 8px;
+    padding: 12px 14px;
+}
+
+.ie-group__head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.ie-group__dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--ie-accent, #2196F3);
+    flex-shrink: 0;
+}
+
+.ie-group__label {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1d1d1f;
+}
+
+.ie-group__desc {
+    margin: 0 0 8px 0;
+    font-size: 12px;
+    color: #86868b;
+}
+
+.ie-group__scopes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 10px;
+}
+
+.ie-scope-chip {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-family: 'SF Mono', Menlo, monospace;
+    color: #515154;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 4px;
+}
+
+.ie-group__actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* ============ 表单 ============ */
+.ie-form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.ie-form-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #1d1d1f;
+}
+
+.ie-form-select {
+    padding: 10px 12px;
+    font-size: 14px;
+    color: #1d1d1f;
+    background: #fff;
+    border: 1px solid #d1d1d6;
+    border-radius: 8px;
+    appearance: none;
+}
+
+.ie-form-select:focus {
+    outline: none;
+    border-color: #FF9800;
+}
+
+/* ============ 冲突策略单选组 ============ */
+.ie-policy-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ie-policy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 12px;
+    background: #f9f9fb;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.ie-policy:hover {
+    background: #fff5e6;
+}
+
+.ie-policy.is-active {
+    background: #FFF4E5;
+    border-color: #FF9800;
+}
+
+.ie-policy input[type="radio"] {
+    margin: 0 8px 0 0;
+    align-self: flex-start;
+    margin-top: 2px;
+}
+
+.ie-policy__label {
+    display: inline;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1d1d1f;
+}
+
+.ie-policy__desc {
+    display: inline;
+    font-size: 12px;
+    color: #86868b;
+    margin-left: 8px;
+}
+
+/* ============ 按钮 ============ */
+.ie-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 20px;
+    font-size: 15px;
+    font-weight: 500;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #1d1d1f;
+    background: #f5f5f7;
+}
+
+.ie-btn:hover {
+    background: #e8e8ed;
+}
+
+.ie-btn--primary {
+    color: #fff;
+    background: #FF9800;
+}
+
+.ie-btn--primary:hover {
+    background: #F57C00;
+}
+
+/* ============ 导入结果 ============ */
+.ie-result {
+    margin: 0;
+    padding: 12px;
+    background: #f9f9fb;
+    border-radius: 6px;
+    font-family: 'SF Mono', Menlo, monospace;
+    font-size: 11px;
+    color: #515154;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 280px;
+    overflow: auto;
+}

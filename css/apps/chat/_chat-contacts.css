@@ -1,0 +1,361 @@
+/* ============================================
+ * chat-app 通讯录页样式
+ *
+ * 来源:旧版 ChatApp.prototype.renderContactsPage
+ * 仿妆原则: 用 framework 的脸，画 chat.js 的妆
+ *
+ * 作用域:.app-shell[data-app-id="chat"]
+ * 样式规范:
+ *   - 所有样式写到本文件
+ *   - JS 只放动态数据属性(data-*)和无法预知的动态颜色(bgColor)
+ *   - 动态颜色通过 CSS 属性选择器 [data-color="xxx"] 设置
+ * ============================================ */
+
+/* ---- 页面容器 ---- */
+.app-shell[data-app-id="chat"] .chat-contacts {
+    height: 100%;
+    padding: 0 16px 20px;
+}
+
+/* ---- 好友申请入口 ---- */
+.app-shell[data-app-id="chat"] .friend-request-entry {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 245, 247, 0.9));
+    border-radius: 14px;
+    box-shadow: 0 2px 12px rgba(255, 107, 157, 0.15);
+    border: 1px solid rgba(255, 182, 193, 0.3);
+    cursor: pointer;
+    transition: all 0.3s;
+    animation: chatItemIn 0.3s ease backwards;
+}
+
+.app-shell[data-app-id="chat"] .friend-request-entry:active {
+    transform: scale(0.98);
+    opacity: 0.9;
+}
+
+/* 头像堆叠容器 */
+.app-shell[data-app-id="chat"] .friend-request-avatar-stack {
+    position: relative;
+    width: 44px;
+    height: 44px;
+}
+
+/* 头像堆叠项 */
+.app-shell[data-app-id="chat"] .friend-request-avatar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 2px solid white;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.app-shell[data-app-id="chat"] .friend-request-avatar:nth-child(2) { left: 8px; z-index: 2; }
+.app-shell[data-app-id="chat"] .friend-request-avatar:nth-child(3) { left: 16px; z-index: 1; }
+
+.app-shell[data-app-id="chat"] .friend-request-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.app-shell[data-app-id="chat"] .friend-request-avatar-inner {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: white;
+}
+
+/* 好友申请信息 */
+.app-shell[data-app-id="chat"] .friend-request-info {
+    flex: 1;
+    margin-left: 12px;
+}
+
+.app-shell[data-app-id="chat"] .friend-request-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+}
+
+.app-shell[data-app-id="chat"] .friend-request-desc {
+    font-size: 12px;
+    color: #888;
+    margin-top: 2px;
+}
+
+/* 好友申请操作区 */
+.app-shell[data-app-id="chat"] .friend-request-action {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="chat"] .friend-request-badge {
+    min-width: 22px;
+    height: 22px;
+    background: linear-gradient(135deg, #FF6B9D, #FF96A8);
+    color: white;
+    border-radius: 11px;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 6px;
+    box-shadow: 0 2px 6px rgba(255, 107, 157, 0.4);
+}
+
+.app-shell[data-app-id="chat"] .friend-request-arrow {
+    color: #FFB6C1;
+}
+
+/* ---- 联系人容器 ---- */
+.app-shell[data-app-id="chat"] .contacts-container {
+    padding: 0;
+}
+
+/* ---- 分类标签 ---- */
+.app-shell[data-app-id="chat"] .contacts-category-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 4px 8px;
+    font-size: 12px;
+    color: #4A6FA5;
+    font-weight: 600;
+}
+
+.app-shell[data-app-id="chat"] .contacts-category-icon {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="chat"] .contacts-category-icon svg {
+    width: 10px;
+    height: 10px;
+}
+
+.app-shell[data-app-id="chat"] .contacts-category-icon.category-icon--main {
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+}
+
+.app-shell[data-app-id="chat"] .contacts-category-icon.category-icon--supporting {
+    background: linear-gradient(135deg, #A8C8EC, #95B8E0);
+}
+
+.app-shell[data-app-id="chat"] .contacts-category-icon.category-icon--npc {
+    background: linear-gradient(135deg, #F4A6CD, #E890B8);
+}
+
+.app-shell[data-app-id="chat"] .category-icon-emoji {
+    font-size: 10px;
+    color: white;
+}
+
+/* ---- 联系人项 ---- */
+.app-shell[data-app-id="chat"] .contact-item {
+    display: flex;
+    align-items: center;
+    padding: 14px 16px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.85);
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(168, 200, 236, 0.15);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: chatItemIn 0.3s ease backwards;
+}
+
+.app-shell[data-app-id="chat"] .contact-item:nth-child(1) { animation-delay: 0ms; }
+.app-shell[data-app-id="chat"] .contact-item:nth-child(2) { animation-delay: 30ms; }
+.app-shell[data-app-id="chat"] .contact-item:nth-child(3) { animation-delay: 60ms; }
+.app-shell[data-app-id="chat"] .contact-item:nth-child(4) { animation-delay: 90ms; }
+.app-shell[data-app-id="chat"] .contact-item:nth-child(5) { animation-delay: 120ms; }
+.app-shell[data-app-id="chat"] .contact-item:nth-child(6) { animation-delay: 150ms; }
+.app-shell[data-app-id="chat"] .contact-item:nth-child(7) { animation-delay: 180ms; }
+.app-shell[data-app-id="chat"] .contact-item:nth-child(8) { animation-delay: 210ms; }
+.app-shell[data-app-id="chat"] .contact-item:nth-child(9) { animation-delay: 240ms; }
+.app-shell[data-app-id="chat"] .contact-item:nth-child(10) { animation-delay: 270ms; }
+
+.app-shell[data-app-id="chat"] .contact-item:active {
+    transform: scale(0.98);
+    opacity: 0.9;
+}
+
+.app-shell[data-app-id="chat"] .contact-item:hover {
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* 头像 - 动态颜色通过 data-color 属性 */
+.app-shell[data-app-id="chat"] .contact-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    margin-right: 14px;
+    overflow: hidden;
+    flex-shrink: 0;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 600;
+    color: white;
+}
+
+/* 动态背景色 */
+.app-shell[data-app-id="chat"] .contact-avatar[data-color="#FF6B6B"] { background: #FF6B6B; }
+.app-shell[data-app-id="chat"] .contact-avatar[data-color="#4ECDC4"] { background: #4ECDC4; }
+.app-shell[data-app-id="chat"] .contact-avatar[data-color="#45B7D1"] { background: #45B7D1; }
+.app-shell[data-app-id="chat"] .contact-avatar[data-color="#96CEB4"] { background: #96CEB4; }
+.app-shell[data-app-id="chat"] .contact-avatar[data-color="#FFEAA7"] { background: #FFEAA7; }
+.app-shell[data-app-id="chat"] .contact-avatar[data-color="#DDA0DD"] { background: #DDA0DD; }
+.app-shell[data-app-id="chat"] .contact-avatar[data-color="#98D8C8"] { background: #98D8C8; }
+.app-shell[data-app-id="chat"] .contact-avatar[data-color="#F8B500"] { background: #F8B500; }
+.app-shell[data-app-id="chat"] .contact-avatar[data-color="#6C5CE7"] { background: #6C5CE7; }
+.app-shell[data-app-id="chat"] .contact-avatar[data-color="#A29BFE"] { background: #A29BFE; }
+
+.app-shell[data-app-id="chat"] .friend-request-avatar-inner[data-color="#FF6B6B"] { background: linear-gradient(135deg, #FF96A8, #FF6B9D); }
+.app-shell[data-app-id="chat"] .friend-request-avatar-inner[data-color="#4ECDC4"] { background: #4ECDC4; }
+.app-shell[data-app-id="chat"] .friend-request-avatar-inner[data-color="#45B7D1"] { background: #45B7D1; }
+.app-shell[data-app-id="chat"] .friend-request-avatar-inner[data-color="#96CEB4"] { background: #96CEB4; }
+.app-shell[data-app-id="chat"] .friend-request-avatar-inner[data-color="#FFEAA7"] { background: #FFEAA7; }
+.app-shell[data-app-id="chat"] .friend-request-avatar-inner[data-color="#DDA0DD"] { background: #DDA0DD; }
+.app-shell[data-app-id="chat"] .friend-request-avatar-inner[data-color="#98D8C8"] { background: #98D8C8; }
+.app-shell[data-app-id="chat"] .friend-request-avatar-inner[data-color="#F8B500"] { background: #F8B500; }
+.app-shell[data-app-id="chat"] .friend-request-avatar-inner[data-color="#6C5CE7"] { background: #6C5CE7; }
+.app-shell[data-app-id="chat"] .friend-request-avatar-inner[data-color="#A29BFE"] { background: #A29BFE; }
+
+/* 联系人信息 */
+.app-shell[data-app-id="chat"] .contact-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="chat"] .contact-name {
+    font-weight: 600;
+    font-size: 15px;
+    color: #333;
+}
+
+.app-shell[data-app-id="chat"] .contact-remark {
+    color: #A8C8EC;
+    font-weight: 400;
+}
+
+.app-shell[data-app-id="chat"] .contact-signature {
+    font-size: 12px;
+    color: #8E8E8E;
+    margin-top: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 箭头 */
+.app-shell[data-app-id="chat"] .contact-arrow {
+    color: #D6E4FF;
+    margin-left: 8px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .contact-arrow svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* ---- 空状态 ---- */
+.app-shell[data-app-id="chat"] .contacts-empty {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.app-shell[data-app-id="chat"] .contacts-empty-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 20px;
+    background: linear-gradient(135deg, #E8F2FF, #FFF5F7);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="chat"] .contacts-empty-icon svg {
+    width: 36px;
+    height: 36px;
+    color: #A8C8EC;
+}
+
+.app-shell[data-app-id="chat"] .contacts-empty-title {
+    font-size: 15px;
+    color: #8E8E8E;
+    font-weight: 500;
+}
+
+.app-shell[data-app-id="chat"] .contacts-empty-sub {
+    font-size: 12px;
+    color: #C4C4C4;
+    margin-top: 8px;
+}
+
+/* ---- 底部操作按钮 ---- */
+.app-shell[data-app-id="chat"] .contacts-actions {
+    padding: 16px 0 20px;
+}
+
+.app-shell[data-app-id="chat"] .contacts-manage-btn {
+    width: 80%;
+    margin-left: 10%;
+    padding: 14px;
+    background: linear-gradient(135deg, #FF6B9D, #FF8FAB);
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(255, 107, 157, 0.3);
+    transition: all 0.3s;
+}
+
+.app-shell[data-app-id="chat"] .contacts-manage-btn:active {
+    transform: scale(0.98);
+    opacity: 0.9;
+}
+
+.app-shell[data-app-id="chat"] .contacts-manage-btn:hover {
+    box-shadow: 0 6px 16px rgba(255, 107, 157, 0.4);
+}
+
+/* ---- 动画 ---- */
+@keyframes chatItemIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

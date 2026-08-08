@@ -95,6 +95,20 @@ function loadCacheAsync(db) {
             _cacheGroups = groups.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
             _cacheLogs = logs.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
             _cacheLoaded = true;
+            // ★ v0.62.x:把已有 key/group 的 label/name 同步写到 localStorage,
+            //   给 chat-app 等其他业务 app 做兜底(它们读不到 __apiSdk 缓存时直接用这里)
+            try {
+                for (const k of _cacheKeys) {
+                    if (k && k.id && k.label) {
+                        localStorage.setItem('xiaoting::api-label::key::' + k.id, k.label);
+                    }
+                }
+                for (const g of _cacheGroups) {
+                    if (g && g.id && g.name) {
+                        localStorage.setItem('xiaoting::api-label::group::' + g.id, g.name);
+                    }
+                }
+            } catch (_) {}
             console.log('[api-mgr] 缓存加载完成', { keys: _cacheKeys.length, groups: _cacheGroups.length, logs: _cacheLogs.length });
             // 数据加载完后异步触发刷新，让 UI 从「加载中」过渡到真正的内容
             if (typeof window !== 'undefined') {
@@ -164,12 +178,19 @@ export function getApiSdk() {
             if (idx >= 0) _cacheKeys[idx] = clean;
             else _cacheKeys.push(clean);
             _cacheKeys.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+            // ★ v0.62.x:同步把 label 写到 localStorage,给 chat-app 等其他业务 app 做兜底
+            try {
+                if (clean.label) localStorage.setItem('xiaoting::api-label::key::' + clean.id, clean.label);
+                if (clean.label === '' || clean.label == null) localStorage.removeItem('xiaoting::api-label::key::' + clean.id);
+            } catch (_) {}
             // 异步持久化（先等 db.ready）
             _persist(db, () => db.put(STORE_KEYS, clean));
             return clean;
         },
         remove(id) {
             _cacheKeys = _cacheKeys.filter(k => k.id !== id);
+            // ★ v0.62.x:同步清掉 localStorage 兜底
+            try { localStorage.removeItem('xiaoting::api-label::key::' + id); } catch (_) {}
             _persist(db, () => db.remove(STORE_KEYS, id));
         },
         listEnabled() {
@@ -206,11 +227,18 @@ export function getApiSdk() {
             if (idx >= 0) _cacheGroups[idx] = clean;
             else _cacheGroups.push(clean);
             _cacheGroups.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+            // ★ v0.62.x:同步把 name 写到 localStorage,给 chat-app 等其他业务 app 做兜底
+            try {
+                if (clean.name) localStorage.setItem('xiaoting::api-label::group::' + clean.id, clean.name);
+                if (clean.name === '' || clean.name == null) localStorage.removeItem('xiaoting::api-label::group::' + clean.id);
+            } catch (_) {}
             _persist(db, () => db.put(STORE_GROUPS, clean));
             return clean;
         },
         remove(id) {
             _cacheGroups = _cacheGroups.filter(g => g.id !== id);
+            // ★ v0.62.x:同步清掉 localStorage 兜底
+            try { localStorage.removeItem('xiaoting::api-label::group::' + id); } catch (_) {}
             _persist(db, () => db.remove(STORE_GROUPS, id));
         },
     };
@@ -269,6 +297,10 @@ export function getApiSdk() {
     loadCacheAsync(db);
     // 暴露加载 promise 供外部业务 await
     window.__apiSdkLoadingPromise = _loadingPromise;
+    // ★ v0.62.x:暴露 getApiSdk 到 window,让 chat-app 等其他业务 app 主动触发初始化
+    if (typeof window !== 'undefined' && !window.getApiSdk) {
+        window.getApiSdk = getApiSdk;
+    }
     return window.__apiSdk;
 }
 
@@ -1216,6 +1248,8 @@ if (typeof window !== 'undefined') {
         if (!window.myDb) return;
         _preloadStarted = true;
         loadCacheAsync(window.myDb);
+        // ★ v0.62.x:同步把 __apiSdk 也挂到 window,让 chat-app 等其他业务 app 直接用
+        try { window.__apiSdk = window.__apiSdk || getApiSdk(); } catch (_) {}
     }
     if (window.myDb) {
         _startPreload();

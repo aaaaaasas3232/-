@@ -70,15 +70,192 @@
 }
 
 /* ---------- 顶部 hero ---------- */
+.phome-hero-wrap {
+    background: #FFFFFF;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+}
+
 .phome-hero {
+    width: 100%;
+    appearance: none;
+    border: 0;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
     display: flex;
     align-items: center;
     gap: 14px;
     padding: 18px 16px;
     background: #FFFFFF;
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    border-radius: 16px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    color: inherit;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 180ms cubic-bezier(0.22, 1.35, 0.36, 1), background-color 160ms ease;
+}
+
+.phome-hero:active {
+    transform: scale(0.985);
+    background: #F8F8FA;
+}
+
+.phome-hero__avatar-hint {
+    flex-shrink: 0;
+    color: #0A84FF;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.phome-avatar-picker {
+    display: grid;
+    grid-template-rows: 1fr;
+    padding: 14px 16px 16px;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    background: #F8F8FA;
+    animation: phome-avatar-expand 360ms cubic-bezier(0.2, 1.45, 0.35, 1) both;
+    transform-origin: top;
+}
+
+@keyframes phome-avatar-expand {
+    0% { opacity: 0; transform: translateY(-10px) scaleY(0.82); }
+    70% { opacity: 1; transform: translateY(2px) scaleY(1.02); }
+    100% { opacity: 1; transform: translateY(0) scaleY(1); }
+}
+
+.phome-media-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 14px;
+    padding: 3px;
+    border-radius: 10px;
+    background: rgba(120, 120, 128, 0.12);
+}
+
+.phome-media-tab {
+    flex: 1;
+    appearance: none;
+    border: 0;
+    border-radius: 8px;
+    padding: 7px 10px;
+    background: transparent;
+    color: var(--settings-color-secondary, rgba(60, 60, 67, 0.72));
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 180ms cubic-bezier(0.2, 1.45, 0.35, 1), background-color 150ms ease;
+}
+
+.phome-media-tab:active { transform: scale(0.94); }
+.phome-media-tab.is-active {
+    background: #FFFFFF;
+    color: #0A84FF;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.phome-avatar-picker__options.is-backgrounds {
+    gap: 9px;
+}
+
+.phome-avatar-picker__option.is-background {
+    width: 72px;
+    height: 46px;
+    flex-basis: 72px;
+    border-radius: 10px;
+}
+
+.phome-background-blur {
+    display: grid;
+    grid-template-columns: auto 1fr 38px;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    color: var(--settings-color-secondary, rgba(60, 60, 67, 0.72));
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.phome-background-blur [data-background-blur-value] {
+    color: #0A84FF;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.phome-avatar-picker__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.phome-avatar-picker__title {
+    color: var(--settings-color-label, #000);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.phome-avatar-picker__hint,
+.phome-avatar-picker__empty {
+    margin-top: 3px;
+    color: var(--settings-color-tertiary, rgba(60, 60, 67, 0.5));
+    font-size: 10.5px;
+    line-height: 1.4;
+}
+
+.phome-avatar-picker__clear {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: #0A84FF;
+    font: inherit;
+    font-size: 10.5px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 2px 0;
+}
+
+.phome-avatar-picker__options {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 2px 2px 4px;
+    scrollbar-width: none;
+}
+
+.phome-avatar-picker__options::-webkit-scrollbar { display: none; }
+
+.phome-avatar-picker__option {
+    width: 48px;
+    height: 48px;
+    padding: 2px;
+    flex: 0 0 48px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    background: #FFFFFF;
+    cursor: pointer;
+    transition: transform 220ms cubic-bezier(0.2, 1.5, 0.35, 1), border-color 150ms ease;
+}
+
+.phome-avatar-picker__option:active { transform: scale(0.86); }
+.phome-avatar-picker__option.is-active { border-color: #0A84FF; }
+.phome-avatar-picker__option img,
+.persona-avatar-image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    object-fit: cover;
+}
+
+.phome-avatar-picker__empty {
+    width: 100%;
+    margin: 0;
+    padding: 10px 0 4px;
+    text-align: center;
 }
 
 .phome-hero__avatar {
@@ -637,7 +814,308 @@
     text-align: center;
 }
 
-/* ---------- 人生阶段 ---------- */
+/* ============================================
+ * 社媒形象配置（v0.19）
+ * ============================================ */
+
+.phome-social__app-card {
+    background: #F8F8FA;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+}
+
+.phome-social__app-card.is-expanded {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.phome-social__app-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 0.15s;
+}
+
+.phome-social__app-header:active {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.phome-social__app-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.phome-social__app-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.phome-social__app-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--settings-color-label, #000);
+    line-height: 1.3;
+}
+
+.phome-social__app-status {
+    font-size: 11px;
+    color: var(--settings-color-secondary, rgba(60, 60, 67, 0.72));
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.phome-social__online-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 6px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.phome-social__online-badge--online {
+    background: rgba(52, 199, 89, 0.15);
+    color: #34c759;
+}
+
+.phome-social__online-badge--offline {
+    background: rgba(120, 120, 128, 0.12);
+    color: rgba(60, 60, 67, 0.6);
+}
+
+.phome-social__app-chevron {
+    flex-shrink: 0;
+    color: rgba(60, 60, 67, 0.4);
+    transition: transform 0.2s;
+}
+
+.phome-social__app-card.is-expanded .phome-social__app-chevron {
+    transform: rotate(180deg);
+}
+
+/* 配置面板 */
+.phome-social__app-panel {
+    padding: 0 14px 14px;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    animation: phome-social-expand 0.25s ease;
+}
+
+@keyframes phome-social-expand {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.phome-social__config-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.phome-social__config-row:last-of-type {
+    border-bottom: none;
+}
+
+.phome-social__config-label {
+    width: 56px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--settings-color-secondary, rgba(60, 60, 67, 0.72));
+    flex-shrink: 0;
+}
+
+.phome-social__config-input {
+    flex: 1;
+    padding: 6px 10px;
+    font-size: 13px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--settings-color-label, #000);
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.phome-social__config-input:focus {
+    border-color: #0A84FF;
+}
+
+.phome-social__config-input::placeholder {
+    color: rgba(60, 60, 67, 0.4);
+}
+
+.phome-social__image-picker-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.phome-social__picker-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid rgba(0, 0, 0, 0.08);
+    background: #fff;
+    cursor: pointer;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s, transform 0.15s;
+}
+
+.phome-social__picker-btn:active {
+    transform: scale(0.95);
+}
+
+.phome-social__picker-btn.is-active,
+.phome-social__picker-btn:focus {
+    border-color: #0A84FF;
+}
+
+.phome-social__picker-btn--bg {
+    border-radius: 8px;
+    width: 56px;
+    height: 36px;
+}
+
+.phome-social__preview-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.phome-social__preview-placeholder {
+    font-size: 10px;
+    color: rgba(60, 60, 67, 0.5);
+    text-align: center;
+}
+
+.phome-social__clear-btn {
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #FF3B30;
+    background: rgba(255, 59, 48, 0.1);
+    border: 0;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background-color 0.15s;
+}
+
+.phome-social__clear-btn:active {
+    background: rgba(255, 59, 48, 0.2);
+}
+
+.phome-social__image-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 0;
+    margin-bottom: 4px;
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+.phome-social__image-option {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    background: #fff;
+    cursor: pointer;
+    overflow: hidden;
+    padding: 0;
+    transition: border-color 0.15s, transform 0.15s;
+}
+
+.phome-social__image-option:active {
+    transform: scale(0.9);
+}
+
+.phome-social__image-option.is-active {
+    border-color: #0A84FF;
+}
+
+.phome-social__image-option--bg {
+    border-radius: 8px;
+    width: 56px;
+    height: 36px;
+}
+
+.phome-social__image-option img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.phome-social__image-empty {
+    font-size: 11px;
+    color: rgba(60, 60, 67, 0.5);
+    padding: 8px 0;
+}
+
+/* 在线时间段 */
+.phome-social__time-range {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.phome-social__time-select {
+    padding: 4px 6px;
+    font-size: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--settings-color-label, #000);
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+}
+
+.phome-social__time-select:focus {
+    border-color: #0A84FF;
+}
+
+.phome-social__time-sep {
+    font-size: 12px;
+    color: rgba(60, 60, 67, 0.5);
+    margin: 0 4px;
+}
+
+/* 保存按钮 */
+.phome-social__config-actions {
+    padding-top: 12px;
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.phome-social__config-actions .persona-btn {
+    min-width: 64px;
+}
+
+/* 人生阶段 ---------- */
 .phome-phase__active {
     background: #F8F8FA;
     border: 1px solid rgba(0, 0, 0, 0.06);
@@ -791,6 +1269,7 @@
     font-size: 11px;
     color: rgba(60, 60, 67, 0.5);
 }
+
 
 .phome-schedule__title {
     font-size: 13px;
@@ -1306,6 +1785,217 @@
 }
 
 /* ============================================
+ * 钱包流水卡片（v0.67 私聊红包/转账流水）
+ *   - 紧跟资产卡片
+ *   - 最近 50 条 + 查看全部
+ * ============================================ */
+
+.phome-card--tx .phome-card__sub {
+    color: var(--settings-color-secondary, rgba(60, 60, 67, 0.7));
+}
+
+.phome-tx {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.phome-tx__list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 480px;
+    overflow-y: auto;
+}
+
+.phome-tx__empty {
+    font-size: 13px;
+    color: var(--settings-color-tertiary, rgba(60, 60, 67, 0.5));
+    text-align: center;
+    padding: 24px 12px;
+    background: var(--settings-color-bg-soft, rgba(120, 120, 128, 0.06));
+    border-radius: 12px;
+}
+
+.phome-tx__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: var(--settings-color-bg-soft, rgba(120, 120, 128, 0.06));
+    border-radius: 10px;
+    border-left: 3px solid transparent;
+    transition: background 0.15s ease;
+}
+
+.phome-tx__item.is-in {
+    border-left-color: #34C759;
+}
+
+.phome-tx__item.is-out {
+    border-left-color: #FF6B8A;
+}
+
+.phome-tx__item-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.phome-tx__item-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--settings-color-primary, #1F2937);
+    margin-bottom: 2px;
+}
+
+.phome-tx__item-note {
+    font-size: 12px;
+    color: var(--settings-color-secondary, rgba(60, 60, 67, 0.7));
+    margin-bottom: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.phome-tx__item-meta {
+    font-size: 11px;
+    color: var(--settings-color-tertiary, rgba(60, 60, 67, 0.5));
+}
+
+.phome-tx__item-amount {
+    font-size: 15px;
+    font-weight: 600;
+    margin-left: 12px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.phome-tx__amount--in {
+    color: #34C759;
+}
+
+.phome-tx__amount--out {
+    color: #FF6B8A;
+}
+
+.phome-tx__footer {
+    display: flex;
+    justify-content: center;
+    padding-top: 4px;
+}
+
+/* ============================================
+ * 钱包流水历史页 (v0.67 独立详情页)
+ *   - 复用 phome-tx 视觉语言
+ *   - 一次性渲染全部,无限制
+ * ============================================ */
+
+.txh {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+    max-width: 720px;
+    margin: 0 auto;
+}
+
+.txh__header {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--settings-color-divider, rgba(60, 60, 67, 0.1));
+}
+
+.txh__title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--settings-color-primary, #1F2937);
+}
+
+.txh__subtitle {
+    font-size: 12px;
+    color: var(--settings-color-secondary, rgba(60, 60, 67, 0.7));
+}
+
+.txh__list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.txh__empty {
+    font-size: 13px;
+    color: var(--settings-color-tertiary, rgba(60, 60, 67, 0.5));
+    text-align: center;
+    padding: 48px 12px;
+    background: var(--settings-color-bg-soft, rgba(120, 120, 128, 0.06));
+    border-radius: 12px;
+}
+
+.txh__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    background: var(--settings-color-bg-soft, rgba(120, 120, 128, 0.06));
+    border-radius: 10px;
+    border-left: 3px solid transparent;
+    transition: background 0.15s ease;
+}
+
+.txh__item.is-in {
+    border-left-color: #34C759;
+}
+
+.txh__item.is-out {
+    border-left-color: #FF6B8A;
+}
+
+.txh__item-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.txh__item-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--settings-color-primary, #1F2937);
+    margin-bottom: 4px;
+}
+
+.txh__item-note {
+    font-size: 12px;
+    color: var(--settings-color-secondary, rgba(60, 60, 67, 0.7));
+    margin-bottom: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.txh__item-meta {
+    font-size: 11px;
+    color: var(--settings-color-tertiary, rgba(60, 60, 67, 0.5));
+    font-variant-numeric: tabular-nums;
+}
+
+.txh__item-amount {
+    font-size: 16px;
+    font-weight: 600;
+    margin-left: 12px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.txh__amount--in {
+    color: #34C759;
+}
+
+.txh__amount--out {
+    color: #FF6B8A;
+}
+
+/* ============================================
  * 人设主页 · 当前人设上下文（v0.19）
  *   显示将发送给 AI 的完整上下文
  * ============================================ */
@@ -1658,11 +2348,16 @@
 }
 
 .phome-mood__mood-name {
-    font-size: 32px;
+    font-size: 24px;
     font-weight: 800;
     letter-spacing: -0.02em;
     line-height: 1.1;
     transition: color 0.3s ease;
+}
+
+.phome-mood__mood-name.is-placeholder {
+    color: var(--settings-color-tertiary, rgba(60, 60, 67, 0.3));
+    font-weight: 500;
 }
 
 .phome-mood__diary {
@@ -1946,7 +2641,7 @@
 }
 
 .phome-mood-detail__mood-name {
-    font-size: 28px;
+    font-size: 20px;
     font-weight: 800;
     letter-spacing: -0.02em;
     transition: color 0.3s ease;
@@ -2059,4 +2754,302 @@
     accent-color: #007aff;
 }
 
+/* ============================================
+ * 心情详情面板 - 专属编辑区块
+ * ============================================ */
+
+.phome-mood-detail__edit-section {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 14px;
+    background: rgba(248, 248, 250, 0.8);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 12px;
+    margin-bottom: 12px;
+}
+
+.phome-mood-detail__edit-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: rgba(60, 60, 67, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.phome-mood-detail__edit-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.phome-mood-detail__edit-field-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(60, 60, 67, 0.72);
+    letter-spacing: 0.02em;
+}
+
+.phome-mood-detail__intensity-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.phome-mood-detail__edit-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    background: #FFFFFF;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: inherit;
+    color: #1c1c1e;
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.phome-mood-detail__edit-input::placeholder {
+    color: rgba(60, 60, 67, 0.4);
+    font-weight: 400;
+}
+
+.phome-mood-detail__edit-input:focus {
+    border-color: #0A84FF;
+    box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.12);
+}
+
+.phome-mood-detail__edit-range {
+    width: 100%;
+    height: 32px;
+    padding: 0;
+    background: transparent;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    outline: none;
+}
+
+.phome-mood-detail__edit-range::-webkit-slider-runnable-track {
+    height: 6px;
+    background: rgba(0, 0, 0, 0.08);
+    border-radius: 999px;
+}
+
+.phome-mood-detail__edit-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #FFFFFF;
+    border: 2px solid #0A84FF;
+    box-shadow: 0 2px 6px rgba(10, 132, 255, 0.3);
+    margin-top: -8px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.phome-mood-detail__edit-range::-webkit-slider-thumb:active {
+    transform: scale(1.1);
+    box-shadow: 0 3px 8px rgba(10, 132, 255, 0.4);
+}
+
+.phome-mood-detail__edit-range::-moz-range-track {
+    height: 6px;
+    background: rgba(0, 0, 0, 0.08);
+    border-radius: 999px;
+}
+
+.phome-mood-detail__edit-range::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #FFFFFF;
+    border: 2px solid #0A84FF;
+    box-shadow: 0 2px 6px rgba(10, 132, 255, 0.3);
+    cursor: pointer;
+}
+
+.phome-mood-detail__edit-textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    background: #FFFFFF;
+    font-size: 13px;
+    font-family: inherit;
+    color: #1c1c1e;
+    line-height: 1.6;
+    box-sizing: border-box;
+    resize: vertical;
+    min-height: 100px;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.phome-mood-detail__edit-textarea::placeholder {
+    color: rgba(60, 60, 67, 0.4);
+}
+
+.phome-mood-detail__edit-textarea:focus {
+    border-color: #0A84FF;
+    box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.12);
+}
+
+.phome-mood-detail__edit-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.phome-mood-detail__edit-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 20px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+    min-width: 70px;
+}
+
+.phome-mood-detail__edit-btn:active {
+    transform: scale(0.96);
+}
+
+.phome-mood-detail__edit-btn--cancel {
+    background: rgba(120, 120, 128, 0.12);
+    color: rgba(60, 60, 67, 0.72);
+}
+
+.phome-mood-detail__edit-btn--cancel:hover {
+    background: rgba(120, 120, 128, 0.2);
+}
+
+.phome-mood-detail__edit-btn--save {
+    background: #34C759;
+    color: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(52, 199, 89, 0.3);
+}
+
+.phome-mood-detail__edit-btn--save:hover {
+    background: #2db84d;
+    box-shadow: 0 3px 10px rgba(52, 199, 89, 0.4);
+}
+
+/* 日程部分不可编辑的视觉提示 */
+.phome-mood-detail__sched {
+    margin-top: 8px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.phome-mood-detail__sched-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.phome-mood-detail__sched-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(60, 60, 67, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.phome-mood-detail__sched-tag {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: rgba(10, 132, 255, 0.08);
+    color: #0A84FF;
+    font-weight: 600;
+}
+
+.phome-mood-detail__sched-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+.phome-mood-detail__sched-row:last-child {
+    border-bottom: none;
+}
+
+.phome-mood-detail__sched-row.is-past {
+    opacity: 0.6;
+}
+
+.phome-mood-detail__sched-time {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(60, 60, 67, 0.5);
+    font-variant-numeric: tabular-nums;
+    min-width: 52px;
+    flex-shrink: 0;
+}
+
+.phome-mood-detail__sched-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.phome-mood-detail__sched-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: #1c1c1e;
+    line-height: 1.4;
+}
+
+.phome-mood-detail__sched-activity {
+    font-size: 11px;
+    color: rgba(60, 60, 67, 0.6);
+    margin-top: 2px;
+    line-height: 1.4;
+}
+
+.phome-mood-detail__sched-phase {
+    display: inline-block;
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 999px;
+    margin-left: 4px;
+    font-weight: 600;
+    vertical-align: 2px;
+}
+
+.phome-mood-detail__sched-phase--past {
+    background: rgba(120, 120, 128, 0.1);
+    color: rgba(60, 60, 67, 0.6);
+}
+
+.phome-mood-detail__sched-phase--future {
+    background: rgba(10, 132, 255, 0.1);
+    color: #0A84FF;
+}
 

@@ -1,0 +1,575 @@
+/* ============================================
+ * Settings · 人设主页 · 空间模块 + 双日记
+ * v0.30 新增
+ *
+ * 选择器都加 .phome-card--space 作用域前缀,
+ * 与心情 / 周历 / 资产互不干扰。
+ * ============================================ */
+
+.phome-card--space {
+    position: relative;
+}
+
+.phome-card--space .phome-space {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* —— 天气卡 —— */
+.phome-card--space .phome-space__wx {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 14px;
+    row-gap: 10px;
+    padding: 14px 15px;
+    border-radius: 16px;
+    background: #fff;
+    border: 1px solid #dbeafe;
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.07);
+}
+
+.phome-card--space .phome-space__wx-head {
+    min-width: 0;
+    grid-column: 1;
+    grid-row: 1;
+}
+
+.phome-card--space .phome-space__wx-head-row {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.phome-card--space .phome-space__place-name {
+    font-size: 15px;
+    font-weight: 650;
+    line-height: 1.25;
+    color: #172033;
+    white-space: nowrap;
+}
+
+.phome-card--space .phome-space__city-name {
+    font-size: 11px;
+    line-height: 1.3;
+    color: #64748b;
+    white-space: nowrap;
+}
+
+.phome-card--space .phome-space__chrono-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-self: start;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    min-height: 22px;
+    max-width: 100%;
+    padding: 3px 8px;
+    border-radius: 7px;
+    background: #eff6ff;
+    color: #2563eb;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.phome-card--space .phome-space__wx-body {
+    display: grid;
+    grid-template-columns: auto auto;
+    align-items: center;
+    justify-content: end;
+    gap: 2px 8px;
+    min-width: 0;
+    text-align: right;
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+}
+
+.phome-card--space .phome-space__wx-icon {
+    grid-row: 1 / span 2;
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+    background: #eff6ff;
+    color: #2563eb;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.phome-card--space .phome-space__wx-temp {
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1;
+    color: #172033;
+}
+
+.phome-card--space .phome-space__wx-desc {
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.25;
+    color: #334155;
+}
+
+.phome-card--space .phome-space__wx-extra {
+    grid-column: 2;
+    max-width: 128px;
+    margin-top: 0;
+    font-size: 10px;
+    line-height: 1.35;
+    color: #7b8ba3;
+}
+
+/* —— 当前所在 —— */
+.phome-card--space .phome-space__current {
+    position: relative;
+    overflow: hidden;
+    padding: 13px 14px 13px 17px;
+    border-radius: 14px;
+    background: #fff;
+    border: 1px solid #dbeafe;
+    box-shadow: 0 5px 16px rgba(37, 99, 235, 0.06);
+}
+
+.phome-card--space .phome-space__current::before {
+    content: '';
+    position: absolute;
+    top: 12px;
+    bottom: 12px;
+    left: 0;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+    background: #3b82f6;
+}
+
+.phome-card--space .phome-space__current--empty,
+.phome-card--space .phome-space__current--idle {
+    background: #fff;
+    border-color: #dbeafe;
+}
+
+.phome-card--space .phome-space__current-label {
+    margin-bottom: 4px;
+    color: #2563eb;
+    font-size: 11px;
+    font-weight: 650;
+    line-height: 1.2;
+}
+
+.phome-card--space .phome-space__current-text {
+    color: #273449;
+    font-size: 13px;
+    font-weight: 550;
+    line-height: 1.45;
+}
+
+.phome-card--space .phome-space__current-time {
+    margin-top: 3px;
+    color: #7b8ba3;
+    font-size: 11px;
+    line-height: 1.35;
+}
+
+/* —— 今日日程预览 —— */
+.phome-card--space .phome-space__sched {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.phome-card--space .phome-space__sched-empty {
+    font-size: 12px;
+    opacity: 0.6;
+    text-align: center;
+    padding: 8px;
+}
+
+.phome-card--space .phome-space__sched-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.phome-card--space .phome-space__sched-time {
+    flex: 0 0 auto;
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 6px;
+    background: rgba(99, 102, 241, 0.10);
+    color: #4f46e5;
+}
+
+.phome-card--space .phome-space__sched-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.phome-card--space .phome-space__sched-name {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.phome-card--space .phome-space__sched-activity {
+    font-size: 11px;
+    opacity: 0.7;
+    margin-top: 2px;
+}
+
+.phome-card--space .phome-space__sched-conf {
+    flex: 0 0 auto;
+    font-size: 10px;
+    opacity: 0.55;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.04);
+}
+
+/* —— 已发生 / 即将 phase 标签 —— */
+.phome-card--space .phome-space__sched-phase {
+    display: inline-block;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    font-weight: 600;
+    margin-left: 6px;
+    vertical-align: 2px;
+    letter-spacing: 0.02em;
+}
+
+.phome-card--space .phome-space__sched-phase--past {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+.phome-card--space .phome-space__sched-phase--future {
+    background: #e0ecff;
+    color: #1d4ed8;
+}
+
+.phome-card--space .phome-space__sched-row.is-past {
+    opacity: 0.7;
+}
+
+.phome-card--space .phome-space__sched-row.is-past .phome-space__sched-time {
+    color: #64748b;
+    background: #f1f5f9;
+}
+
+/* —— 校验冲突红点 —— */
+.phome-card--space .phome-space__warn {
+    margin-top: 6px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.phome-card--space .phome-space__warn-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #dc2626;
+    margin-bottom: 4px;
+}
+
+.phome-card--space .phome-space__warn-row {
+    font-size: 11px;
+    color: #991b1b;
+    line-height: 1.5;
+    opacity: 0.85;
+}
+
+/* —— 操作栏 —— */
+.phome-card--space .phome-space__actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+/* —— 可去场所分组 —— */
+.phome-card--space .phome-space__section-title {
+    margin-top: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    opacity: 0.7;
+    letter-spacing: 0.04em;
+}
+
+.phome-card--space .phome-space__hint {
+    font-size: 12px;
+    opacity: 0.7;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.03);
+    line-height: 1.5;
+}
+
+.phome-card--space .phome-space__groups {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.phome-card--space .phome-space__place-group {
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: rgba(99, 102, 241, 0.05);
+    border: 1px solid rgba(99, 102, 241, 0.12);
+}
+
+.phome-card--space .phome-space__place-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.phome-card--space .phome-space__loc-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.phome-card--space .phome-space__loc-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    padding: 4px 0;
+}
+
+.phome-card--space .phome-space__loc-name {
+    font-weight: 500;
+}
+
+.phome-card--space .phome-space__loc-note {
+    width: 100%;
+    margin-top: 2px;
+    padding-left: 4px;
+    font-size: 11px;
+    opacity: 0.7;
+    border-left: 2px solid rgba(0, 0, 0, 0.1);
+}
+
+/* 频率色标 */
+.phome-card--space .phome-space__freq {
+    display: inline-block;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    font-weight: 600;
+}
+
+.phome-card--space .phome-space__freq--always {
+    background: rgba(34, 197, 94, 0.18);
+    color: #15803d;
+}
+
+.phome-card--space .phome-space__freq--often {
+    background: rgba(59, 130, 246, 0.18);
+    color: #1d4ed8;
+}
+
+.phome-card--space .phome-space__freq--sometimes {
+    background: rgba(234, 179, 8, 0.18);
+    color: #a16207;
+}
+
+.phome-card--space .phome-space__freq--rarely {
+    background: rgba(107, 114, 128, 0.15);
+    color: #4b5563;
+}
+
+/* ============================================
+ * 月历单元格
+ * ============================================ */
+.phome-calendar__cell {
+    position: relative;
+}
+
+/* ============================================
+ * 心情详情面板 · 今日日程
+ * 白色为主,蓝色为辅
+ * ============================================ */
+.phome-mood-detail__sched {
+    margin-top: 10px;
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: #ffffff;
+    border: 1px solid #e5edf7;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.phome-mood-detail__sched-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #eef2f7;
+}
+
+.phome-mood-detail__sched-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #1f2937;
+    letter-spacing: 0.02em;
+}
+
+.phome-mood-detail__sched-tag {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #e0ecff;
+    color: #1d4ed8;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.phome-mood-detail__sched-row {
+    display: flex;
+    gap: 10px;
+    padding: 6px 0;
+    border-bottom: 1px dashed #eef2f7;
+}
+
+.phome-mood-detail__sched-row:last-child {
+    border-bottom: none;
+}
+
+.phome-mood-detail__sched-time {
+    flex: 0 0 auto;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    color: #1d4ed8;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: #f0f6ff;
+    align-self: flex-start;
+}
+
+.phome-mood-detail__sched-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.phome-mood-detail__sched-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: #1f2937;
+}
+
+.phome-mood-detail__sched-activity {
+    font-size: 11px;
+    color: #4b5563;
+    margin-top: 1px;
+}
+
+/* —— 已发生 / 即将 phase 标签 —— */
+.phome-mood-detail__sched-phase {
+    display: inline-block;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    font-weight: 600;
+    margin-left: 6px;
+    vertical-align: 2px;
+    letter-spacing: 0.02em;
+}
+
+.phome-mood-detail__sched-phase--past {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+.phome-mood-detail__sched-phase--future {
+    background: #e0ecff;
+    color: #1d4ed8;
+}
+
+.phome-mood-detail__sched-row.is-past {
+    opacity: 0.72;
+}
+
+.phome-mood-detail__sched-row.is-past .phome-mood-detail__sched-time {
+    color: #64748b;
+    background: #f1f5f9;
+}
+
+/* ============================================
+ * 暗色模式适配
+ * ============================================ */
+@media (prefers-color-scheme: dark) {
+    .phome-card--space .phome-space__wx {
+        background: #fff;
+        border-color: #dbeafe;
+        box-shadow: 0 6px 18px rgba(37, 99, 235, 0.07);
+    }
+
+    .phome-card--space .phome-space__current {
+        background: #fff;
+        border-color: #dbeafe;
+        box-shadow: 0 5px 16px rgba(37, 99, 235, 0.06);
+    }
+
+    .phome-card--space .phome-space__sched-row {
+        background: rgba(255, 255, 255, 0.04);
+        border-color: rgba(255, 255, 255, 0.06);
+    }
+
+    .phome-card--space .phome-space__place-group {
+        background: rgba(99, 102, 241, 0.08);
+        border-color: rgba(99, 102, 241, 0.18);
+    }
+
+    .phome-mood-detail__sched {
+        background: #1f2937;
+        border-color: #334155;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    }
+
+    .phome-mood-detail__sched-head {
+        border-bottom-color: #334155;
+    }
+
+    .phome-mood-detail__sched-title {
+        color: #e5e7eb;
+    }
+
+    .phome-mood-detail__sched-tag {
+        background: #1e3a8a;
+        color: #93c5fd;
+    }
+
+    .phome-mood-detail__sched-row {
+        border-bottom-color: #334155;
+    }
+
+    .phome-mood-detail__sched-time {
+        background: #1e3a8a;
+        color: #93c5fd;
+    }
+
+    .phome-mood-detail__sched-name {
+        color: #e5e7eb;
+    }
+
+    .phome-mood-detail__sched-activity {
+        color: #9ca3af;
+    }
+}

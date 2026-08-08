@@ -11,7 +11,15 @@
  * this 上下文由 app-registry 注入 { app, toolkit, methods, services, ... }。
  */
 
-import { applyDeviceTheme, getDefaultDeviceTheme } from './theme-bridge.js';
+import {
+    applyDeviceTheme,
+    getDefaultDeviceTheme,
+    PHONE_HEIGHT_MIN,
+    PHONE_HEIGHT_MAX,
+    PHONE_Y_OFFSET_MIN,
+    PHONE_Y_OFFSET_MAX,
+    clampDesktopGridRows,
+} from './theme-bridge.js';
 import { APPEARANCE_DB_KEY, APPEARANCE_STORE_NAME, initialAppearance } from './defaults.js';
 import { buildStatusBarMethods } from './phone-statusbar/index.js';
 
@@ -38,6 +46,24 @@ function refresh() {
     }
 }
 
+/**
+ * 通用：把当前 app.state.ui.appearance 写入 IndexedDB（deviceSettings::device-theme）。
+ * 任何字段变更都自动触发，不再依赖用户手动按"保存"按钮。
+ */
+function persistAppearance(app) {
+    if (!app || !app.state || !app.state.ui || !app.state.ui.appearance) return;
+    const ui = { ...app.state.ui.appearance };
+    const db = app.toolkit && app.toolkit.db;
+    if (!db || !db.put) return;
+    db.put(APPEARANCE_STORE_NAME, {
+        key: APPEARANCE_DB_KEY,
+        ...ui,
+        updatedAt: Date.now(),
+    }).catch((err) => {
+        console.warn('[settings] 外观自动保存失败', err);
+    });
+}
+
 export function buildAppearanceMethods() {
     return {
         updateAppearanceField(payload = {}) {
@@ -50,6 +76,27 @@ export function buildAppearanceMethods() {
                 ui.batteryCapacity = Math.max(0, Math.min(1, pctValue / 100));
             } else if (field === 'hideCase') {
                 ui.hideCase = Boolean(value);
+            } else if (field === 'phoneHeight') {
+                // 滑条传的是 px 整数（450-720），clamp 一下防越界
+                const px = Number(value);
+                if (Number.isFinite(px)) {
+                    ui.phoneHeight = Math.max(
+                        PHONE_HEIGHT_MIN,
+                        Math.min(PHONE_HEIGHT_MAX, Math.round(px))
+                    );
+                }
+            } else if (field === 'phoneYOffset') {
+                // 滑条传的是 px 整数（-100 ~ +100），负数上移、正数下移
+                const px = Number(value);
+                if (Number.isFinite(px)) {
+                    ui.phoneYOffset = Math.max(
+                        PHONE_Y_OFFSET_MIN,
+                        Math.min(PHONE_Y_OFFSET_MAX, Math.round(px))
+                    );
+                }
+            } else if (field === 'desktopGridRows') {
+                // 桌面网格行数：3 ~ 8，clamp
+                ui.desktopGridRows = clampDesktopGridRows(value);
             } else if (field === 'showStatusBar') {
                 // 状态栏整体布尔字段：缺省 = true（即显示）；只有显式 false 才隐藏
                 ui.showStatusBar = value !== false;
@@ -69,12 +116,14 @@ export function buildAppearanceMethods() {
                 // 输入期间只更新状态栏的 reactive 配置，不刷新详情页。
                 // 否则 v-html 会替换 input 节点，导致焦点和输入法组合状态在每个字符后丢失。
                 applyDeviceTheme(ui);
+                persistAppearance(this.app);
                 return;
             } else {
                 ui[field] = value;
             }
             applyDeviceTheme(ui);
             refresh();
+            persistAppearance(this.app);
         },
 
         toggleCaseHidden() {
@@ -88,6 +137,7 @@ export function buildAppearanceMethods() {
                 ui.hideCase ? '已隐藏手机壳' : '已显示手机壳',
                 ui.hideCase ? '网页将铺满到屏幕宽度' : '已恢复 iPhone 外壳'
             );
+            persistAppearance(this.app);
         },
 
         // 状态栏相关的 4 个 toggle 方法委托给 phone-statusbar 模块

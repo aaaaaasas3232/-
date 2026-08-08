@@ -1,0 +1,519 @@
+/* === Widget（小组件）样式 ===
+   桌面 grid 是 4 列固定,widget 通过 grid-column: span / grid-row: span 跨格。
+   每种 size 的 footprint (cells 数):
+     - S 横 (2x1): 132  x 76  px (1 行 cell)
+     - S 竖 (1x2): 56   x 170 px (2 行 cell)
+     - M    (2x2): 132  x 170 px (2 行 cell)
+     - L    (4x2): 284  x 170 px (1 横排满 4 列, 2 行 cell)
+   每个 footprint 上方放 widgetMini,下方留 16px 给 widgetName(11px 文字 + 5px margin)。
+   L 的 cell 宽 = 4×56 + 3×20 = 284px(横向铺满整行) */
+
+.widgetContainer {
+    /* 与 appContainer 视觉上区分:不占满 min-height,让 widgetMini 自己定高度 */
+    min-height: 0;
+}
+
+.widgetTouch {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+
+/* === S 横 (2x1): cell 132x76, widgetMini 132x56, 下方留 widgetName === */
+.widgetSize-S.widgetOrient-h .widgetMini {
+    width: 132px;
+    height: 56px;
+    border-radius: 18px;
+    padding: 0 12px 0 8px;
+    gap: 8px;
+    font-size: 14px;
+    margin-top: 0;
+}
+.widgetSize-S.widgetOrient-h .widgetMini-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    font-size: 18px;
+}
+.widgetSize-S.widgetOrient-h .widgetMini-icon svg {
+    width: 22px;
+    height: 22px;
+}
+.widgetSize-S.widgetOrient-h .widgetMini-label {
+    font-size: 14px;
+    font-weight: 700;
+}
+.widgetSize-S.widgetOrient-h .widgetMini-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.2;
+    color: #fff;
+    overflow: hidden;
+}
+
+/* === S 竖 (1x2): cell 56x170, widgetMini 56x150, 下方留 widgetName === */
+.widgetSize-S.widgetOrient-v .widgetMini {
+    width: 56px;
+    height: 150px;
+    border-radius: 18px;
+    padding: 10px 4px;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 6px;
+}
+.widgetSize-S.widgetOrient-v .widgetMini-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    font-size: 18px;
+}
+.widgetSize-S.widgetOrient-v .widgetMini-icon svg {
+    width: 22px;
+    height: 22px;
+}
+.widgetSize-S.widgetOrient-v .widgetMini-label--vertical {
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: center;
+    color: #fff;
+    white-space: normal;
+    word-break: break-all;
+    max-width: 100%;
+    text-overflow: clip;
+}
+
+/* === M (2x2): cell 132x170, widgetMini 132x150, 下方留 widgetName === */
+.widgetSize-M .widgetMini {
+    width: 132px;
+    height: 150px;
+    border-radius: 20px;
+    padding: 12px;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    gap: 6px;
+    overflow: hidden;
+}
+.widgetSize-M .widgetMini-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    color: #fff;
+}
+
+/* === L (4x2): cell 284x170, widgetMini 284x154, 下方留 widgetName === */
+.widgetSize-L .widgetMini {
+    width: 284px;
+    height: 154px;
+    border-radius: 22px;
+    padding: 14px 16px;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    gap: 8px;
+    overflow: hidden;
+}
+.widgetSize-L .widgetMini-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    color: #fff;
+}
+
+/* === widgetMini 基础样式(向后兼容;旧 widget 无 size 时走这里) ===
+   尺寸交给具体的 widgetSize-* class 决定,这里只给"任意 size 都成立"的属性 */
+.widgetMini {
+    position: relative;
+    background: linear-gradient(135deg, #1f1f22 0%, #2a2a30 100%);
+    color: #fff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.18);
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    overflow: hidden;
+    transition: transform 0.1s cubic-bezier(0.215, 0.61, 0.355, 1), box-shadow 0.1s ease;
+}
+
+.widgetTouch:hover .widgetMini {
+    box-shadow: 0 2px 5px rgba(0,0,0,0.12);
+    transform: scale(1.04);
+}
+
+.widgetTouch:active .widgetMini {
+    transform: scale(0.96);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.18);
+}
+
+.widgetMini-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.12);
+    font-size: 11px;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.widgetMini-icon svg {
+    display: block;
+    width: 14px;
+    height: 14px;
+}
+
+.widgetMini-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    color: #fff;
+}
+
+.widgetSize-L .widgetName {
+    max-width: 284px;
+}
+
+.widgetName {
+    margin-top: 6px;
+    max-width: 132px;
+    font-size: 11px;
+    color: #fff;
+    text-align: center;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 编辑模式下的"删除 ×"按钮（app 和 widget 都用） */
+.edit-remove-button {
+    position: absolute;
+    top: -4px;
+    left: 4px;
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    background: #ff3b30;
+    color: #fff;
+    font-size: 14px;
+    line-height: 16px;
+    font-weight: 700;
+    text-align: center;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    z-index: 4;
+    cursor: pointer;
+    display: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.edit-remove-button::before {
+    content: '';
+    position: absolute;
+    inset: -13px;
+    border-radius: 999px;
+}
+
+.appContainer.editing .edit-remove-button {
+    display: block;
+}
+
+/* === 灵动岛 mini 形态：widget 多个图标叠在一起 ===
+   当 widgetSlots 非空时，岛看起来"像几个 app icon 挤一起"。 */
+.dynamic-island.mini .dynamic-island-mini-widgets {
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    padding: 0 12px 0 8px;
+}
+
+.dynamic-island-mini-widgets-icons {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+/* 让多个 widget icon "堆叠"显示，像 iOS 多 music icon */
+.dynamic-island-mini-widgets-icons .dynamic-island-mini-widgets-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 11px;
+    border: 1.5px solid #000;
+    margin-left: -8px;
+    flex-shrink: 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.dynamic-island-mini-widgets-icons .dynamic-island-mini-widgets-icon:first-child {
+    margin-left: 0;
+}
+
+.dynamic-island-mini-widgets-icons .dynamic-island-mini-widgets-icon svg {
+    display: block;
+    width: 12px;
+    height: 12px;
+}
+
+.dynamic-island.mini .dynamic-island-mini-widgets .dynamic-island-mini-text {
+    flex: 1;
+    min-width: 0;
+    margin-left: 6px;
+}
+
+/* === Widget picker 选择面板 ===
+   全屏遮罩 + 中间一张卡片 */
+.widget-picker-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 980;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+}
+
+.widget-picker-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+}
+
+.widget-picker-panel {
+    position: relative;
+    width: calc(100% - 32px);
+    max-width: 360px;
+    max-height: 70%;
+    background: rgba(255, 255, 255, 0.96);
+    border-radius: 24px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    animation: widgetPickerIn 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes widgetPickerIn {
+    0% {
+        opacity: 0;
+        transform: translateY(20px) scale(0.94);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.widget-picker-header {
+    padding: 18px 20px 6px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.widget-picker-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #111;
+}
+
+.widget-picker-subtitle {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #666;
+}
+
+.widget-picker-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    scrollbar-width: none;
+}
+
+.widget-picker-list::-webkit-scrollbar {
+    display: none;
+}
+
+.widget-picker-empty {
+    grid-column: 1 / -1;
+    padding: 36px 12px;
+    text-align: center;
+    color: #999;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.widget-picker-card {
+    background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 16px;
+    padding: 12px 10px 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.18s cubic-bezier(0.215, 0.61, 0.355, 1), box-shadow 0.18s ease, border-color 0.18s ease;
+    position: relative;
+}
+
+.widget-picker-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+    border-color: rgba(99, 102, 241, 0.4);
+}
+
+.widget-picker-card.is-added {
+    background: rgba(0, 0, 0, 0.04);
+    cursor: default;
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+.widget-picker-card.is-added:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.widget-picker-card-icon {
+    width: 44px;
+    height: 44px;
+    margin: 0 auto 8px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+}
+
+.widget-picker-card-icon svg {
+    display: block;
+    width: 24px;
+    height: 24px;
+}
+
+.widget-picker-card-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #111;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.widget-picker-card-app {
+    margin-top: 2px;
+    font-size: 10px;
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.widget-picker-card-size {
+    margin-top: 4px;
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(99, 102, 241, 0.12);
+    color: #4f46e5;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.widget-mini-clock-text {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: #fff;
+    font-feature-settings: 'tnum';
+}
+
+.widget-mini-tip-text {
+    font-size: 11px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.widget-mini-greeting-text {
+    font-size: 11px;
+    font-weight: 600;
+    color: #fff;
+    flex: 1;
+    min-width: 0;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.widget-mini-greeting-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: #4ade80;
+    flex-shrink: 0;
+}
+
+.widget-picker-card-added {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.widget-picker-footer {
+    padding: 12px 16px 14px;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    display: flex;
+    justify-content: flex-end;
+}
+
+.widget-picker-close {
+    padding: 8px 18px;
+    border: 0;
+    border-radius: 999px;
+    background: #111;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.12s ease, background 0.12s ease;
+}
+
+.widget-picker-close:hover {
+    background: #1f2937;
+}
+
+.widget-picker-close:active {
+    transform: scale(0.96);
+}

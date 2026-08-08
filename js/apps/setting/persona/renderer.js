@@ -112,6 +112,21 @@ function moduleEnabled(persona, moduleKey) {
 // ============================================
 
 /**
+ * 计算一个字段在 persona 对象里的存储路径。
+ *   - 'base' / 'meta' group: 字段直接放在 persona 顶层（不是嵌套对象），
+ *     data-persona-field 写成 `entityType|fieldKey`（省略中间 groupKey），
+ *     这样 collectFieldsFromDom 写回时就是 patch[fieldKey]，能正确落库。
+ *   - 其他模块组(preferences / memory / mbti / ...): 字段在 persona[groupKey] 嵌套里,
+ *     data-persona-field 写成 `entityType|groupKey|fieldKey`。
+ */
+function personaFieldPath(entityType, groupKey, fieldKey) {
+    if (groupKey === 'base' || groupKey === 'meta') {
+        return `${escapeHtml(entityType)}|${escapeHtml(fieldKey)}`;
+    }
+    return `${escapeHtml(entityType)}|${escapeHtml(groupKey)}|${escapeHtml(fieldKey)}`;
+}
+
+/**
  * 单行 input。
  *   data-persona-field = entityType|group|key
  */
@@ -132,7 +147,7 @@ function renderTextField(field, value, ctx) {
         ? escapeHtml(displayValue)
         : '';
 
-    const dataAttr = `data-persona-field="${escapeHtml(entityType)}|${escapeHtml(groupKey)}|${escapeHtml(field.key)}"`;
+    const dataAttr = `data-persona-field="${personaFieldPath(entityType, groupKey, field.key)}"`;
 
     const helperHtml = field.helper
         ? `<div class="settings-section__helper">${escapeHtml(field.helper)}</div>`
@@ -158,7 +173,7 @@ function renderSelectField(field, value, ctx) {
     const { entityType, groupKey } = ctx;
     const str = value == null ? '' : String(value);
     const options = field.options || [];
-    const dataAttr = `data-persona-field="${escapeHtml(entityType)}|${escapeHtml(groupKey)}|${escapeHtml(field.key)}"`;
+    const dataAttr = `data-persona-field="${personaFieldPath(entityType, groupKey, field.key)}"`;
     const helperHtml = field.helper
         ? `<div class="settings-section__helper">${escapeHtml(field.helper)}</div>`
         : '';
@@ -183,7 +198,7 @@ function renderSelectField(field, value, ctx) {
 function renderMbtiField(field, value, ctx) {
     const { entityType, groupKey } = ctx;
     const str = value == null ? '' : String(value);
-    const dataAttr = `data-persona-field="${escapeHtml(entityType)}|${escapeHtml(groupKey)}|${escapeHtml(field.key)}"`;
+    const dataAttr = `data-persona-field="${personaFieldPath(entityType, groupKey, field.key)}"`;
     const helperHtml = field.helper
         ? `<div class="settings-section__helper">${escapeHtml(field.helper)}</div>`
         : '';
@@ -661,8 +676,20 @@ export function renderPersonaEditor(persona, entityType, profileLevel, app) {
                 ${paroHtml}
             </div>
             <div class="persona-editor-card__actions">
-                <button class="persona-btn persona-btn--primary" ${wvAction('personaSave', { entityType })}>保存全部</button>
                 <button class="persona-btn persona-btn--ghost persona-btn--outline" ${wvAction('personaDelete', { entityType })}>删除此卡设定</button>
+                ${entityType === 'user' ? (() => {
+                    // ★ v0.23 默认用户卡按钮
+                    //   - 当前已是默认：显示「取消默认」
+                    //   - 否则显示「设为默认」
+                    //   决策走 SDK defaultUserCard.isDefault()，避免 UI 与数据不一致
+                    const sdk = window.settingsSdk;
+                    const isDefault = !!(sdk?.defaultUserCard?.isDefault?.(persona?.id));
+                    const method = isDefault ? 'personaUnsetDefault' : 'personaSetDefault';
+                    const label = isDefault ? '取消默认' : '设为默认';
+                    const extraClass = isDefault ? ' persona-btn--default-active' : '';
+                    return `<button class="persona-btn persona-btn--ghost persona-btn--default${extraClass}" ${wvAction(method, { entityType, userId: persona?.id })}>${escapeHtml(label)}</button>`;
+                })() : ''}
+                <button class="persona-btn persona-btn--primary" ${wvAction('personaSave', { entityType })}>保存全部</button>
             </div>
         </div>
     `;
@@ -682,7 +709,7 @@ function renderBoundWorldSection(persona, entityType) {
     }));
     const currentId = persona?.boundWorldId || '';
     const current = worlds.find(w => w.id === currentId);
-    const dataAttr = `data-persona-field="${escapeHtml(entityType)}|meta|boundWorldId"`;
+    const dataAttr = `data-persona-field="${personaFieldPath(entityType, 'meta', 'boundWorldId')}"`;
     const options = [
         `<option value="" ${!currentId ? 'selected' : ''}>不绑定（自由模式）</option>`,
         ...worlds.map(w =>

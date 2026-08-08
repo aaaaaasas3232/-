@@ -53,6 +53,11 @@ export {
     applyAppearanceFields,
     initThemeSystem,
     syncStatusBarConfig,
+    syncDesktopGridConfig,
+    DESKTOP_GRID_ROWS_OPTIONS,
+    DESKTOP_GRID_ROWS_DEFAULT,
+    DESKTOP_GRID_COLUMNS,
+    clampDesktopGridRows,
 } from './theme-bridge.js';
 
 export { buildAppearanceMethods } from './methods.js';

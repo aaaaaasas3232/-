@@ -1,0 +1,240 @@
+/* ============================================
+ * chat-app / 转发目标选择弹窗 (v0.33 重写)
+ *
+ *   模仿 ai-remark-modal / location-card-modal 的 overlay 写法:
+ *     - .forward-target-modal-overlay  position: fixed; inset: 0
+ *       display: flex; align-items: center; justify-content: center
+ *       z-index: 10000 (高于 framework app-modal-layer 的 12,
+ *       避免被 framework 的 backdrop 遮挡)
+ *
+ *   与 chat-app 现有弹窗(地点 / 图片描述 / 备注 / 背景)风格保持一致:
+ *     - 圆角 16px 白底卡片 + 阴影
+ *     - slideUpModal 动画入场
+ * ============================================ */
+
+.forward-target-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: forwardTargetFadeIn 0.2s ease;
+}
+
+@keyframes forwardTargetFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.forward-target-modal {
+    width: 85%;
+    max-width: 360px;
+    background: #FFFFFF;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    animation: forwardTargetSlideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+
+@keyframes forwardTargetSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* ---- 头部 ---- */
+.forward-target-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 16px 8px;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+    gap: 8px;
+}
+
+.forward-target-modal-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1F2937;
+    flex-shrink: 0;
+}
+
+.forward-target-modal-mode {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+}
+
+.forward-target-modal-mode-tag {
+    font-size: 11px;
+    color: #4A6FA5;
+    padding: 3px 10px;
+    background: #E8F2FF;
+    border-radius: 10px;
+    font-weight: 500;
+}
+
+.forward-target-modal-mode-hint {
+    font-size: 10px;
+    color: #94A3B8;
+}
+
+.forward-target-modal-close {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+    flex-shrink: 0;
+    color: #6B7280;
+}
+
+.forward-target-modal-close:hover {
+    background: #F1F5F9;
+}
+
+.forward-target-modal-close svg {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+}
+
+/* ---- 主体 ---- */
+.forward-target-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 0 8px;
+}
+
+.forward-target-section {
+    padding: 4px 0;
+}
+
+.forward-target-section-title {
+    padding: 8px 16px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #94A3B8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.forward-target-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.forward-target-item {
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.forward-target-item:hover {
+    background: #F8FAFC;
+}
+
+.forward-target-item:active {
+    background: #F1F5F9;
+}
+
+.forward-target-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #A8C8EC;
+    color: #FFFFFF;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.forward-target-avatar img,
+.forward-target-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.forward-target-avatar-group {
+    background: linear-gradient(135deg, #A8C8EC, #F4A6CD);
+}
+
+.forward-target-avatar-group svg {
+    width: 22px;
+    height: 22px;
+    fill: white;
+}
+
+.forward-target-meta {
+    flex: 1;
+    min-width: 0;
+}
+
+.forward-target-name {
+    font-size: 15px;
+    color: #1F2937;
+    font-weight: 500;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.forward-target-subtitle {
+    font-size: 12px;
+    color: #94A3B8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ---- 空态 ---- */
+.forward-target-empty {
+    padding: 32px 20px;
+    text-align: center;
+    color: #94A3B8;
+    font-size: 13px;
+}
+
+.forward-target-empty svg {
+    margin-bottom: 8px;
+}
+
+.forward-target-empty-title {
+    font-size: 14px;
+    color: #6B7280;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.forward-target-empty-hint {
+    font-size: 12px;
+    color: #94A3B8;
+}

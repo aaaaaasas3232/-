@@ -1,0 +1,1771 @@
+/* ============================================
+ * chat-app 消息气泡样式
+ *
+ * 仿妆原则: 用 framework 的脸，画 chat.js 的妆
+ * 效果参考: 参考/chat.js renderMessages()
+ *
+ * 样式规范:
+ *   - 所有样式写到本文件
+ *   - JS 只放动态数据属性(data-*)和无法预知的动态颜色
+ *   - 动态颜色通过 CSS 属性选择器 [data-color="xxx"] 设置
+ *
+ * ============================================ */
+
+/* ---- 消息包装器基础 ---- */
+.app-shell[data-app-id="chat"] .chat-private .message-wrapper {
+    display: flex;
+    margin-bottom: 12px;
+    animation: messageIn 0.3s ease;
+    position: relative;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-wrapper.user {
+    flex-direction: row-reverse;
+}
+
+/* ---- 头像样式 ---- */
+.app-shell[data-app-id="chat"] .chat-private .message-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-avatar:hover {
+    transform: scale(1.1);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* 用户头像 - 粉色系 */
+.app-shell[data-app-id="chat"] .chat-private .message-wrapper.user .message-avatar {
+    background: #F4A6CD;
+}
+
+/* AI 头像 - 蓝色系 */
+.app-shell[data-app-id="chat"] .chat-private .message-wrapper.ai .message-avatar {
+    background: #A8C8EC;
+}
+
+/* ---- 消息内容区 ---- */
+.app-shell[data-app-id="chat"] .chat-private .message-content {
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-content-wrapper {
+    max-width: 70%;
+    margin: 0 8px;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-wrapper.user .message-content-wrapper {
+    align-items: flex-end;
+}
+
+/* ---- 消息气泡基础 ---- */
+.app-shell[data-app-id="chat"] .chat-private .message-bubble {
+    padding: 8px 12px;
+    border-radius: 18px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #333;
+    word-break: break-word;
+    position: relative;
+    border-width: 1px;
+    border-style: solid;
+}
+
+/* ---- 用户消息气泡 ---- */
+.app-shell[data-app-id="chat"] .chat-private .message-wrapper.user .message-bubble {
+    background: #FFE8F0;
+    border-color: #FFB3D1;
+}
+
+/* ---- AI 消息气泡 ---- */
+.app-shell[data-app-id="chat"] .chat-private .message-wrapper.ai .message-bubble {
+    background: #E8F2FF;
+    border-color: #B3D4FF;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* ---- 消息时间 ---- */
+.app-shell[data-app-id="chat"] .chat-private .message-time {
+    font-size: 10px;
+    color: #C4C4C4;
+    margin-top: 4px;
+    padding: 0 4px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-wrapper.user .message-time {
+    text-align: right;
+}
+
+/* ---- 引用消息 ---- */
+.app-shell[data-app-id="chat"] .chat-private .reply-quote {
+    padding: 6px 10px;
+    background: rgba(168, 200, 236, 0.2);
+    border-left: 3px solid #A8C8EC;
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 8px;
+    font-size: 12px;
+    color: #666;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .reply-quote-icon {
+    width: 12px;
+    height: 12px;
+    fill: none;
+    stroke: #A8C8EC;
+    stroke-width: 2;
+    vertical-align: middle;
+    margin-right: 4px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .reply-quote-text {
+    vertical-align: middle;
+}
+
+/* ---- 聊天记录卡片（合并转发）---- */
+.app-shell[data-app-id="chat"] .chat-private .chat-record-card {
+    background: #FAFBFC;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    width: 200px;
+    border: 1px solid #E8ECF0;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .chat-record-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .chat-record-header {
+    padding: 10px 12px;
+    border-bottom: 1px solid #E8ECF0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .chat-record-header svg {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: #7BA3D9;
+    stroke-width: 2;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .chat-record-header span {
+    font-size: 13px;
+    color: #333;
+    font-weight: 500;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .chat-record-header span.label {
+    color: #5A6B7A;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .chat-record-preview {
+    padding: 8px 12px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .chat-record-preview-item {
+    font-size: 11px;
+    color: #666;
+    padding: 2px 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .chat-record-preview-item .sender {
+    color: #5A8BC7;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .chat-record-more {
+    font-size: 10px;
+    color: #999;
+    padding-top: 4px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .chat-record-footer {
+    padding: 8px 12px;
+    background: #F5F6F8;
+    border-top: 1px solid #E8ECF0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .chat-record-footer .count {
+    font-size: 10px;
+    color: #999;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .chat-record-footer .action {
+    font-size: 10px;
+    color: #7BA3D9;
+}
+
+/* ---- 分享卡片 ---- */
+.app-shell[data-app-id="chat"] .chat-private .share-card-in-chat {
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .share-card-in-chat:hover {
+    transform: scale(1.02);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .share-card-thumbnail {
+    height: 60px;
+    background: linear-gradient(135deg, #E8F2FF, #D6E4FF);
+    background-size: cover;
+    background-position: center;
+    border-radius: 8px 8px 0 0;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .share-card-content {
+    padding: 8px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .share-card-title {
+    font-weight: 500;
+    font-size: 12px;
+    color: #333;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .share-card-desc {
+    font-size: 10px;
+    color: #666;
+    margin-top: 3px;
+}
+
+/* ---- 联系人卡片 ---- */
+.app-shell[data-app-id="chat"] .chat-private .contact-card-in-chat {
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 8px;
+    padding: 10px;
+    cursor: pointer;
+    min-width: 130px;
+    transition: transform 0.2s, background 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .contact-card-in-chat:hover {
+    background: rgba(255, 255, 255, 0.9);
+    transform: scale(1.02);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .contact-card-header {
+    display: flex;
+    align-items: center;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .contact-card-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #ddd;
+    margin-right: 8px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 14px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .contact-card-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .contact-card-name {
+    font-weight: 500;
+    color: #333;
+    font-size: 13px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .contact-card-action {
+    font-size: 10px;
+    color: #4A6FA5;
+    margin-top: 6px;
+    text-align: center;
+}
+
+/* ---- 位置卡片 ---- */
+.app-shell[data-app-id="chat"] .chat-private .location-card-in-chat {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    width: 210px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .location-card-in-chat:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .location-card-map {
+    width: 100%;
+    height: 75px;
+    background: linear-gradient(135deg, #E8F2FF, #D6E4FF);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .location-card-map-icon {
+    width: 16px;
+    height: 16px;
+    fill: #FF6B6B;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .location-card-map-grid {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(rgba(168, 200, 236, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(168, 200, 236, 0.1) 1px, transparent 1px);
+    background-size: 15px 15px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .location-card-info {
+    padding: 5px 12px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .location-card-name {
+    font-weight: 600;
+    font-size: 13px;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .location-card-address {
+    font-size: 11px;
+    color: #999;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .location-card-address svg {
+    width: 10px;
+    height: 10px;
+    fill: #999;
+}
+
+/* ---- 表情包 ---- */
+.app-shell[data-app-id="chat"] .chat-private .sticker-message {
+    max-width: 100px;
+    max-height: 100px;
+    border-radius: 8px;
+    display: block;
+}
+
+/* ---- 图片消息 ---- */
+.app-shell[data-app-id="chat"] .chat-private .image-message {
+    max-width: 200px;
+    max-height: 200px;
+    border-radius: 12px;
+    display: block;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .image-message:hover {
+    transform: scale(1.02);
+}
+
+/* ---- 语音消息 ---- */
+.app-shell[data-app-id="chat"] .chat-private .voice-message {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 80px;
+    cursor: pointer;
+    padding: 8px 12px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .voice-icon {
+    width: 16px;
+    height: 16px;
+    fill: #4A6FA5;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .voice-duration {
+    font-size: 12px;
+    color: #666;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .voice-wave {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    height: 16px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .voice-wave span {
+    width: 2px;
+    background: #A8C8EC;
+    border-radius: 1px;
+    animation: voiceWave 0.5s ease infinite alternate;
+}
+
+@keyframes voiceWave {
+    from { height: 4px; }
+    to { height: 16px; }
+}
+
+/* ---- 红包/转账卡片 ---- */
+/* 老的 .redpacket-card / .redpacket-header / .redpacket-icon / .redpacket-title / .redpacket-sender 基础样式
+ * 已删除(2026-08-05 改造):旧样式是给「居中卡片」用的,
+ * 现在红包/位置都改走 .message-bubble-card 包裹的普通气泡结构,
+ * 新样式在 line 1162 起的 .message-bubble-card .redpacket-card 块里。
+ *
+ * .transfer-card(转账卡片)暂未迁移到 .message-bubble-card,
+ * 保留它的旧基础样式。 */
+
+/* 转账卡片 */
+.app-shell[data-app-id="chat"] .chat-private .transfer-card {
+    background: linear-gradient(135deg, #FCD34D, #F59E0B);
+    border-radius: 8px;
+    padding: 12px;
+    cursor: pointer;
+    width: 160px;
+    color: #92400E;
+    transition: transform 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .transfer-card:hover {
+    transform: scale(1.03);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .transfer-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .transfer-icon {
+    width: 32px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .transfer-amount {
+    font-weight: 600;
+    font-size: 18px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .transfer-note {
+    font-size: 11px;
+    opacity: 0.8;
+}
+
+/* ---- 购物分享卡片 ---- */
+.app-shell[data-app-id="chat"] .chat-private .shop-share-card {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    width: 200px;
+    border: 1px solid #E8ECF0;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .shop-share-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .shop-share-image {
+    height: 80px;
+    background: linear-gradient(135deg, #f5f5f5, #e0e0e0);
+    background-size: cover;
+    background-position: center;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .shop-share-info {
+    padding: 10px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .shop-share-title {
+    font-size: 13px;
+    color: #333;
+    font-weight: 500;
+    margin-bottom: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .shop-share-price {
+    font-size: 14px;
+    color: #FF4757;
+    font-weight: 600;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .shop-share-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 6px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .shop-share-action {
+    font-size: 10px;
+    color: #4A6FA5;
+}
+
+/* ---- 歌曲/歌单分享卡片 ---- */
+.app-shell[data-app-id="chat"] .chat-private .song-share-card,
+.app-shell[data-app-id="chat"] .chat-private .playlist-share-card {
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    width: 180px;
+    color: white;
+    transition: transform 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .song-share-card:hover,
+.app-shell[data-app-id="chat"] .chat-private .playlist-share-card:hover {
+    transform: translateY(-2px);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .song-share-header,
+.app-shell[data-app-id="chat"] .chat-private .playlist-share-header {
+    padding: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .song-share-title-row,
+.app-shell[data-app-id="chat"] .chat-private .playlist-share-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .song-share-icon,
+.app-shell[data-app-id="chat"] .chat-private .playlist-share-icon {
+    width: 28px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .song-share-icon svg,
+.app-shell[data-app-id="chat"] .chat-private .playlist-share-icon svg {
+    width: 14px;
+    height: 14px;
+    fill: white;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .song-share-title,
+.app-shell[data-app-id="chat"] .chat-private .playlist-share-title {
+    flex: 1;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .song-share-subtitle,
+.app-shell[data-app-id="chat"] .chat-private .playlist-share-subtitle {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 11px;
+    margin-top: 1px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .song-share-songs,
+.app-shell[data-app-id="chat"] .chat-private .playlist-share-songs {
+    margin-top: 8px;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .song-share-song,
+.app-shell[data-app-id="chat"] .chat-private .playlist-share-song {
+    font-size: 11px;
+    padding: 2px 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .song-share-footer,
+.app-shell[data-app-id="chat"] .chat-private .playlist-share-footer {
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 10px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .song-share-footer svg,
+.app-shell[data-app-id="chat"] .chat-private .playlist-share-footer svg {
+    width: 12px;
+    height: 12px;
+    fill: white;
+    vertical-align: middle;
+    margin-right: 4px;
+}
+
+/* ---- 一起听邀请卡片 ---- */
+.app-shell[data-app-id="chat"] .chat-private .listen-together-card {
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    width: 180px;
+    color: white;
+    transition: transform 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .listen-together-card:hover {
+    transform: translateY(-2px);
+}
+
+/* ---- 消息操作按钮组 ---- */
+.app-shell[data-app-id="chat"] .chat-private .message-actions {
+    position: absolute;
+    bottom: 2px;
+    left: 70%;
+    transform: translateX(-50%);
+    display: none;
+    gap: 4px;
+    z-index: 100;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-wrapper.user .message-actions {
+    left: auto;
+    right: 10%;
+    transform: none;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-wrapper:hover .message-actions {
+    display: flex;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .action-btn {
+    width: 26px;
+    height: 26px;
+    border: 1px solid #D6E4FF;
+    background: #FFF;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .action-btn:hover {
+    transform: scale(1.15);
+    background: #F0F8FF;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .action-btn svg {
+    width: 11px;
+    height: 11px;
+}
+
+/* 收藏按钮 */
+.app-shell[data-app-id="chat"] .chat-private .action-btn.favorite svg {
+    fill: none;
+    stroke: #FF6B9D;
+    stroke-width: 2;
+}
+
+/* ★ v0.44 已收藏状态:粉色填充 */
+.app-shell[data-app-id="chat"] .chat-private .action-btn.favorite.favorited svg,
+.app-shell[data-app-id="chat"] .chat-group .action-btn.favorite.favorited svg {
+    fill: #FF6B9D;
+    stroke: #FF6B9D;
+}
+
+/* 删除按钮 */
+.app-shell[data-app-id="chat"] .chat-private .action-btn.delete svg {
+    fill: none;
+    stroke: #FF6B9D;
+    stroke-width: 2;
+}
+
+/* 回复按钮 */
+.app-shell[data-app-id="chat"] .chat-private .action-btn.reply svg {
+    fill: none;
+    stroke: #4A6FA5;
+    stroke-width: 2;
+}
+
+/* 多选按钮 */
+.app-shell[data-app-id="chat"] .chat-private .action-btn.multiselect {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid #D6E4FF;
+    background: white;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .action-btn.multiselect.checked {
+    background: #4A6FA5;
+    border-color: #4A6FA5;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .action-btn.multiselect.checked svg {
+    stroke: white;
+}
+
+/* ---- 系统消息样式 ---- */
+.app-shell[data-app-id="chat"] .chat-private .system-message,
+.app-shell[data-app-id="chat"] .chat-private .special-msg-wrapper {
+    text-align: center;
+    margin: 12px 0;
+    position: relative;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .system-message span {
+    display: inline-block;
+    padding: 6px 16px;
+    background: rgba(168, 200, 236, 0.15);
+    border-radius: 20px;
+    font-size: 12px;
+    color: #999;
+}
+
+/* ---- 日期分隔线 ---- */
+.app-shell[data-app-id="chat"] .chat-private .date-divider {
+    text-align: center;
+    margin: 16px 0;
+    font-size: 11px;
+    color: #999;
+}
+
+/* ---- 摘要卡片 ---- */
+.app-shell[data-app-id="chat"] .chat-private .summary-card-wrapper {
+    text-align: center;
+    margin: 16px 0;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .summary-card {
+    display: inline-block;
+    max-width: 280px;
+    padding: 14px 18px;
+    background: #FAFBFC;
+    border: 1px solid #E8ECF0;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .summary-card:hover {
+    border-color: #A8C8EC;
+    box-shadow: 0 2px 8px rgba(168, 200, 236, 0.3);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .summary-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .summary-card-header svg {
+    width: 14px;
+    height: 14px;
+    fill: #4A6FA5;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .summary-card-date {
+    font-size: 12px;
+    font-weight: 500;
+    color: #4A6FA5;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .summary-card-content {
+    font-size: 12px;
+    color: #666;
+    line-height: 1.5;
+    text-align: left;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .summary-card-empty {
+    font-size: 11px;
+    color: #999;
+    text-align: left;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .summary-card-action {
+    font-size: 11px;
+    color: #4A6FA5;
+    margin-top: 6px;
+}
+
+/* ---- 通话记录卡片样式 (在 bubble 里) ---- */
+/* 通话记录也是一种消息,所以也归在 .message-wrapper 内 .special-msg-wrapper,
+   卡片 CSS 用 .call-record-card 单独控制,跟普通 .message-bubble 无关。
+   卡片是「居中卡片 + 居中底部时间」,不是头像靠左/靠右的横向气泡布局。 */
+.app-shell[data-app-id="chat"] .chat-private .call-record-wrapper,
+.app-shell[data-app-id="chat"] .chat-group .call-record-wrapper,
+.app-shell[data-app-id="chat"] .chat-private .message-wrapper.call-record-wrapper,
+.app-shell[data-app-id="chat"] .chat-group .message-wrapper.call-record-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin: 16px 0;
+    position: relative;
+    width: 100%;
+}
+
+/* 覆盖 .message-wrapper.user 的 row-reverse — 通话记录卡片永远 column 居中 */
+.app-shell[data-app-id="chat"] .chat-private .message-wrapper.call-record-wrapper.user,
+.app-shell[data-app-id="chat"] .chat-group .message-wrapper.call-record-wrapper.user {
+    flex-direction: column;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .call-record-wrapper .message-actions,
+.app-shell[data-app-id="chat"] .chat-group .call-record-wrapper .message-actions {
+    display: none;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .call-record-wrapper:hover .message-actions,
+.app-shell[data-app-id="chat"] .chat-group .call-record-wrapper:hover .message-actions {
+    display: flex;
+}
+
+/* 卡片本体 — 视频:淡粉,语音:淡蓝。
+   注意不再用 inline-block,因为父级已是 column flex。 */
+.app-shell[data-app-id="chat"] .chat-private .call-record-card,
+.app-shell[data-app-id="chat"] .chat-group .call-record-card {
+    display: block;
+    width: 240px;
+    max-width: calc(100% - 32px);
+    padding: 0;
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    background: linear-gradient(135deg, #EEF4FF 0%, #E0EBFF 100%);
+    border: 1px solid rgba(74, 111, 165, 0.1);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .call-record-card:hover,
+.app-shell[data-app-id="chat"] .chat-group .call-record-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+}
+
+/* 视频通话卡片 — 浅粉主题 */
+.app-shell[data-app-id="chat"] .chat-private .call-record-card[data-call-type="video"],
+.app-shell[data-app-id="chat"] .chat-group .call-record-card[data-call-type="video"] {
+    background: linear-gradient(135deg, #FFF0F3 0%, #FFE4EC 100%);
+    border-color: rgba(233, 30, 99, 0.1);
+}
+
+/* 卡片头部信息(图标 + 标题 + 时长 + 箭头) */
+.app-shell[data-app-id="chat"] .chat-private .call-record-header,
+.app-shell[data-app-id="chat"] .chat-group .call-record-header {
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .call-record-icon,
+.app-shell[data-app-id="chat"] .chat-group .call-record-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: #D6E4FF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .call-record-card[data-call-type="video"] .call-record-icon,
+.app-shell[data-app-id="chat"] .chat-group .call-record-card[data-call-type="video"] .call-record-icon {
+    background: #FFDCE5;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .call-record-icon svg,
+.app-shell[data-app-id="chat"] .chat-group .call-record-icon svg {
+    width: 18px;
+    height: 18px;
+    fill: #4A6FA5;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .call-record-card[data-call-type="video"] .call-record-icon svg,
+.app-shell[data-app-id="chat"] .chat-group .call-record-card[data-call-type="video"] .call-record-icon svg {
+    fill: #E91E63;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .call-record-text,
+.app-shell[data-app-id="chat"] .chat-group .call-record-text {
+    flex: 1;
+    text-align: left;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .call-record-title,
+.app-shell[data-app-id="chat"] .chat-group .call-record-title {
+    font-size: 14px;
+    color: #3D5A80;
+    font-weight: 500;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .call-record-card[data-call-type="video"] .call-record-title,
+.app-shell[data-app-id="chat"] .chat-group .call-record-card[data-call-type="video"] .call-record-title {
+    color: #C2185B;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .call-record-duration,
+.app-shell[data-app-id="chat"] .chat-group .call-record-duration {
+    font-size: 12px;
+    color: #4A6FA5;
+    margin-top: 2px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .call-record-card[data-call-type="video"] .call-record-duration,
+.app-shell[data-app-id="chat"] .chat-group .call-record-card[data-call-type="video"] .call-record-duration {
+    color: #E91E63;
+}
+
+/* 未接通 — 红色提示 */
+.app-shell[data-app-id="chat"] .chat-private .call-record-card[data-connected="false"] .call-record-duration,
+.app-shell[data-app-id="chat"] .chat-group .call-record-card[data-connected="false"] .call-record-duration {
+    color: #FF6B6B;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .call-record-arrow,
+.app-shell[data-app-id="chat"] .chat-group .call-record-arrow {
+    width: 16px;
+    height: 16px;
+    fill: rgba(74, 111, 165, 0.3);
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .call-record-card[data-call-type="video"] .call-record-arrow,
+.app-shell[data-app-id="chat"] .chat-group .call-record-card[data-call-type="video"] .call-record-arrow {
+    fill: rgba(233, 30, 99, 0.3);
+}
+
+/* 卡片底部摘要 / 消息数 */
+.app-shell[data-app-id="chat"] .chat-private .call-record-summary,
+.app-shell[data-app-id="chat"] .chat-group .call-record-summary {
+    padding: 12px 16px 14px;
+    border-top: 1px solid rgba(74, 111, 165, 0.08);
+    font-size: 12px;
+    color: rgba(61, 90, 128, 0.8);
+    line-height: 1.6;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: left;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .call-record-card[data-call-type="video"] .call-record-summary,
+.app-shell[data-app-id="chat"] .chat-group .call-record-card[data-call-type="video"] .call-record-summary {
+    border-top-color: rgba(233, 30, 99, 0.08);
+    color: rgba(194, 24, 91, 0.8);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .call-record-msg-count,
+.app-shell[data-app-id="chat"] .chat-group .call-record-msg-count {
+    font-size: 12px;
+    color: rgba(61, 90, 128, 0.5);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .call-record-card[data-call-type="video"] .call-record-msg-count,
+.app-shell[data-app-id="chat"] .chat-group .call-record-card[data-call-type="video"] .call-record-msg-count {
+    color: rgba(194, 24, 91, 0.5);
+}
+
+/* call-record-card 自身的工具按钮(收藏/删除) — 在卡片下方居中 */
+.app-shell[data-app-id="chat"] .chat-private .call-record-wrapper .call-record-actions,
+.app-shell[data-app-id="chat"] .chat-group .call-record-wrapper .call-record-actions {
+    position: absolute;
+    bottom: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: none;
+    gap: 4px;
+    z-index: 100;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .call-record-wrapper:hover .call-record-actions,
+.app-shell[data-app-id="chat"] .chat-group .call-record-wrapper:hover .call-record-actions {
+    display: flex;
+}
+
+/* 通话记录卡片底部的时间:在卡片下方居中,不是右边 */
+.app-shell[data-app-id="chat"] .chat-private .call-record-wrapper .message-time,
+.app-shell[data-app-id="chat"] .chat-group .call-record-wrapper .message-time {
+    margin-top: 8px;
+    text-align: center;
+    font-size: 10px;
+    color: #C4C4C4;
+    width: 100%;
+}
+
+/* 给 hover 时浮出的 .call-record-actions 留出空间(不被下条消息覆盖) */
+.app-shell[data-app-id="chat"] .chat-private .call-record-wrapper,
+.app-shell[data-app-id="chat"] .chat-group .call-record-wrapper {
+    padding-bottom: 4px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .call-record-wrapper .call-record-actions .action-btn,
+.app-shell[data-app-id="chat"] .chat-group .call-record-wrapper .call-record-actions .action-btn {
+    width: 26px;
+    height: 26px;
+    border: 1px solid #D6E4FF;
+    background: #FFF;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .call-record-wrapper .call-record-actions .action-btn svg,
+.app-shell[data-app-id="chat"] .chat-group .call-record-wrapper .call-record-actions .action-btn svg {
+    width: 11px;
+    height: 11px;
+}
+
+/* ---- 隐藏聊天详情页滚动条(消息流容器) ---- */
+.app-shell[data-app-id="chat"] .chat-private .chat-messages::-webkit-scrollbar,
+.app-shell[data-app-id="chat"] .chat-group .chat-messages::-webkit-scrollbar,
+.app-shell[data-app-id="chat"] .chat-private .chat-messages::-webkit-scrollbar-thumb,
+.app-shell[data-app-id="chat"] .chat-group .chat-messages::-webkit-scrollbar-thumb,
+.app-shell[data-app-id="chat"] .chat-private .chat-messages::-webkit-scrollbar-track,
+.app-shell[data-app-id="chat"] .chat-group .chat-messages::-webkit-scrollbar-track {
+    width: 0;
+    height: 0;
+    background: transparent;
+    display: none;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .chat-messages,
+.app-shell[data-app-id="chat"] .chat-group .chat-messages {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE / Edge */
+}
+
+/* ============================================
+ * 卡片型气泡(红包 / 位置 / 后续的转账 / 歌曲 / 一起听等)
+ *
+ * 与普通气泡同结构:.message-wrapper + .message + .avatar + .message-content + .message-bubble
+ * .message-bubble 内部塞的是卡片本身(不是文字)。
+ *
+ * 加 .message-bubble-card 类后,.message-bubble 自身的 padding / 边框 / 背景全部
+ * 清掉,让卡片自己撑满;卡片的宽高/圆角/阴影由各自的卡片样式管。
+ *
+ * chat.js line 7264-7465 的真实实现:
+ *   avatarHtml + bubbleHtml 拼到 msgWrapper 里,
+ *   bubbleHtml = <div .message-content> + <卡片> + <.message-time>
+ *   头像在 .message 内部,跟普通 text 气泡同款
+ * ============================================ */
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card {
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+/* ============================================
+ * 红包卡片 — 走普通气泡结构(在 .message-bubble-card 内)
+ *
+ * 等比例缩小 30%(2026-08-05)
+ * 220px → 154px
+ * ============================================ */
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card .redpacket-card,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card .redpacket-card {
+    width: 180px;
+    /* 卡片本身不加 padding — chat.js 原版的 padding 都在 header / footer 内部 */
+    padding: 0;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    box-shadow: 0 2px 12px rgba(255, 107, 138, 0.2);
+    transition: transform 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card .redpacket-card:hover,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card .redpacket-card:hover {
+    transform: scale(1.03);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card .redpacket-header,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card .redpacket-header {
+    background: linear-gradient(135deg, #FF8FAB, #FF6B8A);
+    padding: 8px 11px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 0;
+}
+
+/* 已拒绝红包 → 灰色顶(JS 会传 inline style 覆盖 background) */
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card .redpacket-icon,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card .redpacket-icon {
+    width: 28px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card .redpacket-icon svg,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card .redpacket-icon svg {
+    width: 17px;
+    height: 17px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card .redpacket-text,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card .redpacket-text {
+    flex: 1;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card .redpacket-title,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card .redpacket-title {
+    color: white;
+    font-weight: 600;
+    font-size: 12px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card .redpacket-sender,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card .redpacket-sender {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 9px;
+    margin-top: 2px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card .redpacket-footer,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card .redpacket-footer {
+    background: white;
+    padding: 8px 11px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card .redpacket-cta,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card .redpacket-cta {
+    font-size: 10px;
+    color: #FF6B8A;
+}
+
+/* ===== 已领取红包样式 ===== */
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card .redpacket-card.opened .redpacket-header,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card .redpacket-card.opened .redpacket-header {
+    background: linear-gradient(135deg, #b3b3b3, #999);
+}
+
+/* ===== 口令红包封面样式 ===== */
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card .redpacket-card.cover,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card .redpacket-card.cover {
+    background: linear-gradient(180deg, #FFD700, #FFA500);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card .redpacket-cover-bg,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card .redpacket-cover-bg {
+    padding: 16px;
+    text-align: center;
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card .redpacket-cover-title,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card .redpacket-cover-title {
+    font-size: 18px;
+    font-weight: bold;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    margin-bottom: 4px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card .redpacket-cover-subtitle,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card .redpacket-cover-subtitle {
+    font-size: 10px;
+    color: rgba(255,255,255,0.9);
+}
+
+/* ============================================
+ * 转账卡片 — 走普通气泡结构(在 .message-bubble-card 内)
+ *
+ * 等比例缩小 30%
+ * ============================================ */
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card .transfer-card,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card .transfer-card {
+    width: 180px;
+    padding: 0;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    box-shadow: 0 2px 12px rgba(250, 190, 80, 0.3);
+    transition: transform 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card .transfer-card:hover,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card .transfer-card:hover {
+    transform: scale(1.03);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card .transfer-header,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card .transfer-header {
+    background: linear-gradient(135deg, #FFD700, #F59E0B);
+    padding: 11px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card .transfer-icon,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card .transfer-icon {
+    width: 28px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card .transfer-info,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card .transfer-info {
+    flex: 1;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card .transfer-amount,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card .transfer-amount {
+    font-size: 16px;
+    font-weight: bold;
+    color: white;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card .transfer-note,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card .transfer-note {
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.85);
+    margin-top: 2px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card .transfer-footer,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card .transfer-footer {
+    background: white;
+    padding: 8px 11px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card .transfer-status,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card .transfer-status {
+    font-size: 10px;
+    color: #FF6B8A;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card .transfer-check,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card .transfer-check {
+    font-size: 12px;
+    color: #52c41a;
+}
+
+/* ============================================
+ * 位置卡片 — 走普通气泡结构(在 .message-bubble-card 内)
+ *
+ * 1:1 复原 chat.js line 7330-7344
+ * 200px 白底圆角卡 + 阴影
+ * 顶部 100px 地图预览区(蓝渐变 + 红色定位图标 + 网格)
+ * 底部 信息区(地点名 + 地址)
+ * hover 上浮
+ * ============================================ */
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card .location-card-in-chat,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card .location-card-in-chat {
+    width: 200px;
+    /* 位置卡片本身不加 padding — info 区在内部 */
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card .location-card-in-chat:hover,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card .location-card-in-chat:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* ============================================
+ * 图片描述卡片 — 走普通气泡结构(在 .message-bubble-card 内)
+ *
+ * 和位置卡片一样，横向布局（图标 + 文字）
+ * ============================================ */
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card .desc-image-card,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card .desc-image-card {
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card .desc-image-card-inner,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card .desc-image-card-inner {
+    border-radius: 12px;
+    overflow: hidden;
+    padding: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card .desc-image-card-inner:hover,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card .desc-image-card-inner:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card .desc-image-card-icon,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card .desc-image-card-icon {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card .desc-image-card-text-group,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card .desc-image-card-text-group {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 12px 12px 12px 0;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .message-bubble-card .desc-image-card-text,
+.app-shell[data-app-id="chat"] .chat-group .message-bubble-card .desc-image-card-text {
+    font-size: 12px;
+    line-height: 1.3;
+    text-align: left;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* ============================================
+ * 居中卡片消息 — 系统卡片消息(通话记录/图片描述等)
+ *
+ * 特点：左右居中显示，卡片下方带操作组
+ * ============================================ */
+.app-shell[data-app-id="chat"] .chat-private .center-card-wrapper,
+.app-shell[data-app-id="chat"] .chat-group .center-card-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .center-card-container,
+.app-shell[data-app-id="chat"] .chat-group .center-card-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 85%;
+}
+
+/* 图片描述卡片居中 */
+.app-shell[data-app-id="chat"] .chat-private .center-card-container .desc-image-card,
+.app-shell[data-app-id="chat"] .chat-group .center-card-container .desc-image-card {
+    width: 100%;
+    max-width: 260px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .center-card-container .desc-image-card:hover,
+.app-shell[data-app-id="chat"] .chat-group .center-card-container .desc-image-card:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.app-shell[data-app-id="chat"] .chat-private .center-card-container .desc-image-card-inner,
+.app-shell[data-app-id="chat"] .chat-group .center-card-container .desc-image-card-inner {
+    border-radius: 12px;
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    min-height: 120px;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .center-card-container .desc-image-card-icon,
+.app-shell[data-app-id="chat"] .chat-group .center-card-container .desc-image-card-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .center-card-container .desc-image-card-text-group,
+.app-shell[data-app-id="chat"] .chat-group .center-card-container .desc-image-card-text-group {
+    width: 100%;
+    text-align: center;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .center-card-container .desc-image-card-text,
+.app-shell[data-app-id="chat"] .chat-group .center-card-container .desc-image-card-text {
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+/* 居中卡片的时间戳居中 */
+.app-shell[data-app-id="chat"] .chat-private .center-card-wrapper .message-time,
+.app-shell[data-app-id="chat"] .chat-group .center-card-wrapper .message-time {
+    text-align: center;
+    margin-top: 6px;
+}
+
+/* 居中卡片消息的操作组居中 */
+.app-shell[data-app-id="chat"] .chat-private .center-card-wrapper .message-actions,
+.app-shell[data-app-id="chat"] .chat-group .center-card-wrapper .message-actions {
+    justify-content: center;
+    margin-top: 4px;
+}
+
+/* ============================================
+ * v0.62 群聊消息气泡 — 跟私聊共享样式体系
+ *   - 复用 .message-wrapper / .message / .message-content / .message-bubble
+ *   - 新增 .consecutive(连续气泡合并,隐藏头像/名字)
+ *   - 新增 .sender-name 群聊特有(在 bubble 上方显示发送者名字)
+ *   - 多选模式(.multi-select-mode)显示 .message-select-button
+ * ============================================ */
+
+/* ---- 群聊 .message-wrapper 基础 ---- */
+.app-shell[data-app-id="chat"] .chat-group .message-wrapper {
+    display: flex;
+    margin-bottom: 12px;
+    animation: messageIn 0.3s ease;
+    position: relative;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .message-wrapper.user {
+    flex-direction: row-reverse;
+}
+
+/* ---- 群聊头像 ---- */
+.app-shell[data-app-id="chat"] .chat-group .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 13px;
+    font-weight: 500;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* ---- 群聊 .message-content ---- */
+.app-shell[data-app-id="chat"] .chat-group .message-content {
+    position: relative;
+    transition: all 0.3s ease;
+    max-width: 70%;
+    margin: 0 8px;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .message-wrapper.user .message-content {
+    align-items: flex-end;
+}
+
+/* ---- 群聊 .message-bubble 基础 ---- */
+.app-shell[data-app-id="chat"] .chat-group .message-bubble {
+    padding: 8px 12px;
+    border-radius: 18px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #333;
+    word-break: break-word;
+    position: relative;
+    border-width: 1px;
+    border-style: solid;
+}
+
+/* ---- 群聊用户消息气泡 ---- */
+.app-shell[data-app-id="chat"] .chat-group .message-wrapper.user .message-bubble {
+    background: #FFE8F0;
+    border-color: #FFB3D1;
+}
+
+/* ---- 群聊 AI 消息气泡 ---- */
+.app-shell[data-app-id="chat"] .chat-group .message-wrapper.ai .message-bubble,
+.app-shell[data-app-id="chat"] .chat-group .message-wrapper:not(.user) .message-bubble {
+    background: #E8F2FF;
+    border-color: #B3D4FF;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* ---- 群聊 .message-time ---- */
+.app-shell[data-app-id="chat"] .chat-group .message-time {
+    font-size: 10px;
+    color: #C4C4C4;
+    margin-top: 4px;
+    padding: 0 4px;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .message-wrapper.user .message-time {
+    text-align: right;
+}
+
+/* ---- 群聊 .reply-quote ---- */
+.app-shell[data-app-id="chat"] .chat-group .reply-quote {
+    padding: 6px 10px;
+    background: rgba(168, 200, 236, 0.2);
+    border-left: 3px solid #A8C8EC;
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 8px;
+    font-size: 12px;
+    color: #666;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ---- 群聊 .sender-name (新增) ---- */
+.app-shell[data-app-id="chat"] .chat-group .sender-name {
+    font-size: 11px;
+    color: #888;
+    margin-bottom: 4px;
+    padding: 0 6px;
+    font-weight: 500;
+}
+
+/* ---- ★ v0.62 群聊连续气泡合并(.consecutive) ----
+ *   - 隐藏头像(给位,留 margin)
+ *   - 隐藏 sender-name
+ *   - 缩小 bubble 顶部 padding 让两条消息视觉贴近
+ */
+.app-shell[data-app-id="chat"] .chat-group .message-wrapper.consecutive .avatar {
+    visibility: hidden;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .message-wrapper.consecutive .sender-name {
+    display: none;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .message-wrapper.consecutive {
+    margin-top: -6px;
+}
+
+/* ---- 群聊 .message-actions (复用私聊) ---- */
+.app-shell[data-app-id="chat"] .chat-group .message-actions {
+    display: none;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .message-wrapper:hover .message-actions {
+    display: flex;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .message-wrapper.user .message-actions {
+    justify-content: flex-end;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .message-actions .action-btn {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: #F0F2F5;
+    border: none;
+    color: #5A6B7D;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .message-actions .action-btn:hover {
+    background: #E4E8ED;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .message-actions .action-btn svg {
+    width: 11px;
+    height: 11px;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .message-actions .action-btn.favorite.favorited {
+    color: #FFB3D1;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .message-actions .action-btn.disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* ---- 群聊 .message-select-button (多选模式) ---- */
+.app-shell[data-app-id="chat"] .chat-group .message-select-button {
+    display: none;
+    width: 22px;
+    height: 22px;
+    margin-right: 8px;
+    border-radius: 50%;
+    border: 2px solid #D6E4FF;
+    background: white;
+    cursor: pointer;
+    flex-shrink: 0;
+    align-self: center;
+    transition: all 0.15s;
+    position: relative;
+}
+
+.app-shell[data-app-id="chat"] .chat-group.multi-select-mode .message-select-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="chat"] .chat-group.multi-select-mode .message-wrapper.user {
+    flex-direction: row;
+}
+
+.app-shell[data-app-id="chat"] .chat-group.multi-select-mode .message-wrapper.user .message-select-button {
+    margin-right: 0;
+    margin-left: 8px;
+    order: 3;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .message-select-button[aria-checked="true"] {
+    background: #4A6FA5;
+    border-color: #4A6FA5;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .message-select-button[aria-checked="true"] .message-select-check::after {
+    content: '✓';
+    color: white;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .message-wrapper.selected {
+    background: rgba(74, 111, 165, 0.06);
+    border-radius: 8px;
+}
+
+/* ---- 群聊多选模式浮层(.multi-select-bar)---- */
+.app-shell[data-app-id="chat"] .chat-group .multi-select-bar {
+    display: none;
+    flex-shrink: 0;
+    padding: 10px 16px;
+    background: rgba(237, 242, 253, 0.98);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    align-items: center;
+    justify-content: space-between;
+    z-index: 5;
+}
+
+.app-shell[data-app-id="chat"] .chat-group.multi-select-mode .multi-select-bar {
+    display: flex;
+}
+
+/* ---- 群聊回复预览 ---- */
+.app-shell[data-app-id="chat"] .chat-group .reply-preview {
+    display: none;
+    flex-shrink: 0;
+    padding: 8px 16px;
+    background: rgba(168, 200, 236, 0.1);
+    border-top: 1px solid rgba(168, 200, 236, 0.2);
+}
+
+.app-shell[data-app-id="chat"] .chat-group .reply-preview.active {
+    display: flex;
+}
+
+/* ---- 群聊日期分割线 ---- */
+.app-shell[data-app-id="chat"] .chat-group .date-divider {
+    text-align: center;
+    padding: 12px 0;
+    font-size: 11px;
+    color: #999;
+    position: relative;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .date-divider::before,
+.app-shell[data-app-id="chat"] .chat-group .date-divider::after {
+    content: '';
+    display: inline-block;
+    width: 60px;
+    height: 1px;
+    background: #E0E0E0;
+    vertical-align: middle;
+    margin: 0 8px;
+}
+

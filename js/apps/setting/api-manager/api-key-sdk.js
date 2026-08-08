@@ -73,6 +73,18 @@ function now() {
     return Date.now();
 }
 
+/**
+ * ★ v0.62.6 统一查找 API Key:
+ *   优先用 window.__apiSdk(来自 api-manager-section.js,有内存缓存),
+ *   fallback 到 _apiKeySdk(由 bootstrapApiSdk 初始化,可能未初始化)
+ *   → chat-app 等业务 app 即使没经过 settings app 也能找到 key
+ */
+function _getApiKeyById(id) {
+    if (!id) return null;
+    const sdk = window.__apiSdk?.apiKeySdk || _apiKeySdk;
+    return sdk?.get?.(id) || null;
+}
+
 // ============================================
 // API Key SDK
 // ============================================
@@ -196,13 +208,12 @@ function createApiGroupSdk(db) {
             if (strategy === 'random') {
                 // 随机选择
                 const randomIdx = Math.floor(Math.random() * ids.length);
-                const apiKey = _apiKeySdk?.get(ids[randomIdx]);
+                const apiKey = _getApiKeyById(ids[randomIdx]);
                 return apiKey && apiKey.enabled !== false ? { apiKey, group } : null;
             }
 
             if (strategy === 'sequential') {
-                // 顺序使用：总是从第一个开始
-                const apiKey = _apiKeySdk?.get(ids[0]);
+                const apiKey = _getApiKeyById(ids[0]);
                 return apiKey && apiKey.enabled !== false ? { apiKey, group } : null;
             }
 
@@ -213,7 +224,7 @@ function createApiGroupSdk(db) {
 
             while (attempts < len) {
                 const idx = (currentIdx + attempts) % len;
-                const apiKey = _apiKeySdk?.get(ids[idx]);
+                const apiKey = _getApiKeyById(ids[idx]);
                 if (apiKey && apiKey.enabled !== false) {
                     // 更新组的当前索引
                     group.currentIndex = (idx + 1) % len;
@@ -413,14 +424,19 @@ export async function executeApiRequest({
         let usedGroup = null;
 
         if (groupId) {
-            const result = _apiGroupSdk?.getNextInGroup(groupId);
+            // ★ v0.62.6:优先用 window.__apiSdk(来自 api-manager-section.js,有内存缓存),
+            //   否则用 _apiGroupSdk(可能未初始化)
+            const apiGroup = window.__apiSdk?.apiGroupSdk || _apiGroupSdk;
+            const result = apiGroup?.getNextInGroup?.(groupId);
             if (!result) {
                 throw new Error(`API 组 ${groupId} 没有可用的 API Key`);
             }
             apiKeyConfig = result.apiKey;
             usedGroup = result.group;
         } else if (apiKeyId) {
-            apiKeyConfig = _apiKeySdk?.get(apiKeyId);
+            // ★ 同上:优先用 window.__apiSdk,fallback 到 _apiKeySdk
+            const apiKey = window.__apiSdk?.apiKeySdk || _apiKeySdk;
+            apiKeyConfig = apiKey?.get?.(apiKeyId);
         }
 
         if (!apiKeyConfig) {
@@ -445,19 +461,30 @@ export async function executeApiRequest({
         };
 
         // 根据 Provider 添加认证头
-        if (provider === 'openai' || provider === 'openai-compatible') {
+        // ★ v0.62.7 修复:用 PROVIDER_PRESETS[provider].authType 动态判断,
+        //   覆盖所有 OpenAI 兼容 provider(deepseek / siliconflow / moonshot / zhipu / ollama / custom)。
+        //   历史 bug:之前只硬编码 5 个 provider name,导致 deepseek 等
+        //   provider='deepseek' 的 key 不带 Authorization → deepseek API 返回 401。
+        const preset = PROVIDER_PRESETS[provider] || null;
+        const authType = preset?.authType || (provider === 'azure' ? 'api-key' : 'bearer');
+
+        if (authType === 'bearer') {
+            // OpenAI / openai-compatible / deepseek / siliconflow / moonshot / zhipu / ollama / custom
             requestHeaders['Authorization'] = `Bearer ${apiKey}`;
-        } else if (provider === 'anthropic') {
+        } else if (authType === 'api-key' && provider === 'anthropic') {
             requestHeaders['x-api-key'] = apiKey;
             requestHeaders['anthropic-version'] = '2023-06-01';
-        } else if (provider === 'gemini') {
+        } else if (authType === 'api-key' && provider === 'gemini') {
             requestHeaders['x-goog-api-key'] = apiKey;
-        } else if (provider === 'azure') {
+        } else if (authType === 'api-key' && provider === 'azure') {
             // Azure 使用 API Key 在 URL 或 header 中
+            requestHeaders['api-key'] = apiKey;
+        } else if (authType === 'api-key') {
+            // 兜底:未知 api-key 类型 provider 也给个通用头(避免像 deepseek 这种漏网)
             requestHeaders['api-key'] = apiKey;
         }
 
-        // 如果有自定义认证头
+        // 如果有自定义认证头(优先级最高,用户手填覆盖默认)
         if (apiKeyConfig.authHeader) {
             requestHeaders[apiKeyConfig.authHeader] = apiKey;
         }

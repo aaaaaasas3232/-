@@ -1,0 +1,178 @@
+/* ============================================
+ * chat-app 地点卡片弹窗样式
+ *
+ * 与 desc-image-modal 风格一致
+ * 结构：按钮区 → 图片区（地图图标）→ 描述区（名称+地址）
+ * ============================================ */
+
+/* ---- 地点卡片弹窗遮罩 ---- */
+.location-card-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeIn 0.2s ease;
+}
+
+.location-card-modal-overlay--closing {
+    animation: fadeOut 0.2s ease forwards;
+}
+
+/* ---- 地点卡片弹窗主体 ---- */
+.location-card-modal {
+    position: relative;
+    width: 85%;
+    max-width: 280px;
+    display: flex;
+    flex-direction: column;
+    border-radius: 16px;
+    overflow: hidden;
+    animation: slideUp 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.location-card-modal-overlay--closing .location-card-modal {
+    animation: slideDown 0.2s ease forwards;
+}
+
+/* ---- 按钮区域 ---- */
+.location-card-modal-actions {
+    display: flex;
+    gap: 12px;
+    padding: 12px 16px;
+}
+
+.location-card-modal-action-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 6px 8px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: white;
+    color: #333;
+}
+
+.location-card-modal-action-btn:hover {
+    background: #f5f5f5;
+    transform: translateY(-1px);
+}
+
+.location-card-modal-action-btn:active {
+    transform: translateY(0);
+}
+
+.location-card-modal-action-btn svg {
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+}
+
+.location-card-modal-action-btn-primary {
+    color: white;
+    border-color: transparent;
+}
+
+.location-card-modal-action-btn-primary:hover {
+    opacity: 0.9;
+}
+
+/* ---- 图片卡片区域 ---- */
+.location-card-modal-card {
+    border-radius: 16px 16px 0 0;
+    margin: 0 16px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 145px;
+    overflow: hidden;
+}
+
+.location-card-modal-card-img {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.location-card-modal-card-label {
+    margin-top: 8px;
+    font-size: 11px;
+    opacity: 0.7;
+}
+
+/* ---- 描述文字区域 ---- */
+.location-card-modal-content {
+    background: white;
+    border-radius: 0 0 16px 16px;
+    padding: 14px 20px;
+    margin: 0 16px;
+}
+
+.location-card-modal-name {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    line-height: 1.3;
+}
+
+.location-card-modal-address {
+    font-size: 13px;
+    color: #666;
+    line-height: 1.4;
+}
+
+/* ---- 动画 ---- */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+}
+
+/* ---- 响应式适配 ---- */
+@media (max-width: 360px) {
+    .location-card-modal {
+        width: 90%;
+    }
+}

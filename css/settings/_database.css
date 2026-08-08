@@ -1,0 +1,482 @@
+/* ============================================
+ * 数据库管理模块样式
+ * 设计：蓝色辅白色主，简洁大方，禁用渐变和emoji
+ * ============================================ */
+
+/* 页面容器 */
+.db-mgr-page {
+    padding: 0 16px 24px;
+}
+
+/* 标签导航 */
+.db-mgr-tabs {
+    display: flex;
+    gap: 8px;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    margin-bottom: 16px;
+}
+
+.db-mgr-tab {
+    flex: 1;
+    padding: 8px 12px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #666;
+    background: #f5f5f7;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.db-mgr-tab:hover {
+    background: #e8e8ed;
+}
+
+.db-mgr-tab.is-active {
+    color: #fff;
+    background: #2196F3;
+}
+
+/* 内容区域 */
+.db-mgr-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* 分区 */
+.db-mgr-section {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.db-mgr-section-title {
+    font-size: 17px;
+    font-weight: 600;
+    color: #1d1d1f;
+    margin-bottom: 8px;
+}
+
+.db-mgr-section-title--danger {
+    color: #FF3B30;
+}
+
+.db-mgr-hint {
+    font-size: 12px;
+    color: #86868b;
+    margin: 8px 0 0 0;
+    line-height: 1.5;
+}
+
+.db-mgr-desc {
+    font-size: 13px;
+    color: #86868b;
+    margin: 0 0 16px 0;
+    line-height: 1.5;
+}
+
+/* ============ 数据表浏览：分类 ============ */
+.db-mgr-categories {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.db-mgr-category {
+    background: #f9f9fb;
+    border-radius: 10px;
+    padding: 12px;
+}
+
+.db-mgr-category__head {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 10px;
+}
+
+.db-mgr-category__label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1d1d1f;
+}
+
+.db-mgr-category__desc {
+    font-size: 12px;
+    color: #86868b;
+}
+
+.db-mgr-category__stores {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.db-mgr-store-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    text-align: left;
+}
+
+.db-mgr-store-btn:hover {
+    background: #f0f7ff;
+    border-color: #2196F3;
+}
+
+.db-mgr-store-btn__name {
+    font-family: 'SF Mono', Menlo, monospace;
+    font-size: 13px;
+    color: #1d1d1f;
+    font-weight: 500;
+}
+
+.db-mgr-store-btn__label {
+    font-size: 12px;
+    color: #86868b;
+}
+
+/* ============ 数据表详情 ============ */
+.db-mgr-store-detail {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.db-mgr-store-detail__head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.db-mgr-store-detail__title {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.db-mgr-store-detail__name {
+    font-family: 'SF Mono', Menlo, monospace;
+    font-size: 15px;
+    font-weight: 600;
+    color: #1d1d1f;
+}
+
+.db-mgr-store-detail__label {
+    font-size: 12px;
+    color: #86868b;
+}
+
+.db-mgr-back-btn {
+    padding: 6px 12px;
+    font-size: 14px;
+    color: #2196F3;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.db-mgr-back-btn:hover {
+    background: rgba(33, 150, 243, 0.08);
+}
+
+.db-mgr-store-meta {
+    font-size: 12px;
+    color: #86868b;
+    padding: 8px 12px;
+    background: #f9f9fb;
+    border-radius: 6px;
+    margin-bottom: 12px;
+}
+
+.db-mgr-store-meta code {
+    font-family: 'SF Mono', Menlo, monospace;
+    background: #fff;
+    padding: 1px 6px;
+    border-radius: 3px;
+}
+
+.db-mgr-link-btn {
+    padding: 0;
+    background: none;
+    border: none;
+    color: #FF3B30;
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.db-mgr-link-btn:hover {
+    color: #D32F2F;
+}
+
+/* ============ 记录列表 ============ */
+.db-mgr-record-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.db-mgr-record {
+    background: #f9f9fb;
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+
+.db-mgr-record--editing {
+    background: #F0F7FF;
+    border: 1px solid #2196F3;
+}
+
+.db-mgr-record__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    gap: 8px;
+}
+
+.db-mgr-record__key {
+    font-family: 'SF Mono', Menlo, monospace;
+    font-size: 13px;
+    font-weight: 500;
+    color: #1d1d1f;
+    word-break: break-all;
+}
+
+.db-mgr-record__actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.db-mgr-record__preview {
+    margin: 0;
+    padding: 8px;
+    background: #fff;
+    border-radius: 4px;
+    font-family: 'SF Mono', Menlo, monospace;
+    font-size: 11px;
+    color: #515154;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 120px;
+    overflow: auto;
+}
+
+.db-mgr-record__editor {
+    width: 100%;
+    padding: 10px;
+    font-family: 'SF Mono', Menlo, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #1d1d1f;
+    background: #fff;
+    border: 1px solid #d1d1d6;
+    border-radius: 6px;
+    resize: vertical;
+    box-sizing: border-box;
+}
+
+.db-mgr-record__editor:focus {
+    outline: none;
+    border-color: #2196F3;
+}
+
+.db-mgr-record__hint {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #86868b;
+}
+
+/* ============ 导出行 ============ */
+.db-mgr-export-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.db-mgr-export-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    background: #f9f9fb;
+    border-radius: 8px;
+}
+
+.db-mgr-export-row__info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.db-mgr-export-row__name {
+    font-family: 'SF Mono', Menlo, monospace;
+    font-size: 13px;
+    color: #1d1d1f;
+}
+
+.db-mgr-export-row__label {
+    font-size: 12px;
+    color: #86868b;
+}
+
+/* ============ 表单行 ============ */
+.db-mgr-form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.db-mgr-form-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #1d1d1f;
+}
+
+.db-mgr-form-select {
+    padding: 10px 12px;
+    font-size: 14px;
+    color: #1d1d1f;
+    background: #fff;
+    border: 1px solid #d1d1d6;
+    border-radius: 8px;
+    appearance: none;
+}
+
+.db-mgr-form-select:focus {
+    outline: none;
+    border-color: #2196F3;
+}
+
+/* ============ 按钮 ============ */
+.db-mgr-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 20px;
+    font-size: 15px;
+    font-weight: 500;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #1d1d1f;
+    background: #f5f5f7;
+}
+
+.db-mgr-btn:hover {
+    background: #e8e8ed;
+}
+
+.db-mgr-btn--primary {
+    color: #fff;
+    background: #2196F3;
+}
+
+.db-mgr-btn--primary:hover {
+    background: #1976D2;
+}
+
+.db-mgr-btn--small {
+    padding: 5px 12px;
+    font-size: 12px;
+    border-radius: 6px;
+}
+
+.db-mgr-btn--danger {
+    color: #fff;
+    background: #FF3B30;
+}
+
+.db-mgr-btn--danger:hover {
+    background: #D32F2F;
+}
+
+/* ============ 其它 ============ */
+.db-mgr-empty {
+    text-align: center;
+    padding: 24px 16px;
+    color: #86868b;
+    font-size: 14px;
+}
+
+.db-mgr-error {
+    padding: 10px 12px;
+    background: #FFF3E0;
+    color: #D32F2F;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 12px;
+}
+
+.db-mgr-import-result {
+    margin: 0;
+    padding: 12px;
+    background: #f9f9fb;
+    border-radius: 6px;
+    font-family: 'SF Mono', Menlo, monospace;
+    font-size: 11px;
+    color: #515154;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 280px;
+    overflow: auto;
+}
+
+/* ============ 确认框 ============ */
+.db-mgr-confirm-box {
+    background: #FFF3E0;
+    border: 2px solid #FF3B30;
+    border-radius: 12px;
+    padding: 16px;
+    margin-top: 8px;
+}
+
+.db-mgr-confirm-text {
+    font-size: 14px;
+    color: #1d1d1f;
+    margin: 0 0 8px 0;
+    font-weight: 500;
+}
+
+.db-mgr-confirm-list {
+    font-size: 13px;
+    color: #515154;
+    margin: 0 0 8px 0;
+    padding-left: 20px;
+}
+
+.db-mgr-confirm-list li {
+    margin: 4px 0;
+}
+
+.db-mgr-confirm-warning {
+    font-size: 14px;
+    color: #FF3B30;
+    margin: 0 0 12px 0;
+    font-weight: 600;
+}
+
+.db-mgr-confirm-actions {
+    display: flex;
+    gap: 8px;
+}

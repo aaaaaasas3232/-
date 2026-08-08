@@ -339,20 +339,9 @@ function handleClick(e) {
  * 只做轻量更新，不重建 DOM、不 refreshPhoneApps。
  */
 function handleInput(e) {
-    const target = e.target;
-
-    if (target.matches('.case-color-input')) {
-        const index = target.dataset.colorIndex !== undefined
-            ? parseInt(target.dataset.colorIndex, 10)
-            : null;
-        handleColorSelect(target.value, index, { lightweight: true });
-        return;
-    }
-
-    if (target.matches('.case-angle-slider')) {
-        handleAngleChange(target.value, { lightweight: true });
-        return;
-    }
+    // 用户要求：滑条拖动期间不渲染，只在松手时（change）再渲染，避免 v-html 重建
+    // 导致滑块/输入框焦点丢失。颜色 picker 同理。
+    return;
 }
 
 /**

@@ -23,8 +23,15 @@
  * @returns {(record) => Promise<void>}
  */
 export const createPersister = (toolkit, storeName) => async (record) => {
-    if (!toolkit?.db) return;
-    await toolkit.db.put(storeName, record);
+    if (!toolkit?.db) {
+        console.warn('[createPersister] toolkit.db is null, cannot persist to', storeName);
+        return;
+    }
+    try {
+        await toolkit.db.put(storeName, record);
+    } catch (err) {
+        console.error('[createPersister] failed to put record to', storeName, err);
+    }
 };
 
 /**
@@ -45,10 +52,14 @@ export const createBulkPersister = (toolkit, storeName) => async (records) => {
 export const loadFromDb = async (toolkit, storeName, cacheMap, keyField = 'id') => {
     if (!toolkit?.db) return;
     const records = await toolkit.db.getAll(storeName);
+    const beforeCount = cacheMap.size;
     cacheMap.clear();
     for (const record of records || []) {
         const key = record?.[keyField];
         if (key) cacheMap.set(key, record);
+    }
+    if (storeName === 'chatMessages') {
+        console.log(`[loadFromDb] chatMessages: before=${beforeCount} after=${cacheMap.size} db_records=${(records||[]).length}`, new Error('call stack').stack.split('\n').slice(1,5).join(' | '));
     }
 };
 

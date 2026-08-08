@@ -34,6 +34,8 @@ const MODULE_KEYS = [
     'resources',
     // ★ 资产说明开关（控制 assetDescription 是否注入 AI 上下文）
     'assetNotes',
+    // ★ v0.30+ 空间模块（人设主页的「空间」卡：绑定的世界观 / 当前所在 / 可去场所 / 今日日程）
+    'space',
 ];
 
 /** 根据 entityType 拿到 defaults（不依赖 aiPersons scope 来反查）。 */

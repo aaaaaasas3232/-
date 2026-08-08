@@ -103,7 +103,20 @@ export function setGalleryCache(patch) {
 function _invalidate() {
     _cache._lastRenderKey = Date.now();
     if (typeof window !== 'undefined') {
-        window.refreshPhoneApps?.();
+        // ★ v0.49.1 修复:点击「新建图库」等弹窗不显示,需切出再切回才显示
+        //   根因:method 改了 _cache._modalType 但 detailRenderTick 没 ++,
+        //   framework app-renderer-bridge 的 syncRenderer 看 detailKey 没变 +
+        //   tickChanged=false → 不重画 detail 页。
+        //   修复:同时 ++detailRenderTick + bridge.syncNow({force:true}) 兜底,
+        //   双保险确保 detail 页一定能重画(走当前 _cache 的最新值)
+        if (window.__detailRenderTick && typeof window.__detailRenderTick.value === 'number') {
+            window.__detailRenderTick.value++;
+        }
+        const bridge = window.__appRendererBridge;
+        if (bridge && typeof bridge.syncNow === 'function') {
+            try { bridge.syncNow({ force: true }); } catch (_) {}
+        }
+        try { window.refreshPhoneApps?.(); } catch (_) {}
     }
 }
 

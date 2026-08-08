@@ -31,17 +31,12 @@
 }
 
 /* ---- 编辑表单增强 ---- */
-.settings-app .wv-editor {
-    background: white;
-    border-radius: var(--settings-radius-group);
-    padding: 16px;
-    box-shadow:
-        inset 0 2px 4px rgba(0, 0, 0, 0.10),
-        inset 0 -1px 2px rgba(255, 255, 255, 0.6);
-}
+/* .wv-editor 容器样式由 _world-editor-supplement.css 提供（凹陷内嵌风格） */
+/* 这里只补字段层样式 */
 
 .settings-app .wv-editor__row {
-    margin-bottom: 14px;
+    width: 100%;
+    margin-bottom: 12px;
 }
 
 .settings-app .wv-anchor-editor .wv-editor__row:first-child,
@@ -50,18 +45,40 @@
 .settings-app .wv-map .wv-list > .wv-editor > .wv-editor__row:first-child,
 .settings-app .wv-chronicle > .wv-list > .wv-editor > .wv-editor__row:first-child,
 .settings-app .wv-list > .wv-editor > .wv-editor__row:first-child {
-    margin-top: 10px;
+    margin-top: 8px;
+}
+
+/* noSection 模式的 place/location editor：不要额外的 top margin */
+.settings-app .wv-place-editor .wv-editor__row:first-child,
+.settings-app .wv-location-editor .wv-editor__row:first-child {
+    margin-top: 0;
+}
+
+/* 字段竖排（label 在上，input 在下） */
+.settings-app .wv-editor__row--stacked {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 5px;
+}
+
+.settings-app .wv-editor__row--stacked .wv-editor__label {
+    text-align: left;
+    margin-bottom: 0;
+    width: auto;
+    min-width: auto;
+    padding-top: 0;
+    flex-shrink: 0;
 }
 
 .settings-app .wv-editor__row:last-of-type {
-    margin-bottom: 16px;
+    margin-bottom: 14px;
 }
 
 .settings-app .wv-editor__label {
     display: block;
     font-size: 12px;
-    font-weight: 500;
-    color: var(--settings-color-secondary);
+    font-weight: 400;
+    color: #374151;
     margin-bottom: 6px;
     letter-spacing: 0.01em;
 }
@@ -71,14 +88,14 @@
 .settings-app .wv-editor__select {
     width: 100%;
     padding: 10px 12px;
-    border: 1px solid var(--settings-color-separator);
+    border: 1px solid rgba(60, 60, 67, 0.12);
     border-radius: var(--settings-radius-field);
-    background: var(--settings-color-page);
+    background: #FFFFFF;
     font-size: 15px;
     color: var(--settings-color-label);
     font-family: inherit;
     box-sizing: border-box;
-    transition: border-color 0.15s ease;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .settings-app .wv-editor__input:focus,
@@ -101,6 +118,22 @@
     background-repeat: no-repeat;
     background-position: right 12px center;
     padding-right: 32px;
+}
+
+/* 世界观编辑器 - 紧凑输入 */
+.settings-app .wv-world-editor .wv-editor__input,
+.settings-app .wv-world-editor .wv-editor__textarea {
+    padding: 8px 10px;
+    font-size: 14px;
+}
+
+.settings-app .wv-world-editor .wv-editor__textarea {
+    min-height: 48px;
+}
+
+.settings-app .wv-world-editor .wv-editor__select {
+    padding: 8px 28px 8px 10px;
+    font-size: 14px;
 }
 
 .settings-app .wv-editor__color {
@@ -146,6 +179,40 @@
     border: 1px solid var(--settings-color-separator);
 }
 
+/* 编辑器紧凑胶囊按钮 */
+.settings-app .wv-editor__actions--compact {
+    justify-content: center;
+    gap: 8px;
+    padding-top: 6px;
+    border-top: none;
+}
+
+.settings-app .wv-editor__actions--compact .wv-btn--pill {
+    padding: 4px 12px;
+    font-size: 12px;
+    border-radius: 14px;
+    text-align: center;
+    line-height: 1.3;
+    min-width: 50px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 28px;
+}
+
+.settings-app .wv-editor__actions--compact .wv-btn--pill.wv-btn--primary {
+    background: var(--settings-color-blue);
+    color: #fff;
+    border: none;
+    box-shadow: 0 1px 3px rgba(10, 132, 255, 0.25);
+}
+
+.settings-app .wv-editor__actions--compact .wv-btn--pill.wv-btn--ghost {
+    background: rgba(120, 120, 128, 0.1);
+    color: var(--settings-color-secondary);
+    border: 1px solid rgba(60, 60, 67, 0.1);
+}
+
 /* 世界库编辑器 - actions 容器居中 */
 .settings-app .wv-group-editor .wv-editor__actions {
     display: flex;
@@ -161,8 +228,87 @@
     padding-top: 4px;
 }
 
-.settings-app .wv-assets__currency-form .wv-editor__actions {
-    justify-content: flex-end;
+/* ============================================
+ * 查看模式样式 - 精致小巧，只读展示
+ * ============================================ */
+.settings-app .wv-editor--view {
+    padding: 8px 12px;
+}
+
+.settings-app .wv-editor--view .wv-view__section {
+    margin-bottom: 12px;
+}
+
+.settings-app .wv-editor--view .wv-view__section:last-child {
+    margin-bottom: 0;
+}
+
+.settings-app .wv-editor--view .wv-view__section-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--settings-color-separator);
+}
+
+/* 小按钮样式 */
+.settings-app .wv-btn--xs {
+    padding: 4px 8px;
+    font-size: 11px;
+    border-radius: 6px;
+}
+
+/* ============================================
+ * 查看模式样式 - 精致小巧，只读展示
+ * ============================================ */
+
+.settings-app .wv-editor--view .wv-view__row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 4px 0;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.settings-app .wv-editor--view .wv-view__label {
+    flex: 0 0 auto;
+    min-width: 60px;
+    color: var(--settings-color-secondary);
+    font-weight: 500;
+}
+
+.settings-app .wv-editor--view .wv-view__value {
+    flex: 1;
+    color: var(--settings-color-label);
+    word-break: break-word;
+}
+
+.settings-app .wv-editor--view .wv-view__empty {
+    text-align: center;
+    padding: 20px 0;
+    color: var(--settings-color-secondary);
+    font-size: 12px;
+}
+
+.settings-app .wv-editor--view .wv-editor__actions:not(.wv-editor__actions--compact) {
+    justify-content: center;
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid var(--settings-color-separator);
+}
+
+/* 输入控件的查看模式样式 */
+.settings-app .wv-editor--view input,
+.settings-app .wv-editor--view textarea,
+.settings-app .wv-editor--view select {
+    background: transparent;
+    border: none;
+    padding: 0;
+    font-size: inherit;
+    color: var(--settings-color-label);
+    cursor: default;
 }
 
 /* 世界库 - 新建库按钮（占满一行） */
@@ -515,46 +661,35 @@
  * v0.24 场所访问备注编辑器
  * ============================================ */
 
+/* ============================================
+ * 场所访问备注（v0.25 简洁版）
+ * ============================================ */
 .settings-app .wv-location-access {
+    width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-}
-
-.settings-app .wv-location-access--empty {
-    padding: 12px;
-    background: var(--settings-color-page);
-    border-radius: var(--settings-radius-field);
-}
-
-.settings-app .wv-location-access__empty-text {
-    font-size: 12px;
-    color: var(--settings-color-tertiary);
-    text-align: center;
+    gap: 6px;
 }
 
 /* 工具栏 */
-.settings-app .wv-location-access__toolbar {
+.settings-app .wv-location-access__bar {
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 0;
 }
 
-.settings-app .wv-location-access__select-all,
-.settings-app .wv-location-access__select-none {
-    padding: 4px 10px;
+.settings-app .wv-location-access__btn {
+    padding: 3px 10px;
     font-size: 11px;
-    border-radius: 10px;
-    border: 1px solid var(--settings-color-separator);
-    background: transparent;
+    border-radius: 8px;
+    border: 1px solid rgba(60, 60, 67, 0.12);
+    background: #fff;
     color: var(--settings-color-secondary);
     cursor: pointer;
     transition: all 0.15s ease;
 }
 
-.settings-app .wv-location-access__select-all:hover,
-.settings-app .wv-location-access__select-none:hover {
+.settings-app .wv-location-access__btn:hover {
     background: var(--settings-color-blue);
     border-color: var(--settings-color-blue);
     color: #fff;
@@ -566,142 +701,240 @@
     color: var(--settings-color-tertiary);
 }
 
-/* 人设列表 */
+/* 人设行列表 */
 .settings-app .wv-location-access__list {
     display: flex;
     flex-direction: column;
     gap: 4px;
 }
 
-/* 人设卡片 */
-.settings-app .wv-location-access__persona {
-    background: var(--settings-color-page);
-    border-radius: var(--settings-radius-field);
-    border: 1px solid transparent;
+/* 人设行 */
+.settings-app .wv-access-row {
+    border: 1px solid rgba(60, 60, 67, 0.08);
+    border-radius: 8px;
     overflow: hidden;
-    transition: all 0.15s ease;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    background: #fff;
 }
 
-.settings-app .wv-location-access__persona.is-enabled {
-    border-color: var(--settings-color-blue);
-    background: rgba(10, 132, 255, 0.03);
+.settings-app .wv-access-row.is-on {
+    border-color: rgba(10, 132, 255, 0.25);
 }
 
-/* 人设卡片头部 */
-.settings-app .wv-location-access__persona-header {
-    display: flex;
-    align-items: center;
-    padding: 8px 10px;
-    cursor: pointer;
-}
-
-.settings-app .wv-location-access__toggle {
+/* 人设行头部 */
+.settings-app .wv-access-row__head {
     display: flex;
     align-items: center;
     gap: 8px;
+    padding: 7px 10px;
+    background: #fff;
+    transition: background 0.15s ease;
+}
+
+.settings-app .wv-access-row.is-on .wv-access-row__head {
+    background: rgba(10, 132, 255, 0.04);
+}
+
+.settings-app .wv-access-row__check {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     cursor: pointer;
     flex: 1;
 }
 
-.settings-app .wv-location-access__checkbox {
-    width: 16px;
-    height: 16px;
+.settings-app .wv-access-row__checkbox {
+    width: 14px;
+    height: 14px;
     accent-color: var(--settings-color-blue);
     cursor: pointer;
     flex-shrink: 0;
 }
 
-.settings-app .wv-location-access__persona-name {
+.settings-app .wv-access-row__name {
     font-size: 13px;
     font-weight: 500;
     color: var(--settings-color-label);
 }
 
-.settings-app .wv-location-access__persona-type {
-    font-size: 10px;
-    color: var(--settings-color-tertiary);
+.settings-app .wv-access-row__type {
+    font-size: 9.5px;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 999px;
+    flex-shrink: 0;
     background: rgba(0, 0, 0, 0.04);
-    padding: 2px 6px;
-    border-radius: 6px;
+    color: var(--settings-color-tertiary);
 }
 
-.settings-app .wv-location-access__persona-type.user {
-    color: var(--settings-color-green);
+.settings-app .wv-access-row__type.user {
     background: rgba(52, 199, 89, 0.1);
+    color: var(--settings-color-green);
 }
 
-.settings-app .wv-location-access__persona-type.ai {
-    color: var(--settings-color-purple, #AF52DE);
+.settings-app .wv-access-row__type.ai {
     background: rgba(175, 82, 222, 0.1);
+    color: #AF52DE;
 }
 
-/* 人设卡片内容（折叠/展开） */
-.settings-app .wv-location-access__persona-body {
-    padding: 0 10px 10px;
+/* 人设行下部：频率 + 备注 — 默认隐藏 */
+.settings-app .wv-access-row__body {
     display: flex;
-    flex-direction: column;
     gap: 6px;
+    padding: 0 10px;
+    background: #fff;
     max-height: 0;
     overflow: hidden;
     opacity: 0;
-    transition: all 0.2s ease;
+    transition: max-height 0.2s ease, opacity 0.2s ease, padding 0.2s ease;
 }
 
-.settings-app .wv-location-access__persona.is-enabled .wv-location-access__persona-body {
-    padding-top: 8px;
-    max-height: 120px;
+.settings-app .wv-access-row.is-on .wv-access-row__body {
+    max-height: 60px;
+    padding: 7px 10px;
     opacity: 1;
 }
 
-.settings-app .wv-location-access__persona-body.is-collapsed {
-    max-height: 0 !important;
-    opacity: 0 !important;
-    padding-top: 0 !important;
-}
-
-/* 频率和备注行 */
-.settings-app .wv-location-access__frequency-row,
-.settings-app .wv-location-access__note-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.settings-app .wv-location-access__field-label {
-    font-size: 11px;
-    color: var(--settings-color-tertiary);
-    flex-shrink: 0;
-    width: 24px;
-}
-
-.settings-app .wv-location-access__frequency {
-    flex: 1;
-    padding: 6px 8px;
+.settings-app .wv-access-row__freq {
+    flex: 0 0 90px;
+    padding: 5px 6px;
     font-size: 12px;
-    border: 1px solid var(--settings-color-separator);
-    border-radius: 8px;
+    border: 1px solid rgba(60, 60, 67, 0.12);
+    border-radius: 6px;
     background: #fff;
     color: var(--settings-color-label);
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%238E8E93' d='M5 7L1 3h8z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 6px center;
+    padding-right: 20px;
 }
 
-.settings-app .wv-location-access__frequency:focus {
-    border-color: var(--settings-color-blue);
-    outline: none;
-}
-
-.settings-app .wv-location-access__note {
+.settings-app .wv-access-row__note {
     flex: 1;
-    padding: 6px 8px;
+    padding: 5px 8px;
     font-size: 12px;
-    border: 1px solid var(--settings-color-separator);
-    border-radius: 8px;
+    border: 1px solid rgba(60, 60, 67, 0.12);
+    border-radius: 6px;
     background: #fff;
     color: var(--settings-color-label);
     resize: none;
     min-height: 28px;
+    line-height: 1.4;
 }
 
-.settings-app .wv-location-access__note:focus {
+.settings-app .wv-access-row__freq:focus,
+.settings-app .wv-access-row__note:focus {
     border-color: var(--settings-color-blue);
     outline: none;
 }
+
+/* ============================================
+ * 时间轴卡片 - 简洁白色设计
+ * ============================================ */
+.settings-app .wv-tlcard {
+    background: #fff;
+    border: 2px solid #e5e5ea;
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-left: 3px;
+}
+
+.settings-app .wv-tlcard__body {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.settings-app .wv-tlcard__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.settings-app .wv-tlcard__title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1c1c1e;
+    line-height: 1.3;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.settings-app .wv-tlcard__date {
+    font-size: 11px;
+    color: #8e8e93;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.settings-app .wv-tlcard__desc {
+    font-size: 12px;
+    color: #6d6d72;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.settings-app .wv-tlcard__actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.settings-app .wv-tlcard__btn {
+    font-size: 11px;
+    color: #007aff;
+    background: transparent;
+    border: 1px solid rgba(0, 122, 255, 0.3);
+    padding: 3px 10px;
+    border-radius: 14px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.12s, border-color 0.12s;
+}
+
+.settings-app .wv-tlcard__btn:hover {
+    background: rgba(0, 122, 255, 0.08);
+}
+
+.settings-app .wv-tlcard__btn--del {
+    color: #8e8e93;
+    border-color: rgba(142, 142, 147, 0.3);
+}
+
+.settings-app .wv-tlcard__btn--del:hover {
+    background: rgba(142, 142, 147, 0.1);
+}
+
+.settings-app .wv-timeline__node.is-editing .wv-tlcard {
+    display: block;
+    padding: 0;
+    background: transparent;
+}
+
+/* 时间轴卡片按压反馈 */
+.settings-app .wv-tlcard--pressed {
+    background: #f0f0f5;
+    transform: scale(0.98);
+    transition: background 0.08s, transform 0.08s;
+}
+
+/* 时间轴卡片拖拽中 */
+.settings-app .wv-tlcard.is-dragging {
+    opacity: 0.7;
+    cursor: grabbing;
+    transform: scale(1.03);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+

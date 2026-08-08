@@ -1,0 +1,221 @@
+/* ============================================
+ * 软件管理模块样式
+ * 设计：蓝色辅白色主，简洁大方，禁用渐变和emoji
+ * ============================================ */
+
+/* 页面容器 */
+.sw-mgr-page {
+    padding: 0 16px 24px;
+}
+
+/* 内容区域 */
+.sw-mgr-content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* 分区 */
+.sw-mgr-section {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.sw-mgr-section-title {
+    font-size: 17px;
+    font-weight: 600;
+    color: #1d1d1f;
+    margin-bottom: 8px;
+}
+
+.sw-mgr-desc {
+    font-size: 13px;
+    color: #86868b;
+    margin: 0 0 16px 0;
+    line-height: 1.5;
+}
+
+/* 上传区域 */
+.sw-mgr-upload-zone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 32px 16px;
+    background: #f9f9fb;
+    border-radius: 12px;
+    border: 2px dashed #d1d1d6;
+}
+
+.sw-mgr-upload-hint {
+    font-size: 12px;
+    color: #86868b;
+    margin: 0;
+}
+
+/* 注意事项 */
+.sw-mgr-notice {
+    font-size: 13px;
+    color: #86868b;
+    padding: 12px;
+    background: #FFF8E1;
+    border-radius: 8px;
+    margin-top: 12px;
+}
+
+.sw-mgr-notice strong {
+    color: #F57C00;
+}
+
+/* 按钮 */
+.sw-mgr-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 20px;
+    font-size: 15px;
+    font-weight: 500;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.sw-mgr-btn--primary {
+    color: #fff;
+    background: #2196F3;
+}
+
+.sw-mgr-btn--primary:hover {
+    background: #1976D2;
+}
+
+.sw-mgr-btn--primary:active {
+    background: #1565C0;
+}
+
+.sw-mgr-btn--small {
+    padding: 6px 14px;
+    font-size: 13px;
+    color: #fff;
+    background: #2196F3;
+    border-radius: 8px;
+}
+
+.sw-mgr-btn--small:hover {
+    background: #1976D2;
+}
+
+.sw-mgr-btn--danger {
+    background: #FF3B30;
+}
+
+.sw-mgr-btn--danger:hover {
+    background: #D32F2F;
+}
+
+/* 插件列表 */
+.sw-mgr-plugin-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* 插件卡片 */
+.sw-mgr-plugin-card {
+    background: #f9f9fb;
+    border-radius: 12px;
+    padding: 14px;
+}
+
+.sw-mgr-plugin-card.is-disabled {
+    opacity: 0.6;
+}
+
+.sw-mgr-plugin-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.sw-mgr-plugin-card__info {
+    flex: 1;
+    min-width: 0;
+}
+
+.sw-mgr-plugin-card__name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1d1d1f;
+}
+
+.sw-mgr-plugin-card__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+    font-size: 12px;
+    color: #86868b;
+}
+
+.sw-mgr-plugin-card__actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* 开关 */
+.sw-mgr-toggle {
+    position: relative;
+    display: inline-block;
+    width: 51px;
+    height: 31px;
+    cursor: pointer;
+}
+
+.sw-mgr-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.sw-mgr-toggle__track {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #E9E9EB;
+    border-radius: 16px;
+    transition: background 0.2s ease;
+}
+
+.sw-mgr-toggle__thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 27px;
+    height: 27px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s ease;
+}
+
+.sw-mgr-toggle input:checked + .sw-mgr-toggle__track {
+    background: #34C759;
+}
+
+.sw-mgr-toggle input:checked + .sw-mgr-toggle__track .sw-mgr-toggle__thumb {
+    transform: translateX(20px);
+}
+
+/* 空状态 */
+.sw-mgr-empty {
+    text-align: center;
+    padding: 32px 16px;
+    color: #86868b;
+    font-size: 14px;
+}

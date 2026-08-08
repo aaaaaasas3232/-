@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>横向票根预览</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #e0e0e0;
+            padding: 40px;
+        }
+        
+        /* 横向票根主体 */
+        .ticket-horizontal {
+            position: relative;
+            width: 400px;
+            height: 100px;
+            background-color: #fff;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            display: flex;
+            overflow: visible;
+        }
+        
+        /* 右边一排半圆锯齿（横向时等于原来的底部） */
+        .right-notch {
+            position: absolute;
+            right: -9px;
+            top: 0;
+            bottom: 0;
+            width: 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-evenly;
+        }
+        
+        .right-notch span {
+            display: block;
+            width: 12px;
+            height: 12px;
+            background: #e0e0e0;
+            border-radius: 50%;
+        }
+
+        /* 票根内部内容 */
+        .ticket-content {
+            display: flex;
+            width: 100%;
+        }
+        
+        .ticket-left {
+            flex: 1;
+            padding: 12px 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        /* 中间分割线区域 */
+        .ticket-divider {
+            position: relative;
+            width: 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        /* 分割线 */
+        .ticket-divider::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 8px;
+            bottom: 8px;
+            width: 1px;
+            background: repeating-linear-gradient(
+                to bottom,
+                #e0e0e0 0px,
+                #e0e0e0 5px,
+                transparent 5px,
+                transparent 10px
+            );
+        }
+        
+        /* 分割线上下的半圆孔 */
+        .divider-hole-top,
+        .divider-hole-bottom {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 12px;
+            height: 12px;
+            background-color: #e0e0e0;
+            border-radius: 50%;
+        }
+        
+        .divider-hole-top {
+            top: -5px;
+        }
+        
+        .divider-hole-bottom {
+            bottom: -5px;
+        }
+        
+        .ticket-right {
+            flex: 1;
+            padding: 12px 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            text-align: right;
+        }
+
+        h3 {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        p {
+            font-size: 12px;
+            color: #888;
+            line-height: 1.4;
+        }
+
+        .action {
+            font-size: 11px;
+            color: #999;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 完整横向票根 -->
+    <div class="ticket-horizontal">
+        <!-- 右边锯齿 -->
+        <div class="right-notch">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+        
+        <!-- 内容区域 -->
+        <div class="ticket-content">
+            <div class="ticket-left">
+                <h3>2026-08-03</h3>
+                <p>试试</p>
+            </div>
+            
+            <div class="ticket-divider">
+                <div class="divider-hole-top"></div>
+                <div class="divider-hole-bottom"></div>
+            </div>
+            
+            <div class="ticket-right">
+                <h3>是</h3>
+                <p class="action">编辑 · 删除</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

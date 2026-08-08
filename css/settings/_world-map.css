@@ -2,7 +2,18 @@
  * Map（地图编辑器）· 工具栏 / 坐标系 / pin
  * ============================================ */
 
-.settings-app .wv-map { display: flex; flex-direction: column; gap: 10px; }
+.settings-app .wv-map {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    /* 防止内容溢出导致页面水平滚动 */
+    overflow-x: hidden;
+}
+
+/* 确保 wv-map 下所有交互元素都不会触发水平滚动 */
+.settings-app .wv-map > * {
+    overflow-x: hidden;
+}
 
 .settings-app .wv-map__toolbar {
     display: flex;
@@ -44,6 +55,9 @@
 .settings-app .wv-map__toolbar-section--zoom {
     flex: 1;
     min-width: 200px;
+    /* 防止超出容器宽度 */
+    max-width: 100%;
+    overflow-x: hidden;
 }
 
 .settings-app .wv-map__zoom-slider {
@@ -139,15 +153,25 @@
     border: 1px dashed rgba(120,120,128,0.35);
     border-radius: 12px;
     overflow: hidden;
-    cursor: default;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    /* 恢复默认触摸行为，让页面可以正常滚动 */
+    touch-action: auto;
+    max-width: 100%;
 }
 
 /* 内层世界坐标系容器 */
 .settings-app .wv-map__world {
-    position: absolute;
-    inset: 0;
+    position: relative;
+    width: 800px;
+    height: 400px;  /* 500 * 10/16 = 312.5 */
+    margin: 0 auto;
     transform-origin: center center;
-    transition: transform 0.18s ease;
+    /* 缩放有过渡，拖拽时由 JS 动态控制 */
+    will-change: transform;
+    /* 防止内容溢出导致水平滚动 */
+    overflow: hidden;
 }
 
 .settings-app .wv-map__grid {

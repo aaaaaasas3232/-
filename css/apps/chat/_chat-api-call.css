@@ -1,0 +1,385 @@
+/* ============================================
+ * chat-app / API 调用弹窗（v0.62.1）
+ *
+ *   复用弹窗范式,跟 image-picker / context-length / ai-remark 同款
+ *   弹出即用,选完即关
+ * ============================================ */
+
+.app-shell[data-app-id="chat"] .api-call-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.40);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: api-call-fade-in 0.18s ease-out;
+}
+
+@keyframes api-call-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.app-shell[data-app-id="chat"] .api-call-modal {
+    width: 320px;
+    max-width: 100%;
+    max-height: 80vh;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-radius: 22px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: api-call-pop-in 0.22s cubic-bezier(0.18, 0.89, 0.32, 1.18);
+}
+
+@keyframes api-call-pop-in {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* header */
+.app-shell[data-app-id="chat"] .api-call-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.app-shell[data-app-id="chat"] .api-call-modal-title {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 600;
+    color: #2C3E50;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="chat"] .api-call-modal-close {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(74, 111, 165, 0.08);
+    border: none;
+    color: #4A6FA5;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.15s ease;
+}
+
+.app-shell[data-app-id="chat"] .api-call-modal-close:hover {
+    background: rgba(74, 111, 165, 0.16);
+}
+
+.app-shell[data-app-id="chat"] .api-call-modal-close svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* hint */
+.app-shell[data-app-id="chat"] .api-call-modal-hint {
+    padding: 10px 16px 0;
+    font-size: 12px;
+    line-height: 1.55;
+    color: #5A6B82;
+}
+
+.app-shell[data-app-id="chat"] .api-call-modal-hint--sub {
+    font-size: 11px;
+    color: #94A3B8;
+}
+
+/* body */
+.app-shell[data-app-id="chat"] .api-call-modal-body {
+    padding: 10px 12px 8px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 60px;
+    max-height: 50vh;
+}
+
+.app-shell[data-app-id="chat"] .api-call-section {
+    margin-bottom: 10px;
+}
+
+.app-shell[data-app-id="chat"] .api-call-section:last-child {
+    margin-bottom: 0;
+}
+
+.app-shell[data-app-id="chat"] .api-call-section-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 6px 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #6B7682;
+    letter-spacing: 0.2px;
+    text-transform: uppercase;
+}
+
+.app-shell[data-app-id="chat"] .api-call-section-count {
+    font-size: 10px;
+    color: #94A3B8;
+    background: rgba(148, 163, 184, 0.10);
+    padding: 1px 6px;
+    border-radius: 8px;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+/* row */
+.app-shell[data-app-id="chat"] .api-call-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.7);
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+    border: 1px solid transparent;
+}
+
+.app-shell[data-app-id="chat"] .api-call-row:last-child {
+    margin-bottom: 0;
+}
+
+.app-shell[data-app-id="chat"] .api-call-row:hover {
+    background: rgba(74, 111, 165, 0.05);
+}
+
+.app-shell[data-app-id="chat"] .api-call-row.is-selected {
+    background: rgba(74, 111, 165, 0.10);
+    border-color: rgba(74, 111, 165, 0.40);
+}
+
+.app-shell[data-app-id="chat"] .api-call-row.is-disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.app-shell[data-app-id="chat"] .api-call-radio {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid rgba(74, 111, 165, 0.35);
+    background: #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: #FFFFFF;
+    transition: all 0.15s ease;
+}
+
+.app-shell[data-app-id="chat"] .api-call-radio.is-checked {
+    background: #4A6FA5;
+    border-color: #4A6FA5;
+}
+
+.app-shell[data-app-id="chat"] .api-call-radio svg {
+    width: 12px;
+    height: 12px;
+}
+
+.app-shell[data-app-id="chat"] .api-call-row-body {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="chat"] .api-call-row-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #2C3E50;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="chat"] .api-call-row-status {
+    font-size: 10px;
+    font-weight: 600;
+    color: #FF6B6B;
+    background: rgba(255, 107, 107, 0.10);
+    padding: 1px 6px;
+    border-radius: 8px;
+}
+
+.app-shell[data-app-id="chat"] .api-call-row-sub {
+    margin-top: 2px;
+    font-size: 11px;
+    color: #8E97A4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="chat"] .api-call-row-tag {
+    flex-shrink: 0;
+    font-size: 10px;
+    font-weight: 600;
+    color: #4A6FA5;
+    background: rgba(74, 111, 165, 0.10);
+    padding: 2px 7px;
+    border-radius: 9px;
+}
+
+/* 空状态 */
+.app-shell[data-app-id="chat"] .api-call-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 18px 12px;
+    text-align: center;
+}
+
+.app-shell[data-app-id="chat"] .api-call-empty-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #2C3E50;
+}
+
+.app-shell[data-app-id="chat"] .api-call-empty-hint {
+    font-size: 11.5px;
+    color: #6B7682;
+    line-height: 1.55;
+}
+
+.app-shell[data-app-id="chat"] .api-call-cta {
+    margin-top: 6px;
+    background: linear-gradient(135deg, #F4A6CD, #C084FC);
+    color: #FFFFFF;
+    font-size: 12.5px;
+    font-weight: 600;
+    border: none;
+    border-radius: 18px;
+    padding: 8px 20px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(244, 166, 205, 0.28);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.app-shell[data-app-id="chat"] .api-call-cta:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(244, 166, 205, 0.36);
+}
+
+.app-shell[data-app-id="chat"] .api-call-cta:active {
+    transform: scale(0.96);
+}
+
+/* footer */
+.app-shell[data-app-id="chat"] .api-call-modal-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px 14px;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    background: rgba(255, 255, 255, 0.6);
+}
+
+.app-shell[data-app-id="chat"] .api-call-foot-btn {
+    flex: 1;
+    border: none;
+    border-radius: 16px;
+    padding: 9px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="chat"] .api-call-foot-btn:active {
+    transform: scale(0.97);
+}
+
+.app-shell[data-app-id="chat"] .api-call-foot-btn--ghost {
+    background: rgba(74, 111, 165, 0.08);
+    color: #4A6FA5;
+}
+
+.app-shell[data-app-id="chat"] .api-call-foot-btn--ghost:hover {
+    background: rgba(74, 111, 165, 0.14);
+}
+
+.app-shell[data-app-id="chat"] .api-call-foot-btn--ghost:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.app-shell[data-app-id="chat"] .api-call-foot-btn--primary {
+    background: linear-gradient(135deg, #4A6FA5, #6B89C0);
+    color: #FFFFFF;
+    font-weight: 600;
+}
+
+.app-shell[data-app-id="chat"] .api-call-foot-btn--primary:hover {
+    opacity: 0.92;
+}
+
+.app-shell[data-app-id="chat"] .api-call-foot-btn--primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ============================================
+ * 发送按钮长按视觉反馈（v0.62）
+ *
+ *   - 默认:蓝
+ *   - pointerdown (开始按):放大 + 蓝光晕
+ *   - 长按 800ms 触发:粉渐变 + pulse + 旋转光环
+ *   - 松开:回到默认
+ * ============================================ */
+.app-shell[data-app-id="chat"] #sendBtn {
+    position: relative;
+    overflow: visible;
+    transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.app-shell[data-app-id="chat"] #sendBtn.is-pressing {
+    transform: scale(0.94);
+    box-shadow: 0 0 0 4px rgba(74, 111, 165, 0.18);
+}
+
+.app-shell[data-app-id="chat"] #sendBtn.is-pressing--armed {
+    background: linear-gradient(135deg, #F4A6CD, #C084FC) !important;
+    box-shadow: 0 0 0 6px rgba(244, 166, 205, 0.30), 0 4px 12px rgba(192, 132, 252, 0.25);
+    animation: send-btn-armed-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes send-btn-armed-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+}
+
+.app-shell[data-app-id="chat"] #sendBtn.is-pressing--armed::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: inherit;
+    border: 2px solid rgba(244, 166, 205, 0.6);
+    animation: send-btn-armed-ring 1.2s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes send-btn-armed-ring {
+    from { transform: scale(0.95); opacity: 1; }
+    to { transform: scale(1.15); opacity: 0; }
+}

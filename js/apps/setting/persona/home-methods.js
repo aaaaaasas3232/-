@@ -21,6 +21,23 @@ import {
     formatYmd,
 } from './income-engine.js';
 import { buildPersonaContextText, buildContextFromPersona } from './home-section.js';
+import { getGroupImages, getImageSrcByCode } from '../gallery/gallery-db.js';
+import { getSocialProfile, clearOnlineStatusCache } from './social-profile.js';
+import {
+    callAiRaw,
+    parseAiJsonOrFallback,
+    resolveApiKeyIdForPersona,
+    resolveApiKey,
+    gatherContextForAI,
+    buildTodayScheduleSystemPrompt,
+    buildTodayScheduleUserPrompt,
+    sanitizeTodaySchedule,
+} from './space-ai.js';
+import {
+    getAccessibleLocationsForPersona,
+    getPlaceWeather,
+    readWeatherAppState,
+} from './space-sdk.js';
 
 function refresh() {
     window.refreshPhoneApps?.();
@@ -96,6 +113,453 @@ export function buildPersonaHomeMethods() {
             return app.state.personaHome;
         },
 
+        async personaAvatarPickerToggle() {
+            const app = this.app;
+            const route = app.state.personaHome || (app.state.personaHome = {});
+            route.avatarPickerOpen = !route.avatarPickerOpen;
+            refresh();
+            if (!route.avatarPickerOpen) return false;
+
+            route.avatarPickerLoading = true;
+            refresh();
+            const sdk = getSettingsSdk() || window.settingsSdk;
+            const persona = entityApi(sdk, route.entityType || 'user')?.get(route.entityId);
+            const groupIds = Array.isArray(persona?.boundResources?.avatarGroupIds)
+                ? persona.boundResources.avatarGroupIds
+                : [];
+            const records = (await Promise.all(groupIds.map(id => getGroupImages(id)))).flat();
+            route.avatarPickerImages = (await Promise.all(records.map(async image => ({
+                code: image.code,
+                name: image.name || image.code,
+                src: await getImageSrcByCode(image.code),
+            })))).filter(image => image.src);
+            route.avatarPickerLoading = false;
+            refresh();
+            return true;
+        },
+
+        async personaAvatarSelect(payload = {}) {
+            const app = this.app;
+            const route = app.state.personaHome || {};
+            const sdk = getSettingsSdk() || window.settingsSdk;
+            const api = entityApi(sdk, route.entityType || 'user');
+            const persona = api?.get(route.entityId);
+            if (!persona) return null;
+
+            const code = typeof payload.code === 'string' ? payload.code : '';
+            const selected = code
+                ? (route.avatarPickerImages || []).find(image => image.code === code)
+                : null;
+            if (code && !selected) return null;
+
+            const updated = await api.update(persona.id, {
+                avatar: selected?.src || '',
+                avatarCode: selected?.code || '',
+            });
+            route.avatarPickerOpen = false;
+            refresh();
+            this.toolkit?.island?.notify?.('success', selected ? '头像已更新' : '已恢复文字头像');
+            return updated;
+        },
+
+        personaMediaPickerMode(payload = {}) {
+            const route = this.app.state.personaHome || (this.app.state.personaHome = {});
+            route.mediaPickerMode = payload.mode === 'background' ? 'background' : 'avatar';
+            refresh();
+        },
+
+        async personaBackgroundSelect(payload = {}) {
+            const app = this.app;
+            const route = app.state.personaHome || {};
+            const sdk = getSettingsSdk() || window.settingsSdk;
+            const api = entityApi(sdk, route.entityType || 'user');
+            const persona = api?.get(route.entityId);
+            if (!persona) return null;
+
+            const code = typeof payload.code === 'string' ? payload.code : '';
+            const selected = code
+                ? (route.avatarPickerImages || []).find(image => image.code === code)
+                : null;
+            if (code && !selected) return null;
+
+            const updated = await api.update(persona.id, {
+                profileBackground: selected?.src || '',
+                profileBackgroundCode: selected?.code || '',
+            });
+            refresh();
+            this.toolkit?.island?.notify?.('success', selected ? '卡片背景已更新' : '已恢复默认背景');
+            return updated;
+        },
+
+        async personaBackgroundBlurSet(payload = {}) {
+            const app = this.app;
+            const route = app.state.personaHome || {};
+            const sdk = getSettingsSdk() || window.settingsSdk;
+            const api = entityApi(sdk, route.entityType || 'user');
+            const persona = api?.get(route.entityId);
+            if (!persona) return null;
+            const value = Math.max(0, Math.min(24, Number(payload.value) || 0));
+            const updated = await api.update(persona.id, { profileBackgroundBlur: value });
+            refresh();
+            return updated;
+        },
+
+        // ============================================
+        // 社媒形象配置
+        // ============================================
+
+        /** 展开/收起社媒配置面板 */
+        socialProfileToggle(payload = {}) {
+            const route = this.app.state.personaHome || (this.app.state.personaHome = {});
+            const appId = payload.appId || 'chat';
+            if (route.socialProfileExpanded === appId) {
+                route.socialProfileExpanded = null;
+            } else {
+                route.socialProfileExpanded = appId;
+                route.socialImagePickerOpen = null; // 收起时关闭图片选择器
+            }
+            refresh();
+        },
+
+        /** 打开/关闭社媒图片选择器 */
+        async socialImagePickerToggle(payload = {}) {
+            const route = this.app.state.personaHome || (this.app.state.personaHome = {});
+            const appId = payload.appId || 'chat';
+            const mode = payload.mode || 'avatar';
+
+            if (route.socialImagePickerOpen === appId && route.socialImagePickerMode === mode) {
+                route.socialImagePickerOpen = null;
+                route.socialImagePickerImages = [];
+                refresh();
+                return;
+            }
+
+            route.socialImagePickerOpen = appId;
+            route.socialImagePickerMode = mode;
+            route.socialImagePickerLoading = true;
+            refresh();
+
+            const sdk = getSettingsSdk() || window.settingsSdk;
+            const persona = entityApi(sdk, route.entityType || 'user')?.get(route.entityId);
+            if (!persona) {
+                route.socialImagePickerImages = [];
+                route.socialImagePickerLoading = false;
+                refresh();
+                return;
+            }
+
+            // 从人设绑定的头像库加载图片
+            const groupIds = Array.isArray(persona?.boundResources?.avatarGroupIds)
+                ? persona.boundResources.avatarGroupIds
+                : [];
+            const records = (await Promise.all(groupIds.map(id => getGroupImages(id)))).flat();
+            route.socialImagePickerImages = (await Promise.all(records.map(async image => ({
+                code: image.code,
+                name: image.name || image.code,
+                src: await getImageSrcByCode(image.code),
+            })))).filter(image => image.src);
+            route.socialImagePickerLoading = false;
+            refresh();
+        },
+
+        /** 选择社媒头像/背景 */
+        async socialImageSelect(payload = {}) {
+            const { appId, type, code } = payload;
+            const route = this.app.state.personaHome || {};
+            const sdk = getSettingsSdk() || window.settingsSdk;
+            const api = entityApi(sdk, route.entityType || 'user');
+            const persona = api?.get(route.entityId);
+            if (!persona) return null;
+
+            // 找到选中的图片信息
+            const selected = code
+                ? (route.socialImagePickerImages || []).find(i => i.code === code)
+                : null;
+
+            // 更新到 persona.socialProfiles
+            const profiles = { ...(persona.socialProfiles || {}) };
+            if (!profiles[appId]) profiles[appId] = {};
+
+            if (type === 'avatar') {
+                profiles[appId].avatarCode = code || '';
+                profiles[appId].avatar = selected?.src || '';
+            } else if (type === 'background') {
+                profiles[appId].backgroundCode = code || '';
+                profiles[appId].background = selected?.src || '';
+            }
+
+            await api.update(persona.id, { socialProfiles: profiles });
+            clearOnlineStatusCache();
+            this.toolkit?.island?.notify?.('success', selected ? `${type === 'avatar' ? '头像' : '背景'}已更新` : '已清除');
+            return selected;
+        },
+
+        /** 保存社媒配置（网名+在线时间） */
+        async socialProfileSave(payload = {}) {
+            const appId = payload.appId || 'chat';
+            const route = this.app.state.personaHome || {};
+            const sdk = getSettingsSdk() || window.settingsSdk;
+            const api = entityApi(sdk, route.entityType || 'user');
+            const persona = api?.get(route.entityId);
+            if (!persona) return null;
+
+            // 从 DOM 收集网名
+            const nicknameInput = document.querySelector(`[data-social-nickname="${appId}"]`);
+            const nickname = nicknameInput?.value?.trim() || '';
+
+            // 从 DOM 收集拍一拍后缀
+            const patInput = document.querySelector(`[data-social-pat-setting="${appId}"]`);
+            const patSetting = patInput?.value?.trim() || '';
+
+            // 从 DOM 收集在线时间
+            const startH = document.querySelector(`[data-social-time="${appId}-start-h"]`)?.value || '00';
+            const startM = document.querySelector(`[data-social-time="${appId}-start-m"]`)?.value || '00';
+            const endH = document.querySelector(`[data-social-time="${appId}-end-h"]`)?.value || '23';
+            const endM = document.querySelector(`[data-social-time="${appId}-end-m"]`)?.value || '59';
+
+            const profiles = { ...(persona.socialProfiles || {}) };
+            if (!profiles[appId]) profiles[appId] = {};
+
+            profiles[appId].nickname = nickname;
+            profiles[appId].patSetting = patSetting;
+            if (appId === 'chat') {
+                profiles[appId].onlineHours = {
+                    start: `${startH}:${startM}`,
+                    end: `${endH}:${endM}`,
+                };
+            }
+
+            // 合并 pending 中的头像和背景（AI 生成的结果）
+            const pending = route.socialProfilePending || {};
+            if (pending.avatarCode) {
+                profiles[appId].avatarCode = pending.avatarCode;
+                profiles[appId].avatar = pending.avatar || '';
+            }
+            if (pending.backgroundCode) {
+                profiles[appId].backgroundCode = pending.backgroundCode;
+                profiles[appId].background = pending.background || '';
+            }
+
+            // 如果当前有选中的头像/背景（从选择器选的），直接使用
+            const currentProfile = getSocialProfile(persona, appId);
+            if (currentProfile?.avatarCode && !profiles[appId].avatarCode) {
+                profiles[appId].avatarCode = currentProfile.avatarCode;
+                profiles[appId].avatar = currentProfile.avatar || '';
+            }
+            if (currentProfile?.backgroundCode && !profiles[appId].backgroundCode) {
+                profiles[appId].backgroundCode = currentProfile.backgroundCode;
+                profiles[appId].background = currentProfile.background || '';
+            }
+
+            await api.update(persona.id, { socialProfiles: profiles });
+            // 清除 pending 状态
+            route.socialProfilePending = null;
+            // 清除 chat-app 的在线状态缓存，使其重新加载
+            clearOnlineStatusCache();
+            this.toolkit?.island?.notify?.('success', '社媒配置已保存');
+            refresh();
+            return profiles[appId];
+        },
+
+        /**
+         * AI 生成社媒形象配置
+         * 基于人设信息生成适合该软件的网名和在线时间段
+         */
+        async socialProfileGenerate(payload = {}) {
+            const appId = payload.appId || 'chat';
+            const toolkit = this.toolkit;
+            const sdk = getSettingsSdk() || window.settingsSdk;
+            const route = this.app.state.personaHome || {};
+            const api = entityApi(sdk, route.entityType || 'user');
+            const persona = api?.get(route.entityId);
+            if (!persona) return null;
+
+            // 显示加载状态
+            toolkit.island.show('mini', {
+                type: 'info',
+                title: 'AI 生成中…',
+                message: `正在为 ${appId === 'chat' ? 'murmur' : appId} 生成配置`,
+                icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
+            });
+
+            try {
+                // 构建人设上下文
+                const personaInfo = [];
+                if (persona.name) personaInfo.push(`名字：${persona.name}`);
+                if (persona.personality) personaInfo.push(`性格：${persona.personality}`);
+                if (persona.bio) personaInfo.push(`简介：${persona.bio}`);
+                if (persona.identity) personaInfo.push(`身份：${persona.identity}`);
+                if (persona.age) personaInfo.push(`年龄：${persona.age}`);
+                if (persona.gender) personaInfo.push(`性别：${persona.gender}`);
+
+                // 获取人设的世界观信息
+                let worldInfo = '';
+                if (persona.boundWorldId && sdk?.worlds) {
+                    const world = sdk.worlds.get(persona.boundWorldId);
+                    if (world?.name) worldInfo = `世界观：${world.name}`;
+                }
+
+                // 获取人设绑定的头像库图片
+                const groupIds = Array.isArray(persona?.boundResources?.avatarGroupIds)
+                    ? persona.boundResources.avatarGroupIds
+                    : [];
+                const avatarRecords = groupIds.length > 0
+                    ? (await Promise.all(groupIds.map(id => getGroupImages(id)))).flat()
+                    : [];
+                const avatarList = avatarRecords.map(img => ({
+                    code: img.code,
+                    name: img.name || img.code,
+                }));
+
+                // 构建 prompt
+                const appName = appId === 'chat' ? 'murmur（社交聊天软件）' : appId === 'blog' ? '博客平台' : '日记软件';
+                let systemPrompt = `你是一个社交媒体形象顾问。根据用户的人设信息，为其在${appName}上生成合适的形象配置。
+
+请分析人设的性格、身份、年龄等因素，选择：
+1. 一个自然的网名/昵称（8字以内，符合人设风格）
+2. 合理的在线时间段（考虑人设的生活习惯，如学生可能晚上在线，上班族可能午休在线等）
+${avatarList.length > 0 ? `3. 从以下头像列表中选择最合适的1个头像编号（code）：\n${avatarList.map(a => `  - ${a.code}: ${a.name}`).join('\n')}` : ''}
+${avatarList.length > 0 ? `4. 从以下背景图列表中选择最合适的1个背景图编号（code）：\n${avatarList.map(a => `  - ${a.code}: ${a.name}`).join('\n')}` : ''}
+
+请以JSON格式返回：
+{
+  "nickname": "网名",
+  "onlineHours": {
+    "start": "HH:MM",
+    "end": "HH:MM"
+  }${avatarList.length > 0 ? `,
+  "avatarCode": "头像编号",
+  "backgroundCode": "背景图编号"` : ''}
+}
+
+注意：
+- 网名要符合人设身份和性格
+- 在线时间段要合理，如非特殊职业不应在深夜或凌晨在线
+- 返回纯JSON，不要其他内容
+${avatarList.length > 0 ? `- 头像和背景图编号必须从提供的列表中选择，请选择最符合人设气质的外形` : ''}`;
+
+                const userPrompt = `人设信息：
+${personaInfo.join('\n')}
+${worldInfo ? worldInfo + '\n' : ''}
+${avatarList.length > 0 ? `可选头像/背景图编号列表：\n${avatarList.map(a => `${a.code}: ${a.name}`).join('\n')}` : ''}
+
+请为这个人在${appName}上生成合适的网名、在线时间段${avatarList.length > 0 ? '、头像和背景图' : ''}。`;
+
+                // 打印发送给 AI 的内容
+                console.log('[socialProfileGenerate] 发送给 AI 的内容：');
+                console.log('--- system prompt ---');
+                console.log(systemPrompt);
+                console.log('--- user prompt ---');
+                console.log(userPrompt);
+
+                // 获取 API Key
+                const boundApiRef = persona?.boundResources?.apiRefs?.[0];
+                let apiKeyId = null;
+                if (boundApiRef) {
+                    if (typeof boundApiRef === 'string') {
+                        apiKeyId = boundApiRef;
+                    } else if (boundApiRef.refType === 'key' && boundApiRef.refId) {
+                        apiKeyId = boundApiRef.refId;
+                    } else if (boundApiRef.refType === 'group' && boundApiRef.refId) {
+                        const apiSdk = getApiSdk();
+                        const group = apiSdk?.apiGroupSdk?.get?.(boundApiRef.refId);
+                        apiKeyId = group?.apiKeyIds?.[0] || null;
+                    } else if (boundApiRef.id) {
+                        apiKeyId = boundApiRef.id;
+                    }
+                }
+
+                let result = null;
+                if (apiKeyId) {
+                    const apiSdk = getApiSdk();
+                    const apiKey = apiSdk?.apiKeySdk?.get?.(apiKeyId);
+                    if (apiKey) {
+                        const content = await callAiRaw({
+                            apiKey,
+                            systemPrompt,
+                            userPrompt,
+                            maxTokens: avatarList.length > 0 ? 300 : 200,
+                            temperature: 0.7,
+                        });
+
+                        // 打印 AI 返回的内容
+                        console.log('[socialProfileGenerate] AI 返回的内容：');
+                        console.log(content);
+
+                        const parsed = parseAiJsonOrFallback(content, null);
+                        if (parsed && typeof parsed === 'object') {
+                            result = parsed;
+                        }
+                    }
+                }
+
+                if (!result) {
+                    toolkit.island.dismiss();
+                    toolkit.island.notify('error', 'API 未配置', '请先在资源管理中添加 API Key');
+                    return null;
+                }
+
+                // 设置待生成结果到 state
+                route.socialProfilePending = {
+                    appId,
+                    nickname: result.nickname || '',
+                    onlineHours: result.onlineHours || { start: '09:00', end: '22:00' },
+                };
+
+                // 如果有头像库，解析头像和背景
+                if (avatarList.length > 0) {
+                    const validCodes = new Set(avatarList.map(a => a.code));
+                    const avatarCode = result.avatarCode && validCodes.has(result.avatarCode) ? result.avatarCode : '';
+                    const backgroundCode = result.backgroundCode && validCodes.has(result.backgroundCode) ? result.backgroundCode : '';
+
+                    if (avatarCode) {
+                        route.socialProfilePending.avatarCode = avatarCode;
+                        route.socialProfilePending.avatar = await getImageSrcByCode(avatarCode);
+                    }
+                    if (backgroundCode) {
+                        route.socialProfilePending.backgroundCode = backgroundCode;
+                        route.socialProfilePending.background = await getImageSrcByCode(backgroundCode);
+                    }
+                }
+
+                // 更新网名输入框
+                const nicknameInput = document.querySelector(`[data-social-nickname="${appId}"]`);
+                if (nicknameInput && result.nickname) {
+                    nicknameInput.value = result.nickname;
+                }
+
+                // 如果是 chat app，更新在线时间选择器
+                if (appId === 'chat' && result.onlineHours) {
+                    const { start, end } = result.onlineHours;
+                    if (start) {
+                        const [sh, sm] = start.split(':');
+                        const startH = document.querySelector(`[data-social-time="${appId}-start-h"]`);
+                        const startM = document.querySelector(`[data-social-time="${appId}-start-m"]`);
+                        if (startH) startH.value = sh || '09';
+                        if (startM) startM.value = sm || '00';
+                    }
+                    if (end) {
+                        const [eh, em] = end.split(':');
+                        const endH = document.querySelector(`[data-social-time="${appId}-end-h"]`);
+                        const endM = document.querySelector(`[data-social-time="${appId}-end-m"]`);
+                        if (endH) endH.value = eh || '22';
+                        if (endM) endM.value = em || '00';
+                    }
+                }
+
+                toolkit.island.dismiss();
+                toolkit.island.notify('success', '已生成配置', '可自行调整后保存');
+                refresh();
+                return result;
+
+            } catch (err) {
+                console.error('[socialProfileGenerate] 生成失败', err);
+                toolkit.island.dismiss();
+                toolkit.island.notify('error', '生成失败', err.message || '请稍后重试');
+                return null;
+            }
+        },
+
         /** 心情权重编辑（打开输入弹层 —— 这里直接 update）。*/
         async personaSetMoodWeights(payload = {}) {
             const sdk = getSettingsSdk() || window.settingsSdk;
@@ -130,10 +594,10 @@ export function buildPersonaHomeMethods() {
                 cancelLabel: '取消',
                 onConfirm: async (userNote) => {
                     // 用户确认后开始生成
-                    toolkit.island.show('medium', {
+                    toolkit.island.show('mini', {
                         type: 'info',
-                        title: '重新生成中',
-                        message: '正在让 AI 重新分析...',
+                        title: '重新生成中…',
+                        message: 'AI 重新分析中',
                         icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
                     });
 
@@ -263,7 +727,8 @@ export function buildPersonaHomeMethods() {
                     diary: diary.diary || '',
                     isPositive: diary.isPositive,
                     date: editDate,
-                } : { date: editDate };
+                    todaySchedule: diary.todaySchedule || [],
+                } : { date: editDate, todaySchedule: [] };
             }
 
             // 切换到编辑模式
@@ -291,16 +756,18 @@ export function buildPersonaHomeMethods() {
             const pendingData = route.moodPendingSave;
             const isEditing = route.moodEditMode;
 
-            let mood, moodIntensity, diary;
+            let mood, moodIntensity, diary, todaySchedule;
 
             if (pendingData) {
-                // 使用待保存数据
+                // 使用待保存数据，同时保留现有日程
                 mood = pendingData.mood;
                 moodIntensity = pendingData.moodIntensity;
                 diary = pendingData.diary;
+                const existingDiary = sdk.diary.getDateDiary?.(entityType, entityId, editDate);
+                todaySchedule = existingDiary?.todaySchedule || [];
             } else if (isEditing) {
-                // 从 DOM 获取编辑表单的值
-                const overlay = document.querySelector('.phome-mood-edit-inline');
+                // 从 DOM 获取编辑表单的值（支持今日心情卡片和心情详情面板两种表单）
+                const overlay = document.querySelector('.phome-mood-edit-inline, .phome-mood-detail__edit-section');
                 if (!overlay) {
                     toolkit.island.notify('warning', '未找到编辑表单');
                     return null;
@@ -308,6 +775,32 @@ export function buildPersonaHomeMethods() {
                 mood = overlay.querySelector('[data-edit-mood]')?.value?.trim() || '';
                 moodIntensity = parseInt(overlay.querySelector('[data-edit-intensity]')?.value || '50') / 100;
                 diary = overlay.querySelector('[data-edit-diary]')?.value?.trim() || '';
+                // 解析日程文本（格式：HH:MM-HH:MM 地点 [活动]）
+                const scheduleText = overlay.querySelector('[data-edit-schedule]')?.value?.trim() || '';
+                todaySchedule = [];
+                if (scheduleText) {
+                    for (const line of scheduleText.split('\n')) {
+                        const trimmed = line.trim();
+                        if (!trimmed) continue;
+                        // 匹配 HH:MM-HH:MM 或 HH-HH 格式
+                        const timeMatch = trimmed.match(/^(\d{1,2}):?(\d{2})?\s*[-–]\s*(\d{1,2}):?(\d{2})?/);
+                        if (timeMatch) {
+                            const fromHour = parseFloat(timeMatch[1] + (timeMatch[2] ? '.' + timeMatch[2] : '.0'));
+                            const toHour = parseFloat(timeMatch[3] + (timeMatch[4] ? '.' + timeMatch[4] : '.0'));
+                            const rest = trimmed.slice(timeMatch[0].length).trim();
+                            const parts = rest.split(/\s{2,}|\t/);
+                            todaySchedule.push({
+                                fromHour,
+                                toHour,
+                                locationName: parts[0] || '',
+                                activity: parts[1] || '',
+                                locationId: parts[0] || '',
+                                placeName: '',
+                                phase: 'past',
+                            });
+                        }
+                    }
+                }
             } else {
                 toolkit.island.notify('warning', '没有待保存的心情');
                 return null;
@@ -323,22 +816,18 @@ export function buildPersonaHomeMethods() {
             const today = formatDate();
 
             // 保存到数据库
+            const isPositive = moodIntensity > 0.5;
             await sdk.diary.setMoodDetail(entityType, entityId, {
                 mood,
                 moodIntensity,
-                isPositive: moodIntensity > 0.5,
+                isPositive,
                 diary,
+                todaySchedule,
                 date: editDate,
             });
 
-            // 只有编辑的是今天时才更新 persona.dailyMood
-            if (editDate === today) {
-                await sdk.diary.setMood(entityType, entityId, mood);
-                const personaApi = entityApi(sdk, entityType);
-                if (personaApi?.update) {
-                    await personaApi.update(entityId, { dailyMood: mood });
-                }
-            }
+            // ★ v0.30 不再把 mood 写到 persona.dailyMood —— 心情是按日记记录走,
+            // 持久化到人设会让昨天的「郁闷」跨天一直显示成默认心情。
 
             // 清除编辑模式和待保存状态
             route.moodEditMode = false;
@@ -374,7 +863,7 @@ export function buildPersonaHomeMethods() {
             if (!entityId) return null;
             const mood = payload.mood || '';
             await sdk.diary.setMood(entityType, entityId, mood);
-            await entityApi(sdk, entityType).update(entityId, { dailyMood: mood });
+            // ★ v0.30 不再写入 persona.dailyMood —— 心情按日记记录
             refresh();
             return mood;
         },
@@ -406,10 +895,10 @@ export function buildPersonaHomeMethods() {
             if (!entityId) return null;
 
             const toolkit = this.toolkit;
-            toolkit.island.show('medium', {
+            toolkit.island.show('mini', {
                 type: 'info',
-                title: '生成中',
-                message: '正在让 AI 分析今日心情...',
+                title: '生成中…',
+                message: 'AI 分析今日心情',
                 icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
             });
 
@@ -661,6 +1150,66 @@ export function buildPersonaHomeMethods() {
             return route.scheduleOpenDate || '';
         },
 
+        /**
+         * 添加一条每周重复日程。
+         * payload: { weekday, title, startTime?, endTime?, note? }
+         */
+        async personaWeeklyScheduleAddEvent(payload = {}) {
+            const sdk = getSettingsSdk() || window.settingsSdk;
+            if (!sdk?.weeklySchedule) return null;
+            const entityType = payload.entityType || this.app.state.personaHome?.entityType || 'user';
+            const entityId   = payload.entityId   || this.app.state.personaHome?.entityId;
+            if (!entityId) {
+                notify(this.toolkit, 'warning', '请先选择人设');
+                return null;
+            }
+            const dow = payload.weekday;
+            if (dow === undefined || dow < 0 || dow > 6) {
+                notify(this.toolkit, 'error', '周几无效', '');
+                return null;
+            }
+            if (!payload.title) {
+                notify(this.toolkit, 'error', '标题不能为空', '');
+                return null;
+            }
+            const next = await sdk.weeklySchedule.addEvent(entityType, entityId, dow, payload);
+            refresh();
+            notify(this.toolkit, 'success', '已添加每周重复', payload.title);
+            return next;
+        },
+
+        /**
+         * 更新一条每周重复日程。
+         * payload: { weekday, eventId, title?, startTime?, endTime?, note? }
+         */
+        async personaWeeklyScheduleUpdateEvent(payload = {}) {
+            const sdk = getSettingsSdk() || window.settingsSdk;
+            if (!sdk?.weeklySchedule) return null;
+            const entityType = payload.entityType || this.app.state.personaHome?.entityType || 'user';
+            const entityId   = payload.entityId   || this.app.state.personaHome?.entityId;
+            if (!entityId || payload.weekday === undefined || !payload.eventId) return null;
+            const next = await sdk.weeklySchedule.updateEvent(entityType, entityId, payload.weekday, payload.eventId, payload);
+            refresh();
+            notify(this.toolkit, 'success', '已保存', '');
+            return next;
+        },
+
+        /**
+         * 删除一条每周重复日程。
+         * payload: { weekday, eventId }
+         */
+        async personaWeeklyScheduleRemoveEvent(payload = {}) {
+            const sdk = getSettingsSdk() || window.settingsSdk;
+            if (!sdk?.weeklySchedule || payload.weekday === undefined || !payload.eventId) return null;
+            const entityType = payload.entityType || this.app.state.personaHome?.entityType || 'user';
+            const entityId   = payload.entityId   || this.app.state.personaHome?.entityId;
+            if (!entityId) return null;
+            await sdk.weeklySchedule.removeEvent(entityType, entityId, payload.weekday, payload.eventId);
+            refresh();
+            notify(this.toolkit, 'success', '已删除', '');
+            return true;
+        },
+
         /* ============================================
          * injectMode 切换（通用）
          *   支持: schedule, mood
@@ -684,6 +1233,31 @@ export function buildPersonaHomeMethods() {
                 await sdk.persona.module.update(et, pid, 'schedule', { injectMode: next });
             } catch (err) {
                 console.warn('[personaScheduleCycleInject]', err);
+                return false;
+            }
+            refresh();
+            return true;
+        },
+
+        /** 循环切换 space injectMode: none ↔ current。
+ *  空间模块只承载「当天」的数据(当前所在 / 今日日程 / 可去场所),
+ *  不存在「本周/全部」的概念,所以只给两档。*/
+        async personaSpaceCycleInject(payload = {}) {
+            const sdk = getSettingsSdk() || window.settingsSdk;
+            if (!sdk?.persona) return false;
+            const route = this.app.state.personaHome || (this.app.state.personaHome = {});
+            const et = route.entityType || 'user';
+            const pid = route.entityId;
+            if (!pid) return false;
+            const api = et === 'user' ? sdk.users : sdk.aiPersons;
+            const persona = api.get(pid);
+            if (!persona) return false;
+            const current = persona.space?.injectMode || 'none';
+            const next = current === 'none' ? 'current' : 'none';
+            try {
+                await sdk.persona.module.update(et, pid, 'space', { injectMode: next });
+            } catch (err) {
+                console.warn('[personaSpaceCycleInject]', err);
                 return false;
             }
             refresh();
@@ -1173,6 +1747,30 @@ export function buildPersonaHomeMethods() {
         },
 
         /**
+         * ★ v0.67 打开钱包流水历史页（不限制 50 条）
+         *   - 默认跳转到 detail 'transaction-history'
+         *   - payload 透传 entityType + entityId,让 history 页知道展示谁的流水
+         */
+        openTransactionHistory(payload = {}) {
+            const sdk = getSettingsSdk() || window.settingsSdk;
+            if (!sdk) return;
+            // 路由上下文里塞 entityType + entityId,history 页从 app.state 读
+            const route = this.app.state.personaHome || (this.app.state.personaHome = {});
+            const entityType = payload.entityType || route.entityType || 'user';
+            const entityId = payload.entityId || route.entityId || '';
+            // 缓存到 router,history 页用
+            route.txFilter = { entityType, entityId };
+            refresh();
+            const action = {
+                action: 'detail',
+                appId: 'settings',
+                pageId: 'transaction-history',
+                payload: { entityType, entityId },
+            };
+            window.dispatchEvent(new CustomEvent('app:page-action', { detail: action }));
+        },
+
+        /**
          * 接 API 的占位方法 —— 真实 LLM 日记生成接入这里。
          * 当前默认走本地 composeSegment（见 persona/diary-generator.js）。
          * 接入后续步骤：
@@ -1315,6 +1913,116 @@ export function buildPersonaHomeMethods() {
             notify(this.toolkit, 'success', '已保存', '');
             refresh();
         },
+
+        /* ============================================
+         * ★ v0.30 空间模块 · AI 行程生成
+         *   - personaSpaceGenerateTodaySchedule     生成/重 roll 今日日程
+         * ============================================ */
+
+        /**
+         * 内部:组装 context + apiKey,返回 { apiKey, ctx } 或抛错。
+         */
+        async _personaSpacePrepare() {
+            const sdk = getSettingsSdk() || window.settingsSdk;
+            const app = this.app;
+            const toolkit = this.toolkit;
+            if (!sdk) throw new Error('settingsSdk 未就绪');
+            const entityType = app.state?.personaHome?.entityType || 'user';
+            const entityId = app.state?.personaHome?.entityId;
+            const persona = entityApi(sdk, entityType).get(entityId);
+            if (!persona) throw new Error('未选择人设');
+            const worldId = persona.boundWorldId;
+            const world = worldId ? sdk.worlds?.get?.(worldId) : null;
+            const todayDiary = sdk.diary?.getToday?.(entityType, entityId) || null;
+            const accessible = getAccessibleLocationsForPersona(sdk, worldId, persona.id, { includeRare: false });
+            // 找当前主要地点
+            const places = worldId && sdk.places?.list ? sdk.places.list({ worldRef: worldId }) : [];
+            const primaryPlace = accessible.find(a => a.place)?.place || places[0] || null;
+            const weatherAppState = readWeatherAppState();
+            const weather = getPlaceWeather(weatherAppState, primaryPlace);
+
+            const ctx = gatherContextForAI({ app, persona, world, todayDiary, weather });
+            const apiKeyId = resolveApiKeyIdForPersona(persona);
+            const apiKey = resolveApiKey(apiKeyId);
+            if (!apiKey || !apiKey.apiKey) {
+                throw new Error('未配置 API Key,请在资源管理中添加 API Key');
+            }
+            return { sdk, app, toolkit, persona, world, todayDiary, ctx, apiKey, accessible };
+        },
+
+        /**
+         * 生成(或重 roll)今日日程:拼 prompt → 调 LLM → 白名单校验 → 写入 todaySchedule。
+         */
+        async personaSpaceGenerateTodaySchedule(payload = {}) {
+            const app = this.app;
+            const toolkit = this.toolkit;
+            try {
+                // 生成期间用 mini 灵动岛 + 顶部 notify，让用户能继续滚动浏览其他卡片。
+                // backdrop 模式（medium/large）会铺满 fixed inset-0 锁住滚动，生成时间长体感很卡。
+                toolkit.island.show('mini', {
+                    type: 'info',
+                    title: '规划今日行程…',
+                    message: 'AI 正在安排场所',
+                    icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
+                });
+                const { sdk, ctx, apiKey, persona } = await this._personaSpacePrepare();
+                const systemPrompt = buildTodayScheduleSystemPrompt();
+                const userPrompt = buildTodayScheduleUserPrompt(ctx);
+                // 优先使用 API Key 里配置的 maxTokens(用户在资源管理填的「最大输出」);
+                // 兜底 4096,适配 DeepSeek-R1 / 类 thinking 模型的 reasoning_content 预算。
+                const scheduleMaxTokens = Math.max(2048, Number(apiKey?.maxTokens) || 4096);
+                const content = await callAiRaw({ apiKey, systemPrompt, userPrompt, maxTokens: scheduleMaxTokens, temperature: 0.7 });
+                console.log('[space-ai] 行程 LLM 原文长度=', String(content || '').length, '预览=', String(content || '').slice(0, 120));
+                const parsed = parseAiJsonOrFallback(content, null);
+                console.log('[space-ai] 行程 parsed 类型=', Array.isArray(parsed) ? `array(${parsed.length})` : typeof parsed);
+                const allowedIds = new Set();
+                for (const a of (ctx.worldSpace?.groups?.flatMap(g => g.locations) || [])) {
+                    if (a.location?.id) allowedIds.add(a.location.id);
+                }
+                console.log('[space-ai] 行程 allowedIds=', [...allowedIds]);
+                const nowHour = ctx.worldTime?.realHour ?? new Date().getHours();
+                const segments = sanitizeTodaySchedule(parsed, allowedIds, { nowHour });
+                if (segments.length === 0) {
+                    toolkit.island.dismiss();
+                    const hint = parsed === null
+                        ? `AI 原文未识别为 JSON:${String(content).slice(0, 80)}…`
+                        : (allowedIds.size === 0
+                            ? '此 persona 没有可去的场所,无法生成行程。'
+                            : `AI 返回 ${Array.isArray(parsed) ? parsed.length : 0} 段,但 ${[...allowedIds].filter(Boolean).length} 个 locationId 全部未匹配白名单。`);
+                    toolkit.island.notify('warning', '生成失败', hint);
+                    return null;
+                }
+                const entityType = app.state?.personaHome?.entityType || 'user';
+                const entityId = persona.id;
+                const todayDiary = sdk.diary?.getToday?.(entityType, entityId) || { id: `${entityType}:${entityId}:${formatDate()}`, entityType, entityId, date: formatDate() };
+                const warnings = (() => {
+                    const r = [];
+                    // 提示但不阻止(用户在空间卡里能看见)
+                    return r;
+                })();
+                await sdk.diary.upsert({
+                    ...todayDiary,
+                    todaySchedule: segments,
+                    todayScheduleGeneratedAt: Date.now(),
+                    todayScheduleSource: 'ai',
+                    updatedAt: Date.now(),
+                });
+                toolkit.island.dismiss();
+                toolkit.island.notify('success', '已生成今日日程', `${segments.length} 段行程`);
+                refresh();
+                return segments;
+            } catch (err) {
+                console.error('[personaSpaceGenerateTodaySchedule]', err);
+                this.toolkit?.island?.dismiss?.();
+                const msg = String(err?.message || err);
+                if (msg.includes('API Key')) {
+                    this.toolkit?.island?.notify?.('error', 'API 未配置', '请先在资源管理中添加 API Key');
+                } else {
+                    this.toolkit?.island?.notify?.('error', '生成失败', msg.slice(0, 60));
+                }
+                return null;
+            }
+        },
     };
 }
 
@@ -1335,112 +2043,38 @@ function parseRhythmIncoming(raw) {
 
 /**
  * 调用 API 生成心情
+ * 重构 v0.30:复用 space-ai.callAiRaw,prompt 注入今日天气 + 世界观时间
  */
 async function callMoodApi({ apiKey, systemPrompt, userPrompt }) {
-    console.log('[callMoodApi] API Key 完整配置:', {
-        id: apiKey.id,
-        label: apiKey.label || apiKey.name,
-        provider: apiKey.provider,
-        baseUrl: apiKey.baseUrl,
-        hasApiKey: !!apiKey.apiKey,
-        model: apiKey.model,
-    });
-
-    if (!apiKey.apiKey) {
-        throw new Error('API Key 内容为空，请在 API 管理中检查密钥配置');
-    }
-
-    const model = apiKey.model || 'gpt-3.5-turbo';
-    const body = {
-        messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt },
-        ],
-        model,
+    const content = await callAiRaw({
+        apiKey,
+        systemPrompt,
+        userPrompt,
+        maxTokens: 600,
         temperature: 0.7,
-        max_tokens: 500,
-    };
-
-    const isAnthropic = apiKey.provider === 'anthropic';
-    const endpoint = isAnthropic ? 'messages' : 'chat/completions';
-    const baseUrl = (apiKey.baseUrl || 'https://api.openai.com/v1').replace(/\/$/, '');
-    const url = `${baseUrl}/${endpoint}`;
-
-    const headers = { 'Content-Type': 'application/json' };
-
-    // 添加认证头
-    if (isAnthropic) {
-        headers['x-api-key'] = apiKey.apiKey;
-        headers['anthropic-version'] = '2023-06-01';
-        body.max_tokens = 1024;
-        body.messages = [{ role: 'user', content: `${systemPrompt}\n\n${userPrompt}` }];
-    } else if (apiKey.provider === 'gemini') {
-        headers['x-goog-api-key'] = apiKey.apiKey;
-    } else {
-        headers['Authorization'] = `Bearer ${apiKey.apiKey}`;
-    }
-
-    console.log('[callMoodApi] 发送请求到:', url);
-
-    const startTime = performance.now();
-    const response = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(body),
     });
-    const latency = Math.round(performance.now() - startTime);
-
-    console.log('[callMoodApi] 响应状态:', response.status);
-
-    if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`API 请求失败 (${response.status}): ${errorText.slice(0, 200)}`);
-    }
-
-    const result = await response.json();
-    console.log('[callMoodApi] 响应数据:', result);
-
-    // 解析响应
-    let content = '';
-    if (isAnthropic) {
-        content = result?.content?.[0]?.text || '';
-    } else {
-        content = result?.choices?.[0]?.message?.content || '';
-    }
-
-    console.log('[callMoodApi] 解析内容:', content.slice(0, 200));
-
-    // 尝试解析 JSON
-    try {
-        // 提取 JSON（可能有 markdown 代码块）
-        let jsonStr = content;
-        const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-        if (jsonMatch) jsonStr = jsonMatch[1];
-        else {
-            const braceMatch = content.match(/\{[\s\S]*\}/);
-            if (braceMatch) jsonStr = braceMatch[0];
-        }
-        const parsed = JSON.parse(jsonStr);
+    const parsed = parseAiJsonOrFallback(content, null);
+    if (parsed && typeof parsed === 'object') {
         return {
             mood: parsed.mood || '平静',
             moodIntensity: Math.max(0.1, Math.min(1, parseFloat(parsed.moodIntensity) || 0.5)),
             diary: parsed.diary || '',
         };
-    } catch {
-        // 解析失败，尝试从文本提取
-        const lines = content.split('\n').filter(Boolean);
-        const moodLine = lines.find(l => /心情|情绪|状态/.test(l)) || '';
-        const moodMatch = moodLine.match(/[开心平静期待专注小确幸低落焦虑疲惫]+/);
-        return {
-            mood: moodMatch ? moodMatch[0] : '平静',
-            moodIntensity: 0.5,
-            diary: content.slice(0, 100),
-        };
     }
+    // 解析失败,尝试从文本提取
+    const lines = content.split('\n').filter(Boolean);
+    const moodLine = lines.find(l => /心情|情绪|状态/.test(l)) || '';
+    const moodMatch = moodLine.match(/[开心平静期待专注小确幸低落焦虑疲惫]+/);
+    return {
+        mood: moodMatch ? moodMatch[0] : '平静',
+        moodIntensity: 0.5,
+        diary: content.slice(0, 100),
+    };
 }
 
 /**
  * 构建心情分析的用户 prompt
+ * 重构 v0.30:追加天气 + 世界观空间段
  */
 function buildMoodAnalysisPrompt({ persona, world, schedule, today }) {
     const parts = [];
@@ -1458,6 +2092,9 @@ function buildMoodAnalysisPrompt({ persona, world, schedule, today }) {
         parts.push(`\n【世界观】`);
         if (world.name) parts.push(`世界观名称：${world.name}`);
         if (world.summary) parts.push(`概要：${world.summary}`);
+        if (world.chronologySettings?.enabled) {
+            parts.push(`纪时：启用,自定义段名=${(world.chronologySettings.customHours || []).join('/')}`);
+        }
     }
 
     // 今日日程
@@ -1468,6 +2105,26 @@ function buildMoodAnalysisPrompt({ persona, world, schedule, today }) {
             parts.push(`${time} ${e.title}${e.note ? ' - ' + e.note : ''}`);
         });
     }
+
+    // 今日天气(若能拿到)
+    try {
+        const sdk = (typeof window !== 'undefined' ? window.settingsSdk : null);
+        const worldId = persona?.boundWorldId;
+        if (sdk?.places && worldId) {
+            const places = sdk.places.list({ worldRef: worldId }) || [];
+            const weatherAppState = window.weatherAppState;
+            for (const place of places) {
+                if (!place?.realCityRef) continue;
+                const w = weatherAppState?.weatherCache?.[place.realCityRef];
+                if (w?.temperature != null) {
+                    parts.push(`\n【今日天气】`);
+                    parts.push(`${place.realCityRef}(${place.name}): ${w.description || ''}, ${w.temperature}°C, 湿度 ${w.humidity ?? '--'}%, 风力 ${w.wind ?? '--'} 级`);
+                    parts.push(`提示：天气影响情绪(雨天 → 内敛 / 晴 → 放松)。`);
+                    break;
+                }
+            }
+        }
+    } catch (_) { /* ignore */ }
 
     // 当前心情（如果有的话）
     if (today?.mood) {
