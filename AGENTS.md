@@ -23,6 +23,7 @@
 - **v0.63.3**:prompt-manager「当前上下文预览 `<pre>` 末尾重复两段『回复格式与聊天风格』」修复。① 根因:`orderedCards` 已经从 `systemActiveItems.push(reply-format)` 把内容拼到 `previewParts`,但 `previewParts` 末尾又兜底 push 了一次 `SPECIAL_ACTIONS_HELP + REPLY_STYLE_INSTRUCTIONS`,导致 `<pre>` 里出现两份几乎一模一样的特殊消息格式 + 短句聊天风格 —— 而且因为兜底 push 在最尾巴,用户**怎么拖拽顺序都看不到变化**(reply-format 卡拖到最前面,pre 末尾仍是兜底那两份)。② 修复:删掉 `previewParts` 末尾的兜底 push,只让 `orderedCards` / `systemActiveItems` 做 single source of truth。详见 chat迁移/README.md §v0.63.3 + §34「注意『当前上下文顶部预览 pre』不要重复 push」。
 - **v0.66**:「日历视图 → 层级管理 → Prompt 管理」三级联动完成。① 日历 prompt 模板新增 `{{aiName}}` / `{{userName}}` / `{{dateRange}}` / `{{messages}}` 占位符,生成概要时自动从 SDK 替换;② 日历日详情 `cdd-summary-content` 显示已生成的 L1 概要,每条带「应用到 Prompt 管理」按钮;③ 「层级管理历史信息页 → 日概要」tab 下新增可滚动 div,显示「【日期】概要内容 [应用到prompt管理]」条目;④ 概要进 prompt-manager 后进 Murmur 组,带**层级徽章**(L1/L2/L3/L4)+ toggle 启用/关闭 + 删除按钮,删除走顶层确认弹窗 + SDK 软删;⑤ `sdk.memorySummaries.list` 返回的「deleted=true」记录不出现在 Murmur 组,本次生成的概要默认 active=true;⑥ `prompt-builder` 新增 `memorySummaryInjectOverride` 临时屏蔽用户在 prompt-manager 关闭的概要(不写盘,只影响本次 AI 调用);⑦ 三段式持久化:app.state.chat.memorySummaryInject 走 localStorage `xiaoting::chat-memory-summary-inject-v1`,hydrate 时读回。详见 chat迁移/README.md §v0.66 + §38。
 - **v0.66.1**:日历日详情「生概要」modal `initialContent` 误填 prompt 模板 + 「未配置 API Key」bug 修复。① `chat-modal-registry.openSummaryEdit` 之前 v0.65.1 加了 `mergedContent = promptPrefix + initialContent` 拼接,目的是让用户能改 prompt 模板;v0.66 重构后,textarea 只该显示 AI 概要正文,prompt 必须**内部传给 AI、不透到 textarea** → 改成 `initialContent` 原值直传(空串)。② `_generateDaySummary` 用 `apiSdk.listKeys()`,但 `window.__apiSdk` 实际暴露的是 `{apiKeySdk, apiGroupSdk, apiUsageSdk}`,**没有 listKeys 方法** → 改成 `apiKeySdk.listEnabled()[0] || apiKeySdk.list()[0]` + console.warn 兜底。③ `summary-edit-modal.js` 的模块级 `let _currentSummaryEditInstance` 在 `index.js` 直接引用报 `ReferenceError` —— 因为 ESM 模块局部变量跨文件不可见 → 改成通过 `window.__currentSummaryEditModal` 全局注册(避免 ESM 子模块访问问题),并 `export { _getCurrentSummaryEditInstance }` 让 `index.js` 通过 import 访问。详见 chat迁移/README.md §v0.66.1 + §39 + §40。
+- **v0.67**:私聊三大功能模块落地 —— **资金流水 / 红包+转账交互 / 通话接入**。① 新增 `assetFlow` SDK 模块(在 settings-sdk 挂载),持久化到 user/aiPerson 的 `assetFlow:[]` 数组,自动扣减 `persona.asset.assetBalance`,24h 内同 sourceId/amount/counterpartyId 自动去重。② 红包/转账完整流程:`aiSendRedpacket / userReceiveRedpacket / userRejectRedpacket / userSendRedpacket / aiReceiveRedpacket` + `aiSendTransfer / userReceiveTransfer / userReturnTransfer / userSendTransfer / aiReceiveTransfer` 全部走 `chat-asset-service.js`,AI 发红包/转账先扣 AI 余额 → 写 assetFlow → 写消息;User 领取/收 → 扣对方加自己 → 双方写 assetFlow。③ 新增三个 Vue 弹窗组件:`RedpacketReceiveModal` / `TransferReceiveModal` / `CallSummaryModal`,加到 `chat-modal-registry`。④ 钱包流水 UI:人设主页新增「钱包流水」卡片(最近 50 条 + 查看全部按钮),详细页 `transaction-history` 展示全部流水,无 50 条限制。⑤ 通话接入:`call-manager.js` 状态机(ringing → connected → idle),支持用户主动拨打 / AI 主动来电(AI 输出 `[打电话]` / `[视频通话]` token);`IncomingCallModal` 弹窗 + 30s 自动挂断;通话消息持久化到 `chatMessages`(call_chat / call_record / call_end_notice 类型);通话结束 AI 生成概要。详见 §41。
 
 ```bash
 npm install
@@ -1629,9 +1630,11 @@ settings 那边需要识别这两个 payload 字段自动滚到「表情包库�
 5. **§18 「业务 DOM 操作的禁止做法」** —— 一旦觉得「要自己拼 DOM 了」,先看这里
 6. **§21 「chat-app 回复提示词」** —— 要接 AI SDK / 改 prompt-manager / 改 replyPrompts 数据层,先看这里
 6. **§34 「v0.62.x 回复格式与聊天风格」** —— 改 Murmur 组 / 改 prompt-builder 末尾注入 / 改 systemActiveItems 时,先看这里
+7. **§41 「v0.67 私聊三大功能模块」** —— 改资金流水 / 红包转账 / 通话时,先看这里
 7. **§36 「v0.63.2 K 链 toggle 三层穿透」** —— 改 K 链 / 任何「虚拟系统级卡」的 toggle 状态时,先看这里
 8. **§39 「v0.66.1 modal promptPrefix 隔离」** —— 改 SummaryEditModal / 任何 AI 生成 modal 时,先看这里
 9. **§40 「v0.66.1 apiSdk.listKeys() 不存在」** —— 改 _generateDaySummary / 任何调 API Key SDK 的代码时,先看这里
+10. **§41 「v0.67 私聊三大功能模块」** —— 改资金流水 / 红包转账 / 通话时,先看这里
 ---
 
 ## 34. 「可用 Prompt → Murmur」新增虚拟卡 = 三处必改(v0.62.x,2026-08-08)
@@ -2067,6 +2070,171 @@ onGenerate: async (payload) => {
 
 ---
 
+## 41. v0.67 私聊三大功能模块(2026-08-08)
+
+### 41.1 一句话
+
+私聊 App 落地三大功能 —— **资金流水(钱包)** / **红包+转账交互(领取/拒绝/退回)** / **通话(语音/视频,AI 主动来电)**。
+
+### 41.2 资金流水 SDK(`sdk.assetFlow`)
+
+**文件**:`js/apps/setting/world/sdk/asset-flow.js`
+
+挂在 `sdk.assetFlow`(通过 settings-sdk.js 注入):
+
+```js
+const sdk = await window.whenSettingsSdkReady();
+
+// API
+sdk.assetFlow.list(entityType, entityId, opts?)           // 读流水(最新在前,默认 limit=50)
+sdk.assetFlow.listBySource(sourceType, sourceId, opts?)  // 按 source 反查
+sdk.assetFlow.add(entry, entityType, entityId)           // 新增一条 + 同步调 asset.adjust 改余额
+sdk.assetFlow.getBalance(entityType, entityId)           // 读当前余额(走 asset.getBalance)
+sdk.assetFlow.settleAndSync(entityType, entityId)        // 结算定时收入 → 写一条 income-settle 流水
+sdk.assetFlow.removeBySource(sourceType, sourceId, entityType, entityId)  // 撤回流水
+sdk.assetFlow.clear(entityType, entityId)                // 危险:清空
+```
+
+**数据落点**:persona(user / aiPerson)顶层 `assetFlow: []` 数组,每条 entry 字段:
+```
+{ id, type, direction ('in'|'out'), amount,
+  counterpartyType ('user'|'ai'|'system'), counterpartyId, counterpartyName,
+  sourceType ('redpacket'|'transfer'|'income-settle'|'manual'), sourceId,
+  note, timestamp, balance (写完后回填的当前余额) }
+```
+
+**自动去重**:同一 `(sourceType, sourceId, counterpartyId, direction, amount)` 在 24h 内视为重复,保留最早一条(防 SDK 写入 + UI 重画的 race)。
+
+**资金真流动**:`add` 内部自动 `await sdk.persona.asset.adjust(delta, note, entityType, entityId)` 改 `assetBalance`,**UI 显示的钱包余额 = `sdk.assetFlow.getBalance()`** = 走 `persona.asset.getBalance()`。income-engine 的定时收入也走 assetFlow.settleAndSync 写一条 income-settle 记录。
+
+### 41.3 红包/转账服务层(`chat-asset-service.js`)
+
+**文件**:`js/apps/chat-app/services/chat-asset-service.js`(10 个公开 API)
+
+```js
+// AI 主动发
+export async function aiSendRedpacket({ aiPersonId, mode, amount, message, senderName })
+export async function aiSendTransfer({ aiPersonId, mode, amount, note, senderName })
+
+// User 接收/拒绝/退回
+export async function userReceiveRedpacket({ aiPersonId, mode, msgId, amount, message })
+export async function userRejectRedpacket({ aiPersonId, mode, msgId, amount, message })
+export async function userReceiveTransfer({ aiPersonId, mode, msgId, amount, note })
+export async function userReturnTransfer({ aiPersonId, mode, msgId, amount, note })
+
+// User 主动发
+export async function userSendRedpacket({ aiPersonId, mode, amount, message })
+export async function userSendTransfer({ aiPersonId, mode, amount, note })
+
+// AI 接收(由 AI 自己主动领,或 chat.js 解析 [收红包]/[收转账] token)
+export async function aiReceiveRedpacket({ aiPersonId, mode, msgId, amount, message })
+export async function aiReceiveTransfer({ aiPersonId, mode, msgId, amount, note })
+```
+
+**核心模式**:
+```
+1) 检查余额(防 UI 时差透支)
+2) 调 sdk.assetFlow.add() → 同步改余额 + 写 assetFlow + 自动去重
+3) 更新消息卡(opened/returned/rejected 等标志)
+4) 写一条 system type='action_notify' 让 AI 知道对方动作(可选)
+```
+
+### 41.4 红包/转账交互 UI
+
+**新增 Vue 弹窗组件**(`chat-modal-components.js`):
+
+| 弹窗 | class | 触发场景 | 操作 |
+|---|---|---|---|
+| `RedpacketReceiveModal` | `.redpacket-receive-modal` | 点 AI 红包卡片(未领取) | 领取 / 不领取 |
+| `TransferReceiveModal` | `.transfer-receive-modal` | 点 AI 转账卡片(未收款) | 收款 / 退回 |
+| `CallSummaryModal` | `.call-summary-modal` | 通话结束 | 关闭 / 查看详情 |
+| `IncomingCallModal` | `.incoming-call-overlay` | AI 主动来电 | 接听 / 拒绝 |
+
+**注册位置**:`chat-modal-registry.js` 的 `CHAT_MODAL_COMPONENTS` + 同步 `openRedpacketReceive / openTransferReceive / openCallSummary / openIncomingCall` 方法。
+
+**卡片点击 handler**(chat-app/index.js):点 `.redpacket-card` / `.transfer-card` → 弹弹窗 + 调 service API。
+
+### 41.5 通话管理器(`call-manager.js`)
+
+**文件**:`js/apps/chat-app/services/call-manager.js`(单例 `window.__callManager`)
+
+**状态机**:
+```
+idle ←→ ringing ←→ connected → idle (endCall)
+```
+
+**API**:
+```js
+window.__callManager.startOutgoingCall(aiPersonId, 'voice'|'video', mode)  // 用户主动拨打
+window.__callManager.startIncomingCall(aiPersonId, callType, mode)         // AI 主动来电
+window.__callManager.acceptIncomingCall() / rejectIncomingCall()           // 用户接/拒
+window.__callManager.sendCallMessage(content)                              // 通话中发消息
+window.__callManager.endCall()                                             // 挂断 → 返回 {summary, duration, wasConnected}
+window.__callManager.onChange(cb)                                          // 订阅状态变化
+window.__callManager.getState()                                            // 当前状态快照
+```
+
+**AI 触发来电**:AI 在 `sendMessageWithAi` 写盘循环里检测 `msg.type === 'call'`(`_parseOneToken` 新增 `打电话` / `视频通话` 两个 case)→ 调 `callManager.startIncomingCall` + 弹 `IncomingCallModal`。
+
+**30 秒自动挂断**:`startIncomingCall` 内部 `setTimeout(30s)`,匹配 chat.js 行为。
+
+**通话消息落库**:
+- `type='call_chat'`:`{ sender: 'user'|'ai', content, callType, isCallMessage: true }`
+- `type='call_record'`:通话结束写一条记录卡 `{ callRecord: {callType, duration, wasConnected, caller, messages, summary, timestamp} }`
+- `type='call_end_notice'`:通话结束系统通知(让后续聊天 AI 知道刚才通话内容)
+- `type='call_system'`:环境描述/声音描述(视频通话的背景、语音通话的噪音等)
+
+**通话概要 AI 生成**:`endCall` 内部 `_generateCallSummary` → 调 AI(走 `__apiSdk.apiKeySdk.listEnabled()` 拿 key,fallback 默认回复),写回 `callRecord.summary`,然后弹 `CallSummaryModal`。
+
+### 41.6 钱包流水 UI(settings 端)
+
+**人设主页钱包流水卡片**(`persona/home-section.js` 新增 `renderTransactionHistoryBlock`):
+- 紧跟资产卡片,展示最近 50 条流水
+- 绿色左边框(in)/ 粉红色左边框(out)
+- 类型文案映射:redpacket → 「收到红包」/「发红包」,transfer → 「收到转账」/「转账」
+- 显示金额 + 时间(HH:MM 格式)+ 对方名称 + 备注
+- 有 ≥50 条时显示「查看全部」按钮 → 跳 `transaction-history` 详情页
+
+**流水历史详情页**(`settings → transaction-history`):
+- 独立 detail 页面,展示**所有流水**(无 50 条限制)
+- 显示当前余额 + 总条数 + 完整时间戳(YYYY-MM-DD HH:MM:SS)
+- `app.state.personaHome.txFilter` 缓存 `{entityType, entityId}`,从主页跳过来时携带
+
+**新文件**:`js/apps/setting/persona/transaction-history.js` + 注册到 `settings/main.js` 的 `renderDetailPage` 路由。
+
+### 41.7 改动文件速查
+
+| 文件 | 改动 |
+|------|------|
+| `js/apps/setting/world/sdk/asset-flow.js` | **新增** 资金流水 SDK |
+| `js/apps/setting/world/sdk/settings-sdk.js` | 挂载 `sdk.assetFlow` |
+| `js/apps/setting/persona/home-section.js` | 新增 `renderTransactionHistoryBlock` |
+| `js/apps/setting/persona/home-methods.js` | 新增 `openTransactionHistory` |
+| `js/apps/setting/persona/transaction-history.js` | **新增** 流水历史详情页 |
+| `js/apps/setting/main.js` | 注册 `transaction-history` 详情页路由 |
+| `css/settings/_persona-home.css` | `.phome-tx` + `.txh` 样式 |
+| `js/apps/chat-app/services/chat-asset-service.js` | **新增** 红包/转账服务层 |
+| `js/apps/chat-app/services/call-manager.js` | **新增** 通话状态机 |
+| `js/apps/chat-app/services/ai-service.js` | `_parseOneToken` 新增 `打电话` / `视频通话` |
+| `js/apps/chat-app/components/chat-modal-components.js` | 新增 `RedpacketReceiveModal` / `TransferReceiveModal` / `CallSummaryModal` / `IncomingCallModal` |
+| `js/apps/chat-app/components/chat-modal-registry.js` | 注册 4 个弹窗类型 + 4 个 `openXxx` 方法 |
+| `js/apps/chat-app/index.js` | 卡片 click handler(redpacket/transfer);AI 发红包/转账/通话 hook;用户发红包/转账走 chat-asset-service |
+| `js/apps/chat-app/pages/chat-page.js` | `compactMessages` 加 redpacketCard / transferCard 字段 |
+| `css/apps/chat/_chat-receive-modals.css` | **新增** 接收/概要/来电弹窗样式 |
+| `css/apps/chat/index.css` | `@import` 新 CSS |
+
+### 41.8 诊断台词
+
+- 「红包/转账卡点了没反应」 → grep `addEventListener.*redpacket-card` / 确认 chat-app/index.js 派发链已挂
+- 「红包/转账发出去但余额没扣」 → 看 console 有没有 `userSendRedpacket ok` / `aiSendRedpacket failed` 报错;assetFlow 写入失败会让余额不动
+- 「钱包余额显示但流水没出现」 → 检查 `renderTransactionHistoryBlock` 里 `entityId` 是否拿到(优先读 `app.state.personaHome.entityId`,fallback `sdk.defaultUserCard.getDefault().id`)
+- 「通话卡在 RINGING 不接通」 → callManager `startOutgoingCall` 内部 1.5s 后会自动 setConnected;若卡住看是不是 timer 被 GC 掉了
+- 「AI 来电弹窗不弹」 → 检查 `callManager.startIncomingCall` 返回 `true` 后,index.js 是否成功 `chatModalManager.openIncomingCall`
+- 「通话概要永远是『交流了 N 条消息』fallback」 → 看 `__apiSdk.apiKeySdk.listEnabled()` 是否有 enabled key;无 key 会走 fallback
+- 「assetFlow 数组越来越长」 → 正常行为,只在 sourceId 同 amount+counterpartyId+direction 24h 内去重;长尾数据不会爆 IndexedDB(每条 ~200B)
+
+---
+
 最后:如果读到这里仍有疑问,按优先级排查:
 
 1. `src/core/app-renderer.js` —— 三模式调度器
@@ -2076,3 +2244,4 @@ onGenerate: async (payload) => {
 5. **§18 「业务 DOM 操作的禁止做法」** —— 一旦觉得「要自己拼 DOM 了」,先看这里
 6. **§21 「chat-app 回复提示词」** —— 要接 AI SDK / 改 prompt-manager / 改 replyPrompts 数据层,先看这里
 6. **§34 「v0.62.x 回复格式与聊天风格」** —— 改 Murmur 组 / 改 prompt-builder 末尾注入 / 改 systemActiveItems 时,先看这里
+7. **§41 「v0.67 私聊三大功能模块」** —— 改资金流水 / 红包转账 / 通话时,先看这里
