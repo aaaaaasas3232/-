@@ -1,0 +1,222 @@
+/* murmur · 四叶草购物卡片
+ *
+ * 三种卡：商品/店铺分享、礼物、小剧场概要。
+ * 渲染器在 `js/apps/chat-app/components/share-cards.js`。
+ *
+ * ── 为什么不做彩色渐变底 ──────────────────────────────────────────
+ *
+ * 音乐卡那种高饱和渐变在偶尔出现一张时很好看，但商品卡会**连着出现好几张**
+ * （用户逛街时一口气分享三四件），一屏全是撞色会把聊天页搅得很花。
+ * 所以这几张走白底 + 一条彩色边：远看是聊天记录，近看才是卡片。
+ *
+ * ★ 颜色不能用四叶草的 --sp-* 变量。那些变量挂在
+ *   `.app-shell[data-app-id="shop"]` 上，这里是 chat 的 shell，继承不到，
+ *   会全部退化成 initial（文字变黑、背景透明）。所以这里自己定义 --shopc-*，
+ *   值刻意和四叶草的「晨露」主题一致。
+ */
+
+.app-shell[data-app-id="chat"] .shop-item-card,
+.app-shell[data-app-id="chat"] .shop-gift-card,
+.app-shell[data-app-id="chat"] .shop-theater-card {
+    --shopc-line: #e6e9e3;
+    --shopc-surface: #ffffff;
+    --shopc-soft: #f2f4ef;
+    --shopc-green: #6e9c7c;
+    --shopc-green-deep: #557c61;
+    --shopc-apricot: #d9a183;
+    --shopc-price: #c2705a;
+    --shopc-ink: #2e332f;
+    --shopc-ink-2: #6b7570;
+    --shopc-ink-3: #a3aba6;
+
+    position: relative;
+    width: 232px;
+    padding: 12px 13px;
+    border: 1px solid var(--shopc-line);
+    border-radius: 13px;
+    background: var(--shopc-surface);
+    overflow: hidden;
+}
+
+/* 左边那条彩色竖线是唯一的品牌色出现处 */
+.app-shell[data-app-id="chat"] .shop-item-card::before,
+.app-shell[data-app-id="chat"] .shop-theater-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--shopc-green);
+}
+
+.app-shell[data-app-id="chat"] .shop-card-kind {
+    display: inline-block;
+    padding: 1px 6px;
+    margin-bottom: 5px;
+    border-radius: 4px;
+    background: var(--shopc-soft);
+    color: var(--shopc-green-deep);
+    font-size: 10px;
+    letter-spacing: 0.3px;
+}
+
+.app-shell[data-app-id="chat"] .shop-card-name {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--shopc-ink);
+}
+
+.app-shell[data-app-id="chat"] .shop-card-sub {
+    margin-top: 2px;
+    font-size: 11px;
+    color: var(--shopc-ink-3);
+}
+
+.app-shell[data-app-id="chat"] .shop-card-blurb {
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--shopc-ink-2);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="chat"] .shop-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 7px;
+}
+
+.app-shell[data-app-id="chat"] .shop-card-tags span {
+    padding: 1px 6px;
+    border: 1px solid var(--shopc-line);
+    border-radius: 5px;
+    background: var(--shopc-soft);
+    color: var(--shopc-ink-2);
+    font-size: 10px;
+}
+
+.app-shell[data-app-id="chat"] .shop-card-foot {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 9px;
+    padding-top: 8px;
+    border-top: 1px solid var(--shopc-line);
+}
+
+.app-shell[data-app-id="chat"] .shop-card-price {
+    color: var(--shopc-price);
+    font-size: 15px;
+    font-weight: 640;
+}
+.app-shell[data-app-id="chat"] .shop-card-price i {
+    margin-right: 3px;
+    font-style: normal;
+    font-size: 10px;
+    color: var(--shopc-ink-3);
+}
+.app-shell[data-app-id="chat"] .shop-card-price em {
+    margin-left: 2px;
+    font-style: normal;
+    font-size: 10px;
+    opacity: 0.8;
+}
+
+.app-shell[data-app-id="chat"] .shop-card-brand {
+    font-size: 10px;
+    color: var(--shopc-ink-3);
+}
+
+.app-shell[data-app-id="chat"] .shop-card-note {
+    margin-top: 7px;
+    padding: 6px 9px;
+    border-radius: 7px;
+    background: var(--shopc-soft);
+    font-size: 11.5px;
+    line-height: 1.55;
+    color: var(--shopc-ink-2);
+}
+
+/* ── 礼物卡 ───────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="chat"] .shop-gift-card {
+    padding-top: 16px;
+    border-color: var(--shopc-apricot);
+}
+
+/* 顶上一条丝带，这是唯一一处「装饰」——
+   礼物卡在聊天流里应该一眼认出来，它和商品卡的语义完全不同 */
+.app-shell[data-app-id="chat"] .shop-gift-ribbon {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--shopc-apricot), var(--shopc-green));
+}
+
+.app-shell[data-app-id="chat"] .shop-gift-who {
+    font-size: 11px;
+    color: var(--shopc-ink-3);
+}
+
+.app-shell[data-app-id="chat"] .shop-gift-name {
+    margin-top: 3px;
+    font-size: 15px;
+    font-weight: 620;
+    line-height: 1.35;
+    color: var(--shopc-ink);
+}
+
+.app-shell[data-app-id="chat"] .shop-gift-msg {
+    margin-top: 7px;
+    font-size: 12px;
+    line-height: 1.65;
+    color: var(--shopc-ink-2);
+}
+
+.app-shell[data-app-id="chat"] .shop-gift-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 9px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--shopc-line);
+}
+
+.app-shell[data-app-id="chat"] .shop-gift-price {
+    color: var(--shopc-price);
+    font-size: 13.5px;
+    font-weight: 620;
+}
+
+.app-shell[data-app-id="chat"] .shop-gift-wish {
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(217, 161, 131, 0.16);
+    color: var(--shopc-apricot);
+    font-size: 10px;
+}
+
+/* ── 小剧场卡 ─────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="chat"] .shop-theater-card { cursor: pointer; }
+.app-shell[data-app-id="chat"] .shop-theater-card::before { background: var(--shopc-apricot); }
+
+.app-shell[data-app-id="chat"] .shop-theater-summary {
+    margin-top: 7px;
+    padding: 7px 9px;
+    border-radius: 8px;
+    background: var(--shopc-soft);
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: var(--shopc-ink-2);
+}

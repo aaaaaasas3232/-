@@ -23,7 +23,15 @@
  */
 
 import { escapeHtml } from '@/src/core/escape.js';
-import { PROVIDER_PRESETS } from './api-key-sdk.js';
+import {
+    PROVIDER_PRESETS,
+    executeApiRequest,
+    executeApiStream,
+    providerSupportsStreaming,
+} from './api-key-sdk.js';
+// 诊断 / 科普：把「一串看不懂的报错」翻译成「这是什么问题 + 你该怎么办」
+import { API_FAQ } from './api-diagnostics.js';
+import { getLastApiDiagnostic } from './api-manager-methods.js';
 
 // ============================================
 // 工具函数
@@ -153,7 +161,16 @@ function _persist(db, fn) {
 
 // 同步 SDK：先从缓存返回，读写先更新缓存，再异步持久化
 export function getApiSdk() {
-    if (window.__apiSdk) return window.__apiSdk;
+    if (window.__apiSdk) {
+        // 业务 App 统一从 window.__apiSdk 发请求。旧对象可能由 HMR 保留下来，
+        // 因此每次取 SDK 都补齐执行器，避免出现“能列出 Key、却不能调用”的半初始化状态。
+        Object.assign(window.__apiSdk, {
+            executeApiRequest,
+            executeApiStream,
+            providerSupportsStreaming,
+        });
+        return window.__apiSdk;
+    }
 
     const db = window.myDb;
     if (!db) return null;
@@ -186,6 +203,11 @@ export function getApiSdk() {
             // 异步持久化（先等 db.ready）
             _persist(db, () => db.put(STORE_KEYS, clean));
             return clean;
+        },
+        update(id, patch = {}) {
+            const current = _cacheKeys.find(k => k.id === id);
+            if (!current) return null;
+            return this.put({ ...current, ...patch, id });
         },
         remove(id) {
             _cacheKeys = _cacheKeys.filter(k => k.id !== id);
@@ -241,6 +263,39 @@ export function getApiSdk() {
             try { localStorage.removeItem('xiaoting::api-label::group::' + id); } catch (_) {}
             _persist(db, () => db.remove(STORE_GROUPS, id));
         },
+        getNextInGroup(groupId) {
+            const group = _cacheGroups.find(g => g.id === groupId);
+            const ids = Array.isArray(group?.apiKeyIds) ? group.apiKeyIds : [];
+            if (!group || ids.length === 0) return null;
+
+            const enabled = ids
+                .map((id, index) => ({ apiKey: _cacheKeys.find(k => k.id === id), index }))
+                .filter(item => item.apiKey && item.apiKey.enabled !== false);
+            if (enabled.length === 0) return null;
+
+            let selected;
+            if (group.strategy === 'random') {
+                selected = enabled[Math.floor(Math.random() * enabled.length)];
+            } else if (group.strategy === 'sequential') {
+                selected = enabled[0];
+            } else {
+                const start = Math.max(0, Number(group.currentIndex) || 0) % ids.length;
+                for (let offset = 0; offset < ids.length; offset++) {
+                    const index = (start + offset) % ids.length;
+                    const apiKey = _cacheKeys.find(k => k.id === ids[index]);
+                    if (apiKey && apiKey.enabled !== false) {
+                        selected = { apiKey, index };
+                        break;
+                    }
+                }
+            }
+
+            if (!selected) return null;
+            if (group.strategy !== 'random' && group.strategy !== 'sequential') {
+                this.put({ ...group, currentIndex: (selected.index + 1) % ids.length });
+            }
+            return { apiKey: selected.apiKey, group: this.get(groupId) || group };
+        },
     };
 
     const apiUsageSdk = {
@@ -292,7 +347,14 @@ export function getApiSdk() {
         },
     };
 
-    window.__apiSdk = { apiKeySdk, apiGroupSdk, apiUsageSdk };
+    window.__apiSdk = {
+        apiKeySdk,
+        apiGroupSdk,
+        apiUsageSdk,
+        executeApiRequest,
+        executeApiStream,
+        providerSupportsStreaming,
+    };
     // 即便外部不调用 api manager section,也先静默加载缓存,避免后续业务调用取不到 key
     loadCacheAsync(db);
     // 暴露加载 promise 供外部业务 await
@@ -387,7 +449,6 @@ function renderOverviewCard(app) {
             ${summary.totalTokens > 0 ? `
                 <div class="api-mgr-overview__tokens">
                     <span class="api-mgr-token-badge">
-                        <span class="api-mgr-token-badge__icon">◈</span>
                         <span>本周消耗</span>
                         <span class="api-mgr-token-badge__value">${formatTokens(summary.totalInputTokens)}</span>
                         <span class="api-mgr-token-badge__sep">输入</span>
@@ -463,6 +524,10 @@ function renderKeyCard(key, app) {
     const sdk = getApiSdk();
     const stats = sdk?.apiKeySdk.getStats(key.id) || {};
     const isEnabled = key.enabled !== false;
+    // 上一次测试失败的诊断只挂在**那一个** key 上，别让别的卡片也冒出「诊断」按钮
+    const diag = getLastApiDiagnostic();
+    const hasDiag = !!(diag && diag.keyId === key.id);
+    const repairOpen = app?.state?.apiMgr?.repairKeyId === key.id;
 
     return `
         <div class="api-mgr-key-card ${isEnabled ? '' : 'is-disabled'}">
@@ -505,9 +570,104 @@ function renderKeyCard(key, app) {
             <div class="api-mgr-key-card__actions">
                 <button class="api-mgr-btn api-mgr-btn--small" ${wvAction('apiEditKey', { id: key.id })}>编辑</button>
                 <button class="api-mgr-btn api-mgr-btn--small api-mgr-btn--ghost" ${wvAction('apiTestKey', { id: key.id })}>测试</button>
+                <button class="api-mgr-btn api-mgr-btn--small api-mgr-btn--ghost" ${wvAction('apiToggleRepair', { id: key.id })}>修复</button>
                 <button class="api-mgr-btn api-mgr-btn--small api-mgr-btn--ghost" ${wvAction('apiDuplicateKey', { id: key.id })}>复制</button>
                 <button class="api-mgr-btn api-mgr-btn--small api-mgr-btn--danger" ${wvAction('apiDeleteKey', { id: key.id })}>删除</button>
+                ${hasDiag ? `
+                    <div class="api-mgr-key-card__diagnostic-action">
+                        <button class="api-mgr-btn api-mgr-btn--small api-mgr-btn--warn" ${wvAction('apiOpenDiagnostic', { id: key.id })}>诊断 ${escapeHtml(diag.code)}</button>
+                    </div>
+                ` : ''}
             </div>
+
+            ${repairOpen ? renderRepairPanel(key, app) : ''}
+        </div>
+    `;
+}
+
+/**
+ * 修复窗口：粘一段配置进来，系统解析成字段写回。
+ *
+ * 用户拿到的配置形态五花八门（服务商文档里的 JSON、朋友发的几行文本、
+ * .env 片段），让他一项项对着填最容易填错 —— 尤其是 Base URL 那一段路径。
+ * 这个窗口的意义就是「整段粘进来，剩下的我来对」。
+ */
+function renderRepairPanel(key, app) {
+    const result = app?.state?.apiMgr?.repairResult || null;
+    return `
+        <div class="api-mgr-repair">
+            <div class="api-mgr-repair__title">粘贴配置自动修复</div>
+            <div class="api-mgr-repair__hint">
+                把服务商给的配置整段贴进来就行，JSON、每行「键: 值」、或者 .env 那种 KEY=VALUE 都认。
+                认不出来的字段会跳过，不会把整段作废。Base URL 末尾多写的 /chat/completions 会自动去掉。
+            </div>
+            <textarea class="api-mgr-repair__input" data-api-repair-input="1" rows="5" spellcheck="false"
+                placeholder='{
+  "baseUrl": "https://api.example.com/v1",
+  "apiKey": "sk-…",
+  "model": "gpt-4o"
+}'></textarea>
+            ${result ? `
+                <div class="api-mgr-repair__result ${result.ok ? 'is-ok' : 'is-bad'}">
+                    ${escapeHtml(result.message || '')}
+                </div>
+            ` : ''}
+            <div class="api-mgr-repair__actions">
+                <button class="api-mgr-btn api-mgr-btn--small api-mgr-btn--ghost" ${wvAction('apiToggleRepair', { id: key.id })}>收起</button>
+                <button class="api-mgr-btn api-mgr-btn--small" ${wvAction('apiApplyRepair', { id: key.id })}>解析并应用</button>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * 诊断报告面板：上一次测试失败的完整信息，可整段复制。
+ * API Key 已经在生成报告时打过码，用户可以放心截图 / 转发。
+ */
+function renderDiagnosticPanel(app) {
+    const diag = getLastApiDiagnostic();
+    if (!diag) return '';
+    return `
+        <div class="api-mgr-modal-overlay" data-api-modal-kind="diagnostic">
+            <div class="api-mgr-modal api-mgr-modal--diag">
+                <div class="api-mgr-modal__head">
+                    <div class="api-mgr-modal__title">诊断报告 · ${escapeHtml(diag.code)}</div>
+                    <button class="api-mgr-modal__close" aria-label="关闭" ${wvAction('apiCloseDiagnostic', {})}>×</button>
+                </div>
+                <div class="api-mgr-modal__body">
+                    <div class="api-mgr-diag__hint">
+                        下面这段可以整段复制出去问别人或问 AI。API Key 已经打码，不会泄漏。
+                    </div>
+                    <pre class="api-mgr-diag__report">${escapeHtml(diag.report || '')}</pre>
+                </div>
+                <div class="api-mgr-modal__foot">
+                    <button class="api-mgr-btn api-mgr-btn--ghost" ${wvAction('apiCloseDiagnostic', {})}>关闭</button>
+                    <button class="api-mgr-btn" ${wvAction('apiCopyDiagnostic', {})}>复制报告</button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * 科普页：给「不知道 API 是什么」的用户看。
+ * 默认收起 —— 老手不需要，展开会把密钥列表挤到屏幕外。
+ */
+function renderFaqPanel(app) {
+    const open = !!app?.state?.apiMgr?.faqOpen;
+    const items = open ? API_FAQ.map((item) => `
+        <details class="api-mgr-faq__item">
+            <summary class="api-mgr-faq__q">${escapeHtml(item.q)}</summary>
+            <div class="api-mgr-faq__a">${escapeHtml(item.a)}</div>
+        </details>
+    `).join('') : '';
+    return `
+        <div class="api-mgr-faq">
+            <button class="api-mgr-faq__toggle" ${wvAction('apiToggleFaq', {})}>
+                <span>${open ? '收起' : 'API、LLM、Token 是什么？'}</span>
+                <span class="api-mgr-faq__chevron">${open ? '▴' : '▾'}</span>
+            </button>
+            ${open ? `<div class="api-mgr-faq__list">${items}</div>` : ''}
         </div>
     `;
 }
@@ -518,12 +678,12 @@ function renderKeyEditor(app, editingKey) {
     const params = editingKey.params || {};
 
     return `
-        <div class="api-mgr-modal-overlay"
-             onclick="(function(e){ if(e.target === e.currentTarget) window.__apiCloseKeyEditor && window.__apiCloseKeyEditor(); })(event)">
+        <div class="api-mgr-modal-overlay" data-api-modal-kind="key">
             <div class="api-mgr-modal">
 
                 <div class="api-mgr-modal__head">
                     <div class="api-mgr-modal__title">${escapeHtml(title)}</div>
+                    <button class="api-mgr-modal__close" aria-label="关闭" ${wvAction('apiCloseKeyEditor', {})}>×</button>
                 </div>
 
                 <div class="api-mgr-modal__body">
@@ -691,10 +851,8 @@ function renderKeyEditor(app, editingKey) {
                 </div>
 
                 <div class="api-mgr-modal__foot">
-                    <button class="api-mgr-btn api-mgr-btn--ghost"
-                        onclick="window.__apiCloseKeyEditor && window.__apiCloseKeyEditor()">取消</button>
-                    <button class="api-mgr-btn api-mgr-btn--primary"
-                        onclick="window.__apiSaveKey && window.__apiSaveKey()">保存</button>
+                    <button class="api-mgr-btn api-mgr-btn--ghost" ${wvAction('apiCloseKeyEditor', {})}>取消</button>
+                    <button class="api-mgr-btn api-mgr-btn--primary" ${wvAction('apiSaveKey', {})}>保存</button>
                 </div>
             </div>
         </div>
@@ -807,12 +965,12 @@ function renderGroupEditor(app, editingGroup, allKeys) {
     const selectedKeyIds = editingGroup.apiKeyIds || [];
 
     return `
-        <div class="api-mgr-modal-overlay"
-             onclick="(function(e){ if(e.target === e.currentTarget) window.__apiCloseGroupEditor && window.__apiCloseGroupEditor(); })(event)">
+        <div class="api-mgr-modal-overlay" data-api-modal-kind="group">
             <div class="api-mgr-modal">
 
                 <div class="api-mgr-modal__head">
                     <div class="api-mgr-modal__title">${escapeHtml(title)}</div>
+                    <button class="api-mgr-modal__close" aria-label="关闭" ${wvAction('apiCloseGroupEditor', {})}>×</button>
                 </div>
 
                 <div class="api-mgr-modal__body">
@@ -876,10 +1034,8 @@ function renderGroupEditor(app, editingGroup, allKeys) {
                 </div>
 
                 <div class="api-mgr-modal__foot">
-                    <button class="api-mgr-btn api-mgr-btn--ghost"
-                        onclick="window.__apiCloseGroupEditor && window.__apiCloseGroupEditor()">取消</button>
-                    <button class="api-mgr-btn api-mgr-btn--primary"
-                        onclick="window.__apiSaveGroup && window.__apiSaveGroup()">保存</button>
+                    <button class="api-mgr-btn api-mgr-btn--ghost" ${wvAction('apiCloseGroupEditor', {})}>取消</button>
+                    <button class="api-mgr-btn api-mgr-btn--primary" ${wvAction('apiSaveGroup', {})}>保存</button>
                 </div>
             </div>
         </div>
@@ -1066,10 +1222,12 @@ export function renderApiManagerSection(app) {
     return `
         <div class="api-mgr-page">
             ${renderOverviewCard(app)}
+            ${renderFaqPanel(app)}
             ${renderTabs(tab)}
             ${tab === 'keys' ? renderKeysTab(app) : ''}
             ${tab === 'groups' ? renderGroupsTab(app) : ''}
             ${tab === 'stats' ? renderStatsTab(app) : ''}
+            ${app.state.apiMgr?.diagnosticOpen ? renderDiagnosticPanel(app) : ''}
         </div>
     `;
 }

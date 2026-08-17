@@ -550,15 +550,120 @@ function handleMapMouseLeave(e) {
     _mapDragState = null;
 }
 
+// ============================================
+// 地标拖动（改坐标）
+// ============================================
+// 之前 handleMapMouseDown 里写着「由 pin 自己的拖拽逻辑处理」，
+// 但那段逻辑从来不存在 —— 地标一直是拖不动的。这里补上：
+//   拖动改 left/top（视觉即时跟手）→ 松手换算成 -100~100 坐标并落盘。
+// 换算与渲染侧一致：pct = (v + 100) / 2，反过来 v = pct * 2 - 100。
+
+let _pinDragState = null;
+
+const clampPct = (v) => Math.max(0, Math.min(100, v));
+const pctToCoord = (pct) => Math.round((pct * 2 - 100) * 10) / 10;
+
+function handlePinMouseDown(e) {
+    const mark = e.target.closest('[data-wv-map-pin]');
+    if (!mark) return;
+    const stage = mark.closest('[data-wv-map-stage]');
+    if (!stage) return;
+    // 缩放后的实际渲染框：屏幕位移 ÷ 这个宽高 = 百分比位移，不用再单独除 zoom
+    const box = (mark.closest('.wv-map__world') || stage).getBoundingClientRect();
+    if (!box.width || !box.height) return;
+    const pos = getPointerPos(e);
+    _pinDragState = {
+        mark,
+        placeId: mark.getAttribute('data-place-id') || '',
+        locationId: mark.getAttribute('data-location-id') || '',
+        startX: pos.x,
+        startY: pos.y,
+        boxW: box.width,
+        boxH: box.height,
+        startLeft: parseFloat(mark.style.left) || 50,
+        startTop: parseFloat(mark.style.top) || 50,
+        left: parseFloat(mark.style.left) || 50,
+        top: parseFloat(mark.style.top) || 50,
+        moved: false,
+    };
+}
+
+function handlePinMouseMove(e) {
+    const st = _pinDragState;
+    if (!st) return;
+    const pos = getPointerPos(e);
+    const dx = pos.x - st.startX;
+    const dy = pos.y - st.startY;
+    if (!st.moved && Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+
+    if (!st.moved) {
+        st.moved = true;
+        st.mark.classList.add('is-dragging');
+        // ★ 摘掉 data-app-action：否则松手那一下框架的点击派发会把用户带进编辑页
+        st.actionAttr = st.mark.getAttribute('data-app-action');
+        st.mark.removeAttribute('data-app-action');
+        // 拖动时挂一个坐标气泡，让用户知道自己拖到哪了
+        st.badge = document.createElement('span');
+        st.badge.className = 'wv-map__dragcoord';
+        st.mark.appendChild(st.badge);
+    }
+    e.preventDefault();
+    st.left = clampPct(st.startLeft + (dx / st.boxW) * 100);
+    st.top = clampPct(st.startTop + (dy / st.boxH) * 100);
+    st.mark.style.left = `${st.left.toFixed(2)}%`;
+    st.mark.style.top = `${st.top.toFixed(2)}%`;
+    if (st.badge) {
+        st.badge.textContent = `${pctToCoord(st.left)}, ${pctToCoord(100 - st.top)}`;
+    }
+}
+
+function handlePinMouseUp() {
+    const st = _pinDragState;
+    if (!st) return;
+    _pinDragState = null;
+    st.mark.classList.remove('is-dragging');
+    if (st.badge) { try { st.badge.remove(); } catch (_) { /* noop */ } }
+    if (!st.moved) return;   // 只是点了一下 → 保留原有点击行为
+
+    const x = pctToCoord(st.left);
+    const y = pctToCoord(100 - st.top);   // 屏幕 y 向下，坐标系 y 向上
+    if (st.placeId) {
+        dispatchPageAction({
+            action: 'appMethod', appId: 'settings',
+            method: 'worldSetPlacePosition',
+            payload: { id: st.placeId, x, y },
+        });
+    } else if (st.locationId) {
+        dispatchPageAction({
+            action: 'appMethod', appId: 'settings',
+            method: 'worldSetLocationPosition',
+            payload: { id: st.locationId, x, y },
+        });
+    }
+}
+
 /**
  * 主点击处理
  */
+function handleIconPick(e) {
+    const btn = e.target.closest('[data-wv-icon-pick]');
+    if (!btn) return;
+    const pick = btn.closest('.wv-iconpick');
+    if (!pick) return;
+    const hidden = pick.querySelector('input[type="hidden"]');
+    if (hidden) hidden.value = btn.getAttribute('data-wv-icon-pick') || 'pin';
+    pick.querySelectorAll('.wv-iconpick__item').forEach((el) => {
+        el.classList.toggle('is-on', el === btn);
+    });
+}
+
 function handleClick(e) {
     handleToggleTab(e);
     handlePresetClick(e);
     handleDateClear(e);
     handleLocationAccessToggle(e);
     handleLocationAccessSelect(e);
+    handleIconPick(e);
 }
 
 // ============================================
@@ -588,10 +693,18 @@ export function initWorldEventHandlers() {
     document.addEventListener('mouseup', handleMapMouseUp, true);
     document.addEventListener('mouseleave', handleMapMouseLeave, true);
 
+    // 地标拖动（改坐标）
+    document.addEventListener('mousedown', handlePinMouseDown, true);
+    document.addEventListener('mousemove', handlePinMouseMove, true);
+    document.addEventListener('mouseup', handlePinMouseUp, true);
+
     // 触摸事件（移动端支持）
     document.addEventListener('touchstart', handleMapMouseDown, { passive: false });
     document.addEventListener('touchmove', handleMapMouseMove, { passive: false });
     document.addEventListener('touchend', handleMapMouseUp, true);
+    document.addEventListener('touchstart', handlePinMouseDown, { passive: false });
+    document.addEventListener('touchmove', handlePinMouseMove, { passive: false });
+    document.addEventListener('touchend', handlePinMouseUp, true);
 }
 
 export function destroyWorldEventHandlers() {
@@ -610,8 +723,16 @@ export function destroyWorldEventHandlers() {
     document.removeEventListener('mouseup', handleMapMouseUp, true);
     document.removeEventListener('mouseleave', handleMapMouseLeave, true);
 
+    // 地标拖动
+    document.removeEventListener('mousedown', handlePinMouseDown, true);
+    document.removeEventListener('mousemove', handlePinMouseMove, true);
+    document.removeEventListener('mouseup', handlePinMouseUp, true);
+
     // 触摸事件
     document.removeEventListener('touchstart', handleMapMouseDown);
     document.removeEventListener('touchmove', handleMapMouseMove);
     document.removeEventListener('touchend', handleMapMouseUp, true);
+    document.removeEventListener('touchstart', handlePinMouseDown);
+    document.removeEventListener('touchmove', handlePinMouseMove);
+    document.removeEventListener('touchend', handlePinMouseUp, true);
 }

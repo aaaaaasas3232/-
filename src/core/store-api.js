@@ -22,7 +22,14 @@ function normalizeStoreConfig(storeConfig) {
                     return { name: item, keyPath: 'id' };
                 }
                 if (item?.name) {
-                    return { name: item.name, keyPath: item.keyPath || 'id' };
+                    // ★ indexes 必须透传：engine.registerStore 支持
+                    // { keyPath, indexes: [{name, keyPath, unique?, multiEntry?}] }，
+                    // 之前这里丢掉了 indexes，app 声明的索引永远建不出来。
+                    const normalized = { name: item.name, keyPath: item.keyPath || 'id' };
+                    if (Array.isArray(item.indexes) && item.indexes.length) {
+                        normalized.indexes = item.indexes;
+                    }
+                    return normalized;
                 }
                 return null;
             })
@@ -62,6 +69,10 @@ export function createAppDbApi(appId, stores = []) {
             return ensureStore(storeName).put(storeName, data);
         },
         remove(storeName, key) {
+            return ensureStore(storeName).remove(storeName, key);
+        },
+        // 插件常写成 db.delete；和 remove 同一条路
+        delete(storeName, key) {
             return ensureStore(storeName).remove(storeName, key);
         },
         clear(storeName) {

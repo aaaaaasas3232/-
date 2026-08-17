@@ -1,0 +1,154 @@
+/**
+ * ================================================================
+ * 小听 Framework · 滑动指示器预设 CSS
+ * ---------------------------------------------------------------
+ * 聊天 App 风格底部 Tab Bar
+ * - 粉色小 pill 在 tab 下方滑动
+ * - 使用 CSS :has() 选择器实现
+ *
+ * 迁移自: css/apps/chat/index.css (chat-tab-indicator 区域)
+ * ================================================================
+ */
+
+/* ================================================================
+   容器样式
+   ================================================================ */
+
+/* 指示器预设容器 */
+.app-tab-bar[data-preset="indicator"] {
+    /* 预设默认值 */
+    --indicator-width: 24px;
+    --indicator-height: 3px;
+    --indicator-color: #007aff;
+    --indicator-radius: 1.5px;
+    --indicator-bottom: 4px;
+}
+
+/* ================================================================
+   Tab Indicator 基础样式
+   ================================================================ */
+
+/* 指示器容器 */
+.app-tab-bar[data-preset="indicator"] .chat-tab-indicator {
+    position: absolute;
+    bottom: var(--indicator-bottom, 4px);
+    height: var(--indicator-height, 3px);
+    border-radius: var(--indicator-radius, 1.5px);
+    background: var(--indicator-color, #007aff);
+    transition: left 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+    /* 初始宽度，由 JS 或 CSS :has() 控制 */
+    width: var(--indicator-width, 24px);
+}
+
+/* ================================================================
+   :has() 滑动指示器
+   ================================================================ */
+
+/* 说明:现代浏览器支持 :has() 选择器，可以通过 :has() 检测 active tab 来定位指示器 */
+
+/* 第 1 个 tab 激活 */
+.app-tab-bar[data-preset="indicator"]:has(.app-tab-item:nth-child(1).active) .chat-tab-indicator {
+    /* 计算位置: 50% - 半个容器宽度 - 调整值 */
+    left: calc(20% - 12px);
+}
+
+/* 第 2 个 tab 激活 */
+.app-tab-bar[data-preset="indicator"]:has(.app-tab-item:nth-child(2).active) .chat-tab-indicator {
+    left: calc(40% - 12px);
+}
+
+/* 第 3 个 tab 激活 */
+.app-tab-bar[data-preset="indicator"]:has(.app-tab-item:nth-child(3).active) .chat-tab-indicator {
+    left: calc(60% - 12px);
+}
+
+/* 第 4 个 tab 激活 */
+.app-tab-bar[data-preset="indicator"]:has(.app-tab-item:nth-child(4).active) .chat-tab-indicator {
+    left: calc(80% - 12px);
+}
+
+/* 第 5 个 tab 激活 */
+.app-tab-bar[data-preset="indicator"]:has(.app-tab-item:nth-child(5).active) .chat-tab-indicator {
+    left: calc(100% - 12px);
+}
+
+/* ================================================================
+   Tab Item 基础样式
+   ================================================================ */
+
+/* 取消默认的 active 样式，让指示器接管视觉反馈 */
+.app-tab-bar[data-preset="indicator"] .app-tab-item {
+    transition: color 0.2s ease;
+}
+
+.app-tab-bar[data-preset="indicator"] .app-tab-item.active {
+    color: var(--indicator-color, #007aff);
+}
+
+/* ================================================================
+   指示器宽度（根据容器宽度动态计算）
+   ================================================================ */
+
+/* 小屏幕适配 */
+@media (max-width: 380px) {
+    .app-tab-bar[data-preset="indicator"] .chat-tab-indicator {
+        --indicator-width: 20px;
+    }
+}
+
+/* ================================================================
+   备用方案：使用 nth-child 精确定位
+   （当 :has() 不可用时）
+   ================================================================ */
+
+/* 注意:下面的选择器是精确百分比定位，需要根据实际 tab 数量调整 */
+
+/*
+.app-tab-bar[data-preset="indicator"]:has(.app-tab-item:nth-child(2).active) .chat-tab-indicator {
+    left: calc(50% / 4 - var(--indicator-width, 24px) / 2 + (50% / 4) * 1);
+}
+
+.app-tab-bar[data-preset="indicator"]:has(.app-tab-item:nth-child(3).active) .chat-tab-indicator {
+    left: calc(50% / 4 - var(--indicator-width, 24px) / 2 + (50% / 4) * 2);
+}
+
+...以此类推
+*/
+
+/* ================================================================
+   JS 驱动的精确指示器定位
+   ================================================================ */
+
+/*
+ * 如果 CSS :has() 定位不够精确，可以由 JS 控制位置
+ * JS 应设置 .chat-tab-indicator 的 style.left 和 style.width
+ *
+ * 示例代码（由 framework 或 app 提供）:
+ *
+ * const indicator = tabBar.querySelector('.chat-tab-indicator');
+ * const activeTab = tabBar.querySelector('.app-tab-item.active');
+ * if (indicator && activeTab) {
+ *     const tabRect = activeTab.getBoundingClientRect();
+ *     const barRect = tabBar.getBoundingClientRect();
+ *     indicator.style.left = (tabRect.left - barRect.left + (tabRect.width - indicatorWidth) / 2) + 'px';
+ *     indicator.style.width = indicatorWidth + 'px';
+ * }
+ */
+
+/* ================================================================
+   兼容性提示
+   ================================================================ */
+
+/*
+ * CSS :has() 浏览器支持情况（截至 2024）:
+ * - Chrome 105+ ✓
+ * - Safari 15.4+ ✓
+ * - Firefox 121+ ✓
+ * - Edge 105+ ✓
+ *
+ * 如需兼容更老的浏览器，可以使用 JS 方案：
+ * 1. 监听 tab 切换事件
+ * 2. 计算 active tab 位置
+ * 3. 更新指示器位置
+ */

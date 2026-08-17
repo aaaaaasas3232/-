@@ -1,0 +1,92 @@
+/**
+ * ================================================================
+ * 小听 Framework · 极简风格预设 CSS
+ * ---------------------------------------------------------------
+ * 仅显示图标，无文字
+ * 透明背景，最小化视觉干扰
+ * ================================================================
+ */
+
+/* ================================================================
+   容器样式
+   ================================================================ */
+
+.app-tab-bar[data-preset="minimal"] {
+    height: 44px;
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    padding: 0;
+}
+
+.app-tab-bar[data-preset="minimal"] .app-nav {
+    padding: 0;
+}
+
+/* ================================================================
+   Tab Item 样式
+   ================================================================ */
+
+.app-tab-bar[data-preset="minimal"] .app-tab-item {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    gap: 0;
+    color: rgba(17, 24, 39, 0.5);
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.app-tab-bar[data-preset="minimal"] .app-tab-item .tab-icon {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-tab-bar[data-preset="minimal"] .app-tab-item .tab-icon svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+    transition: fill 0.2s ease, transform 0.2s ease;
+}
+
+/* ================================================================
+   Active 状态
+   ================================================================ */
+
+.app-tab-bar[data-preset="minimal"] .app-tab-item.active {
+    color: rgba(17, 24, 39, 0.9);
+    transform: scale(1.1);
+}
+
+.app-tab-bar[data-preset="minimal"] .app-tab-item.active .tab-icon svg {
+    transform: none;
+}
+
+/* ================================================================
+   Hover 状态
+   ================================================================ */
+
+.app-tab-bar[data-preset="minimal"] .app-tab-item:not(.active):hover {
+    color: rgba(17, 24, 39, 0.7);
+}
+
+/* ================================================================
+   隐藏文字标签
+   ================================================================ */
+
+.app-tab-bar[data-preset="minimal"] .app-tab-item > span:not(.tab-icon) {
+    display: none;
+}
+
+/* ================================================================
+   按钮间距
+   ================================================================ */
+
+.app-tab-bar[data-preset="minimal"] {
+    --tabbar-button-gap: 16px;
+    justify-content: space-around;
+}

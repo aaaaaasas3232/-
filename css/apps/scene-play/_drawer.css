@@ -1,0 +1,120 @@
+/**
+ * 情景剧场 · 侧边抽屉
+ *
+ * 用户要求「侧边栏的边不是竖线而是大圆角」。所以抽屉是一整块**右侧收圆**
+ * 的面板浮在舞台上,靠 28px 圆角 + 落影和内容区分开,而不是一条 1px 竖线。
+ *
+ * 分页在抽屉**里面**顶部 —— 竖排图标那种做法在手机宽度下会把内容挤到只剩一半。
+ */
+
+.app-shell[data-app-id="scene-play"] .sp-drawer-layer {
+    position: absolute;
+    inset: 0;
+    z-index: var(--sp-z-drawer);
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="scene-play"] .sp-drawer-scrim {
+    position: absolute;
+    inset: 0;
+    background: var(--sp-overlay);
+    opacity: 0;
+    transition: opacity 0.24s var(--sp-ease);
+}
+.app-shell[data-app-id="scene-play"] .sp-drawer-layer.is-open { pointer-events: auto; }
+.app-shell[data-app-id="scene-play"] .sp-drawer-layer.is-open .sp-drawer-scrim { opacity: 1; }
+
+.app-shell[data-app-id="scene-play"] .sp-drawer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 86%;
+    max-width: 340px;
+    display: flex;
+    flex-direction: column;
+    /* ★ 右侧大圆角 —— 这就是「边不是竖线」的那条边 */
+    border-radius: 0 var(--sp-r-xl) var(--sp-r-xl) 0;
+    background: var(--sp-drawer-bg);
+    box-shadow: 8px 0 30px var(--sp-drawer-shadow);
+    transform: translateX(-104%);
+    transition: transform 0.3s var(--sp-bounce);
+    overflow: hidden;
+}
+.app-shell[data-app-id="scene-play"] .sp-drawer-layer.is-open .sp-drawer { transform: translateX(0); }
+
+.app-shell[data-app-id="scene-play"] .sp-drawer-head {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    /* 状态栏和灵动岛浮在整个手机屏最上层,自绘内容要让满 54px */
+    padding: var(--sp-top-safe) 16px 10px;
+    background: var(--sp-drawer-head);
+}
+.app-shell[data-app-id="scene-play"] .sp-drawer-title {
+    flex: 1 1 auto;
+    font-size: 15px;
+    font-weight: 700;
+}
+.app-shell[data-app-id="scene-play"] .sp-drawer-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: var(--sp-r);
+    background: var(--sp-surface);
+    color: var(--sp-text-secondary);
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="scene-play"] .sp-drawer-tabs {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 3px;
+    padding: 8px 10px;
+    background: var(--sp-drawer-head);
+}
+.app-shell[data-app-id="scene-play"] .sp-drawer-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 7px 2px;
+    border: none;
+    border-radius: var(--sp-r);
+    background: var(--sp-drawer-tab);
+    color: var(--sp-text-secondary);
+    font-size: 9px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.16s var(--sp-ease), color 0.16s var(--sp-ease), transform 0.16s var(--sp-bounce);
+}
+.app-shell[data-app-id="scene-play"] .sp-drawer-tab:active { transform: scale(0.94); }
+.app-shell[data-app-id="scene-play"] .sp-drawer-tab.is-active {
+    background: var(--sp-drawer-tab-on);
+    color: var(--sp-on-primary);
+}
+.app-shell[data-app-id="scene-play"] .sp-drawer-tab .sp-icon { --sp-icon-size: 15px; }
+
+.app-shell[data-app-id="scene-play"] .sp-drawer-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 12px 14px calc(20px + var(--app-safe-bottom, 0px));
+}
+
+.app-shell[data-app-id="scene-play"] .sp-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.app-shell[data-app-id="scene-play"] .sp-panel-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}

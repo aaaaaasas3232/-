@@ -1,0 +1,233 @@
+/* 灯塔 · 面试列表与对话 */
+
+/* ── 列表 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-talks {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="job"] .jb-talkitem {
+    display: block;
+    width: 100%;
+    padding: 13px 14px;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="job"] .jb-talkitem:active { background: var(--jb-card-hover); }
+
+.app-shell[data-app-id="job"] .jb-talkitem__head {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 3px;
+}
+
+.app-shell[data-app-id="job"] .jb-talkitem__name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--jb-text);
+}
+
+.app-shell[data-app-id="job"] .jb-talkitem__title {
+    font-size: 11.5px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-talkitem__head > :last-child { margin-left: auto; }
+
+.app-shell[data-app-id="job"] .jb-talkitem__job {
+    margin: 0 0 6px;
+    font-size: 12px;
+    color: var(--jb-primary-strong);
+}
+
+.app-shell[data-app-id="job"] .jb-talkitem__job i {
+    font-style: normal;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-talkitem__last {
+    margin: 0 0 4px;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--jb-text-2);
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.app-shell[data-app-id="job"] .jb-talkitem__when {
+    margin: 0;
+    font-size: 10.5px;
+    color: var(--jb-text-3);
+}
+
+/* ── 对话 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-who__name {
+    margin: 0 0 8px;
+    font-size: 15px;
+    font-weight: 620;
+    color: var(--jb-text);
+}
+
+.app-shell[data-app-id="job"] .jb-who__name i {
+    margin-left: 7px;
+    font-style: normal;
+    font-size: 11.5px;
+    font-weight: 400;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-talk__job {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 9px;
+    margin-bottom: 14px;
+    font-size: 12px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-talk__job b {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--jb-text);
+}
+
+.app-shell[data-app-id="job"] .jb-talk__flow {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-bottom: 8px;
+}
+
+.app-shell[data-app-id="job"] .jb-bubble {
+    position: relative;
+    max-width: 80%;
+    padding: 9px 13px;
+    border-radius: 15px;
+}
+
+.app-shell[data-app-id="job"] .jb-bubble--hr {
+    align-self: flex-start;
+    border: 1px solid var(--jb-line);
+    border-bottom-left-radius: 5px;
+    background: var(--jb-bubble-hr);
+    color: var(--jb-bubble-hr-text);
+}
+
+.app-shell[data-app-id="job"] .jb-bubble--user {
+    align-self: flex-end;
+    border-bottom-right-radius: 5px;
+    background: var(--jb-bubble-me);
+    color: var(--jb-bubble-me-text);
+}
+
+/* 系统提示（比如「你已经三份工作了」）不是谁说的话，
+   所以既不靠左也不靠右，也没有气泡形状 */
+.app-shell[data-app-id="job"] .jb-bubble--system {
+    align-self: center;
+    max-width: 92%;
+    padding: 7px 12px;
+    border: 1px dashed var(--jb-line-strong);
+    border-radius: 11px;
+    background: transparent;
+    color: var(--jb-text-3);
+    font-size: 11.5px;
+    text-align: center;
+}
+
+.app-shell[data-app-id="job"] .jb-bubble__text {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.app-shell[data-app-id="job"] .jb-bubble__time {
+    display: block;
+    margin-top: 3px;
+    font-size: 10px;
+    opacity: 0.55;
+}
+
+.app-shell[data-app-id="job"] .jb-bubble--typing {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 13px;
+}
+
+.app-shell[data-app-id="job"] .jb-bubble__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--jb-text-3);
+    animation: jbDot 1.1s ease-in-out infinite;
+}
+
+.app-shell[data-app-id="job"] .jb-bubble__dot:nth-child(2) { animation-delay: 0.16s; }
+.app-shell[data-app-id="job"] .jb-bubble__dot:nth-child(3) { animation-delay: 0.32s; }
+
+@keyframes jbDot {
+    0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+    30% { opacity: 1; transform: translateY(-3px); }
+}
+
+/* 结果：长在消息流里，不是弹窗 —— 弹窗会盖住刚说完那句话，
+   而那句话恰恰是「为什么」 */
+.app-shell[data-app-id="job"] .jb-talk__verdict {
+    align-self: stretch;
+    margin-top: 6px;
+    padding: 14px;
+    border: 1px solid var(--jb-line);
+    border-radius: 14px;
+    text-align: center;
+}
+
+.app-shell[data-app-id="job"] .jb-talk__verdict.is-ok {
+    border-color: var(--jb-success);
+    color: var(--jb-success);
+}
+
+.app-shell[data-app-id="job"] .jb-talk__verdict.is-bad {
+    border-color: var(--jb-danger);
+    color: var(--jb-danger);
+}
+
+.app-shell[data-app-id="job"] .jb-talk__verdict b {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 14.5px;
+    font-weight: 640;
+}
+
+.app-shell[data-app-id="job"] .jb-talk__verdict p {
+    margin: 0 0 10px;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--jb-text-2);
+}
+
+/* 输入区。它坐在 panel 的滚动区里最下面，
+   ⚠️ 不要再加一次 --app-safe-bottom —— 底栏已经让过一次了 */
+.app-shell[data-app-id="job"] .jb-talk__input {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--jb-line-soft);
+}
+
+.app-shell[data-app-id="job"] .jb-talk__input .jb-textarea { flex: 1; min-height: 46px; }
+
+.app-shell[data-app-id="job"] .jb-talk__input--done { display: block; }

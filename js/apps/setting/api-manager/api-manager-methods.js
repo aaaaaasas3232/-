@@ -7,6 +7,24 @@
  */
 
 import { PROVIDER_PRESETS } from './api-key-sdk.js';
+import {
+    classifyApiError,
+    buildDiagnosticReport,
+    parseRepairSnippet,
+} from './api-diagnostics.js';
+
+/**
+ * 最近一次测试失败的诊断结果。
+ *
+ * 存在模块级变量而不是 app.state 里：它是「上一次操作的产物」，
+ * 不需要持久化、也不该在刷新后还留着一份可能已经不成立的报告。
+ * 结构：{ keyId, code, report, at }
+ */
+let _lastDiagnostic = null;
+
+export function getLastApiDiagnostic() {
+    return _lastDiagnostic;
+}
 
 // ============================================
 // 方法构建器
@@ -279,7 +297,13 @@ export function buildApiManagerMethods() {
             if (!key) return;
 
             if (!key.baseUrl || !key.apiKey || !key.model) {
-                this.app.toolkit.island.notify('warn', '无法测试', '请先填写 Base URL、API Key 与模型');
+                const diag = { code: 'API-CONFIG', title: '配置还没填完', cause: 'Base URL / API Key / 模型三个必填项里有空的。', fixes: ['把三个必填项都填上再测试'] };
+                _lastDiagnostic = {
+                    keyId: key.id, code: diag.code, at: Date.now(),
+                    report: buildDiagnosticReport({ key, status: 0, diag }),
+                };
+                this.app.toolkit.island.notify('warning', `${diag.code} 配置未填完`, '请先填写 Base URL、API Key 与模型');
+                refresh();
                 return;
             }
 
@@ -336,7 +360,15 @@ export function buildApiManagerMethods() {
                     statusCode: 0,
                     note: '手动测试',
                 });
-                this.app.toolkit.island.notify('error', '测试失败', err?.message || '网络错误');
+                // 网络层失败：分类 + 存一份可复制的报告，灵动岛只显示错误码 + 一句结论。
+                // 原来这里直接把 err.message 甩到岛上 —— 岛 3.5 秒就没了，
+                // 用户既看不懂也来不及截图。
+                const diag = classifyApiError({ err });
+                _lastDiagnostic = {
+                    keyId: key.id, code: diag.code, at: Date.now(),
+                    report: buildDiagnosticReport({ key, status: 0, err, diag, latency }),
+                };
+                this.app.toolkit.island.notify('error', `${diag.code} ${diag.title}`, '点密钥卡片上的「诊断」看怎么修');
                 refresh();
                 return;
             }
@@ -346,18 +378,32 @@ export function buildApiManagerMethods() {
             let outputTokens = 0;
             let success = resp.ok;
             let error = null;
+            let rawBody = '';
+            let badJson = false;
+            let emptyContent = false;
             if (resp.ok) {
                 try {
                     const data = await resp.json();
                     inputTokens = data.usage?.prompt_tokens || 0;
                     outputTokens = data.usage?.completion_tokens || 0;
+                    // HTTP 200 但没有正文：连通了却拿不到内容，跟「成功」是两回事。
+                    // 之前这种情况被当成测试通过，用户在聊天里才发现 AI 不说话。
+                    const content = data?.choices?.[0]?.message?.content;
+                    if (!content || !String(content).trim()) {
+                        emptyContent = true;
+                        success = false;
+                        error = 'HTTP 200 但返回内容为空';
+                    }
                 } catch (_) {
-                    // 解析失败但 HTTP 成功
+                    // 解析失败但 HTTP 成功 —— 多半 Base URL 指到了网页而不是 API
+                    badJson = true;
+                    success = false;
+                    error = 'HTTP 200 但返回的不是 JSON';
                 }
             } else {
                 try {
-                    const txt = await resp.text();
-                    error = `${resp.status} ${txt.slice(0, 120)}`;
+                    rawBody = await resp.text();
+                    error = `${resp.status} ${rawBody.slice(0, 120)}`;
                 } catch (_) {
                     error = `HTTP ${resp.status}`;
                 }
@@ -379,10 +425,121 @@ export function buildApiManagerMethods() {
             });
 
             if (success) {
+                _lastDiagnostic = null;   // 通了就把上一次的报告清掉，别留着误导
                 this.app.toolkit.island.notify('success', '测试成功', `${latency}ms · ${key.label || key.id}`);
             } else {
-                this.app.toolkit.island.notify('error', '测试失败', error || `HTTP ${resp.status}`);
+                const diag = classifyApiError({ status: resp.status, body: rawBody, badJson, emptyContent });
+                _lastDiagnostic = {
+                    keyId: key.id, code: diag.code, at: Date.now(),
+                    report: buildDiagnosticReport({ key, status: resp.status, body: rawBody, diag, latency }),
+                };
+                this.app.toolkit.island.notify('error', `${diag.code} ${diag.title}`, '点密钥卡片上的「诊断」看怎么修');
             }
+            refresh();
+        },
+
+        // ============================================
+        // 诊断 / 科普 / 修复（2026-08-13）
+        // ============================================
+
+        /** 打开上一次失败的诊断报告（可整段复制，Key 已打码） */
+        apiOpenDiagnostic({ id } = {}) {
+            const diag = _lastDiagnostic;
+            if (!diag || (id && diag.keyId !== id)) {
+                this.app.toolkit.island.notify('info', '暂无诊断记录', '先点一次「测试」');
+                return;
+            }
+            const app = this.app;
+            if (!app.state.apiMgr) app.state.apiMgr = {};
+            app.state.apiMgr.diagnosticOpen = true;
+            refresh();
+        },
+
+        apiCloseDiagnostic() {
+            const app = this.app;
+            if (app.state.apiMgr) app.state.apiMgr.diagnosticOpen = false;
+            refresh();
+        },
+
+        /** 复制诊断报告到剪贴板 */
+        async apiCopyDiagnostic() {
+            const text = _lastDiagnostic?.report || '';
+            if (!text) return;
+            let ok = false;
+            try {
+                await navigator.clipboard.writeText(text);
+                ok = true;
+            } catch (_) {
+                // 非安全上下文 / 无权限：退回 textarea + execCommand
+                try {
+                    const ta = document.createElement('textarea');
+                    ta.value = text;
+                    ta.style.position = 'fixed';
+                    ta.style.opacity = '0';
+                    document.body.appendChild(ta);
+                    ta.select();
+                    ok = document.execCommand('copy');
+                    document.body.removeChild(ta);
+                } catch (_) { ok = false; }
+            }
+            this.app.toolkit.island.notify(ok ? 'success' : 'warning',
+                ok ? '诊断报告已复制' : '复制失败',
+                ok ? '可以直接贴给别人问' : '请手动长按选中复制');
+        },
+
+        /** 打开 / 关闭「API 是什么」科普页 */
+        apiToggleFaq() {
+            const app = this.app;
+            if (!app.state.apiMgr) app.state.apiMgr = {};
+            app.state.apiMgr.faqOpen = !app.state.apiMgr.faqOpen;
+            refresh();
+        },
+
+        /** 打开 / 关闭修复窗口 */
+        apiToggleRepair({ id } = {}) {
+            const app = this.app;
+            if (!app.state.apiMgr) app.state.apiMgr = {};
+            const cur = app.state.apiMgr.repairKeyId;
+            app.state.apiMgr.repairKeyId = (cur && cur === id) ? null : (id || null);
+            app.state.apiMgr.repairResult = null;
+            refresh();
+        },
+
+        /**
+         * 修复窗口的「解析并应用」。
+         *
+         * 用户把从服务商 / 朋友 / AI 那里拿到的一段配置整段粘进来，
+         * 这里解析成字段写回密钥。支持 JSON / `键: 值` / `.env` 三种写法，
+         * 键名做别名归一，不认识的键跳过而不是整段失败
+         * （用户多半是整段拷来的，里面混着别的东西很正常）。
+         */
+        async apiApplyRepair({ id } = {}) {
+            const sdk = window.__apiSdk;
+            const app = this.app;
+            if (!sdk || !id) return;
+            const el = document.querySelector('[data-api-repair-input="1"]');
+            const text = el ? el.value : '';
+            const res = parseRepairSnippet(text);
+            if (!app.state.apiMgr) app.state.apiMgr = {};
+            if (!res.ok) {
+                app.state.apiMgr.repairResult = { ok: false, message: res.error };
+                this.app.toolkit.island.notify('warning', '没认出配置', res.error || '');
+                refresh();
+                return;
+            }
+            try {
+                await sdk.apiKeySdk.update(id, res.patch);
+            } catch (err) {
+                app.state.apiMgr.repairResult = { ok: false, message: err?.message || '写入失败' };
+                refresh();
+                return;
+            }
+            app.state.apiMgr.repairResult = {
+                ok: true,
+                message: `已更新 ${res.recognized.length} 项：${res.recognized.join('、')}`
+                    + (res.ignored.length ? `；忽略了 ${res.ignored.length} 项无关字段` : ''),
+            };
+            this.app.toolkit.island.notify('success', '配置已应用', '再点一次「测试」确认');
             refresh();
         },
 

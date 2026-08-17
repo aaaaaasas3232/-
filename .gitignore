@@ -1,6 +1,9 @@
 node_modules
 dist
+dist-single
 .DS_Store
 *.log
 .vite
 _orphan_backup/
+# e2e 探针的截图是排查用的临时产物(__probe-kit.mjs 的 screenshot 写在这儿)
+tests/e2e/*.png

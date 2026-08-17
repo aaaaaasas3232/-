@@ -23,7 +23,6 @@ import {
 } from '../helpers.js';
 import {
     DEFAULT_PLACE,
-    DEFAULT_LOCATION,
 } from './geo-constants.js';
 
 // ============================================

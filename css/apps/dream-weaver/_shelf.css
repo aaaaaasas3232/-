@@ -1,0 +1,197 @@
+/**
+ * 梦境编织 · 书架 & 我的
+ */
+
+/* ============================================================
+   书架
+   ============================================================ */
+
+.app-shell[data-app-id="dream-weaver"] .dw-shelf-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: var(--dw-gap-lg);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-shelf-title {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-shelf-sub {
+    margin: 3px 0 0;
+    font-size: 12px;
+    color: var(--dw-text-tertiary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-shelf-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    margin-bottom: var(--dw-gap);
+    border-radius: var(--dw-radius-pill);
+    background: var(--dw-input-bg);
+    border: 1px solid var(--dw-input-border);
+    color: var(--dw-text-tertiary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-shelf-search-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    border: none;
+    background: none;
+    color: var(--dw-text);
+    font-family: inherit;
+    font-size: 13px;
+    outline: none;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-book-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--dw-gap);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-book-card {
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.2s var(--dw-ease-bounce);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-book-card:active { transform: scale(0.97); }
+
+/**
+ * 封面。
+ *
+ * 底色由 `[data-tone]` 提供的 `--dw-tone-color` 决定 —— JS 只传色调名。
+ * 书脊那道深色竖条是纯 CSS 做的,不需要图片资源(单文件构建也不会变胖)。
+ */
+.app-shell[data-app-id="dream-weaver"] .dw-book-cover {
+    position: relative;
+    aspect-ratio: 3 / 4;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 4px;
+    padding: 14px 12px 14px 20px;
+    border-radius: 4px var(--dw-radius) var(--dw-radius) 4px;
+    background:
+        linear-gradient(140deg,
+            color-mix(in srgb, var(--dw-tone-color) 92%, var(--dw-black)) 0%,
+            color-mix(in srgb, var(--dw-tone-color) 62%, var(--dw-black)) 100%);
+    box-shadow: var(--dw-shadow-md);
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-book-spine {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 9px;
+    background: linear-gradient(
+        to right,
+        color-mix(in srgb, var(--dw-black) 34%, transparent),
+        transparent
+    );
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-book-cover-title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--dw-white);
+    /* 两行截断,书名太长时不撑破封面 */
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-book-cover-author {
+    margin: 0;
+    font-size: 11px;
+    color: color-mix(in srgb, var(--dw-white) 72%, transparent);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-book-meta { padding: 8px 2px 0; }
+
+.app-shell[data-app-id="dream-weaver"] .dw-book-title {
+    margin: 0;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-book-sub {
+    margin: 2px 0 0;
+    font-size: 11px;
+    color: var(--dw-text-tertiary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-book-more {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--dw-black) 34%, transparent);
+    color: var(--dw-white);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.18s var(--dw-ease);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-book-card:hover .dw-book-more,
+.app-shell[data-app-id="dream-weaver"] .dw-book-more:focus-visible { opacity: 1; }
+
+/* 触屏没有 hover,更多按钮必须常驻,否则永远点不到 */
+@media (hover: none) {
+    .app-shell[data-app-id="dream-weaver"] .dw-book-more { opacity: 1; }
+}
+
+/* ============================================================
+   我的
+   ============================================================ */
+
+.app-shell[data-app-id="dream-weaver"] .dw-profile-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: var(--dw-gap-lg);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-profile-avatar {
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--dw-radius);
+    background: linear-gradient(135deg, var(--dw-primary), var(--dw-secondary));
+    color: var(--dw-on-primary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-profile-avatar svg { width: 24px; height: 24px; }
+
+.app-shell[data-app-id="dream-weaver"] .dw-profile-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-profile-sub {
+    margin: 3px 0 0;
+    font-size: 12px;
+    color: var(--dw-text-tertiary);
+}

@@ -1,0 +1,634 @@
+/**
+ * 人设机 · 根布局 + 通用控件
+ *
+ * 全部选择器挂在 `.app-shell[data-app-id="persona-lab"]` 下 —— 不污染其他 app。
+ */
+
+/* ============================================================
+   0) 和框架容器的接线
+   ★ `fullscreen: true` 只解决了「背景铺不到底」。想做「内容区自己滚 +
+     底栏钉在屏幕底边」,这四处必须**一起**改,少一处就不成立
+     (`docs/framework-总览.md` §3.1):
+       .app-content      默认 padding: 0 14px       → 左右各吃掉 14px
+       .app-screen-panel 默认 padding: 16px 14px    → 再各吃 14px
+       .app-screen-panel 只有 min-height 没有 height → 子元素 height:100% 静默失效
+       .app-page         默认 overflow-y: auto      → 和 App 内部滚动容器抢手势
+   ============================================================ */
+
+.app-shell[data-app-id="persona-lab"] .app-content { padding: 0; }
+.app-shell[data-app-id="persona-lab"] .app-page-stack { border-radius: 0; }
+.app-shell[data-app-id="persona-lab"] .app-page { overflow: hidden; }
+.app-shell[data-app-id="persona-lab"] .app-screen-panel {
+    position: relative;
+    height: 100%;
+    padding: 0;
+}
+
+/* ★ SVG 不带 width/height 时浏览器按规范画成 300×150,会把整张卡撑爆。
+   两层 :where() 把特异性压到 (0,0,1),任何具名规则都能盖过它。
+   不能只写一层 —— `svg:not([width]):not([height])` 本身是 (0,2,1),
+   会反过来盖掉 `.pl-icon svg` 这种 (0,1,1) 的规则。 */
+:where(.app-shell[data-app-id="persona-lab"]) svg:where(:not([width]):not([height])) {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+/* ============================================================
+   1) 根
+   ============================================================ */
+
+.app-shell[data-app-id="persona-lab"] .pl-root {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--pl-bg);
+    color: var(--pl-text);
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-page {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+.app-shell[data-app-id="persona-lab"] .pl-page::-webkit-scrollbar {
+    display: none;
+}
+
+.app-shell[data-app-id="persona-lab"] * { box-sizing: border-box; }
+
+.app-shell[data-app-id="persona-lab"] h1,
+.app-shell[data-app-id="persona-lab"] h2,
+.app-shell[data-app-id="persona-lab"] h3,
+.app-shell[data-app-id="persona-lab"] p,
+.app-shell[data-app-id="persona-lab"] ul,
+.app-shell[data-app-id="persona-lab"] ol {
+    margin: 0;
+    padding: 0;
+}
+
+.app-shell[data-app-id="persona-lab"] li { list-style: none; }
+
+/* ============================================================
+   2) 底部 tab 栏
+   ★ `--app-safe-bottom` 只让一次。底栏用它让开 Home 指示条之后,
+     坐在底栏**上面**的输入区就不能再加一遍,否则中间会空出 40px。
+   ============================================================ */
+
+.app-shell[data-app-id="persona-lab"] .pl-tabbar {
+    flex: 0 0 auto;
+    display: flex;
+    background: var(--pl-surface);
+    border-top: 1px solid var(--pl-border);
+    padding-bottom: var(--app-safe-bottom, 0px);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-tabbar-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 9px 0 7px;
+    border: 0;
+    background: none;
+    color: var(--pl-text-tertiary);
+    font-size: 11px;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: color 0.16s ease;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-tabbar-item.is-active { color: var(--pl-primary-strong); }
+.app-shell[data-app-id="persona-lab"] .pl-tabbar-item svg { width: 21px; height: 21px; }
+
+/* ============================================================
+   3) 图标 / 头像
+   ============================================================ */
+
+.app-shell[data-app-id="persona-lab"] .pl-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-avatar {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    border-radius: var(--pl-radius);
+    background: var(--pl-tone, var(--pl-primary-soft));
+    color: var(--pl-tone-ink, var(--pl-primary-strong));
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-avatar[data-size="sm"] { width: 32px; height: 32px; border-radius: 10px; }
+.app-shell[data-app-id="persona-lab"] .pl-avatar-text { font-size: 17px; font-weight: 600; }
+
+.app-shell[data-app-id="persona-lab"] .pl-avatar-badge {
+    position: absolute;
+    right: -4px;
+    bottom: -4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--pl-surface);
+    border: 1px solid var(--pl-border);
+    color: var(--pl-text-secondary);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-avatar-badge svg { width: 11px; height: 11px; }
+.app-shell[data-app-id="persona-lab"] .pl-avatar-badge[data-scope="user"] { color: var(--pl-primary-strong); }
+
+/* ============================================================
+   4) 按钮
+   ============================================================ */
+
+.app-shell[data-app-id="persona-lab"] .pl-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 38px;
+    padding: 0 14px;
+    border-radius: var(--pl-radius);
+    border: 1px solid transparent;
+    background: none;
+    color: var(--pl-text);
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.16s ease, border-color 0.16s ease, opacity 0.16s ease;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-btn[data-size="sm"] { min-height: 30px; padding: 0 10px; font-size: 12px; }
+.app-shell[data-app-id="persona-lab"] .pl-btn[data-block="1"] { width: 100%; }
+.app-shell[data-app-id="persona-lab"] .pl-btn:disabled { opacity: 0.42; cursor: default; }
+
+.app-shell[data-app-id="persona-lab"] .pl-btn[data-variant="primary"] {
+    background: var(--pl-primary);
+    color: var(--pl-on-primary);
+    font-weight: 500;
+}
+.app-shell[data-app-id="persona-lab"] .pl-btn[data-variant="primary"]:not(:disabled):active {
+    background: var(--pl-primary-strong);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-btn[data-variant="ghost"] {
+    border-color: var(--pl-border-strong);
+    color: var(--pl-text);
+}
+.app-shell[data-app-id="persona-lab"] .pl-btn[data-variant="ghost"]:not(:disabled):active {
+    background: var(--pl-surface-sunken);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-btn[data-variant="quiet"] { color: var(--pl-text-secondary); }
+.app-shell[data-app-id="persona-lab"] .pl-btn[data-variant="quiet"]:not(:disabled):active { background: var(--pl-surface-sunken); }
+
+.app-shell[data-app-id="persona-lab"] .pl-btn[data-variant="danger"] {
+    background: var(--pl-danger-soft);
+    color: var(--pl-danger);
+    font-weight: 500;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-btn-spin {
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    animation: pl-spin 0.7s linear infinite;
+}
+
+@keyframes pl-spin { to { transform: rotate(360deg); } }
+
+.app-shell[data-app-id="persona-lab"] .pl-row-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.app-shell[data-app-id="persona-lab"] .pl-row-actions > * { flex: 1; }
+
+/* ============================================================
+   5) 分段控件 / 开关
+   ============================================================ */
+
+.app-shell[data-app-id="persona-lab"] .pl-segmented {
+    display: inline-flex;
+    padding: 2px;
+    gap: 2px;
+    border-radius: 11px;
+    background: var(--pl-surface-sunken);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-segmented-item {
+    position: relative;
+    padding: 5px 12px;
+    border: 0;
+    border-radius: 9px;
+    background: none;
+    color: var(--pl-text-secondary);
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.16s ease, color 0.16s ease;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-segmented-item.is-active {
+    background: var(--pl-surface);
+    color: var(--pl-primary-strong);
+    font-weight: 500;
+    box-shadow: var(--pl-shadow-sm);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-segmented-dot {
+    position: absolute;
+    top: 4px;
+    right: 5px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--pl-primary);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-switch {
+    position: relative;
+    width: 40px;
+    height: 23px;
+    flex-shrink: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: var(--pl-surface-sunken);
+    box-shadow: inset 0 0 0 1px var(--pl-border);
+    cursor: pointer;
+    transition: background 0.18s ease;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-switch[aria-checked="true"] {
+    background: var(--pl-primary);
+    box-shadow: none;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-switch-dot {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 17px;
+    height: 17px;
+    border-radius: 50%;
+    background: var(--pl-surface);
+    box-shadow: var(--pl-shadow-sm);
+    transition: transform 0.18s ease;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-switch[aria-checked="true"] .pl-switch-dot { transform: translateX(17px); }
+
+/* ============================================================
+   6) 分区标题 / 空态 / 加载 / 标签
+   ============================================================ */
+
+.app-shell[data-app-id="persona-lab"] .pl-section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-section-title h2 {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-section-title p {
+    flex: 1;
+    font-size: 11.5px;
+    color: var(--pl-text-tertiary);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-section-title > *:last-child:not(h2):not(p) { margin-left: auto; }
+
+.app-shell[data-app-id="persona-lab"] .pl-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 34px 20px;
+    text-align: center;
+    border: 1px dashed var(--pl-border-strong);
+    border-radius: var(--pl-radius-lg);
+    background: var(--pl-surface-soft);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-empty-icon { color: var(--pl-primary); }
+.app-shell[data-app-id="persona-lab"] .pl-empty-icon svg { width: 26px; height: 26px; }
+.app-shell[data-app-id="persona-lab"] .pl-empty-title { font-size: 13.5px; font-weight: 500; }
+.app-shell[data-app-id="persona-lab"] .pl-empty-hint {
+    font-size: 12px;
+    color: var(--pl-text-secondary);
+    max-width: 24em;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-spinner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    padding: 28px 0;
+    color: var(--pl-text-secondary);
+    font-size: 12.5px;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-spinner-ring {
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    border: 2px solid var(--pl-primary-line);
+    border-top-color: var(--pl-primary);
+    animation: pl-spin 0.7s linear infinite;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 6px;
+    border-radius: 6px;
+    background: var(--pl-primary-soft);
+    color: var(--pl-text-on-soft);
+    font-size: 10.5px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-tag[data-kind="warn"] {
+    background: var(--pl-warn-soft);
+    color: var(--pl-warn);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 7px;
+    border-radius: 6px;
+    border: 1px solid var(--pl-border);
+    color: var(--pl-text-secondary);
+    font-size: 10.5px;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-chip[data-scope="user"] {
+    border-color: var(--pl-primary-line);
+    color: var(--pl-text-on-soft);
+}
+
+/* ============================================================
+   7) 输入
+   ============================================================ */
+
+.app-shell[data-app-id="persona-lab"] .pl-textarea,
+.app-shell[data-app-id="persona-lab"] .pl-code-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--pl-border-strong);
+    border-radius: var(--pl-radius);
+    background: var(--pl-surface);
+    color: var(--pl-text);
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.65;
+    resize: none;
+    outline: none;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-textarea:focus,
+.app-shell[data-app-id="persona-lab"] .pl-code-input:focus {
+    border-color: var(--pl-primary-line);
+    box-shadow: 0 0 0 3px var(--pl-primary-soft);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-code-input {
+    font-family: var(--pl-font-mono);
+    font-size: 12.5px;
+    line-height: 1.75;
+    resize: vertical;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-textarea::placeholder,
+.app-shell[data-app-id="persona-lab"] .pl-code-input::placeholder { color: var(--pl-text-tertiary); }
+
+.app-shell[data-app-id="persona-lab"] .pl-field { display: flex; flex-direction: column; gap: 6px; }
+.app-shell[data-app-id="persona-lab"] .pl-field-label { font-size: 12px; color: var(--pl-text-secondary); }
+
+.app-shell[data-app-id="persona-lab"] .pl-error {
+    padding: 8px 11px;
+    border-radius: var(--pl-radius-sm);
+    background: var(--pl-danger-soft);
+    color: var(--pl-danger);
+    font-size: 12px;
+}
+
+/* ============================================================
+   8) 底部抽屉
+   ============================================================ */
+
+.app-shell[data-app-id="persona-lab"] .pl-sheet-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 40;
+    display: flex;
+    align-items: flex-end;
+    background: var(--pl-scrim);
+    animation: pl-fade 0.18s ease;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-sheet {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-height: 72%;
+    border-radius: var(--pl-radius-lg) var(--pl-radius-lg) 0 0;
+    background: var(--pl-surface);
+    box-shadow: var(--pl-shadow-lg);
+    animation: pl-rise 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-sheet[data-tall="1"] { max-height: 88%; }
+
+.app-shell[data-app-id="persona-lab"] .pl-sheet-head {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 16px var(--pl-pad) 10px;
+    border-bottom: 1px solid var(--pl-divider);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-sheet-grip {
+    position: absolute;
+    top: 7px;
+    left: 50%;
+    width: 34px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--pl-border-strong);
+    transform: translateX(-50%);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-sheet-titles { flex: 1; min-width: 0; }
+.app-shell[data-app-id="persona-lab"] .pl-sheet-titles h3 { font-size: 14.5px; font-weight: 600; }
+.app-shell[data-app-id="persona-lab"] .pl-sheet-titles p { font-size: 11.5px; color: var(--pl-text-tertiary); }
+
+.app-shell[data-app-id="persona-lab"] .pl-sheet-close {
+    flex-shrink: 0;
+    display: inline-flex;
+    padding: 4px;
+    border: 0;
+    border-radius: 8px;
+    background: none;
+    color: var(--pl-text-tertiary);
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-sheet-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 14px var(--pl-pad);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-sheet-foot {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 8px;
+    padding: 10px var(--pl-pad);
+    padding-bottom: calc(10px + var(--app-safe-bottom, 0px));
+    border-top: 1px solid var(--pl-divider);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-sheet-foot > * { flex: 1; }
+
+@keyframes pl-fade { from { opacity: 0; } }
+@keyframes pl-rise { from { transform: translateY(14px); opacity: 0.6; } }
+
+/* ============================================================
+   9) 提示条
+   ============================================================ */
+
+.app-shell[data-app-id="persona-lab"] .pl-toast {
+    position: absolute;
+    left: 50%;
+    bottom: calc(80px + var(--app-safe-bottom, 0px));
+    z-index: 60;
+    max-width: calc(100% - 32px);
+    padding: 9px 15px;
+    border-radius: 999px;
+    background: var(--pl-text);
+    color: var(--pl-bg);
+    font-size: 12.5px;
+    text-align: center;
+    box-shadow: var(--pl-shadow-md);
+    transform: translateX(-50%);
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-toast-enter-active,
+.app-shell[data-app-id="persona-lab"] .pl-toast-leave-active { transition: opacity 0.2s ease, transform 0.2s ease; }
+
+.app-shell[data-app-id="persona-lab"] .pl-toast-enter-from,
+.app-shell[data-app-id="persona-lab"] .pl-toast-leave-to {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+}
+
+/* ============================================================
+   10) API 提示行 / 落库预览(库页和工作台共用)
+   ============================================================ */
+
+.app-shell[data-app-id="persona-lab"] .pl-api-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    font-size: 11.5px;
+    color: var(--pl-text-secondary);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-api-line svg { width: 13px; height: 13px; }
+.app-shell[data-app-id="persona-lab"] .pl-api-line [data-ok="1"] { color: var(--pl-text); }
+.app-shell[data-app-id="persona-lab"] .pl-api-line [data-ok="0"] { color: var(--pl-danger); }
+.app-shell[data-app-id="persona-lab"] .pl-api-sub { color: var(--pl-text-tertiary); }
+
+.app-shell[data-app-id="persona-lab"] .pl-patch {
+    padding: 12px;
+    border: 1px solid var(--pl-border);
+    border-radius: var(--pl-radius);
+    background: var(--pl-surface-soft);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-patch-head {
+    margin-bottom: 8px;
+    font-size: 12px;
+    color: var(--pl-text-secondary);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-patch-list {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-patch-list li {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    font-size: 12.5px;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-patch-key {
+    flex: 0 0 5.5em;
+    display: flex;
+    flex-direction: column;
+    color: var(--pl-text-on-soft);
+    font-weight: 500;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-patch-lineno {
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--pl-text-tertiary);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-patch-val {
+    flex: 1;
+    min-width: 0;
+    color: var(--pl-text);
+    word-break: break-word;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-patch-note {
+    margin-top: 8px;
+    font-size: 11.5px;
+    color: var(--pl-warn);
+}

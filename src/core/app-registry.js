@@ -5,6 +5,8 @@
 
 import { normalizeStoreConfig, SHARED_STORES } from './store-api.js';
 import { createAppToolkit } from './app-toolkit.js';
+import { registerAppPresence } from './app-presence.js';
+import { registerSocialAppFromConfig } from './social-app-registry.js';
 
 export const APP_PAGE_CONTENT = {};
 export const DETAIL_PAGE_CONTENT = {};
@@ -37,6 +39,15 @@ function normalizeAppConfig(appConfig) {
         widgetId: widget.id,
         qualifiedId: `${appConfig.id}::${widget.id}`,
     }));
+    // islandKinds：App 声明「我会在什么时候弹什么样的灵动岛」。
+    // 灵动岛本身是运行时 API，不声明的话系统无从预览、用户也无从关掉。
+    // 详见 src/core/app-presence.js 和 docs/framework-灵动岛与小组件总览.md
+    registerAppPresence(appConfig);
+    // socialProfile：App 声明「我是社交软件，人设在我这儿有独立形象」。
+    // 声明了之后，nook 的人设编辑器里会自动出现它的「社媒形象」卡
+    // （网名 / 头像 / 背景），数据仍然存在 persona.socialProfiles[appId]。
+    // 不声明的 App 什么都不会发生。详见 src/core/social-app-registry.js
+    registerSocialAppFromConfig(appConfig);
     const toolkit = createAppToolkit(appConfig, declaredStores);
     const initialState = typeof appConfig.setup === 'function'
         ? (appConfig.setup({ toolkit, app: appConfig }) || {})
@@ -78,6 +89,8 @@ function normalizeAppConfig(appConfig) {
     };
     // ★ 把 toolkit 挂到 appConfig 上，确保 this.app.toolkit.* 可用
     appConfig.toolkit = toolkit;
+    // ★ 让 appConfig.app 指向自己，这样 hydrate 里用 this.app.state 能正常工作
+    appConfig.app = appConfig;
     for (const [methodName, method] of Object.entries(appConfig.methods || {})) {
         if (typeof method !== 'function') {
             continue;
@@ -171,6 +184,48 @@ export function listRegisteredWidgets() {
     return Object.values(registry);
 }
 
+/**
+ * 同步注册的 App 声明了「数据库里还不存在」的表时,大声报出来。
+ *
+ * ── 为什么需要这个 ────────────────────────────────────────────────
+ *
+ * 规则是「声明了 stores 就必须走 `registerPhoneAppAsync`」,因为只有异步路径
+ * 才会 `await ensureSchema()` 去建表。同步注册时表根本没建,首次 `put` 静默失败 ——
+ * 用户感知是「保存成功了,但刷新就没了」。
+ *
+ * 但这条规则有一个**会掩盖问题的例外**:如果这些表恰好也写在
+ * `js/db/base-stores.js` 里(启动时就建好了),同步注册照样能跑。
+ * `settings` 就是这个情况 —— 它声明了 20 张表、走同步注册,一直没出事,
+ * 纯粹是因为那 20 张表在 base-stores 里都有一份。
+ *
+ * 这种「靠巧合正确」很危险:哪天有人往 `settings.stores` 加一张新表、
+ * 忘了同步加进 base-stores,就会退化成静默失败,而且因为其他表都好使,
+ * 极难联想到是注册方式的问题。
+ *
+ * 所以这里不改任何行为(改注册方式会动启动时序,风险更大),
+ * 只做一件事:**把这个隐患从「完全静默」变成「控制台一条明确的 error」**。
+ */
+function warnAboutMissingStores(appConfig) {
+    const stores = Array.isArray(appConfig?.stores) ? appConfig.stores : [];
+    if (stores.length === 0) return;
+
+    const db = typeof window !== 'undefined' ? window.myDb : null;
+    if (!db || typeof db._hasOpenStore !== 'function') return;
+
+    const missing = stores
+        .map((s) => s?.name)
+        .filter((name) => name && !db._hasOpenStore(name));
+
+    if (missing.length === 0) return;
+
+    console.error(
+        `[app-registry] "${appConfig.id}" 是**同步注册**的,但它声明的这些表还不存在:` +
+        `${missing.join(', ')}。\n` +
+        '同步注册不会建表 —— 这些表的读写会静默失败(表现为「保存成功但刷新就没了」)。\n' +
+        `修法:在 js/apps/index.js 的 appFactories 里把 "${appConfig.id}" 改成 async: true。`,
+    );
+}
+
 export function createAppRegistry() {
     return {
         apps: [],
@@ -186,6 +241,8 @@ export function createAppRegistry() {
 
             const normalizedApp = normalizeAppConfig(appConfig);
             mergeAppContent(normalizedApp);
+
+            warnAboutMissingStores(normalizedApp);
 
             this.apps.push(normalizedApp);
             this.appMap[normalizedApp.id] = normalizedApp;
@@ -205,11 +262,18 @@ export function createAppRegistry() {
 
             if (window.myDb) {
                 try {
-                    await window.myDb.ensureSchema();
+                    // ★ 先全部 defer 登记，再 ensureSchema 一次性升级。
+                    //   逐张 registerStore 会各触发一次 close+reopen，
+                    //   声明 3 张表就是 3 轮升级，容易撞「数据库升级被阻塞」且拖慢启动。
                     for (const store of normalizedApp.stores) {
                         if (window.myDb._hasOpenStore(store.name)) continue;
-                        window.myDb.registerStore(store.name, store.keyPath);
+                        // ★ 传对象而不是裸 keyPath，否则 store.indexes 会被丢掉
+                        window.myDb.registerStore(store.name, {
+                            keyPath: store.keyPath,
+                            indexes: Array.isArray(store.indexes) ? store.indexes : [],
+                        }, { defer: true });
                     }
+                    await window.myDb.ensureSchema();
                 } catch (e) {
                     console.warn('[app-registry] ensureSchema 失败', e);
                 }

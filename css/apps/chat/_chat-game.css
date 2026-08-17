@@ -1,0 +1,1580 @@
+/* ============================================
+ * chat-app / 群聊小游戏
+ *
+ * 作用域：`.app-shell[data-app-id="chat"]`
+ *
+ * ★ 颜色全部走 `--cg-*` token，按 `[data-cg-tone]` 换一套。
+ *   JS 里一个 hex 都没有 —— 否则「换主题只换了个寂寞」（AGENTS2 §11.4 ⑦）。
+ *   三个游戏各自的色系只是 tone 不同，结构完全共用。
+ *
+ * 命名前缀 `cg-` = chat game。
+ * ============================================ */
+
+/* ---- 色板 ------------------------------------------------ */
+
+/*
+ * ★ 默认值挂在 app-shell 上，不挂在 `[data-cg-tone]` 上。
+ *   第一版挂在 `[data-cg-tone]` 上，结果游戏大厅和排行榜（这两个页面没有
+ *   tone 属性）拿不到任何 token —— `border-radius: var(--cg-radius)` 变成非法值
+ *   退化成 0，颜色全部落空。浏览器探针量 `border-radius` 时抓到的就是这个。
+ *
+ *   教训：给一组 token 定默认值，要挂在**一定存在**的那个祖先上，
+ *   而不是挂在「用来切换主题的那个属性」上 —— 后者只在切过主题的地方才有。
+ */
+.app-shell[data-app-id="chat"] {
+    --cg-bg: #F2F7FF;
+    --cg-surface: #FFFFFF;
+    --cg-surface-2: #F6F9FF;
+    --cg-primary: #4A6FA5;
+    --cg-primary-soft: #DCE9FF;
+    --cg-accent: #A8C8EC;
+    --cg-text: #26364B;
+    --cg-text-2: #7B8CA6;
+    --cg-text-3: #A9B6C8;
+    --cg-border: rgba(74, 111, 165, 0.14);
+    --cg-shadow: 0 6px 20px rgba(74, 111, 165, 0.10);
+    --cg-danger: #D26A78;
+    --cg-good: #4FA07C;
+    --cg-night: #33406B;
+    --cg-radius: 14px;
+}
+
+.app-shell[data-app-id="chat"] [data-cg-tone="pink"] {
+    --cg-bg: #FFF5F8;
+    --cg-surface: #FFFFFF;
+    --cg-surface-2: #FFF0F4;
+    --cg-primary: #C76B8F;
+    --cg-primary-soft: #FFE0EB;
+    --cg-accent: #E88FAC;
+    --cg-text: #4A2C38;
+    --cg-text-2: #9E7484;
+    --cg-text-3: #C9AAB6;
+    --cg-border: rgba(199, 107, 143, 0.16);
+    --cg-shadow: 0 6px 20px rgba(199, 107, 143, 0.10);
+}
+
+.app-shell[data-app-id="chat"] [data-cg-tone="slate"] {
+    --cg-bg: #F4F5F6;
+    --cg-surface: #FFFFFF;
+    --cg-surface-2: #EFF1F3;
+    --cg-primary: #5C7285;
+    --cg-primary-soft: #DCE3E9;
+    --cg-accent: #8FA3B3;
+    --cg-text: #2A343C;
+    --cg-text-2: #74838F;
+    --cg-text-3: #A7B2BB;
+    --cg-border: rgba(60, 78, 92, 0.14);
+    --cg-shadow: 0 6px 20px rgba(60, 78, 92, 0.10);
+}
+
+.app-shell[data-app-id="chat"] [data-cg-tone="violet"] {
+    --cg-bg: #F8F4FF;
+    --cg-primary: #8A6BAE;
+    --cg-primary-soft: #EBE1F8;
+    --cg-accent: #B79CD6;
+    --cg-text: #3A2E4A;
+    --cg-text-2: #8B7BA0;
+    --cg-border: rgba(138, 107, 174, 0.16);
+}
+
+/* 大厅里每张卡按自己那个游戏的色系走（卡上带 data-tone） */
+.app-shell[data-app-id="chat"] .cg-lobby-card[data-tone="pink"] {
+    --cg-primary: #C76B8F;
+    --cg-primary-soft: #FFE0EB;
+}
+.app-shell[data-app-id="chat"] .cg-lobby-card[data-tone="slate"] {
+    --cg-primary: #5C7285;
+    --cg-primary-soft: #DCE3E9;
+}
+.app-shell[data-app-id="chat"] .cg-lobby-card[data-tone="violet"] {
+    --cg-primary: #8A6BAE;
+    --cg-primary-soft: #EBE1F8;
+}
+
+/* ★ SVG 尺寸兜底：不带 width/height 的内联 SVG 浏览器按 300×150 画，
+   会把整张卡撑爆。两层 :where() 把特异性压到 (0,0,1)，
+   任何具名规则都能盖过它（AGENTS2 §9.9）。 */
+:where(.app-shell[data-app-id="chat"]) :where(.cg-page, .cg-lobby, .cg-setup, .cg-lb) svg:where(:not([width]):not([height])) {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+/* ---- 页面骨架 -------------------------------------------- */
+
+.app-shell[data-app-id="chat"] .cg-page,
+.app-shell[data-app-id="chat"] .cg-lobby,
+.app-shell[data-app-id="chat"] .cg-setup,
+.app-shell[data-app-id="chat"] .cg-lb {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--cg-bg);
+    color: var(--cg-text);
+    font-size: 13px;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="chat"] .cg-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="chat"] .cg-body--result {
+    overflow-y: auto;
+    padding: 12px;
+}
+
+/* head 区可能很高（大富翁的棋盘、狼人杀的身份卡 + 座位条）。
+   给它一个上限并允许滚动，否则内容一多会把消息流挤成 0 高。 */
+.app-shell[data-app-id="chat"] .cg-region[data-cg-region="head"] {
+    flex: 0 1 auto;
+    max-height: 58%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    touch-action: pan-y;
+    padding: 0 12px 6px;
+    scrollbar-width: none;
+}
+.app-shell[data-app-id="chat"] .cg-region[data-cg-region="head"]::-webkit-scrollbar { display: none; }
+
+/* 大富翁的主体是棋盘，消息流退成一条窄的战报条，整块一起滚更顺 */
+.app-shell[data-app-id="chat"] .cg-page[data-cg-game="monopoly"] .cg-region[data-cg-region="head"] {
+    max-height: none;
+    overflow: visible;
+}
+.app-shell[data-app-id="chat"] .cg-page[data-cg-game="monopoly"] .cg-body {
+    overflow-y: auto;
+    touch-action: pan-y;
+    scrollbar-width: none;
+}
+.app-shell[data-app-id="chat"] .cg-page[data-cg-game="monopoly"] .cg-body::-webkit-scrollbar { display: none; }
+.app-shell[data-app-id="chat"] .cg-page[data-cg-game="monopoly"] .cg-feed {
+    flex: 0 0 auto;
+    max-height: 190px;
+}
+
+.app-shell[data-app-id="chat"] .cg-feed {
+    flex: 1 1 auto;
+    min-height: 96px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    /* overflow-y:auto 会把 overflow-x 一起算成 auto，手机上整页能左右拖
+       （AGENTS2 §15.3）。这一层的纵向手势交给浏览器，横向关掉。 */
+    touch-action: pan-y;
+    padding: 4px 12px 10px;
+    scrollbar-width: none;
+}
+.app-shell[data-app-id="chat"] .cg-feed::-webkit-scrollbar { display: none; }
+
+.app-shell[data-app-id="chat"] .cg-action {
+    flex: 0 0 auto;
+    max-height: 46%;
+    overflow-y: auto;
+    padding: 10px 12px calc(10px + var(--app-safe-bottom, 0px));
+    background: var(--cg-surface);
+    border-top: 1px solid var(--cg-border);
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.04);
+    scrollbar-width: none;
+}
+.app-shell[data-app-id="chat"] .cg-action::-webkit-scrollbar { display: none; }
+
+/* ---- 顶栏 ------------------------------------------------ */
+/* 状态栏浮在 shell 之上，自绘顶栏要留出 54px（framework-总览 §3.1） */
+
+.app-shell[data-app-id="chat"] .cg-topbar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 54px 12px 10px;
+    background: var(--cg-surface);
+    border-bottom: 1px solid var(--cg-border);
+}
+
+.app-shell[data-app-id="chat"] .cg-topbar__back {
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 50%;
+    background: var(--cg-surface-2);
+    color: var(--cg-primary);
+    cursor: pointer;
+}
+.app-shell[data-app-id="chat"] .cg-topbar__back:active { transform: scale(0.92); }
+.app-shell[data-app-id="chat"] .cg-topbar__back svg { width: 16px; height: 16px; }
+
+.app-shell[data-app-id="chat"] .cg-topbar__copy { flex: 1 1 auto; min-width: 0; }
+.app-shell[data-app-id="chat"] .cg-topbar__title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--cg-primary);
+    line-height: 1.2;
+}
+.app-shell[data-app-id="chat"] .cg-topbar__sub {
+    font-size: 11px;
+    color: var(--cg-text-3);
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.app-shell[data-app-id="chat"] .cg-topbar__right { flex: 0 0 auto; }
+.app-shell[data-app-id="chat"] .cg-topbar__tag {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 9px;
+    border-radius: 9px;
+    background: var(--cg-primary-soft);
+    color: var(--cg-primary);
+    white-space: nowrap;
+}
+
+/* ---- 通用控件 -------------------------------------------- */
+
+.app-shell[data-app-id="chat"] .cg-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 7px 14px;
+    border: 1px solid var(--cg-border);
+    border-radius: 11px;
+    background: var(--cg-surface-2);
+    color: var(--cg-text);
+    font-size: 13px;
+    font-family: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.app-shell[data-app-id="chat"] .cg-btn:active:not(:disabled) { transform: scale(0.97); }
+.app-shell[data-app-id="chat"] .cg-btn:disabled { opacity: 0.42; cursor: not-allowed; }
+.app-shell[data-app-id="chat"] .cg-btn.is-block { width: 100%; }
+.app-shell[data-app-id="chat"] .cg-btn[data-tone="primary"] {
+    background: var(--cg-primary);
+    border-color: var(--cg-primary);
+    color: #fff;
+}
+.app-shell[data-app-id="chat"] .cg-btn[data-tone="danger"] {
+    background: transparent;
+    border-color: var(--cg-danger);
+    color: var(--cg-danger);
+}
+.app-shell[data-app-id="chat"] .cg-btn[data-tone="ghost"] {
+    background: transparent;
+    border-color: transparent;
+    color: var(--cg-text-2);
+    font-weight: 500;
+}
+.app-shell[data-app-id="chat"] .cg-btn__body { display: flex; flex-direction: column; align-items: center; line-height: 1.25; }
+.app-shell[data-app-id="chat"] .cg-btn__sub { font-size: 10px; font-weight: 400; opacity: 0.75; }
+.app-shell[data-app-id="chat"] .cg-btn__icon { display: inline-flex; }
+
+.app-shell[data-app-id="chat"] .cg-btn-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+.app-shell[data-app-id="chat"] .cg-btn-row.is-wrap { flex-wrap: wrap; }
+.app-shell[data-app-id="chat"] .cg-btn-row > .cg-btn { flex: 1 1 auto; }
+
+.app-shell[data-app-id="chat"] .cg-chip {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 8px;
+    background: var(--cg-primary-soft);
+    color: var(--cg-primary);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.app-shell[data-app-id="chat"] .cg-panel {
+    background: var(--cg-surface);
+    border: 1px solid var(--cg-border);
+    border-radius: var(--cg-radius);
+    margin: 8px 0;
+    overflow: hidden;
+}
+.app-shell[data-app-id="chat"] .cg-panel__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 9px 12px 0;
+}
+.app-shell[data-app-id="chat"] .cg-panel__title { font-size: 12px; font-weight: 700; color: var(--cg-text); }
+.app-shell[data-app-id="chat"] .cg-panel__hint { font-size: 10px; color: var(--cg-text-3); }
+.app-shell[data-app-id="chat"] .cg-panel__body { padding: 8px 12px 11px; }
+.app-shell[data-app-id="chat"] .cg-panel.is-compact .cg-panel__body { padding: 6px 10px 8px; }
+
+.app-shell[data-app-id="chat"] .cg-empty {
+    padding: 22px 12px;
+    text-align: center;
+}
+.app-shell[data-app-id="chat"] .cg-empty__text { font-size: 13px; color: var(--cg-text-2); }
+.app-shell[data-app-id="chat"] .cg-empty__sub { font-size: 11px; color: var(--cg-text-3); margin-top: 5px; }
+
+.app-shell[data-app-id="chat"] .cg-kv { display: flex; flex-direction: column; gap: 3px; }
+.app-shell[data-app-id="chat"] .cg-kv__row { display: flex; gap: 8px; font-size: 11px; }
+.app-shell[data-app-id="chat"] .cg-kv__k { color: var(--cg-text-3); flex: 0 0 52px; }
+.app-shell[data-app-id="chat"] .cg-kv__v { color: var(--cg-text); flex: 1 1 auto; }
+
+.app-shell[data-app-id="chat"] .cg-waiting {
+    padding: 14px 4px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--cg-text-3);
+}
+
+.app-shell[data-app-id="chat"] .cg-thinking {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 10px;
+    margin: 6px 0;
+    border-radius: 10px;
+    background: var(--cg-surface-2);
+    font-size: 11px;
+    color: var(--cg-text-2);
+}
+.app-shell[data-app-id="chat"] .cg-thinking__dots { display: inline-flex; gap: 3px; }
+.app-shell[data-app-id="chat"] .cg-thinking__dots i {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--cg-accent);
+    animation: cgBlink 1.1s infinite ease-in-out;
+}
+.app-shell[data-app-id="chat"] .cg-thinking__dots i:nth-child(2) { animation-delay: 0.16s; }
+.app-shell[data-app-id="chat"] .cg-thinking__dots i:nth-child(3) { animation-delay: 0.32s; }
+@keyframes cgBlink { 0%, 80%, 100% { opacity: 0.28; } 40% { opacity: 1; } }
+
+/* 输入条 */
+.app-shell[data-app-id="chat"] .cg-inputbar { display: flex; gap: 8px; align-items: flex-end; }
+.app-shell[data-app-id="chat"] .cg-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 8px 11px;
+    border: 1px solid var(--cg-border);
+    border-radius: 11px;
+    background: var(--cg-surface-2);
+    color: var(--cg-text);
+    font-size: 13px;
+    font-family: inherit;
+    line-height: 1.45;
+    resize: none;
+    outline: none;
+}
+.app-shell[data-app-id="chat"] .cg-input:focus { border-color: var(--cg-accent); }
+.app-shell[data-app-id="chat"] .cg-input::placeholder { color: var(--cg-text-3); }
+.app-shell[data-app-id="chat"] .cg-btn.is-send { flex: 0 0 auto; }
+
+.app-shell[data-app-id="chat"] .cg-actbar__title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--cg-primary);
+    margin-bottom: 7px;
+}
+
+/* ---- 头像 ------------------------------------------------ */
+
+.app-shell[data-app-id="chat"] .cg-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--cg-avatar-size, 40px);
+    height: var(--cg-avatar-size, 40px);
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--cg-hue, var(--cg-accent));
+    color: #fff;
+    font-size: calc(var(--cg-avatar-size, 40px) * 0.42);
+    font-weight: 600;
+    flex-shrink: 0;
+}
+.app-shell[data-app-id="chat"] .cg-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+/* 12 个稳定色槽。id → hue 的映射在 JS 里（ui.hueOf），值在这里 */
+.app-shell[data-app-id="chat"] [data-hue="0"]  { --cg-hue: #8FB3E0; }
+.app-shell[data-app-id="chat"] [data-hue="1"]  { --cg-hue: #E8A0B4; }
+.app-shell[data-app-id="chat"] [data-hue="2"]  { --cg-hue: #86C4B0; }
+.app-shell[data-app-id="chat"] [data-hue="3"]  { --cg-hue: #E5B57C; }
+.app-shell[data-app-id="chat"] [data-hue="4"]  { --cg-hue: #A99BD6; }
+.app-shell[data-app-id="chat"] [data-hue="5"]  { --cg-hue: #7FBFD4; }
+.app-shell[data-app-id="chat"] [data-hue="6"]  { --cg-hue: #D69A8C; }
+.app-shell[data-app-id="chat"] [data-hue="7"]  { --cg-hue: #9CC28A; }
+.app-shell[data-app-id="chat"] [data-hue="8"]  { --cg-hue: #C79ACB; }
+.app-shell[data-app-id="chat"] [data-hue="9"]  { --cg-hue: #7EA8C9; }
+.app-shell[data-app-id="chat"] [data-hue="10"] { --cg-hue: #DFA9A0; }
+.app-shell[data-app-id="chat"] [data-hue="11"] { --cg-hue: #8FB8A8; }
+
+/* ---- 座位 ------------------------------------------------ */
+
+.app-shell[data-app-id="chat"] .cg-seats {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 6px 2px 8px;
+    scrollbar-width: none;
+}
+.app-shell[data-app-id="chat"] .cg-seats::-webkit-scrollbar { display: none; }
+
+.app-shell[data-app-id="chat"] .cg-seatgrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.app-shell[data-app-id="chat"] .cg-seat {
+    flex: 0 0 auto;
+    width: 58px;
+    text-align: center;
+    border-radius: 11px;
+    padding: 4px 2px;
+    transition: background 0.16s ease, transform 0.16s ease;
+}
+.app-shell[data-app-id="chat"] .cg-seat.is-clickable { cursor: pointer; }
+.app-shell[data-app-id="chat"] .cg-seat.is-clickable:active { transform: scale(0.94); }
+.app-shell[data-app-id="chat"] .cg-seat.is-active { background: var(--cg-primary-soft); }
+.app-shell[data-app-id="chat"] .cg-seat.is-selected { background: var(--cg-primary-soft); outline: 2px solid var(--cg-primary); }
+.app-shell[data-app-id="chat"] .cg-seat.is-disabled { opacity: 0.35; pointer-events: none; }
+.app-shell[data-app-id="chat"] .cg-seat.is-out { opacity: 0.42; }
+
+.app-shell[data-app-id="chat"] .cg-seat__av { position: relative; display: inline-block; }
+.app-shell[data-app-id="chat"] .cg-seat.is-active .cg-seat__av .cg-avatar {
+    box-shadow: 0 0 0 2px var(--cg-primary);
+}
+.app-shell[data-app-id="chat"] .cg-seat.is-me .cg-seat__av .cg-avatar {
+    box-shadow: 0 0 0 2px var(--cg-accent);
+}
+.app-shell[data-app-id="chat"] .cg-seat__no {
+    position: absolute;
+    left: -2px;
+    top: -2px;
+    min-width: 15px;
+    height: 15px;
+    line-height: 15px;
+    border-radius: 8px;
+    background: var(--cg-primary);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+}
+.app-shell[data-app-id="chat"] .cg-seat__badge {
+    position: absolute;
+    right: -2px;
+    top: -2px;
+    min-width: 15px;
+    height: 15px;
+    line-height: 15px;
+    border-radius: 8px;
+    background: var(--cg-danger);
+    color: #fff;
+    font-size: 9px;
+}
+.app-shell[data-app-id="chat"] .cg-seat__out {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: rgba(30, 40, 55, 0.42);
+}
+.app-shell[data-app-id="chat"] .cg-seat__out::before,
+.app-shell[data-app-id="chat"] .cg-seat__out::after {
+    content: '';
+    position: absolute;
+    left: 22%;
+    top: 50%;
+    width: 56%;
+    height: 2px;
+    background: #fff;
+    border-radius: 1px;
+}
+.app-shell[data-app-id="chat"] .cg-seat__out::before { transform: rotate(45deg); }
+.app-shell[data-app-id="chat"] .cg-seat__out::after { transform: rotate(-45deg); }
+
+.app-shell[data-app-id="chat"] .cg-seat__name {
+    font-size: 10px;
+    color: var(--cg-text);
+    margin-top: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.app-shell[data-app-id="chat"] .cg-seat__sub { font-size: 9px; color: var(--cg-text-3); }
+
+.app-shell[data-app-id="chat"] .cg-picker__title { font-size: 12px; font-weight: 700; color: var(--cg-primary); }
+.app-shell[data-app-id="chat"] .cg-picker__hint { font-size: 10px; color: var(--cg-text-3); margin-top: 2px; }
+.app-shell[data-app-id="chat"] .cg-picker__foot { margin-top: 4px; }
+
+/* ---- 阶段条 / 错误 --------------------------------------- */
+
+.app-shell[data-app-id="chat"] .cg-phasebar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 11px;
+    margin-top: 8px;
+    border-radius: 10px;
+    background: var(--cg-surface);
+    border: 1px solid var(--cg-border);
+    font-size: 11px;
+}
+.app-shell[data-app-id="chat"] .cg-phasebar[data-tone="night"] {
+    background: var(--cg-night);
+    border-color: transparent;
+    color: #E4EAF6;
+}
+.app-shell[data-app-id="chat"] .cg-phasebar[data-tone="night"] .cg-phasebar__round { background: rgba(255, 255, 255, 0.16); color: #fff; }
+.app-shell[data-app-id="chat"] .cg-phasebar[data-tone="night"] .cg-phasebar__extra { color: rgba(255, 255, 255, 0.66); }
+.app-shell[data-app-id="chat"] .cg-phasebar__round {
+    padding: 2px 7px;
+    border-radius: 7px;
+    background: var(--cg-primary-soft);
+    color: var(--cg-primary);
+    font-weight: 700;
+}
+.app-shell[data-app-id="chat"] .cg-phasebar__phase { flex: 1 1 auto; font-weight: 600; }
+.app-shell[data-app-id="chat"] .cg-phasebar__extra { color: var(--cg-text-3); }
+
+.app-shell[data-app-id="chat"] .cg-error {
+    margin: 8px 0;
+    padding: 10px 12px;
+    border-radius: var(--cg-radius);
+    background: rgba(210, 106, 120, 0.10);
+    border: 1px solid rgba(210, 106, 120, 0.28);
+}
+.app-shell[data-app-id="chat"] .cg-error__title { font-size: 12px; font-weight: 700; color: var(--cg-danger); }
+.app-shell[data-app-id="chat"] .cg-error__msg { font-size: 11px; color: var(--cg-text); margin-top: 4px; word-break: break-all; }
+.app-shell[data-app-id="chat"] .cg-error__hint { font-size: 10px; color: var(--cg-text-3); margin-top: 4px; }
+
+/* ---- 消息流 ---------------------------------------------- */
+
+.app-shell[data-app-id="chat"] .cg-feed__list { display: flex; flex-direction: column; gap: 7px; }
+
+.app-shell[data-app-id="chat"] .cg-line {
+    align-self: center;
+    max-width: 90%;
+    text-align: center;
+    font-size: 11px;
+    color: var(--cg-text-2);
+    animation: cgIn 0.24s ease;
+}
+.app-shell[data-app-id="chat"] .cg-line.is-phase {
+    margin: 6px 0 2px;
+    color: var(--cg-primary);
+    font-weight: 700;
+}
+.app-shell[data-app-id="chat"] .cg-line.is-phase span {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 9px;
+    background: var(--cg-primary-soft);
+}
+.app-shell[data-app-id="chat"] .cg-line.is-system span {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 9px;
+    background: var(--cg-surface);
+    border: 1px solid var(--cg-border);
+}
+.app-shell[data-app-id="chat"] .cg-line.is-system[data-tone="death"] span { color: var(--cg-danger); }
+.app-shell[data-app-id="chat"] .cg-line.is-system[data-tone="good"] span { color: var(--cg-good); }
+.app-shell[data-app-id="chat"] .cg-line.is-system[data-tone="bad"] span { color: var(--cg-danger); }
+.app-shell[data-app-id="chat"] .cg-line.is-result span {
+    display: inline-block;
+    padding: 7px 14px;
+    border-radius: 11px;
+    background: var(--cg-primary);
+    color: #fff;
+    font-weight: 700;
+    font-size: 12px;
+}
+
+.app-shell[data-app-id="chat"] .cg-bubble {
+    display: flex;
+    gap: 7px;
+    align-items: flex-start;
+    max-width: 88%;
+    animation: cgIn 0.24s ease;
+}
+.app-shell[data-app-id="chat"] .cg-bubble.is-other { align-self: flex-start; }
+.app-shell[data-app-id="chat"] .cg-bubble.is-me { align-self: flex-end; flex-direction: row; }
+.app-shell[data-app-id="chat"] .cg-bubble__name { font-size: 10px; color: var(--cg-text-3); margin-bottom: 2px; }
+.app-shell[data-app-id="chat"] .cg-bubble.is-me .cg-bubble__name { text-align: right; }
+.app-shell[data-app-id="chat"] .cg-bubble__text {
+    padding: 7px 11px;
+    border-radius: 12px;
+    background: var(--cg-surface);
+    border: 1px solid var(--cg-border);
+    font-size: 13px;
+    line-height: 1.5;
+    word-break: break-word;
+}
+.app-shell[data-app-id="chat"] .cg-bubble.is-me .cg-bubble__text {
+    background: var(--cg-primary);
+    border-color: var(--cg-primary);
+    color: #fff;
+}
+.app-shell[data-app-id="chat"] .cg-bubble.is-secret .cg-bubble__text {
+    background: var(--cg-night);
+    border-color: transparent;
+    color: #DCE4F5;
+}
+.app-shell[data-app-id="chat"] .cg-bubble.is-narrate .cg-bubble__text {
+    background: transparent;
+    border-style: dashed;
+    color: var(--cg-text-2);
+    font-style: italic;
+}
+
+@keyframes cgIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: none; }
+}
+
+/* ---- 身份卡 / 票型 / 结算 -------------------------------- */
+
+.app-shell[data-app-id="chat"] .cg-rolecard {
+    margin-top: 8px;
+    padding: 11px 13px;
+    border-radius: var(--cg-radius);
+    background: var(--cg-surface);
+    border: 1px solid var(--cg-border);
+    box-shadow: var(--cg-shadow);
+}
+.app-shell[data-app-id="chat"] .cg-rolecard[data-tone="wolf"] { border-color: rgba(210, 106, 120, 0.4); }
+.app-shell[data-app-id="chat"] .cg-rolecard[data-tone="village"] { border-color: rgba(79, 160, 124, 0.4); }
+.app-shell[data-app-id="chat"] .cg-rolecard.is-hidden { background: var(--cg-night); color: #E1E8F6; border-color: transparent; }
+.app-shell[data-app-id="chat"] .cg-rolecard.is-hidden .cg-rolecard__label,
+.app-shell[data-app-id="chat"] .cg-rolecard.is-hidden .cg-rolecard__desc { color: rgba(255, 255, 255, 0.62); }
+.app-shell[data-app-id="chat"] .cg-rolecard.is-hidden .cg-rolecard__name { color: #fff; }
+.app-shell[data-app-id="chat"] .cg-rolecard__label { font-size: 10px; color: var(--cg-text-3); }
+.app-shell[data-app-id="chat"] .cg-rolecard__name { font-size: 20px; font-weight: 800; color: var(--cg-primary); line-height: 1.25; }
+.app-shell[data-app-id="chat"] .cg-rolecard__desc { font-size: 11px; color: var(--cg-text-2); margin-top: 2px; }
+.app-shell[data-app-id="chat"] .cg-rolecard__extra { margin-top: 7px; padding-top: 7px; border-top: 1px dashed var(--cg-border); }
+
+.app-shell[data-app-id="chat"] .cg-votes { display: flex; flex-direction: column; gap: 4px; }
+.app-shell[data-app-id="chat"] .cg-votes__row { display: flex; align-items: center; gap: 7px; font-size: 11px; }
+.app-shell[data-app-id="chat"] .cg-votes__name { flex: 0 0 52px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-shell[data-app-id="chat"] .cg-votes__bar { flex: 1 1 auto; height: 7px; border-radius: 4px; background: var(--cg-surface-2); overflow: hidden; }
+.app-shell[data-app-id="chat"] .cg-votes__bar i { display: block; height: 100%; background: var(--cg-accent); transition: width 0.3s ease; }
+.app-shell[data-app-id="chat"] .cg-votes__count { flex: 0 0 18px; text-align: right; font-weight: 700; color: var(--cg-primary); }
+.app-shell[data-app-id="chat"] .cg-votes__voters { font-size: 10px; color: var(--cg-text-3); padding-left: 59px; }
+
+.app-shell[data-app-id="chat"] .cg-result {
+    padding: 14px;
+    border-radius: var(--cg-radius);
+    background: var(--cg-surface);
+    border: 1px solid var(--cg-border);
+    box-shadow: var(--cg-shadow);
+}
+.app-shell[data-app-id="chat"] .cg-result__head { text-align: center; padding-bottom: 10px; }
+.app-shell[data-app-id="chat"] .cg-result__title { font-size: 19px; font-weight: 800; color: var(--cg-primary); }
+.app-shell[data-app-id="chat"] .cg-result[data-outcome="win"] .cg-result__title { color: var(--cg-good); }
+.app-shell[data-app-id="chat"] .cg-result[data-outcome="lose"] .cg-result__title { color: var(--cg-danger); }
+.app-shell[data-app-id="chat"] .cg-result__summary { font-size: 11px; color: var(--cg-text-2); margin-top: 5px; line-height: 1.55; }
+.app-shell[data-app-id="chat"] .cg-result__stats { display: flex; gap: 8px; margin-bottom: 10px; }
+.app-shell[data-app-id="chat"] .cg-result__stat {
+    flex: 1 1 0;
+    text-align: center;
+    padding: 8px 4px;
+    border-radius: 10px;
+    background: var(--cg-surface-2);
+}
+.app-shell[data-app-id="chat"] .cg-result__stat b { display: block; font-size: 16px; color: var(--cg-primary); }
+.app-shell[data-app-id="chat"] .cg-result__stat span { font-size: 10px; color: var(--cg-text-3); }
+.app-shell[data-app-id="chat"] .cg-result__roster { display: flex; flex-direction: column; gap: 5px; }
+.app-shell[data-app-id="chat"] .cg-result__row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 9px;
+    border-radius: 10px;
+    background: var(--cg-surface-2);
+}
+.app-shell[data-app-id="chat"] .cg-result__row.is-win { background: rgba(79, 160, 124, 0.12); }
+.app-shell[data-app-id="chat"] .cg-result__row.is-me { outline: 1px solid var(--cg-accent); }
+.app-shell[data-app-id="chat"] .cg-result__who { flex: 1 1 auto; min-width: 0; }
+.app-shell[data-app-id="chat"] .cg-result__name { font-size: 12px; font-weight: 600; }
+.app-shell[data-app-id="chat"] .cg-result__seat { font-size: 10px; color: var(--cg-text-3); margin-left: 5px; }
+.app-shell[data-app-id="chat"] .cg-result__word { font-size: 10px; color: var(--cg-text-3); }
+.app-shell[data-app-id="chat"] .cg-result__role {
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 7px;
+    background: var(--cg-primary-soft);
+    color: var(--cg-primary);
+}
+.app-shell[data-app-id="chat"] .cg-result__flag { font-size: 11px; font-weight: 700; color: var(--cg-text-3); }
+.app-shell[data-app-id="chat"] .cg-result__row.is-win .cg-result__flag { color: var(--cg-good); }
+
+/* ---- 狼人杀专属 ------------------------------------------ */
+
+.app-shell[data-app-id="chat"] .cg-wolfchat {
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: var(--cg-night);
+    color: #DCE4F5;
+    margin-bottom: 8px;
+}
+.app-shell[data-app-id="chat"] .cg-wolfchat__line { font-size: 11px; line-height: 1.6; }
+.app-shell[data-app-id="chat"] .cg-wolfchat__line b { margin-right: 5px; color: #fff; }
+
+/* ---- 卧底专属 -------------------------------------------- */
+
+.app-shell[data-app-id="chat"] .cg-wordpair { display: flex; gap: 8px; }
+.app-shell[data-app-id="chat"] .cg-wordpair__item {
+    flex: 1 1 0;
+    text-align: center;
+    padding: 8px 4px;
+    border-radius: 10px;
+    background: var(--cg-surface-2);
+}
+.app-shell[data-app-id="chat"] .cg-wordpair__item[data-side="undercover"] { background: rgba(210, 106, 120, 0.12); }
+.app-shell[data-app-id="chat"] .cg-wordpair__k { display: block; font-size: 10px; color: var(--cg-text-3); }
+.app-shell[data-app-id="chat"] .cg-wordpair__v { display: block; font-size: 16px; font-weight: 700; color: var(--cg-text); }
+
+/* ---- 大富翁专属 ------------------------------------------ */
+
+/* 棋盘是正方形的，不限宽的话在手机上会占掉整屏 ——
+   骰子和资产条就得滚下去才看得见，而掷骰是每回合都要看的。
+   288px 正好能让「棋盘 + 骰子」一屏装下。 */
+.app-shell[data-app-id="chat"] .cg-board {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    grid-template-rows: repeat(6, 1fr);
+    gap: 3px;
+    aspect-ratio: 1;
+    width: 100%;
+    max-width: 288px;
+    margin: 8px auto;
+}
+/* 棋盘内圈：骰子住在这里（见 monopoly/view.js renderHead 的说明） */
+.app-shell[data-app-id="chat"] .cg-board__center {
+    grid-column: 2 / 6;
+    grid-row: 2 / 6;
+    border-radius: 12px;
+    background: var(--cg-surface);
+    border: 1px dashed var(--cg-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+.app-shell[data-app-id="chat"] .cg-board__center .cg-dice-stage {
+    /* 骰子本身的 padding: 20px 0 是原型规格，但内圈只有 ~190px 高，
+       这里靠 flex 居中，不需要它再撑一次 */
+    padding: 0;
+}
+.app-shell[data-app-id="chat"] .cg-board__center .cg-dice-stage__total { margin-top: 10px; }
+.app-shell[data-app-id="chat"] .cg-board__hint {
+    padding: 0 14px;
+    text-align: center;
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--cg-text-3);
+}
+.app-shell[data-app-id="chat"] .cg-cell {
+    position: relative;
+    border-radius: 6px;
+    background: var(--cg-surface);
+    border: 1px solid var(--cg-border);
+    padding: 3px 2px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    font-size: 8px;
+    line-height: 1.15;
+}
+.app-shell[data-app-id="chat"] .cg-cell.is-current { box-shadow: 0 0 0 2px var(--cg-primary); }
+.app-shell[data-app-id="chat"] .cg-cell[data-type="go"],
+.app-shell[data-app-id="chat"] .cg-cell[data-type="jail"],
+.app-shell[data-app-id="chat"] .cg-cell[data-type="parking"],
+.app-shell[data-app-id="chat"] .cg-cell[data-type="goto_jail"] { background: var(--cg-primary-soft); }
+.app-shell[data-app-id="chat"] .cg-cell[data-type="chance"] { background: rgba(232, 181, 124, 0.22); }
+.app-shell[data-app-id="chat"] .cg-cell[data-type="fate"] { background: rgba(169, 155, 214, 0.22); }
+.app-shell[data-app-id="chat"] .cg-cell[data-type="tax"] { background: rgba(210, 106, 120, 0.14); }
+.app-shell[data-app-id="chat"] .cg-cell[data-group]::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+}
+.app-shell[data-app-id="chat"] .cg-cell[data-group="A"]::before { background: #8FB3E0; }
+.app-shell[data-app-id="chat"] .cg-cell[data-group="B"]::before { background: #E8A0B4; }
+.app-shell[data-app-id="chat"] .cg-cell[data-group="C"]::before { background: #86C4B0; }
+.app-shell[data-app-id="chat"] .cg-cell[data-group="D"]::before { background: #E5B57C; }
+.app-shell[data-app-id="chat"] .cg-cell[data-owner-hue] { box-shadow: inset 0 0 0 2px var(--cg-hue); }
+.app-shell[data-app-id="chat"] .cg-cell__name { font-weight: 600; color: var(--cg-text); text-align: center; }
+.app-shell[data-app-id="chat"] .cg-cell__price { color: var(--cg-text-3); font-size: 7px; }
+.app-shell[data-app-id="chat"] .cg-cell__houses { color: var(--cg-good); font-size: 7px; letter-spacing: -1px; }
+.app-shell[data-app-id="chat"] .cg-cell__pawns { position: absolute; bottom: 1px; display: flex; gap: 2px; }
+.app-shell[data-app-id="chat"] .cg-cell__pawns i {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--cg-hue, var(--cg-primary));
+    border: 1px solid #fff;
+    transition: transform 0.2s ease;
+}
+
+.app-shell[data-app-id="chat"] .cg-stands { display: flex; flex-direction: column; gap: 3px; }
+.app-shell[data-app-id="chat"] .cg-stand {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 4px 8px;
+    border-radius: 9px;
+    background: var(--cg-surface);
+    border: 1px solid var(--cg-border);
+}
+.app-shell[data-app-id="chat"] .cg-stand.is-current { border-color: var(--cg-primary); }
+.app-shell[data-app-id="chat"] .cg-stand.is-out { opacity: 0.45; }
+.app-shell[data-app-id="chat"] .cg-stand__main { flex: 1 1 auto; min-width: 0; }
+.app-shell[data-app-id="chat"] .cg-stand__name { font-size: 12px; font-weight: 600; }
+.app-shell[data-app-id="chat"] .cg-stand__sub { font-size: 10px; color: var(--cg-text-3); }
+.app-shell[data-app-id="chat"] .cg-stand__money { font-size: 13px; font-weight: 700; color: var(--cg-primary); }
+
+.app-shell[data-app-id="chat"] .cg-deal { margin-bottom: 6px; }
+.app-shell[data-app-id="chat"] .cg-deal__row { display: flex; justify-content: space-between; font-size: 11px; padding: 2px 0; }
+.app-shell[data-app-id="chat"] .cg-deal__row span { color: var(--cg-text-3); }
+
+/* ---- 大厅 ------------------------------------------------ */
+
+.app-shell[data-app-id="chat"] .cg-lobby__body,
+.app-shell[data-app-id="chat"] .cg-setup__body,
+.app-shell[data-app-id="chat"] .cg-lb__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    touch-action: pan-y;
+    padding: 12px 12px calc(16px + var(--app-safe-bottom, 0px));
+    scrollbar-width: none;
+}
+.app-shell[data-app-id="chat"] .cg-lobby__body::-webkit-scrollbar,
+.app-shell[data-app-id="chat"] .cg-setup__body::-webkit-scrollbar,
+.app-shell[data-app-id="chat"] .cg-lb__body::-webkit-scrollbar { display: none; }
+
+.app-shell[data-app-id="chat"] .cg-lobby__note {
+    font-size: 11px;
+    color: var(--cg-text-3);
+    text-align: center;
+    padding: 6px 0 10px;
+}
+
+.app-shell[data-app-id="chat"] .cg-lobby-card {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    width: 100%;
+    padding: 13px;
+    margin-bottom: 10px;
+    border: 1px solid var(--cg-border);
+    border-radius: var(--cg-radius);
+    background: var(--cg-surface);
+    box-shadow: var(--cg-shadow);
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+    transition: transform 0.16s ease;
+}
+.app-shell[data-app-id="chat"] .cg-lobby-card:active:not(:disabled) { transform: scale(0.985); }
+.app-shell[data-app-id="chat"] .cg-lobby-card:disabled { opacity: 0.45; cursor: not-allowed; }
+.app-shell[data-app-id="chat"] .cg-lobby-card.is-resume { border-color: var(--cg-primary); }
+.app-shell[data-app-id="chat"] .cg-lobby-card__icon {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: var(--cg-primary-soft);
+    color: var(--cg-primary);
+}
+.app-shell[data-app-id="chat"] .cg-lobby-card__icon svg { width: 24px; height: 24px; }
+.app-shell[data-app-id="chat"] .cg-lobby-card__main { flex: 1 1 auto; min-width: 0; }
+.app-shell[data-app-id="chat"] .cg-lobby-card__name { display: block; font-size: 15px; font-weight: 700; color: var(--cg-primary); }
+.app-shell[data-app-id="chat"] .cg-lobby-card__desc { display: block; font-size: 11px; color: var(--cg-text-2); margin-top: 2px; }
+.app-shell[data-app-id="chat"] .cg-lobby-card__tag {
+    display: inline-block;
+    margin-top: 5px;
+    padding: 2px 7px;
+    border-radius: 7px;
+    background: var(--cg-primary-soft);
+    color: var(--cg-primary);
+    font-size: 10px;
+}
+.app-shell[data-app-id="chat"] .cg-lobby-card__arrow { color: var(--cg-text-3); display: flex; }
+
+/* ---- 设置页 ---------------------------------------------- */
+
+.app-shell[data-app-id="chat"] .cg-setup__foot {
+    flex: 0 0 auto;
+    padding: 10px 12px calc(12px + var(--app-safe-bottom, 0px));
+    background: var(--cg-surface);
+    border-top: 1px solid var(--cg-border);
+}
+.app-shell[data-app-id="chat"] .cg-setup__warn {
+    font-size: 11px;
+    color: var(--cg-danger);
+    text-align: center;
+    margin-bottom: 7px;
+}
+
+.app-shell[data-app-id="chat"] .cg-choice { display: flex; gap: 8px; }
+.app-shell[data-app-id="chat"] .cg-choice__item {
+    flex: 1 1 0;
+    padding: 9px 10px;
+    border: 1px solid var(--cg-border);
+    border-radius: 11px;
+    background: var(--cg-surface-2);
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+}
+.app-shell[data-app-id="chat"] .cg-choice__item.is-on {
+    border-color: var(--cg-primary);
+    background: var(--cg-primary-soft);
+}
+.app-shell[data-app-id="chat"] .cg-choice__t { display: block; font-size: 12px; font-weight: 700; color: var(--cg-text); }
+.app-shell[data-app-id="chat"] .cg-choice__d { display: block; font-size: 10px; color: var(--cg-text-3); margin-top: 2px; }
+
+.app-shell[data-app-id="chat"] .cg-members {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+    gap: 8px;
+}
+.app-shell[data-app-id="chat"] .cg-member {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 9px 4px;
+    border: 1px solid var(--cg-border);
+    border-radius: 11px;
+    background: var(--cg-surface-2);
+    cursor: pointer;
+    font-family: inherit;
+}
+.app-shell[data-app-id="chat"] .cg-member.is-on { border-color: var(--cg-primary); background: var(--cg-primary-soft); }
+.app-shell[data-app-id="chat"] .cg-member__av {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--cg-hue, var(--cg-accent));
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+}
+.app-shell[data-app-id="chat"] .cg-member__av img { width: 100%; height: 100%; object-fit: cover; }
+.app-shell[data-app-id="chat"] .cg-member__name {
+    font-size: 10px;
+    color: var(--cg-text);
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.app-shell[data-app-id="chat"] .cg-member__check {
+    position: absolute;
+    right: 5px;
+    top: 5px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 1px solid var(--cg-border);
+    background: var(--cg-surface);
+}
+.app-shell[data-app-id="chat"] .cg-member.is-on .cg-member__check { background: var(--cg-primary); border-color: var(--cg-primary); }
+.app-shell[data-app-id="chat"] .cg-member.is-on .cg-member__check::after {
+    content: '';
+    position: absolute;
+    left: 4px; top: 1px;
+    width: 4px; height: 8px;
+    border: solid #fff;
+    border-width: 0 1.6px 1.6px 0;
+    transform: rotate(45deg);
+}
+
+.app-shell[data-app-id="chat"] .cg-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.app-shell[data-app-id="chat"] .cg-tag {
+    padding: 5px 11px;
+    border: 1px solid var(--cg-border);
+    border-radius: 9px;
+    background: var(--cg-surface-2);
+    color: var(--cg-text-2);
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+}
+.app-shell[data-app-id="chat"] .cg-tag.is-on {
+    border-color: var(--cg-primary);
+    background: var(--cg-primary);
+    color: #fff;
+}
+
+.app-shell[data-app-id="chat"] .cg-rules { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.app-shell[data-app-id="chat"] .cg-switch {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--cg-border);
+    border-radius: 11px;
+    background: var(--cg-surface-2);
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+    margin-top: 8px;
+}
+.app-shell[data-app-id="chat"] .cg-rules .cg-switch { margin-top: 0; }
+.app-shell[data-app-id="chat"] .cg-switch__main { flex: 1 1 auto; min-width: 0; }
+.app-shell[data-app-id="chat"] .cg-switch__t { display: block; font-size: 12px; font-weight: 600; color: var(--cg-text); }
+.app-shell[data-app-id="chat"] .cg-switch__d { display: block; font-size: 10px; color: var(--cg-text-3); margin-top: 2px; line-height: 1.4; }
+.app-shell[data-app-id="chat"] .cg-switch__knob {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 20px;
+    border-radius: 10px;
+    background: var(--cg-border);
+    position: relative;
+    transition: background 0.2s ease;
+}
+.app-shell[data-app-id="chat"] .cg-switch__knob::after {
+    content: '';
+    position: absolute;
+    left: 2px; top: 2px;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform 0.2s ease;
+}
+.app-shell[data-app-id="chat"] .cg-switch.is-on .cg-switch__knob { background: var(--cg-primary); }
+.app-shell[data-app-id="chat"] .cg-switch.is-on .cg-switch__knob::after { transform: translateX(14px); }
+
+.app-shell[data-app-id="chat"] .cg-configcard {
+    padding: 10px 11px;
+    border-radius: 11px;
+    background: var(--cg-surface-2);
+}
+.app-shell[data-app-id="chat"] .cg-configcard__name { font-size: 13px; font-weight: 700; color: var(--cg-primary); }
+.app-shell[data-app-id="chat"] .cg-configcard__desc { font-size: 11px; color: var(--cg-text-2); margin-top: 3px; }
+.app-shell[data-app-id="chat"] .cg-configcard__roles { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 7px; }
+.app-shell[data-app-id="chat"] .cg-configcard__roles span {
+    padding: 2px 7px;
+    border-radius: 7px;
+    background: var(--cg-surface);
+    color: var(--cg-text-2);
+    font-size: 10px;
+}
+
+/* ---- 排行榜 ---------------------------------------------- */
+
+.app-shell[data-app-id="chat"] .cg-lb { --cg-bg: #F8F4FF; }
+.app-shell[data-app-id="chat"] .cg-lb__tabs {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 6px;
+    padding: 10px 12px 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.app-shell[data-app-id="chat"] .cg-lb__tabs::-webkit-scrollbar { display: none; }
+.app-shell[data-app-id="chat"] .cg-lbtab {
+    flex: 0 0 auto;
+    padding: 5px 12px;
+    border: none;
+    border-radius: 9px;
+    background: var(--cg-surface);
+    color: var(--cg-text-2);
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+}
+.app-shell[data-app-id="chat"] .cg-lbtab.is-on { background: var(--cg-primary); color: #fff; font-weight: 600; }
+
+.app-shell[data-app-id="chat"] .cg-podium { display: flex; gap: 8px; margin-bottom: 12px; }
+.app-shell[data-app-id="chat"] .cg-podium__item {
+    flex: 1 1 0;
+    text-align: center;
+    padding: 12px 6px 10px;
+    border-radius: 12px;
+    background: var(--cg-surface);
+    border: 1px solid var(--cg-border);
+}
+.app-shell[data-app-id="chat"] .cg-podium__item[data-rank="1"] { border-color: #E5B57C; }
+.app-shell[data-app-id="chat"] .cg-podium__item[data-rank="2"] { border-color: #C3CBD4; }
+.app-shell[data-app-id="chat"] .cg-podium__item[data-rank="3"] { border-color: #D6A98C; }
+.app-shell[data-app-id="chat"] .cg-podium__item[data-me="1"] { background: var(--cg-primary-soft); }
+.app-shell[data-app-id="chat"] .cg-podium__av {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: var(--cg-hue, var(--cg-accent));
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+}
+.app-shell[data-app-id="chat"] .cg-podium__name { display: block; font-size: 11px; margin-top: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-shell[data-app-id="chat"] .cg-podium__wins { display: block; font-size: 10px; color: var(--cg-text-3); }
+.app-shell[data-app-id="chat"] .cg-podium__rate { display: block; font-size: 15px; font-weight: 800; color: var(--cg-primary); }
+
+.app-shell[data-app-id="chat"] .cg-lblist { display: flex; flex-direction: column; gap: 5px; }
+.app-shell[data-app-id="chat"] .cg-lbrow {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 10px;
+    border-radius: 11px;
+    background: var(--cg-surface);
+    border: 1px solid var(--cg-border);
+}
+.app-shell[data-app-id="chat"] .cg-lbrow.is-me { border-color: var(--cg-primary); }
+.app-shell[data-app-id="chat"] .cg-lbrow__rank { flex: 0 0 18px; text-align: center; font-size: 12px; font-weight: 700; color: var(--cg-text-3); }
+.app-shell[data-app-id="chat"] .cg-lbrow__rank[data-rank="1"],
+.app-shell[data-app-id="chat"] .cg-lbrow__rank[data-rank="2"],
+.app-shell[data-app-id="chat"] .cg-lbrow__rank[data-rank="3"] { color: var(--cg-primary); }
+.app-shell[data-app-id="chat"] .cg-lbrow__av {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--cg-hue, var(--cg-accent));
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+}
+.app-shell[data-app-id="chat"] .cg-lbrow__main { flex: 1 1 auto; min-width: 0; }
+.app-shell[data-app-id="chat"] .cg-lbrow__name { display: block; font-size: 12px; font-weight: 600; }
+.app-shell[data-app-id="chat"] .cg-lbrow__sub { display: block; font-size: 10px; color: var(--cg-text-3); }
+.app-shell[data-app-id="chat"] .cg-lbrow__score { text-align: right; }
+.app-shell[data-app-id="chat"] .cg-lbrow__score b { display: block; font-size: 14px; color: var(--cg-primary); }
+.app-shell[data-app-id="chat"] .cg-lbrow__score i { font-size: 10px; color: var(--cg-text-3); font-style: normal; }
+
+.app-shell[data-app-id="chat"] .cg-histrow { display: flex; align-items: center; gap: 7px; padding: 4px 0; font-size: 11px; }
+.app-shell[data-app-id="chat"] .cg-histrow__game { flex: 0 0 auto; padding: 1px 6px; border-radius: 6px; background: var(--cg-primary-soft); color: var(--cg-primary); font-size: 10px; }
+.app-shell[data-app-id="chat"] .cg-histrow__text { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--cg-text-2); }
+.app-shell[data-app-id="chat"] .cg-histrow__time { flex: 0 0 auto; color: var(--cg-text-3); font-size: 10px; }
+
+/* ---- 群聊顶部的「有一局在打」回条 -------------------------- */
+
+.app-shell[data-app-id="chat"] .chat-game-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: calc(100% - 24px);
+    margin: 6px 12px 0;
+    padding: 7px 11px;
+    border: 1px solid var(--cg-primary-soft);
+    border-radius: 11px;
+    background: var(--cg-surface);
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    flex: 0 0 auto;
+}
+.app-shell[data-app-id="chat"] .chat-game-bar[data-tone="pink"] { --cg-primary: #C76B8F; --cg-primary-soft: #FFE0EB; }
+.app-shell[data-app-id="chat"] .chat-game-bar[data-tone="slate"] { --cg-primary: #5C7285; --cg-primary-soft: #DCE3E9; }
+.app-shell[data-app-id="chat"] .chat-game-bar:active { transform: scale(0.99); }
+.app-shell[data-app-id="chat"] .chat-game-bar__dot {
+    width: 7px;
+    height: 7px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: var(--cg-primary);
+}
+.app-shell[data-app-id="chat"] .chat-game-bar[data-waiting="1"] .chat-game-bar__dot {
+    animation: cgPulse 1.3s infinite ease-in-out;
+}
+@keyframes cgPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.35); } }
+.app-shell[data-app-id="chat"] .chat-game-bar__text {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 11px;
+    color: var(--cg-text-2);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.app-shell[data-app-id="chat"] .chat-game-bar__text b { color: var(--cg-primary); margin-right: 6px; }
+.app-shell[data-app-id="chat"] .chat-game-bar__cta {
+    flex: 0 0 auto;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 8px;
+    background: var(--cg-primary-soft);
+    color: var(--cg-primary);
+}
+.app-shell[data-app-id="chat"] .chat-game-bar[data-waiting="1"] .chat-game-bar__cta {
+    background: var(--cg-primary);
+    color: #fff;
+}
+
+/* ---- 群聊里的战绩卡 -------------------------------------- */
+
+.app-shell[data-app-id="chat"] .game-record-wrapper {
+    display: flex;
+    justify-content: center;
+    padding: 6px 0;
+}
+.app-shell[data-app-id="chat"] .game-record-card {
+    width: 250px;
+    padding: 11px 13px;
+    border-radius: 14px;
+    background: #fff;
+    border: 1px solid rgba(74, 111, 165, 0.14);
+    box-shadow: 0 4px 14px rgba(74, 111, 165, 0.08);
+    cursor: pointer;
+    --cg-rc: #4A6FA5;
+    --cg-rc-soft: #DCE9FF;
+}
+.app-shell[data-app-id="chat"] .game-record-card[data-tone="pink"] { --cg-rc: #C76B8F; --cg-rc-soft: #FFE0EB; }
+.app-shell[data-app-id="chat"] .game-record-card[data-tone="slate"] { --cg-rc: #5C7285; --cg-rc-soft: #DCE3E9; }
+.app-shell[data-app-id="chat"] .game-record-card:active { transform: scale(0.985); }
+.app-shell[data-app-id="chat"] .game-record-card__head { display: flex; justify-content: space-between; align-items: center; }
+.app-shell[data-app-id="chat"] .game-record-card__game { font-size: 11px; font-weight: 700; color: var(--cg-rc); }
+.app-shell[data-app-id="chat"] .game-record-card__outcome {
+    font-size: 10px;
+    padding: 1px 7px;
+    border-radius: 7px;
+    background: var(--cg-rc-soft);
+    color: var(--cg-rc);
+}
+.app-shell[data-app-id="chat"] .game-record-card[data-outcome="win"] .game-record-card__outcome { background: rgba(79, 160, 124, 0.16); color: #3E8A69; }
+.app-shell[data-app-id="chat"] .game-record-card[data-outcome="lose"] .game-record-card__outcome { background: rgba(210, 106, 120, 0.16); color: #C15A69; }
+.app-shell[data-app-id="chat"] .game-record-card__title { font-size: 14px; font-weight: 700; color: #26364B; margin-top: 5px; }
+.app-shell[data-app-id="chat"] .game-record-card__summary {
+    font-size: 10px;
+    color: #7B8CA6;
+    margin-top: 3px;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.app-shell[data-app-id="chat"] .game-record-card__roster { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 7px; }
+.app-shell[data-app-id="chat"] .game-record-card__player {
+    font-size: 9px;
+    padding: 1px 6px;
+    border-radius: 6px;
+    background: #F4F7FC;
+    color: #7B8CA6;
+}
+.app-shell[data-app-id="chat"] .game-record-card__player.is-win { background: rgba(79, 160, 124, 0.14); color: #3E8A69; }
+.app-shell[data-app-id="chat"] .game-record-card__player.is-me { outline: 1px solid var(--cg-rc); }
+.app-shell[data-app-id="chat"] .game-record-card__player i { font-style: normal; opacity: 0.7; margin-left: 3px; }
+.app-shell[data-app-id="chat"] .game-record-card__meta {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+    padding-top: 7px;
+    border-top: 1px dashed rgba(74, 111, 165, 0.14);
+    font-size: 10px;
+    color: #A9B6C8;
+}
+
+.app-shell[data-app-id="chat"] .cg-recorddetail {
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+    padding: 54px 14px calc(20px + var(--app-safe-bottom, 0px));
+    background: #F2F7FF;
+    scrollbar-width: none;
+}
+.app-shell[data-app-id="chat"] .cg-recorddetail::-webkit-scrollbar { display: none; }
+/* chat-app 全局藏掉了框架的 .app-detail-header，这一页要自己画返回 */
+.app-shell[data-app-id="chat"] .cg-recorddetail__back {
+    position: absolute;
+    left: 12px;
+    top: 54px;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 50%;
+    background: #fff;
+    color: #4A6FA5;
+    cursor: pointer;
+    z-index: 2;
+}
+.app-shell[data-app-id="chat"] .cg-recorddetail__back svg { width: 16px; height: 16px; }
+.app-shell[data-app-id="chat"] .cg-recorddetail__head {
+    padding: 16px;
+    border-radius: 14px;
+    background: #fff;
+    text-align: center;
+    margin-bottom: 12px;
+}
+.app-shell[data-app-id="chat"] .cg-recorddetail__game { font-size: 11px; color: #A9B6C8; }
+.app-shell[data-app-id="chat"] .cg-recorddetail__title { font-size: 19px; font-weight: 800; color: #4A6FA5; margin-top: 3px; }
+.app-shell[data-app-id="chat"] .cg-recorddetail__summary { font-size: 11px; color: #7B8CA6; margin-top: 6px; line-height: 1.6; }
+.app-shell[data-app-id="chat"] .cg-recorddetail__highlights {
+    padding: 10px 13px;
+    border-radius: 12px;
+    background: #fff;
+    margin-bottom: 12px;
+    font-size: 11px;
+    color: #7B8CA6;
+    line-height: 1.8;
+}
+
+/* ============================================================
+   做一个新游戏（.cgm-*）
+   ------------------------------------------------------------
+   三步表单：说清楚要做什么 → 规则怎么走 → 拿提示词去生成 + 上传玩法。
+   产物是**提示词**不是代码，理由见 pages/game-maker-page.js 文件头。
+   ============================================================ */
+
+.app-shell[data-app-id="chat"] .cg-lobby-card__badge {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 6px;
+    border-radius: 6px;
+    background: var(--cg-primary-soft);
+    color: var(--cg-primary);
+    font-size: 9px;
+    font-style: normal;
+    vertical-align: 1px;
+}
+
+.app-shell[data-app-id="chat"] .cgm-page {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.app-shell[data-app-id="chat"] .cgm-steps {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 6px;
+    padding: 10px 14px 2px;
+}
+
+.app-shell[data-app-id="chat"] .cgm-step {
+    flex: 1;
+    height: 3px;
+    border: 0;
+    padding: 0;
+    border-radius: 2px;
+    background: var(--cg-line);
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="chat"] .cgm-step.is-done { background: var(--cg-primary-soft); }
+.app-shell[data-app-id="chat"] .cgm-step.is-on { background: var(--cg-primary); }
+
+.app-shell[data-app-id="chat"] .cgm-body { padding-bottom: 8px; }
+
+.app-shell[data-app-id="chat"] .cgm-field { margin-bottom: 16px; }
+
+.app-shell[data-app-id="chat"] .cgm-field__label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--cg-text-1);
+    margin-bottom: 3px;
+}
+
+.app-shell[data-app-id="chat"] .cgm-field__hint {
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--cg-text-3);
+    margin-bottom: 7px;
+}
+
+.app-shell[data-app-id="chat"] .cgm-input,
+.app-shell[data-app-id="chat"] .cgm-textarea,
+.app-shell[data-app-id="chat"] .cgm-num {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 9px 11px;
+    border: 1px solid var(--cg-line);
+    border-radius: 10px;
+    background: var(--cg-surface);
+    color: var(--cg-text-1);
+    font-family: inherit;
+    font-size: 13px;
+    outline: none;
+}
+
+.app-shell[data-app-id="chat"] .cgm-textarea { resize: vertical; line-height: 1.6; }
+.app-shell[data-app-id="chat"] .cgm-num { width: 68px; }
+
+.app-shell[data-app-id="chat"] .cgm-range {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    font-size: 12px;
+    color: var(--cg-text-2);
+}
+
+.app-shell[data-app-id="chat"] .cgm-options {
+    display: grid;
+    gap: 7px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.app-shell[data-app-id="chat"] .cgm-options[data-cols="1"] { grid-template-columns: 1fr; }
+.app-shell[data-app-id="chat"] .cgm-options[data-cols="5"] { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+
+.app-shell[data-app-id="chat"] .cgm-option {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    align-items: flex-start;
+    padding: 9px 11px;
+    border: 1px solid var(--cg-line);
+    border-radius: 10px;
+    background: var(--cg-surface);
+    color: var(--cg-text-1);
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.app-shell[data-app-id="chat"] .cgm-option.is-on {
+    border-color: var(--cg-primary);
+    background: var(--cg-primary-soft);
+}
+
+.app-shell[data-app-id="chat"] .cgm-option__name { font-size: 12px; font-weight: 600; }
+.app-shell[data-app-id="chat"] .cgm-option__desc { font-size: 10.5px; line-height: 1.5; color: var(--cg-text-3); }
+
+.app-shell[data-app-id="chat"] .cgm-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--cg-line);
+    border-radius: 10px;
+    background: var(--cg-surface);
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="chat"] .cgm-toggle__copy { display: flex; flex-direction: column; gap: 2px; text-align: left; min-width: 0; }
+.app-shell[data-app-id="chat"] .cgm-toggle__label { font-size: 12.5px; color: var(--cg-text-1); }
+.app-shell[data-app-id="chat"] .cgm-toggle__desc { font-size: 10.5px; line-height: 1.5; color: var(--cg-text-3); }
+
+.app-shell[data-app-id="chat"] .cgm-toggle__track {
+    flex: 0 0 auto;
+    position: relative;
+    width: 38px;
+    height: 22px;
+    border-radius: 11px;
+    background: var(--cg-line);
+    transition: background 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .cgm-toggle.is-on .cgm-toggle__track { background: var(--cg-primary); }
+
+.app-shell[data-app-id="chat"] .cgm-toggle__knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.app-shell[data-app-id="chat"] .cgm-toggle.is-on .cgm-toggle__knob { transform: translateX(16px); }
+
+.app-shell[data-app-id="chat"] .cgm-note {
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    border-radius: 12px;
+    background: var(--cg-primary-soft);
+}
+
+.app-shell[data-app-id="chat"] .cgm-note__title { font-size: 12.5px; font-weight: 600; color: var(--cg-primary); margin-bottom: 6px; }
+.app-shell[data-app-id="chat"] .cgm-note__list { margin: 0; padding-left: 18px; font-size: 12px; line-height: 1.85; color: var(--cg-text-2); }
+
+.app-shell[data-app-id="chat"] .cgm-actions { display: flex; gap: 8px; margin-bottom: 10px; }
+
+.app-shell[data-app-id="chat"] .cgm-btn {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid var(--cg-line);
+    border-radius: 10px;
+    background: var(--cg-surface);
+    color: var(--cg-text-1);
+    font-family: inherit;
+    font-size: 12.5px;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="chat"] .cgm-btn--primary { background: var(--cg-primary); border-color: transparent; color: #fff; }
+.app-shell[data-app-id="chat"] .cgm-btn--mini { flex: 0 0 auto; padding: 4px 10px; font-size: 11px; }
+.app-shell[data-app-id="chat"] .cgm-btn:disabled { opacity: 0.4; cursor: default; }
+
+.app-shell[data-app-id="chat"] .cgm-preview { margin-top: 12px; }
+.app-shell[data-app-id="chat"] .cgm-preview summary { font-size: 12px; color: var(--cg-text-2); cursor: pointer; }
+
+.app-shell[data-app-id="chat"] .cgm-preview__body {
+    margin: 8px 0 0;
+    padding: 10px;
+    max-height: 240px;
+    overflow: auto;
+    border-radius: 10px;
+    background: var(--cg-surface-2, rgba(127,127,140,.08));
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 10px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--cg-text-2);
+}
+
+.app-shell[data-app-id="chat"] .cgm-installed { margin-top: 16px; }
+.app-shell[data-app-id="chat"] .cgm-installed__title { font-size: 12px; font-weight: 600; color: var(--cg-text-2); margin-bottom: 7px; }
+
+.app-shell[data-app-id="chat"] .cgm-installed__row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    border: 1px solid var(--cg-line);
+    border-radius: 10px;
+}
+
+.app-shell[data-app-id="chat"] .cgm-installed__name { flex: 1; min-width: 0; font-size: 12.5px; color: var(--cg-text-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-shell[data-app-id="chat"] .cgm-installed__id { font-size: 10px; color: var(--cg-text-3); font-family: ui-monospace, monospace; }
+
+.app-shell[data-app-id="chat"] .cgm-foot {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 8px;
+    padding: 10px 14px calc(12px + var(--app-safe-bottom, 0px));
+    border-top: 1px solid var(--cg-line);
+    background: var(--cg-bg);
+}

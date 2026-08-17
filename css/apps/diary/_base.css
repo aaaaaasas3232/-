@@ -1,0 +1,648 @@
+/**
+ * 日记 · 根布局与通用控件
+ *
+ * 风格取向：无印良品。具体到规则上就是三条 ——
+ *   1. **没有渐变**（产品要求，也是莫兰迪配色的前提）
+ *   2. **没有投影**，层次靠 1px 细线和极小的明度差
+ *   3. **留白比装饰重要**，宁可空着也不填东西
+ *
+ * 所有选择器挂在 `.app-shell[data-app-id="diary"]` 下，不污染其他 app。
+ */
+
+/* ============================================================
+   SVG 兜底
+   ------------------------------------------------------------
+   ★ 内联 SVG 不带 width/height 时浏览器按 **300×150** 画，
+     能把整行布局撑爆。两层 :where() 让特异性归零，
+     任何一条真实规则都能盖过它。
+   ============================================================ */
+:where(.app-shell[data-app-id="diary"]) svg:where(:not([width]):not([height])) {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="diary"] .dy-icon {
+    display: block;
+}
+
+/* ============================================================
+   页面容器 —— 让 .dy-root 拿到一个「确定的高度」
+   ------------------------------------------------------------
+   ★ 不改这两条的话，底部 tab 栏会被挤到屏幕外面去，而且**没有任何报错**。
+     链路是这样的：
+       .app-page          position:absolute; inset:0     → 高度确定（534px）
+       .app-screen-panel  min-height:100%; height:auto   → ★ 高度不确定
+       .dy-root           height:100%                    → 对着 auto 父级算 → 退回 auto
+                                                         → 变成「内容多高就多高」
+     于是 `flex:1` 的 .dy-body 永远不会溢出、永远不产生自己的滚动条，
+     整页在 .app-page 里一起滚，`flex:0 0 auto` 的 tab 栏就被顶到 1125px
+     （可视区只有 707px）。DOM 里它在、能点、能查到 —— 就是看不见。
+
+     修法是把「确定高度」补回来：panel 给死高度，滚动权交给 .dy-body。
+     顺带清掉 panel 自带的 16px padding —— 顶栏和 tab 栏都是自绘的，
+     不需要框架再让一圈边距。
+   ============================================================ */
+.app-shell[data-app-id="diary"] .app-page {
+    /* 滚动交给 .dy-body 自己，外层不要再套一层滚动容器 */
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="diary"] .app-screen-panel {
+    height: 100%;
+    min-height: 0;
+    padding: 0;
+}
+
+/* ============================================================
+   根
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-root {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--dy-bg);
+    color: var(--dy-text);
+    font-size: var(--dy-fs-md);
+    line-height: var(--dy-lh);
+    letter-spacing: var(--dy-track);
+    -webkit-font-smoothing: antialiased;
+}
+
+.app-shell[data-app-id="diary"] .dy-root * {
+    box-sizing: border-box;
+}
+
+/* 状态栏浮在 app-shell 之上，自绘顶栏必须留出 54px */
+.app-shell[data-app-id="diary"] .dy-topbar {
+    flex: 0 0 auto;
+    padding: 54px var(--dy-pad) 10px;
+    background: var(--dy-bg);
+    border-bottom: var(--dy-hair) solid var(--dy-border-soft);
+}
+
+.app-shell[data-app-id="diary"] .dy-topbar__row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 30px;
+}
+
+.app-shell[data-app-id="diary"] .dy-topbar__title {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: var(--dy-fs-lg);
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="diary"] .dy-topbar__sub {
+    margin-top: 2px;
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+    letter-spacing: 0.05em;
+}
+
+/* 内容区：底部给 tab 栏和 home 条让位 */
+.app-shell[data-app-id="diary"] .dy-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    /* ★ 只开纵向。写 `overflow: auto` 会顺手打开横向滚动，
+       一个超宽的子元素就能让整页左右晃（AGENTS2 §15.3）。 */
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding: var(--dy-pad) var(--dy-pad) 28px;
+}
+
+/* 滚动条藏起来 —— 框架给 .app-page 做了同样的事，
+   我们把滚动接管过来之后得自己再做一遍，否则右侧会多出一条灰杠 */
+.app-shell[data-app-id="diary"] .dy-body,
+.app-shell[data-app-id="diary"] .dy-setup__body,
+.app-shell[data-app-id="diary"] .dy-sheet__body {
+    scrollbar-width: none;
+}
+
+.app-shell[data-app-id="diary"] .dy-body::-webkit-scrollbar,
+.app-shell[data-app-id="diary"] .dy-setup__body::-webkit-scrollbar,
+.app-shell[data-app-id="diary"] .dy-sheet__body::-webkit-scrollbar {
+    display: none;
+}
+
+/* ============================================================
+   底部 tab
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-tabbar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: stretch;
+    background: var(--dy-surface);
+    border-top: var(--dy-hair) solid var(--dy-border-soft);
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+.app-shell[data-app-id="diary"] .dy-tab {
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 9px 0 8px;
+    border: 0;
+    background: transparent;
+    color: var(--dy-text-3);
+    font-size: var(--dy-fs-xs);
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: color var(--dy-dur) var(--dy-ease);
+}
+
+.app-shell[data-app-id="diary"] .dy-tab.is-active {
+    color: var(--dy-primary);
+}
+
+.app-shell[data-app-id="diary"] .dy-tab svg {
+    width: 19px;
+    height: 19px;
+}
+
+/* ============================================================
+   卡片 / 分区
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-card {
+    background: var(--dy-surface);
+    border: var(--dy-hair) solid var(--dy-border-soft);
+    border-radius: var(--dy-radius);
+    padding: 16px;
+}
+
+.app-shell[data-app-id="diary"] .dy-card + .dy-card {
+    margin-top: var(--dy-gap);
+}
+
+.app-shell[data-app-id="diary"] .dy-card--plain {
+    background: transparent;
+    border-color: transparent;
+    padding: 0;
+}
+
+.app-shell[data-app-id="diary"] .dy-section {
+    margin-bottom: 22px;
+}
+
+.app-shell[data-app-id="diary"] .dy-section__head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.app-shell[data-app-id="diary"] .dy-section__title {
+    font-size: var(--dy-fs-sm);
+    font-weight: 500;
+    color: var(--dy-text-2);
+    letter-spacing: 0.12em;
+}
+
+.app-shell[data-app-id="diary"] .dy-section__note {
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+}
+
+.app-shell[data-app-id="diary"] .dy-section__action {
+    margin-left: auto;
+    border: 0;
+    background: transparent;
+    color: var(--dy-primary);
+    font-size: var(--dy-fs-xs);
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    padding: 2px 0;
+}
+
+/* ============================================================
+   行
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 13px 0;
+    border: 0;
+    border-bottom: var(--dy-hair) solid var(--dy-divider);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="diary"] .dy-row:last-child {
+    border-bottom: 0;
+}
+
+.app-shell[data-app-id="diary"] .dy-row--static {
+    cursor: default;
+}
+
+.app-shell[data-app-id="diary"] .dy-row__label {
+    flex: 0 0 auto;
+    color: var(--dy-text-2);
+    font-size: var(--dy-fs-md);
+}
+
+.app-shell[data-app-id="diary"] .dy-row__value {
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: right;
+    color: var(--dy-text);
+    font-size: var(--dy-fs-md);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="diary"] .dy-row__value--muted {
+    color: var(--dy-text-3);
+}
+
+.app-shell[data-app-id="diary"] .dy-row__chev {
+    flex: 0 0 auto;
+    color: var(--dy-text-3);
+}
+
+.app-shell[data-app-id="diary"] .dy-row__chev svg {
+    width: 15px;
+    height: 15px;
+}
+
+.app-shell[data-app-id="diary"] .dy-row__hint {
+    margin: -6px 0 12px;
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+    line-height: 1.7;
+}
+
+/* ============================================================
+   按钮
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 18px;
+    border: var(--dy-hair) solid var(--dy-border);
+    border-radius: var(--dy-radius-sm);
+    background: transparent;
+    color: var(--dy-text);
+    font-size: var(--dy-fs-md);
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: background var(--dy-dur) var(--dy-ease), border-color var(--dy-dur) var(--dy-ease);
+}
+
+.app-shell[data-app-id="diary"] .dy-btn:active {
+    background: var(--dy-primary-soft);
+}
+
+.app-shell[data-app-id="diary"] .dy-btn--primary {
+    background: var(--dy-primary);
+    border-color: var(--dy-primary);
+    color: var(--dy-on-primary);
+}
+
+.app-shell[data-app-id="diary"] .dy-btn--ghost {
+    border-color: transparent;
+    color: var(--dy-primary);
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+.app-shell[data-app-id="diary"] .dy-btn--danger {
+    color: var(--dy-danger);
+    border-color: var(--dy-border-soft);
+}
+
+.app-shell[data-app-id="diary"] .dy-btn--block {
+    width: 100%;
+}
+
+.app-shell[data-app-id="diary"] .dy-btn--sm {
+    padding: 6px 12px;
+    font-size: var(--dy-fs-sm);
+}
+
+.app-shell[data-app-id="diary"] .dy-btn[disabled] {
+    opacity: 0.42;
+    cursor: default;
+}
+
+.app-shell[data-app-id="diary"] .dy-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.app-shell[data-app-id="diary"] .dy-btnbar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* 图标按钮（顶栏右上角那种） */
+.app-shell[data-app-id="diary"] .dy-iconbtn {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--dy-radius-sm);
+    background: transparent;
+    color: var(--dy-text-2);
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="diary"] .dy-iconbtn:active {
+    background: var(--dy-primary-soft);
+}
+
+/* ============================================================
+   表单
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-field {
+    width: 100%;
+    padding: 10px 12px;
+    border: var(--dy-hair) solid var(--dy-border);
+    border-radius: var(--dy-radius-sm);
+    background: var(--dy-surface);
+    color: var(--dy-text);
+    font: inherit;
+    line-height: 1.7;
+    outline: none;
+    transition: border-color var(--dy-dur) var(--dy-ease);
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.app-shell[data-app-id="diary"] .dy-field:focus {
+    border-color: var(--dy-primary-dim);
+}
+
+.app-shell[data-app-id="diary"] .dy-field::placeholder {
+    color: var(--dy-text-3);
+}
+
+.app-shell[data-app-id="diary"] textarea.dy-field {
+    resize: none;
+    min-height: 88px;
+}
+
+.app-shell[data-app-id="diary"] .dy-formrow {
+    margin-bottom: 16px;
+}
+
+.app-shell[data-app-id="diary"] .dy-formrow__label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: var(--dy-fs-sm);
+    color: var(--dy-text-2);
+    letter-spacing: 0.08em;
+}
+
+.app-shell[data-app-id="diary"] .dy-formrow__hint {
+    margin-top: 5px;
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+    line-height: 1.7;
+}
+
+/* 数字步进 */
+.app-shell[data-app-id="diary"] .dy-stepper {
+    display: inline-flex;
+    align-items: center;
+    border: var(--dy-hair) solid var(--dy-border);
+    border-radius: var(--dy-radius-sm);
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="diary"] .dy-stepper__btn {
+    width: 34px;
+    height: 32px;
+    border: 0;
+    background: transparent;
+    color: var(--dy-text-2);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="diary"] .dy-stepper__btn:active {
+    background: var(--dy-primary-soft);
+}
+
+.app-shell[data-app-id="diary"] .dy-stepper__btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.app-shell[data-app-id="diary"] .dy-stepper__value {
+    min-width: 52px;
+    text-align: center;
+    font-size: var(--dy-fs-md);
+    font-variant-numeric: tabular-nums;
+}
+
+/* 开关 —— 方形，不用圆胶囊（无印良品调子） */
+.app-shell[data-app-id="diary"] .dy-switch {
+    position: relative;
+    flex: 0 0 auto;
+    width: 40px;
+    height: 22px;
+    border: var(--dy-hair) solid var(--dy-border);
+    border-radius: 11px;
+    background: var(--dy-surface-dim);
+    cursor: pointer;
+    transition: background var(--dy-dur) var(--dy-ease), border-color var(--dy-dur) var(--dy-ease);
+    padding: 0;
+}
+
+.app-shell[data-app-id="diary"] .dy-switch.is-on {
+    background: var(--dy-primary);
+    border-color: var(--dy-primary);
+}
+
+.app-shell[data-app-id="diary"] .dy-switch__dot {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--dy-surface);
+    transition: transform var(--dy-dur) var(--dy-ease);
+}
+
+.app-shell[data-app-id="diary"] .dy-switch.is-on .dy-switch__dot {
+    transform: translateX(18px);
+}
+
+/* 选项组（横排小方块） */
+.app-shell[data-app-id="diary"] .dy-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.app-shell[data-app-id="diary"] .dy-chip {
+    padding: 6px 12px;
+    border: var(--dy-hair) solid var(--dy-border);
+    border-radius: var(--dy-radius-sm);
+    background: transparent;
+    color: var(--dy-text-2);
+    font-size: var(--dy-fs-sm);
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all var(--dy-dur) var(--dy-ease);
+}
+
+.app-shell[data-app-id="diary"] .dy-chip.is-on {
+    border-color: var(--dy-primary);
+    background: var(--dy-primary-soft);
+    color: var(--dy-primary);
+}
+
+.app-shell[data-app-id="diary"] .dy-chip--wide {
+    flex: 1 1 auto;
+    text-align: center;
+}
+
+/* ============================================================
+   空状态
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 44px 24px;
+    text-align: center;
+    color: var(--dy-text-3);
+}
+
+.app-shell[data-app-id="diary"] .dy-empty svg {
+    width: 26px;
+    height: 26px;
+    opacity: 0.55;
+}
+
+.app-shell[data-app-id="diary"] .dy-empty__text {
+    font-size: var(--dy-fs-sm);
+    line-height: 1.9;
+}
+
+/* ============================================================
+   轻提示
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-toast {
+    position: absolute;
+    left: 50%;
+    bottom: 88px;
+    transform: translateX(-50%);
+    z-index: 60;
+    max-width: 82%;
+    padding: 9px 16px;
+    border: var(--dy-hair) solid var(--dy-border);
+    border-radius: var(--dy-radius-sm);
+    background: var(--dy-surface);
+    color: var(--dy-text);
+    font-size: var(--dy-fs-sm);
+    letter-spacing: 0.06em;
+    text-align: center;
+    animation: dy-toast-in 200ms var(--dy-ease);
+}
+
+@keyframes dy-toast-in {
+    from { opacity: 0; transform: translate(-50%, 6px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* 忙碌条 —— 不用转圈，用一条慢慢走的细线 */
+.app-shell[data-app-id="diary"] .dy-busy {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 14px;
+    border: var(--dy-hair) solid var(--dy-border-soft);
+    border-radius: var(--dy-radius-sm);
+    background: var(--dy-surface-alt);
+    color: var(--dy-text-2);
+    font-size: var(--dy-fs-sm);
+}
+
+.app-shell[data-app-id="diary"] .dy-busy__track {
+    flex: 1 1 auto;
+    height: 1px;
+    background: var(--dy-border);
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="diary"] .dy-busy__bar {
+    width: 34%;
+    height: 100%;
+    background: var(--dy-primary);
+    animation: dy-busy 1500ms var(--dy-ease) infinite;
+}
+
+@keyframes dy-busy {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(340%); }
+}
+
+/* ============================================================
+   行内包装元素的块化
+   ------------------------------------------------------------
+   ★ 这些「标题 + 副标题」结构都用 <span> 包，而不是 <div> ——
+     因为它们全都长在 <button> 里，而 <button> 里塞 <div> 虽然浏览器能渲染，
+     但在部分环境下会被 HTML 解析器规范化掉（button 的内容模型是 phrasing content）。
+
+     代价是 span 默认 inline，两行文字会挤在同一行连成一句
+     （「探针日记1 篇 · 1 张便利贴」）。所以凡是要独占一行的都得显式块化。
+     这不是可选的美化，是这套结构的必要配套。
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-book__name,
+.app-shell[data-app-id="diary"] .dy-book__sub,
+.app-shell[data-app-id="diary"] .dy-arch__d,
+.app-shell[data-app-id="diary"] .dy-arch__w,
+.app-shell[data-app-id="diary"] .dy-marker__value,
+.app-shell[data-app-id="diary"] .dy-marker__unit,
+.app-shell[data-app-id="diary"] .dy-marker__title,
+.app-shell[data-app-id="diary"] .dy-marker__date,
+.app-shell[data-app-id="diary"] .dy-ctx__title,
+.app-shell[data-app-id="diary"] .dy-ctx__meta,
+.app-shell[data-app-id="diary"] .dy-cyclemini__state,
+.app-shell[data-app-id="diary"] .dy-cyclemini__sub {
+    display: block;
+}
+
+/* ============================================================
+   工具类
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-muted { color: var(--dy-text-3); }
+.app-shell[data-app-id="diary"] .dy-small { font-size: var(--dy-fs-xs); }
+.app-shell[data-app-id="diary"] .dy-nums { font-variant-numeric: tabular-nums; }
+.app-shell[data-app-id="diary"] .dy-hr {
+    height: var(--dy-hair);
+    background: var(--dy-divider);
+    margin: 16px 0;
+    border: 0;
+}
+.app-shell[data-app-id="diary"] .dy-stack > * + * { margin-top: var(--dy-gap); }

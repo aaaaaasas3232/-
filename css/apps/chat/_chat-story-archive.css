@@ -1,27 +1,25 @@
 /**
- * chat-app / 故事存档详情页样式
+ * chat-app / 故事管理详情页样式
  *
- * Phase 11 — UI 复原
- *
- * 旧版:ChatApp.prototype.openStoryArchive(aiId)
- * 风格:粉白渐变背景 + 粉渐变保存按钮 + 白底存档卡片(与 chat-calendar-view 同款策略)
+ * v0.68 — 故事模式主角:故事概要管理
+ *   - 顶栏:返回 + 「故事管理」
+ *   - 主体:故事概要卡片列表(主角,可读取/编辑/覆盖/删除/应用到回复提示词)
+ *   - 辅助:故事存档卡片列表(作为生成概要的素材源)
+ *   - 故事模式无层级管理,这里跟日历视图的「层级管理」形成 1:1 对应
  *
  * 样式规范:
  *   - 所有样式写到本文件
  *   - JS 只放动态数据属性(data-*)
  *   - 动态颜色通过 [data-color-xxx] 属性选择器设置
+ *   - 粉白渐变背景 + 粉蓝主色,与 chat-calendar-view 风格一致
  */
-
-/* ============================================
- * 作用域:app-shell[data-app-id="chat"] 后代
- * ============================================ */
 
 /* ============================================
  * 页面容器
  * ============================================ */
 
 /* 外层容器(与 chat-calendar-view 同款) */
-.app-shell[data-app-id="chat"] .chat-story-archive {
+.app-shell[data-app-id="chat"] .chat-story-management {
     position: absolute;
     inset: 0;
     display: flex;
@@ -30,8 +28,8 @@
     background: linear-gradient(180deg, #FFF5F7 0%, #E8F2FF 50%, #FFFFFF 100%);
 }
 
-/* 顶部 topbar(返回按钮 + 标题) */
-.app-shell[data-app-id="chat"] .chat-story-archive-topbar {
+/* 顶部 topbar(返回按钮 + 「故事管理」标题) */
+.app-shell[data-app-id="chat"] .chat-story-mgmt-topbar {
     flex-shrink: 0;
     display: flex;
     align-items: center;
@@ -43,7 +41,7 @@
     z-index: 10;
 }
 
-.app-shell[data-app-id="chat"] .chat-story-archive-topbar .chat-back-btn {
+.app-shell[data-app-id="chat"] .chat-story-mgmt-topbar .chat-back-btn {
     width: 28px;
     height: 28px;
     border-radius: 50%;
@@ -58,16 +56,16 @@
     flex-shrink: 0;
 }
 
-.app-shell[data-app-id="chat"] .chat-story-archive-topbar .chat-back-btn:hover {
+.app-shell[data-app-id="chat"] .chat-story-mgmt-topbar .chat-back-btn:hover {
     background: #FCE4EC;
 }
 
-.app-shell[data-app-id="chat"] .chat-story-archive-topbar .chat-back-btn:active {
+.app-shell[data-app-id="chat"] .chat-story-mgmt-topbar .chat-back-btn:active {
     background: rgba(212, 114, 138, 0.15);
     transform: scale(0.92);
 }
 
-.app-shell[data-app-id="chat"] .chat-story-archive-topbar .chat-back-btn svg {
+.app-shell[data-app-id="chat"] .chat-story-mgmt-topbar .chat-back-btn svg {
     width: 18px;
     height: 18px;
     fill: none;
@@ -75,7 +73,7 @@
     stroke-width: 2;
 }
 
-.app-shell[data-app-id="chat"] .chat-story-archive-topbar-title {
+.app-shell[data-app-id="chat"] .chat-story-mgmt-topbar-title {
     font-size: 16px;
     font-weight: 600;
     color: #D4728A;
@@ -83,7 +81,7 @@
 }
 
 /* 内部页面滚动区 */
-.app-shell[data-app-id="chat"] .chat-story-archive-page {
+.app-shell[data-app-id="chat"] .chat-story-mgmt-page {
     flex: 1;
     overflow-y: auto;
     padding: 16px 16px 40px;
@@ -91,22 +89,22 @@
     scrollbar-width: none;
 }
 
-.app-shell[data-app-id="chat"] .chat-story-archive-page::-webkit-scrollbar {
+.app-shell[data-app-id="chat"] .chat-story-mgmt-page::-webkit-scrollbar {
     display: none;
 }
 
 /* ============================================
- * 头部(头像 + 名字 + 存档数)
+ * 头部(头像 + 名字 + 「X 份概要 · Y 个存档」)
  * ============================================ */
 
-.app-shell[data-app-id="chat"] .story-archive-header {
+.app-shell[data-app-id="chat"] .story-mgmt-header {
     display: flex;
     align-items: center;
     gap: 12px;
     padding: 8px 4px 16px;
 }
 
-.app-shell[data-app-id="chat"] .story-archive-avatar {
+.app-shell[data-app-id="chat"] .story-mgmt-avatar {
     width: 48px;
     height: 48px;
     border-radius: 14px;
@@ -119,7 +117,7 @@
     flex-shrink: 0;
 }
 
-.app-shell[data-app-id="chat"] .story-archive-avatar[data-avatar-color] {
+.app-shell[data-app-id="chat"] .story-mgmt-avatar[data-avatar-color] {
     background: var(--avatar-color, #F4A6CD);
 }
 
@@ -133,35 +131,42 @@
 .app-shell[data-app-id="chat"] [data-avatar-color="#B8E6CF"] { --avatar-color: #B8E6CF; }
 .app-shell[data-app-id="chat"] [data-avatar-color="#D4B8F0"] { --avatar-color: #D4B8F0; }
 
-.app-shell[data-app-id="chat"] .story-archive-avatar-text {
+.app-shell[data-app-id="chat"] .story-mgmt-avatar-text {
     color: white;
     font-size: 20px;
     font-weight: 600;
 }
 
-.app-shell[data-app-id="chat"] .story-archive-header-text {
+.app-shell[data-app-id="chat"] .story-mgmt-header-text {
     flex: 1;
     min-width: 0;
 }
 
-.app-shell[data-app-id="chat"] .story-archive-header-name {
+.app-shell[data-app-id="chat"] .story-mgmt-header-name {
     font-size: 18px;
     font-weight: 600;
     color: #D4728A;
     margin-bottom: 4px;
 }
 
-.app-shell[data-app-id="chat"] .story-archive-header-sub {
+.app-shell[data-app-id="chat"] .story-mgmt-header-sub {
     font-size: 12px;
     color: #999;
 }
 
 /* ============================================
- * 「封存当前聊天记录」大按钮(粉渐变)
+ * 顶部 action 行:封存当前聊天 + 新增概要
  * ============================================ */
 
-.app-shell[data-app-id="chat"] .story-archive-save-btn {
-    width: 100%;
+.app-shell[data-app-id="chat"] .story-mgmt-actions-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+/* 「封存当前聊天」按钮(粉渐变,主操作) */
+.app-shell[data-app-id="chat"] .story-mgmt-save-btn {
+    flex: 1.4;
     padding: 14px;
     background: linear-gradient(135deg, #FFB3D1, #FF96A8);
     border: none;
@@ -177,122 +182,239 @@
     box-shadow: 0 4px 16px rgba(255, 150, 168, 0.3);
     transition: all 0.3s;
     font-family: inherit;
-    margin-bottom: 20px;
 }
 
-.app-shell[data-app-id="chat"] .story-archive-save-btn:hover {
+.app-shell[data-app-id="chat"] .story-mgmt-save-btn:hover {
     transform: translateY(-1px);
     box-shadow: 0 6px 20px rgba(255, 150, 168, 0.4);
 }
 
-.app-shell[data-app-id="chat"] .story-archive-save-btn:active {
+.app-shell[data-app-id="chat"] .story-mgmt-save-btn:active {
     transform: scale(0.98);
 }
 
-.app-shell[data-app-id="chat"] .story-archive-save-btn svg {
+.app-shell[data-app-id="chat"] .story-mgmt-save-btn svg {
     width: 18px;
     height: 18px;
     fill: white;
 }
 
-/* ============================================
- * 存档列表区域
- * ============================================ */
-
-.app-shell[data-app-id="chat"] .story-archive-list-section {
-    /* 整块区域容器 */
+/* 「新增概要」按钮(白底粉边,次操作) */
+.app-shell[data-app-id="chat"] .story-mgmt-new-btn {
+    flex: 1;
+    padding: 14px;
+    background: white;
+    border: 1.5px solid #F8C8D9;
+    border-radius: 14px;
+    color: #D4728A;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 2px 8px rgba(212, 114, 138, 0.1);
+    transition: all 0.2s;
+    font-family: inherit;
 }
 
-.app-shell[data-app-id="chat"] .story-archive-list-title {
+.app-shell[data-app-id="chat"] .story-mgmt-new-btn:hover {
+    background: #FFF5F7;
+    border-color: #D4728A;
+}
+
+.app-shell[data-app-id="chat"] .story-mgmt-new-btn:active {
+    transform: scale(0.98);
+}
+
+.app-shell[data-app-id="chat"] .story-mgmt-new-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: #D4728A;
+}
+
+/* ============================================
+ * 章节标题(故事概要 / 故事存档)
+ * ============================================ */
+
+.app-shell[data-app-id="chat"] .story-mgmt-section-title {
     display: flex;
     align-items: center;
     gap: 6px;
     font-size: 14px;
     font-weight: 600;
     color: #4A6FA5;
-    margin-bottom: 12px;
+    margin: 16px 0 12px;
     padding: 0 4px;
 }
 
-.app-shell[data-app-id="chat"] .story-archive-list-title svg {
+.app-shell[data-app-id="chat"] .story-mgmt-section-title svg {
     width: 16px;
     height: 16px;
-    fill: #4A6FA5;
 }
 
-/* 存档列表容器 */
-.app-shell[data-app-id="chat"] .story-archive-list {
+.app-shell[data-app-id="chat"] .story-mgmt-section-count {
+    margin-left: 4px;
+    font-size: 11px;
+    color: #999;
+    background: #E8F2FF;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 500;
+}
+
+/* ============================================
+ * 故事概要主卡片(主角)
+ *   - 标题 / 摘要预览 / 来源 / 3 操作按钮
+ * ============================================ */
+
+.app-shell[data-app-id="chat"] .story-mgmt-summary-list {
     display: flex;
     flex-direction: column;
     gap: 12px;
 }
 
-/* 单个存档卡片 */
-.app-shell[data-app-id="chat"] .archive-item {
+.app-shell[data-app-id="chat"] .story-mgmt-summary-card {
     background: white;
     border-radius: 14px;
-    overflow: hidden;
-    box-shadow: 0 2px 12px rgba(168, 200, 236, 0.1);
+    padding: 16px;
+    box-shadow: 0 2px 12px rgba(168, 200, 236, 0.15);
     transition: all 0.3s;
+    border: 1px solid rgba(248, 200, 217, 0.4);
 }
 
-.app-shell[data-app-id="chat"] .archive-item:hover {
+.app-shell[data-app-id="chat"] .story-mgmt-summary-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(168, 200, 236, 0.2);
+    box-shadow: 0 4px 16px rgba(168, 200, 236, 0.25);
 }
 
-.app-shell[data-app-id="chat"] .archive-item-body {
-    padding: 14px 16px;
-}
-
-/* 存档名 + meta */
-.app-shell[data-app-id="chat"] .archive-item-header {
+.app-shell[data-app-id="chat"] .story-mgmt-summary-head {
     display: flex;
-    justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 8px;
+    gap: 10px;
+    margin-bottom: 10px;
 }
 
-.app-shell[data-app-id="chat"] .archive-item-info {
+.app-shell[data-app-id="chat"] .story-mgmt-summary-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #FFE4EC, #FFD4E5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .story-mgmt-summary-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.app-shell[data-app-id="chat"] .story-mgmt-summary-meta {
     flex: 1;
     min-width: 0;
 }
 
-.app-shell[data-app-id="chat"] .archive-item-name {
+.app-shell[data-app-id="chat"] .story-mgmt-summary-title {
     font-size: 15px;
     font-weight: 600;
     color: #333;
     margin-bottom: 4px;
+    word-break: break-word;
+    line-height: 1.4;
 }
 
-.app-shell[data-app-id="chat"] .archive-item-meta {
+.app-shell[data-app-id="chat"] .story-mgmt-summary-sub {
     font-size: 11px;
     color: #999;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
 }
 
-/* 存档描述 */
-.app-shell[data-app-id="chat"] .archive-item-desc {
-    font-size: 12px;
-    color: #666;
-    line-height: 1.5;
-    margin-bottom: 10px;
-    padding: 8px 10px;
+.app-shell[data-app-id="chat"] .story-mgmt-summary-dot {
+    color: #ccc;
+}
+
+.app-shell[data-app-id="chat"] .story-mgmt-summary-preview {
+    font-size: 13px;
+    line-height: 1.6;
+    color: #555;
+    margin: 0 0 12px;
+    padding: 10px 12px;
     background: #FAFBFC;
     border-radius: 8px;
     word-break: break-word;
+    max-height: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-/* 操作按钮组 */
-.app-shell[data-app-id="chat"] .archive-item-actions {
+/* 来源存档指示器 */
+.app-shell[data-app-id="chat"] .story-mgmt-source {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #999;
+    margin-bottom: 12px;
+    padding: 6px 10px;
+    background: #F8F9FA;
+    border-radius: 8px;
+}
+
+.app-shell[data-app-id="chat"] .story-mgmt-source svg {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .story-mgmt-source-label {
+    color: #999;
+}
+
+.app-shell[data-app-id="chat"] .story-mgmt-source-name {
+    color: #666;
+    font-weight: 500;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="chat"] .story-mgmt-source-link {
+    background: transparent;
+    border: none;
+    color: #4A6FA5;
+    font-size: 11px;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 4px;
+    font-family: inherit;
+    text-decoration: underline;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .story-mgmt-source--manual {
+    background: #FFF8FA;
+    border: 1px dashed #F8C8D9;
+}
+
+/* 主操作按钮组 */
+.app-shell[data-app-id="chat"] .story-mgmt-summary-actions {
     display: flex;
     gap: 8px;
+    align-items: center;
 }
 
-.app-shell[data-app-id="chat"] .archive-action-btn {
+.app-shell[data-app-id="chat"] .story-mgmt-action-btn {
     border: none;
     border-radius: 10px;
     cursor: pointer;
-    transition: all 0.2s;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -300,74 +422,61 @@
     font-family: inherit;
     font-size: 12px;
     font-weight: 500;
-    padding: 10px;
+    padding: 10px 12px;
+    transition: all 0.2s;
+    flex-shrink: 0;
 }
 
-/* 恢复按钮(蓝渐变) */
-.app-shell[data-app-id="chat"] .archive-action-restore {
+.app-shell[data-app-id="chat"] .story-mgmt-action-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.app-shell[data-app-id="chat"] .story-mgmt-action-btn:active {
+    transform: scale(0.95);
+}
+
+/* 编辑按钮(蓝渐变) */
+.app-shell[data-app-id="chat"] .story-mgmt-action-edit {
     flex: 1;
     background: linear-gradient(135deg, #E8F2FF, #D6E4FF);
     color: #4A6FA5;
 }
 
-.app-shell[data-app-id="chat"] .archive-action-restore:active {
-    transform: scale(0.96);
+/* 应用到回复提示词按钮(粉渐变 — 主操作,视觉权重最高) */
+.app-shell[data-app-id="chat"] .story-mgmt-action-apply {
+    flex: 1.6;
+    background: linear-gradient(135deg, #FFD4E5, #FFB8D1);
+    color: white;
+    font-weight: 600;
+    box-shadow: 0 2px 6px rgba(212, 114, 138, 0.25);
 }
 
-.app-shell[data-app-id="chat"] .archive-action-restore svg {
-    width: 12px;
-    height: 12px;
-    fill: #4A6FA5;
+.app-shell[data-app-id="chat"] .story-mgmt-action-apply svg path {
+    fill: white;
 }
 
-/* 查看按钮(灰底) */
-.app-shell[data-app-id="chat"] .archive-action-view {
-    flex: 1;
-    background: #F8F9FA;
-    border: 1px solid #E8ECF0;
-    color: #666;
-}
-
-.app-shell[data-app-id="chat"] .archive-action-view:active {
-    transform: scale(0.96);
-}
-
-.app-shell[data-app-id="chat"] .archive-action-view svg {
-    width: 12px;
-    height: 12px;
-    fill: #666;
-}
-
-/* 删除按钮(红色背景) */
-.app-shell[data-app-id="chat"] .archive-action-delete {
-    padding: 10px 14px;
+/* 删除按钮(红底) */
+.app-shell[data-app-id="chat"] .story-mgmt-action-delete {
+    padding: 10px 12px;
     background: #FEE2E2;
 }
 
-.app-shell[data-app-id="chat"] .archive-action-delete:active {
-    transform: scale(0.96);
+.app-shell[data-app-id="chat"] .story-mgmt-action-delete:active {
     background: #FECACA;
 }
 
-.app-shell[data-app-id="chat"] .archive-action-delete svg {
-    width: 12px;
-    height: 12px;
-    fill: #DC2626;
-}
-
-/* ============================================
- * 空状态
- * ============================================ */
-
-.app-shell[data-app-id="chat"] .story-archive-empty {
+/* 故事概要空状态 */
+.app-shell[data-app-id="chat"] .story-mgmt-summary-empty {
     background: white;
     border-radius: 16px;
     padding: 40px 20px;
     text-align: center;
     box-shadow: 0 2px 12px rgba(168, 200, 236, 0.1);
+    border: 1px dashed #F8C8D9;
 }
 
-.app-shell[data-app-id="chat"] .story-archive-empty-icon {
+.app-shell[data-app-id="chat"] .story-mgmt-summary-empty-icon {
     width: 64px;
     height: 64px;
     margin: 0 auto 16px;
@@ -378,21 +487,196 @@
     justify-content: center;
 }
 
-.app-shell[data-app-id="chat"] .story-archive-empty-icon svg {
+.app-shell[data-app-id="chat"] .story-mgmt-summary-empty-icon svg {
     width: 28px;
     height: 28px;
     fill: #D4728A;
 }
 
-.app-shell[data-app-id="chat"] .story-archive-empty-title {
+.app-shell[data-app-id="chat"] .story-mgmt-summary-empty-title {
     font-size: 14px;
     color: #666;
     font-weight: 500;
     margin-bottom: 6px;
 }
 
-.app-shell[data-app-id="chat"] .story-archive-empty-sub {
+.app-shell[data-app-id="chat"] .story-mgmt-summary-empty-sub {
     font-size: 12px;
+    color: #999;
+}
+
+/* ============================================
+ * 故事存档卡片(辅助区,作为素材源)
+ * ============================================ */
+
+.app-shell[data-app-id="chat"] .story-mgmt-archive-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="chat"] .story-mgmt-archive-card {
+    background: white;
+    border-radius: 12px;
+    padding: 12px 14px;
+    box-shadow: 0 2px 8px rgba(168, 200, 236, 0.08);
+    border: 1px solid rgba(168, 200, 236, 0.2);
+    transition: all 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .story-mgmt-archive-card:hover {
+    box-shadow: 0 4px 12px rgba(168, 200, 236, 0.15);
+}
+
+.app-shell[data-app-id="chat"] .story-mgmt-archive-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.app-shell[data-app-id="chat"] .story-mgmt-archive-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="chat"] .story-mgmt-archive-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 2px;
+    word-break: break-word;
+    line-height: 1.4;
+}
+
+.app-shell[data-app-id="chat"] .story-mgmt-archive-meta {
+    font-size: 11px;
+    color: #999;
+}
+
+/* 「+ 生成概要」按钮(与「✓ 已有概要」chip 二选一) */
+.app-shell[data-app-id="chat"] .story-mgmt-archive-gen-btn {
+    padding: 6px 12px;
+    background: linear-gradient(135deg, #FFB3D1, #FF96A8);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    flex-shrink: 0;
+    transition: all 0.2s;
+    box-shadow: 0 2px 6px rgba(255, 150, 168, 0.3);
+}
+
+.app-shell[data-app-id="chat"] .story-mgmt-archive-gen-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(255, 150, 168, 0.4);
+}
+
+.app-shell[data-app-id="chat"] .story-mgmt-archive-gen-btn:active {
+    transform: scale(0.96);
+}
+
+.app-shell[data-app-id="chat"] .story-mgmt-archive-bound {
+    display: inline-block;
+    padding: 4px 10px;
+    background: #E8F2FF;
+    color: #4A6FA5;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 500;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .story-mgmt-archive-desc {
+    font-size: 12px;
+    color: #666;
+    line-height: 1.5;
+    margin-bottom: 10px;
+    padding: 8px 10px;
+    background: #FAFBFC;
+    border-radius: 8px;
+    word-break: break-word;
+}
+
+/* 存档操作按钮组 */
+.app-shell[data-app-id="chat"] .story-mgmt-archive-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.app-shell[data-app-id="chat"] .story-mgmt-archive-action {
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 8px 10px;
+    transition: all 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .story-mgmt-archive-action svg {
+    width: 12px;
+    height: 12px;
+}
+
+.app-shell[data-app-id="chat"] .story-mgmt-archive-action:active {
+    transform: scale(0.95);
+}
+
+/* 恢复按钮(蓝渐变) */
+.app-shell[data-app-id="chat"] .story-mgmt-archive-action-restore {
+    flex: 1;
+    background: linear-gradient(135deg, #E8F2FF, #D6E4FF);
+    color: #4A6FA5;
+}
+
+/* 查看按钮(灰底) */
+.app-shell[data-app-id="chat"] .story-mgmt-archive-action-view {
+    flex: 1;
+    background: #F8F9FA;
+    border: 1px solid #E8ECF0;
+    color: #666;
+}
+
+/* 删除按钮(红底) */
+.app-shell[data-app-id="chat"] .story-mgmt-archive-action-delete {
+    padding: 8px 10px;
+    background: #FEE2E2;
+}
+
+.app-shell[data-app-id="chat"] .story-mgmt-archive-action-delete:active {
+    background: #FECACA;
+}
+
+/* 故事存档空状态 */
+.app-shell[data-app-id="chat"] .story-mgmt-archive-empty {
+    background: white;
+    border-radius: 12px;
+    padding: 24px 16px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(168, 200, 236, 0.08);
+    border: 1px dashed #E8ECF0;
+}
+
+.app-shell[data-app-id="chat"] .story-mgmt-archive-empty-text {
+    font-size: 13px;
+    color: #666;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.app-shell[data-app-id="chat"] .story-mgmt-archive-empty-sub {
+    font-size: 11px;
     color: #999;
 }
 
@@ -401,15 +685,39 @@
  * ============================================ */
 
 @media (max-width: 360px) {
-    .app-shell[data-app-id="chat"] .chat-story-archive-page {
+    .app-shell[data-app-id="chat"] .chat-story-mgmt-page {
         padding: 12px 12px 32px;
     }
 
-    .app-shell[data-app-id="chat"] .story-archive-header-name {
+    .app-shell[data-app-id="chat"] .story-mgmt-header-name {
         font-size: 16px;
     }
 
-    .app-shell[data-app-id="chat"] .archive-item-name {
+    .app-shell[data-app-id="chat"] .story-mgmt-summary-card {
+        padding: 14px;
+    }
+
+    .app-shell[data-app-id="chat"] .story-mgmt-summary-title {
         font-size: 14px;
+    }
+
+    .app-shell[data-app-id="chat"] .story-mgmt-summary-sub,
+    .app-shell[data-app-id="chat"] .story-mgmt-summary-preview {
+        font-size: 12px;
+    }
+
+    .app-shell[data-app-id="chat"] .story-mgmt-summary-actions {
+        flex-wrap: wrap;
+    }
+
+    .app-shell[data-app-id="chat"] .story-mgmt-action-btn {
+        font-size: 11px;
+        padding: 8px 10px;
+    }
+
+    .app-shell[data-app-id="chat"] .story-mgmt-save-btn,
+    .app-shell[data-app-id="chat"] .story-mgmt-new-btn {
+        padding: 12px;
+        font-size: 13px;
     }
 }

@@ -1,0 +1,319 @@
+/* 灯塔 · 框架接线 + 根布局 */
+
+/* ============================================================
+   和框架容器的接线（四条必须一起改）
+   ------------------------------------------------------------
+   框架默认给了两层内边距（.app-content 14 + .app-screen-panel 14），
+   自绘内容再加 16，左右一共被吃掉 44px。
+
+   更麻烦的是高度：框架的滚动容器是 .app-page，而 .app-screen-panel
+   只有 min-height:100%，**没有 height**。CSS 里百分比高度需要父级有
+   确定高度，min-height 不算 —— 所以 .jb-root 写 height:100% 会静默
+   退化成 auto，被内容整个撑长，自绘的底栏跟着掉到文档流最底下，
+   表现是「要把整页滑到最底才看得见 tab 栏」。
+   ============================================================ */
+
+.app-shell[data-app-id="job"] .app-content { padding: 0; }
+.app-shell[data-app-id="job"] .app-page-stack { border-radius: 0; }
+.app-shell[data-app-id="job"] .app-page { overflow: hidden; }
+.app-shell[data-app-id="job"] .app-screen-panel {
+    position: relative;
+    height: 100%;
+    min-height: 100%;
+    padding: 0;
+}
+
+/* 滚动条一律不显示。这个 App 里能滚的地方有七八处，露出一条灰条就很脏 */
+.app-shell[data-app-id="job"] * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.app-shell[data-app-id="job"] *::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
+/* 内联 SVG 不带 width/height 时浏览器按 300×150 画，整张卡会被撑爆。
+   两层 :where() 把特异性压到 (0,0,1)，任何具名规则都能盖过它 ——
+   只用一层的话 svg:not([width]) 本身是 (0,2,1)，会反过来盖掉
+   .jb-xxx svg 这种 (0,1,1) 的规则 */
+:where(.app-shell[data-app-id="job"]) svg:where(:not([width]):not([height])) {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+/* ============================================================
+   根布局
+   ============================================================ */
+
+.app-shell[data-app-id="job"] .jb-root {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--jb-bg);
+    color: var(--jb-text);
+    font-size: 14px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+}
+
+.app-shell[data-app-id="job"] .jb-root * { box-sizing: border-box; }
+
+/* 顶栏。状态栏画在整个手机屏最上层，不在 App 的文档流里，
+   自绘内容必须自己让出 54px，而且那一块得是**实色** ——
+   内容从底下滚过去时透出来会和时间叠在一起。
+   所以这里不用毛玻璃：毛玻璃是半透的，滚动内容会从字底下穿过去。 */
+.app-shell[data-app-id="job"] .jb-top {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 58px 18px 11px;
+    background: var(--jb-bg);
+    border-bottom: 1px solid var(--jb-line-soft);
+}
+
+.app-shell[data-app-id="job"] .jb-top__main {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="job"] .jb-top__mark {
+    display: inline-flex;
+    color: var(--jb-accent);
+}
+
+.app-shell[data-app-id="job"] .jb-top__text { min-width: 0; }
+
+.app-shell[data-app-id="job"] .jb-top__title {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 620;
+    letter-spacing: 0.2px;
+    color: var(--jb-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="job"] .jb-top__sub {
+    margin: 1px 0 0;
+    font-size: 11px;
+    color: var(--jb-text-3);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 顶栏右边那颗余额丸 */
+.app-shell[data-app-id="job"] .jb-top__coin {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 11px 4px 8px;
+    border: 1px solid var(--jb-line);
+    border-radius: 14px;
+    background: var(--jb-glass);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: var(--jb-coin);
+    font-size: 12px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="job"] .jb-top__coin span { color: var(--jb-text-3); font-weight: 400; }
+
+/* 内容区：只有它滚 */
+.app-shell[data-app-id="job"] .jb-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="job"] .jb-page,
+.app-shell[data-app-id="job"] .jb-panel__body {
+    height: 100%;
+    overflow-y: auto;
+    /* overflow-y:auto 会把 overflow-x 一起算成 auto —— 桌面看不出来，
+       手机上整页能左右拖。容器层一次性关掉，别逐个追溢出源 */
+    overflow-x: hidden;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+    padding: 14px 16px 20px;
+}
+
+.app-shell[data-app-id="job"] .jb-blocked {
+    height: 100%;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+}
+
+/* ============================================================
+   子页面板（详情 / 面试 / 工作 / 小剧场 / 配色 / 提示词）
+   ============================================================ */
+
+.app-shell[data-app-id="job"] .jb-panel {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--jb-bg);
+}
+
+.app-shell[data-app-id="job"] .jb-panel__bar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px 10px 6px;
+    border-bottom: 1px solid var(--jb-line-soft);
+    background: var(--jb-glass-strong);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+}
+
+.app-shell[data-app-id="job"] .jb-panel__title {
+    flex: 1;
+    min-width: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--jb-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="job"] .jb-panel__bar-right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.app-shell[data-app-id="job"] .jb-panel__desc {
+    margin: 0 0 12px;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-panel__note {
+    margin: 8px 0 0;
+    font-size: 11.5px;
+    line-height: 1.65;
+    color: var(--jb-text-3);
+}
+
+/* ============================================================
+   底栏
+   ============================================================ */
+
+.app-shell[data-app-id="job"] .jb-tabbar {
+    flex: 0 0 auto;
+    display: flex;
+    background: var(--jb-nav-bg);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border-top: 1px solid var(--jb-nav-line);
+    /* fullscreen 之后 .app-bottom 浮在最上层，底栏得自己让开那 40px。
+       var() 的兜底是 0，所以非全屏时写了也没副作用 */
+    padding-bottom: var(--app-safe-bottom, 0px);
+}
+
+.app-shell[data-app-id="job"] .jb-tabbar__item {
+    flex: 1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 8px 0 7px;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    color: var(--jb-nav-icon);
+    transition: color 0.18s ease;
+}
+
+.app-shell[data-app-id="job"] .jb-tabbar__item.is-on { color: var(--jb-nav-active); }
+
+.app-shell[data-app-id="job"] .jb-tabbar__icon {
+    display: inline-flex;
+    transition: transform 0.22s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+.app-shell[data-app-id="job"] .jb-tabbar__item.is-on .jb-tabbar__icon {
+    transform: translateY(-1px);
+}
+
+.app-shell[data-app-id="job"] .jb-tabbar__label {
+    font-size: 10px;
+    letter-spacing: 0.3px;
+}
+
+.app-shell[data-app-id="job"] .jb-tabbar__item.is-on .jb-tabbar__label { font-weight: 560; }
+
+.app-shell[data-app-id="job"] .jb-tabbar__badge {
+    position: absolute;
+    top: 4px;
+    left: 50%;
+    margin-left: 6px;
+    min-width: 15px;
+    height: 15px;
+    padding: 0 4px;
+    border-radius: 8px;
+    background: var(--jb-accent);
+    color: var(--jb-on-accent);
+    font-size: 9px;
+    font-style: normal;
+    font-weight: 600;
+    line-height: 15px;
+    text-align: center;
+}
+
+.app-shell[data-app-id="job"] .jb-tabbar__dot {
+    position: absolute;
+    top: 7px;
+    left: 50%;
+    margin-left: 8px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--jb-accent);
+}
+
+/* ============================================================
+   toast
+   ============================================================ */
+
+.app-shell[data-app-id="job"] .jb-toast {
+    position: absolute;
+    left: 50%;
+    bottom: calc(78px + var(--app-safe-bottom, 0px));
+    transform: translateX(-50%);
+    max-width: 80%;
+    padding: 9px 16px;
+    border-radius: 18px;
+    background: var(--jb-text);
+    color: var(--jb-text-inverse);
+    font-size: 12.5px;
+    text-align: center;
+    z-index: 60;
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="job"] .jb-toast-enter-active,
+.app-shell[data-app-id="job"] .jb-toast-leave-active {
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.app-shell[data-app-id="job"] .jb-toast-enter-from,
+.app-shell[data-app-id="job"] .jb-toast-leave-to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(6px);
+}

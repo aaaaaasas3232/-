@@ -1,0 +1,2880 @@
+/**
+ * 小奇怪 / 样式入口
+ *
+ * 全部选择器都挂在 `.app-shell[data-app-id="oddity"]` 下面 —— 不污染其他 App。
+ *
+ * ★ 颜色唯一真相在最上面那三套 `--oq-*` token 里。
+ *   组件 JS 里**一个 hex 都没有**,想换肤只改这里。
+ *   主题由根组件往 shell 上写 `data-oq-theme="morandi|ink|dusk"` 切换。
+ *
+ * ★ 默认主题是莫兰迪 —— 用户对双人扫雷的原话是「格子的颜色、格子上的数字颜色
+ *   都请参考莫兰迪配色」,那就让整个 App 站在这个调子上,而不只是扫雷那一页。
+ *
+ * ★ 全站不出现 emoji。图标要么是 inline SVG(icons.js),
+ *   要么是纯 CSS 画的形状(爱心、道具、圆球里的汉字)。
+ */
+
+/* ==========================================================================
+   1. 主题 token
+   ========================================================================== */
+
+.app-shell[data-app-id="oddity"],
+.app-shell[data-app-id="oddity"] [data-oq-theme="morandi"] {
+    /* 底色 / 卡片 */
+    --oq-app-bg: #edeae5;
+    --oq-surface: #fbf9f6;
+    --oq-surface-2: #f4f1ec;
+    --oq-line: #e3dcd3;
+    --oq-line-soft: #ede7df;
+
+    /* 文字 */
+    --oq-ink: #5b5450;
+    --oq-ink-soft: #938b85;
+    --oq-ink-faint: #b6ada5;
+    --oq-status-ink: #5b5450;
+    --oq-home-indicator: rgba(91, 84, 80, 0.3);
+
+    /* 格子 */
+    --oq-cell: #cfc6ba;
+    --oq-cell-hi: #ded6cb;
+    --oq-cell-open: #f1ede7;
+    --oq-cell-boom: #e3cfcb;
+
+    /* 雷（爱心） */
+    --oq-mine: #b4868b;
+    --oq-mine-deep: #a96f75;
+
+    /* 雷数字：莫兰迪同色系里挑 8 个可分辨的 */
+    --oq-n1: #7d8f94;
+    --oq-n2: #869179;
+    --oq-n3: #b08c79;
+    --oq-n4: #7c7c96;
+    --oq-n5: #a6787a;
+    --oq-n6: #6f8b85;
+    --oq-n7: #8a7c8b;
+    --oq-n8: #7c766e;
+
+    /* 两位玩家 */
+    --oq-p1: #8fa9a3;
+    --oq-p1-deep: #6e8c86;
+    --oq-p1-mist: #e4edea;
+    --oq-p2: #c8a19c;
+    --oq-p2-deep: #a97f7a;
+    --oq-p2-mist: #f3e7e4;
+
+    /* 强调 */
+    --oq-accent: #8fa9a3;
+    --oq-accent-deep: #6e8c86;
+    --oq-danger: #a6787a;
+
+    /* 五子棋棋盘木色 */
+    --oq-go-wood: #e6d3b3;
+
+    /* 形状 */
+    --oq-radius: 18px;
+    --oq-radius-sm: 11px;
+    --oq-radius-xs: 7px;
+    --oq-shadow: 0 6px 18px -10px rgba(91, 84, 80, 0.5);
+    --oq-ease: cubic-bezier(0.32, 0.72, 0, 1);
+    --oq-ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.app-shell[data-app-id="oddity"][data-oq-theme="ink"],
+.app-shell[data-app-id="oddity"] [data-oq-theme="ink"] {
+    --oq-app-bg: #f0efec;
+    --oq-surface: #fbfbfa;
+    --oq-surface-2: #f3f2ef;
+    --oq-line: #e0dfdb;
+    --oq-line-soft: #ecebe7;
+    --oq-ink: #3d3b38;
+    --oq-ink-soft: #837f7a;
+    --oq-ink-faint: #b0aca6;
+    --oq-status-ink: #3d3b38;
+    --oq-home-indicator: rgba(61, 59, 56, 0.3);
+    --oq-cell: #cbc8c2;
+    --oq-cell-hi: #dbd8d2;
+    --oq-cell-open: #f2f1ee;
+    --oq-cell-boom: #ddd8d4;
+    --oq-mine: #6f6a65;
+    --oq-mine-deep: #514d49;
+    --oq-n1: #6f7a7d; --oq-n2: #74796d; --oq-n3: #8b7d71; --oq-n4: #6f6f7d;
+    --oq-n5: #877273; --oq-n6: #66756f; --oq-n7: #7a7178; --oq-n8: #6b6862;
+    --oq-p1: #8d8f88; --oq-p1-deep: #6b6d67; --oq-p1-mist: #eaeae7;
+    --oq-p2: #b3a49c; --oq-p2-deep: #8e8078; --oq-p2-mist: #f0ebe7;
+    --oq-accent: #6b6d67; --oq-accent-deep: #4d4f4a; --oq-danger: #877273;
+    --oq-go-wood: #ddd6c8;
+}
+
+.app-shell[data-app-id="oddity"][data-oq-theme="dusk"],
+.app-shell[data-app-id="oddity"] [data-oq-theme="dusk"] {
+    --oq-app-bg: #24222a;
+    --oq-surface: #2e2b34;
+    --oq-surface-2: #38343f;
+    --oq-line: #423d4c;
+    --oq-line-soft: #3a3644;
+    --oq-ink: #e8e2e6;
+    --oq-ink-soft: #a89fa9;
+    --oq-ink-faint: #7d7484;
+    --oq-status-ink: #e8e2e6;
+    --oq-home-indicator: rgba(232, 226, 230, 0.3);
+    --oq-cell: #4a4454;
+    --oq-cell-hi: #57506333;
+    --oq-cell-hi: #575063;
+    --oq-cell-open: #37333f;
+    --oq-cell-boom: #5b3f47;
+    --oq-mine: #d69aa2;
+    --oq-mine-deep: #b97b84;
+    --oq-n1: #8fa8b5; --oq-n2: #9db58f; --oq-n3: #d0a184; --oq-n4: #a29ec9;
+    --oq-n5: #d0959a; --oq-n6: #85b0a8; --oq-n7: #b79cc0; --oq-n8: #a49c94;
+    --oq-p1: #7fa8a0; --oq-p1-deep: #a3ccc4; --oq-p1-mist: #33453f;
+    --oq-p2: #c08f8a; --oq-p2-deep: #e0aba5; --oq-p2-mist: #4a353a;
+    --oq-accent: #a3ccc4; --oq-accent-deep: #7fa8a0; --oq-danger: #d0959a;
+    --oq-go-wood: #4d4550;
+}
+
+/* ==========================================================================
+   2. fullscreen 四条（AGENTS.md §5）
+   缺任何一条的表现：左右空 14px / 指示条被盖 / 退不出 App
+   ========================================================================== */
+
+.app-shell[data-app-id="oddity"] .app-content { padding: 0; }
+.app-shell[data-app-id="oddity"] .app-page-stack { border-radius: 0; }
+.app-shell[data-app-id="oddity"] .app-page { overflow: hidden; }
+.app-shell[data-app-id="oddity"] .app-screen-panel {
+    height: 100%;
+    min-height: 0;
+    padding: 0;
+}
+
+/* ==========================================================================
+   2.5 滚动条一律不画
+   ==========================================================================
+
+   ★ 这是**全 App 一条**,不是每个滚动容器各写一遍。
+     之前只有 `.oq-chiprow` 和 `.oq-fav-filter-bar` 两处写了隐藏,
+     于是「玩」页面右边挂着一条系统滚动条,而别的页面没有 ——
+     同一个 App 里两种样子。手机壳里那条灰杠也没有任何信息量:
+     内容能不能滚,用户滑一下就知道了。
+
+   ★ `scrollbar-width` 是 Firefox 的,`::-webkit-scrollbar` 是 WebKit 的,
+     两条都要 —— 只写一条的表现是「在我的浏览器上是好的」。
+   ========================================================================== */
+
+.app-shell[data-app-id="oddity"],
+.app-shell[data-app-id="oddity"] * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.app-shell[data-app-id="oddity"] ::-webkit-scrollbar,
+.app-shell[data-app-id="oddity"]::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+}
+
+/* ==========================================================================
+   3. 根布局
+   ========================================================================== */
+
+.app-shell[data-app-id="oddity"] .oq-root {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--oq-app-bg);
+    color: var(--oq-ink);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* 顶栏
+   ★ 状态栏是画在 App 外面的浮层，高 50px（index.html 写死）。
+     --app-safe-top 这个变量全项目没人定义，之前 fallback 写 12px，
+     顶栏整个钻到状态栏底下 —— fallback 必须 ≥ 50px（对齐 starlit 的 52px）。 */
+.app-shell[data-app-id="oddity"] .oq-topbar {
+    flex: 0 0 auto;
+    padding: calc(var(--app-safe-top, 50px) + 4px) 16px 10px;
+    background: var(--oq-app-bg);
+    border-bottom: 1px solid var(--oq-line-soft);
+}
+
+.app-shell[data-app-id="oddity"] .oq-topbar-line {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.app-shell[data-app-id="oddity"] .oq-topbar-title {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="oddity"] .oq-topbar-name {
+    font-size: 19px;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+}
+
+.app-shell[data-app-id="oddity"] .oq-topbar-desc,
+.app-shell[data-app-id="oddity"] .oq-topbar-sub {
+    font-size: 11.5px;
+    color: var(--oq-ink-faint);
+    letter-spacing: 0.03em;
+}
+
+.app-shell[data-app-id="oddity"] .oq-topbar-sub { margin: 7px 0 0; }
+
+.app-shell[data-app-id="oddity"] .oq-topbar-theme {
+    flex: 0 0 auto;
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--oq-line);
+    border-radius: 50%;
+    background: var(--oq-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+}
+
+.app-shell[data-app-id="oddity"] .oq-theme-dot {
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--oq-p1) 0 50%, var(--oq-p2) 50% 100%);
+}
+
+/* 小东西切换 chip */
+.app-shell[data-app-id="oddity"] .oq-chiprow {
+    display: flex;
+    gap: 7px;
+    margin-top: 11px;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.app-shell[data-app-id="oddity"] .oq-chiprow::-webkit-scrollbar { display: none; }
+
+.app-shell[data-app-id="oddity"] .oq-chip {
+    flex: 0 0 auto;
+    border: 1px solid var(--oq-line);
+    background: var(--oq-surface);
+    color: var(--oq-ink-soft);
+    font-family: inherit;
+    font-size: 12.5px;
+    letter-spacing: 0.06em;
+    padding: 6px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.18s var(--oq-ease), color 0.18s var(--oq-ease), border-color 0.18s var(--oq-ease);
+}
+
+.app-shell[data-app-id="oddity"] .oq-chip.is-active {
+    background: var(--oq-ink);
+    border-color: var(--oq-ink);
+    color: var(--oq-surface);
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   沉浸细浮条
+
+   用户原话:「这块设计我很喜欢要保留」。所以形状、毛玻璃、圆点全部照旧,
+   只在两头各加一件事:
+
+     左边  名字变成可点的 —— 点开掉出一张小列表,五个小东西一次看全。
+           光靠圆点切换,用户不知道每个点是什么。
+     右边  一个工具键 —— 这些页面**唯一**的工具入口。
+           各页面底部原来那条常驻工具条已经删掉(会和自绘底栏叠在一起)。
+
+   ★ 仍然要躲开 50px 的状态栏。
+   ────────────────────────────────────────────────────────────────────── */
+.app-shell[data-app-id="oddity"] .oq-slimbar {
+    position: absolute;
+    top: calc(var(--app-safe-top, 50px) + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 8px 5px 12px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--oq-surface) 78%, transparent);
+    border: 1px solid var(--oq-line-soft);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 4px 14px -10px rgba(0, 0, 0, 0.5);
+}
+
+.app-shell[data-app-id="oddity"] .oq-slimbar-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border: none;
+    background: none;
+    padding: 0;
+    font-family: inherit;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    color: var(--oq-ink-soft);
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="oddity"] .oq-slimbar-caret {
+    width: 0;
+    height: 0;
+    border-left: 3.5px solid transparent;
+    border-right: 3.5px solid transparent;
+    border-top: 4px solid var(--oq-ink-faint);
+    transition: transform 0.2s var(--oq-ease);
+}
+.app-shell[data-app-id="oddity"] .oq-slimbar.is-open .oq-slimbar-caret { transform: rotate(180deg); }
+
+.app-shell[data-app-id="oddity"] .oq-slimbar-switch { display: flex; gap: 6px; }
+
+/* 工具键:三条横线,和「设定」那类图标区分开 */
+.app-shell[data-app-id="oddity"] .oq-slimbar-tool {
+    width: 26px;
+    height: 26px;
+    flex: 0 0 auto;
+    border: none;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--oq-ink) 6%, transparent);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2.5px;
+    padding: 0;
+    cursor: pointer;
+    transition: background 0.18s var(--oq-ease);
+}
+.app-shell[data-app-id="oddity"] .oq-slimbar-tool i {
+    width: 11px;
+    height: 1.4px;
+    border-radius: 1px;
+    background: var(--oq-ink-soft);
+    transition: background 0.18s var(--oq-ease);
+}
+.app-shell[data-app-id="oddity"] .oq-slimbar-tool.is-active { background: var(--oq-accent); }
+.app-shell[data-app-id="oddity"] .oq-slimbar-tool.is-active i { background: var(--oq-surface); }
+
+/* 名字点开的那张小列表 */
+/* 和工具浮窗同一条规矩:让开底栏,别让「点底栏只是关掉浮层」发生 */
+.app-shell[data-app-id="oddity"] .oq-slimmenu-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: calc(76px + var(--app-safe-bottom, 0px));
+    z-index: 5;
+}
+
+/* 落点和工具小浮窗共用同一个量出来的坐标 —— 两个键在同一条浮条上,
+   掉出来的东西就该对齐在同一条线上。 */
+.app-shell[data-app-id="oddity"] .oq-slimmenu {
+    position: absolute;
+    top: var(--oq-pop-top, calc(var(--app-safe-top, 50px) + 46px));
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(88%, 246px);
+    padding: 6px;
+    border-radius: var(--oq-radius);
+    background: color-mix(in srgb, var(--oq-surface) 96%, transparent);
+    border: 1px solid var(--oq-line-soft);
+    box-shadow: 0 14px 34px -18px rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.app-shell[data-app-id="oddity"] .oq-slimmenu-item {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    text-align: left;
+    border: none;
+    background: none;
+    font-family: inherit;
+    color: var(--oq-ink);
+    padding: 8px 11px;
+    border-radius: var(--oq-radius-sm);
+    cursor: pointer;
+    transition: background 0.15s var(--oq-ease);
+}
+.app-shell[data-app-id="oddity"] .oq-slimmenu-item.is-active { background: var(--oq-surface-2); }
+.app-shell[data-app-id="oddity"] .oq-slimmenu-name { font-size: 13px; letter-spacing: 0.08em; }
+.app-shell[data-app-id="oddity"] .oq-slimmenu-sub { font-size: 10.5px; color: var(--oq-ink-faint); }
+
+.app-shell[data-app-id="oddity"] .oq-fade-enter-active,
+.app-shell[data-app-id="oddity"] .oq-fade-leave-active { transition: opacity 0.18s var(--oq-ease); }
+.app-shell[data-app-id="oddity"] .oq-fade-enter-from,
+.app-shell[data-app-id="oddity"] .oq-fade-leave-to { opacity: 0; }
+
+.app-shell[data-app-id="oddity"] .oq-slimbar-dot {
+    width: 7px;
+    height: 7px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: var(--oq-ink-faint);
+    opacity: 0.5;
+    cursor: pointer;
+    transition: opacity 0.18s var(--oq-ease), transform 0.18s var(--oq-ease);
+}
+.app-shell[data-app-id="oddity"] .oq-slimbar-dot.is-active {
+    opacity: 1;
+    transform: scale(1.35);
+    background: var(--oq-accent-deep);
+}
+
+/* 舞台 */
+.app-shell[data-app-id="oddity"] .oq-stage {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    /* ★ 滚到头就停,别把这一下继续传给外面的手机壳。
+         没有这行的时候,在「捏」页往下拖会把整个 App 一起拽下来一截再弹回去,
+         用户说的「手机端下滑体验不是很好」有一半是这个。 */
+    overscroll-behavior: contain;
+    /* 底栏 76px + home 指示条 */
+    padding: 14px 14px calc(84px + var(--app-safe-bottom, 0px));
+}
+
+/*
+   沉浸态的舞台。
+
+   ★ 顶部要给细浮条让位(它是 absolute,不占流),底部给自绘底栏让位。
+   ★ **可以滚**。以前这里写死 `overflow: hidden` —— 那时沉浸的只有沙漏
+     (一屏铺满,不需要滚)。现在「看」下面还有打字机和三个匿名页,
+     内容是列表,hidden 会让第二屏永远看不到。
+   ★ 沙漏不受这里的 padding 影响:`.oq-hg` 是 `position:absolute; inset:0`,
+     绝对定位元素以**内边距盒**为参照,padding 不会把它顶下去,仍然满屏。
+*/
+.app-shell[data-app-id="oddity"] .oq-root.is-immersive .oq-stage {
+    padding: calc(var(--app-safe-top, 50px) + 46px) 14px calc(84px + var(--app-safe-bottom, 0px));
+    overflow-y: auto;
+}
+
+/* 沙漏自己铺满,不要上面那份 padding 造成的视觉留白 */
+.app-shell[data-app-id="oddity"] .oq-root.is-immersive .oq-stage:has(> .oq-hg) {
+    padding: 0;
+    overflow: hidden;
+}
+
+/* ==========================================================================
+   4. 自绘底栏
+   ★ z-index 4 —— 必须 < `.app-bottom` 的 6,否则指示条被盖住就退不出 App
+   ========================================================================== */
+
+.app-shell[data-app-id="oddity"] .oq-tabbar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 4;
+    padding: 0 14px calc(8px + var(--app-safe-bottom, 0px));
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="oddity"] .oq-tabbar-shell {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-around;
+    height: 62px;
+    padding: 0 6px;
+    border-radius: 22px;
+    background: color-mix(in srgb, var(--oq-surface) 88%, transparent);
+    border: 1px solid var(--oq-line-soft);
+    box-shadow: var(--oq-shadow);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    pointer-events: auto;
+}
+
+.app-shell[data-app-id="oddity"] .oq-tab-item {
+    position: relative;
+    flex: 1;
+    height: 100%;
+    border: none;
+    background: none;
+    padding: 0 0 9px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 5px;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.app-shell[data-app-id="oddity"] .oq-tab-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--oq-ink-faint);
+    opacity: 0.55;
+    transition: opacity 0.2s var(--oq-ease), transform 0.2s var(--oq-ease);
+}
+.app-shell[data-app-id="oddity"] .oq-tab-item.is-active .oq-tab-dot {
+    opacity: 0;
+    transform: scale(0.3);
+}
+
+.app-shell[data-app-id="oddity"] .oq-tab-label {
+    font-size: 10.5px;
+    letter-spacing: 0.16em;
+    color: var(--oq-ink-faint);
+    transition: color 0.2s var(--oq-ease);
+}
+.app-shell[data-app-id="oddity"] .oq-tab-item.is-active .oq-tab-label { color: var(--oq-ink); }
+
+/* 托到栏上方的那颗球 */
+.app-shell[data-app-id="oddity"] .oq-tab-blob {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 38px;
+    height: 38px;
+    margin-left: -19px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--oq-accent);
+    box-shadow: 0 5px 12px -5px var(--oq-accent-deep);
+    opacity: 0;
+    transform: translateY(14px) scale(0.4);
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="oddity"] .oq-tab-blob.is-in {
+    opacity: 1;
+    transform: translateY(-17px) scale(1);
+    transition: transform 0.44s var(--oq-ease-bounce), opacity 0.24s var(--oq-ease);
+}
+.app-shell[data-app-id="oddity"] .oq-tab-blob.is-out {
+    opacity: 0;
+    transform: translateY(10px) scale(0.5);
+    transition: transform 0.3s var(--oq-ease), opacity 0.24s var(--oq-ease);
+}
+
+.app-shell[data-app-id="oddity"] .oq-tab-blob-glyph {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0;
+    color: var(--oq-surface);
+}
+
+/* ==========================================================================
+   5. 通用控件（components/shared.js）
+   ========================================================================== */
+
+.app-shell[data-app-id="oddity"] .oq-icon {
+    width: var(--oq-icon-size, 18px);
+    height: var(--oq-icon-size, 18px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+}
+.app-shell[data-app-id="oddity"] .oq-icon svg { width: 100%; height: 100%; display: block; }
+
+/* 按钮 */
+.app-shell[data-app-id="oddity"] .oq-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border: 1px solid var(--oq-line);
+    background: var(--oq-surface);
+    color: var(--oq-ink);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    padding: 10px 16px;
+    border-radius: var(--oq-radius-sm);
+    cursor: pointer;
+    transition: background 0.16s var(--oq-ease), transform 0.1s var(--oq-ease), opacity 0.16s var(--oq-ease);
+}
+.app-shell[data-app-id="oddity"] .oq-btn:active:not(:disabled) { transform: scale(0.985); }
+.app-shell[data-app-id="oddity"] .oq-btn:disabled { opacity: 0.42; cursor: not-allowed; }
+
+.app-shell[data-app-id="oddity"] .oq-btn--primary {
+    background: var(--oq-accent);
+    border-color: var(--oq-accent);
+    color: #fff;
+}
+.app-shell[data-app-id="oddity"] .oq-btn--danger {
+    background: var(--oq-danger);
+    border-color: var(--oq-danger);
+    color: #fff;
+}
+.app-shell[data-app-id="oddity"] .oq-btn--ghost {
+    background: transparent;
+    border-color: var(--oq-line);
+    color: var(--oq-ink-soft);
+}
+.app-shell[data-app-id="oddity"] .oq-btn--quiet {
+    background: transparent;
+    border-color: transparent;
+    color: var(--oq-ink-soft);
+    font-weight: 500;
+}
+.app-shell[data-app-id="oddity"] .oq-btn--sm { padding: 7px 12px; font-size: 12px; }
+.app-shell[data-app-id="oddity"] .oq-btn--lg { padding: 13px 20px; font-size: 14px; }
+/* ★ 照着 OqButton 真正吐出来的 class 写。它的 `block` / `iconOnly` / `loading`
+   三个 prop 出来的是 `is-block` / `is-icon-only` / `is-loading`,
+   只有 variant 和 size 走 `oq-btn--` 前缀。这里以前写的是 `.oq-btn--block`,
+   于是所有传了 `block` 的按钮压根没有铺满,而且零报错。 */
+.app-shell[data-app-id="oddity"] .oq-btn.is-block { display: flex; width: 100%; }
+.app-shell[data-app-id="oddity"] .oq-btn.is-icon-only { padding: 9px; }
+.app-shell[data-app-id="oddity"] .oq-btn.is-loading { cursor: progress; }
+.app-shell[data-app-id="oddity"] .oq-btn-label { display: inline-block; }
+
+.app-shell[data-app-id="oddity"] .oq-btn-spinner {
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    animation: oqSpin 0.72s linear infinite;
+}
+
+@keyframes oqSpin { to { transform: rotate(360deg); } }
+
+/* 卡片 */
+.app-shell[data-app-id="oddity"] .oq-card {
+    background: var(--oq-surface);
+    border: 1px solid var(--oq-line);
+    border-radius: var(--oq-radius);
+    padding: 15px 14px;
+    margin-bottom: 13px;
+}
+.app-shell[data-app-id="oddity"] .oq-card:last-child { margin-bottom: 0; }
+
+.app-shell[data-app-id="oddity"] .oq-card-head {
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+    margin-bottom: 12px;
+}
+
+.app-shell[data-app-id="oddity"] .oq-card-step {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--oq-ink-faint);
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="oddity"] .oq-card-title {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    margin: 0;
+}
+
+.app-shell[data-app-id="oddity"] .oq-card-hint,
+.app-shell[data-app-id="oddity"] .oq-card-extra {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--oq-ink-faint);
+    letter-spacing: 0.03em;
+}
+
+.app-shell[data-app-id="oddity"] .oq-card-body > * + * { margin-top: 10px; }
+
+/* 表单 */
+.app-shell[data-app-id="oddity"] .oq-field { display: flex; flex-direction: column; gap: 6px; }
+.app-shell[data-app-id="oddity"] .oq-field-label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--oq-ink-soft);
+}
+.app-shell[data-app-id="oddity"] .oq-field-hint { font-size: 11px; color: var(--oq-ink-faint); }
+
+.app-shell[data-app-id="oddity"] .oq-input {
+    width: 100%;
+    border: 1px solid var(--oq-line);
+    background: var(--oq-surface-2);
+    color: var(--oq-ink);
+    font-family: inherit;
+    font-size: 13.5px;
+    padding: 10px 12px;
+    border-radius: var(--oq-radius-sm);
+    outline: none;
+    transition: border-color 0.16s var(--oq-ease);
+}
+.app-shell[data-app-id="oddity"] .oq-input:focus { border-color: var(--oq-accent); }
+.app-shell[data-app-id="oddity"] .oq-input::placeholder { color: var(--oq-ink-faint); }
+
+/* 开关 */
+.app-shell[data-app-id="oddity"] .oq-switch {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    cursor: pointer;
+}
+.app-shell[data-app-id="oddity"] .oq-switch-input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.app-shell[data-app-id="oddity"] .oq-switch-text { flex: 1; display: flex; flex-direction: column; gap: 1px; }
+.app-shell[data-app-id="oddity"] .oq-switch-label { font-size: 13px; }
+.app-shell[data-app-id="oddity"] .oq-switch-hint { font-size: 11px; color: var(--oq-ink-faint); }
+
+.app-shell[data-app-id="oddity"] .oq-switch-track {
+    flex: 0 0 auto;
+    width: 42px;
+    height: 25px;
+    border-radius: 999px;
+    background: var(--oq-cell);
+    position: relative;
+    transition: background 0.2s var(--oq-ease);
+}
+.app-shell[data-app-id="oddity"] .oq-switch-thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 19px;
+    height: 19px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s var(--oq-ease);
+}
+.app-shell[data-app-id="oddity"] .oq-switch-input:checked + .oq-switch-track { background: var(--oq-accent); }
+.app-shell[data-app-id="oddity"] .oq-switch-input:checked + .oq-switch-track .oq-switch-thumb { transform: translateX(17px); }
+
+/* 分段 */
+.app-shell[data-app-id="oddity"] .oq-segment {
+    display: flex;
+    gap: 4px;
+    padding: 3px;
+    background: var(--oq-surface-2);
+    border-radius: var(--oq-radius-sm);
+}
+.app-shell[data-app-id="oddity"] .oq-segment-item {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: var(--oq-ink-soft);
+    font-family: inherit;
+    font-size: 12px;
+    padding: 7px 6px;
+    border-radius: var(--oq-radius-xs);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    align-items: center;
+    transition: background 0.16s var(--oq-ease), color 0.16s var(--oq-ease);
+}
+.app-shell[data-app-id="oddity"] .oq-segment-item.is-active {
+    background: var(--oq-surface);
+    color: var(--oq-ink);
+    box-shadow: 0 1px 3px rgba(91, 84, 80, 0.12);
+}
+.app-shell[data-app-id="oddity"] .oq-segment-label { font-weight: 600; letter-spacing: 0.06em; }
+.app-shell[data-app-id="oddity"] .oq-segment-sub { font-size: 10px; color: var(--oq-ink-faint); }
+
+/* ──────────────────────────────────────────────────────────────────────
+   OqPanel · 顶部落下的小浮窗
+
+   用户原话:「不要这种半屏弹窗 就是小型弹窗」。
+
+   上一版是底部半屏抽屉:一开就吃掉大半个屏幕,为了放四个小键把整页都盖了。
+   现在是一张小卡片,从顶部那条细浮条底下落出来,宽度只占内容区的一小截。
+
+   ★ 落点是量出来的,不是写死的。`--oq-pop-top` 由根组件在开的那一刻按触发键
+     的实际位置写进 `.oq-root`(见 root.js 的 anchorPop)。
+     「捏」页是整块顶栏、「看」页是细浮条,两者高度差一大截,写死必错一个。
+     兜底值按细浮条算 —— 唯一不经过工具键打开的弹层(漂流瓶拆瓶子)只出现在
+     沉浸页,兜底值在那儿正好是对的。
+   ★ 卡片不是 absolute 定位的,是被 layer 用 flex 摆住的。
+     这样入场动画可以随便用 transform,不用和居中用的 translateX 打架。
+   ────────────────────────────────────────────────────────────────────── */
+.app-shell[data-app-id="oddity"] .oq-pop-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    /* ★ 停在自绘底栏上沿,不铺到底。
+         铺到底的话,浮窗开着时点底栏那一下会被遮罩吃掉,只是把浮窗关了 ——
+         想换个 tab 得点两次。让开之后,底栏一直是能点的,
+         而 setTab / setSubTab 本来就会顺手把浮窗收掉。 */
+    bottom: calc(76px + var(--app-safe-bottom, 0px));
+    /* ★ 必须 < 6 —— `.app-bottom`(home 指示条)是 6,盖住就退不出 App */
+    z-index: 5;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: var(--oq-pop-top, calc(var(--app-safe-top, 50px) + 46px)) 14px 10px;
+    /* 只压一点点。压太狠就又变回「弹窗霸屏」那种重量感了 */
+    background: rgba(28, 24, 22, 0.16);
+    animation: oqPopFade 0.18s var(--oq-ease);
+}
+.app-shell[data-app-id="oddity"] .oq-pop-layer.is-dark { background: rgba(4, 4, 8, 0.4); }
+.app-shell[data-app-id="oddity"] .oq-pop-layer.is-closing { animation: oqPopFadeOut 0.18s var(--oq-ease) forwards; }
+
+@keyframes oqPopFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes oqPopFadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+.app-shell[data-app-id="oddity"] .oq-pop {
+    width: min(88%, 246px);
+    max-height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background: color-mix(in srgb, var(--oq-surface) 97%, transparent);
+    border: 1px solid var(--oq-line-soft);
+    border-radius: 16px;
+    box-shadow: 0 16px 34px -20px rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    transform-origin: top center;
+    animation: oqPopIn 0.2s var(--oq-ease);
+}
+.app-shell[data-app-id="oddity"] .oq-pop-layer.is-closing .oq-pop {
+    animation: oqPopOut 0.18s var(--oq-ease) forwards;
+}
+
+@keyframes oqPopIn {
+    from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes oqPopOut {
+    from { opacity: 1; transform: translateY(0) scale(1); }
+    to { opacity: 0; transform: translateY(-6px) scale(0.97); }
+}
+
+.app-shell[data-app-id="oddity"] .oq-pop-head {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding: 11px 13px 8px;
+}
+.app-shell[data-app-id="oddity"] .oq-pop-title {
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    color: var(--oq-ink);
+}
+.app-shell[data-app-id="oddity"] .oq-pop-sub {
+    font-size: 10px;
+    line-height: 1.5;
+    color: var(--oq-ink-faint);
+}
+
+.app-shell[data-app-id="oddity"] .oq-pop-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    /* 默认压得很矮 —— 工具卡就该是「一眼看完」。列表型的用 tall 放开 */
+    max-height: 208px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0 13px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.app-shell[data-app-id="oddity"] .oq-pop.is-tall .oq-pop-body { max-height: none; }
+
+.app-shell[data-app-id="oddity"] .oq-pop-foot {
+    flex: 0 0 auto;
+    padding: 9px 13px 11px;
+    border-top: 1px solid var(--oq-line-soft);
+}
+
+/* ── 卡片里的控件一律降一档 ────────────────────────────────────────────
+   同一套 OqButton / OqInput / OqSwitch 在正文里是常规尺寸,进了这张小卡片
+   就得收着点。不这么做的话,一个 44px 高的主按钮会把 246px 宽的卡片撑得
+   像个错版的对话框。 */
+.app-shell[data-app-id="oddity"] .oq-pop .oq-btn {
+    padding: 8px 12px;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    border-radius: var(--oq-radius-xs);
+}
+.app-shell[data-app-id="oddity"] .oq-pop .oq-input {
+    font-size: 12px;
+    padding: 8px 10px;
+    line-height: 1.7;
+}
+.app-shell[data-app-id="oddity"] .oq-pop .oq-field { gap: 4px; }
+.app-shell[data-app-id="oddity"] .oq-pop .oq-field-label { font-size: 11px; }
+.app-shell[data-app-id="oddity"] .oq-pop .oq-field-hint { font-size: 10px; line-height: 1.6; }
+.app-shell[data-app-id="oddity"] .oq-pop .oq-switch { padding: 2px 0; }
+.app-shell[data-app-id="oddity"] .oq-pop .oq-switch-label { font-size: 12px; }
+.app-shell[data-app-id="oddity"] .oq-pop .oq-switch-hint { font-size: 10px; }
+.app-shell[data-app-id="oddity"] .oq-pop .oq-empty { padding: 22px 12px; gap: 5px; }
+.app-shell[data-app-id="oddity"] .oq-pop .oq-empty-text { font-size: 12px; }
+.app-shell[data-app-id="oddity"] .oq-pop .oq-empty-hint { font-size: 10.5px; }
+
+/* 卡片里反复出现的三种排布 */
+.app-shell[data-app-id="oddity"] .oq-panel-actions { display: flex; flex-direction: column; gap: 6px; }
+.app-shell[data-app-id="oddity"] .oq-panel-row { display: flex; flex-wrap: wrap; gap: 5px; }
+.app-shell[data-app-id="oddity"] .oq-panel-error {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.7;
+    color: var(--oq-danger);
+    background: color-mix(in srgb, var(--oq-danger) 8%, transparent);
+    border-radius: var(--oq-radius-xs);
+    padding: 7px 9px;
+}
+.app-shell[data-app-id="oddity"] .oq-panel-list {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 8px 10px;
+    border-radius: var(--oq-radius-xs);
+    background: var(--oq-surface-2);
+}
+.app-shell[data-app-id="oddity"] .oq-panel-list-title {
+    margin: 0;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--oq-ink-soft);
+}
+.app-shell[data-app-id="oddity"] .oq-panel-list-body {
+    margin: 0;
+    font-size: 10.5px;
+    line-height: 1.8;
+    color: var(--oq-ink-faint);
+}
+
+/* ── OqRow · 卡片里的一行(选人设、挑草稿都用它) ──────────────────────
+   ★ 可点的是里面那个 `.oq-row-main` 按钮,不是外面这层 —— 外层还要放
+     右侧的「删除」。所以按钮的浏览器默认边框和背景必须在这儿抹掉,
+     否则每一行里都会多出一个灰色的原生按钮框。 */
+.app-shell[data-app-id="oddity"] .oq-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    background: var(--oq-surface-2);
+    border: 1px solid transparent;
+    border-radius: var(--oq-radius-xs);
+    padding: 2px 8px 2px 2px;
+    transition: border-color 0.15s var(--oq-ease), background 0.15s var(--oq-ease);
+}
+.app-shell[data-app-id="oddity"] .oq-row:hover { border-color: var(--oq-line); }
+.app-shell[data-app-id="oddity"] .oq-row.is-active {
+    border-color: var(--oq-accent);
+    background: color-mix(in srgb, var(--oq-accent) 10%, var(--oq-surface-2));
+}
+.app-shell[data-app-id="oddity"] .oq-row.is-muted { opacity: 0.5; }
+
+.app-shell[data-app-id="oddity"] .oq-row-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    border: none;
+    background: none;
+    text-align: left;
+    font-family: inherit;
+    color: var(--oq-ink);
+    padding: 8px 10px;
+    cursor: pointer;
+}
+.app-shell[data-app-id="oddity"] .oq-row-title { font-size: 12.5px; }
+.app-shell[data-app-id="oddity"] .oq-row-desc {
+    font-size: 10.5px;
+    color: var(--oq-ink-faint);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.app-shell[data-app-id="oddity"] .oq-row-acts { flex: 0 0 auto; display: flex; align-items: center; gap: 4px; }
+
+/* ── OqMiniBtn / OqComposer 的小键 ────────────────────────────────────
+   ★ 组件渲染出来的是 `.oq-mini` + `data-tone`,不是 `.oq-mini-btn`,
+     也不是 `.is-danger`。以前这里按后者写,于是「删除」和「送出」既没有
+     红色也没有强调色,而且完全不报错。选择器一律照着组件的真实产物写。 */
+.app-shell[data-app-id="oddity"] .oq-mini {
+    border: none;
+    background: none;
+    padding: 3px 6px;
+    font-family: inherit;
+    font-size: 11.5px;
+    letter-spacing: 0.06em;
+    color: var(--oq-ink-faint);
+    cursor: pointer;
+    transition: color 0.15s var(--oq-ease);
+}
+.app-shell[data-app-id="oddity"] .oq-mini:hover:not(:disabled) { color: var(--oq-ink); }
+.app-shell[data-app-id="oddity"] .oq-mini:disabled { opacity: 0.4; cursor: not-allowed; }
+.app-shell[data-app-id="oddity"] .oq-mini[data-tone="accent"] { color: var(--oq-accent-deep); }
+.app-shell[data-app-id="oddity"] .oq-mini[data-tone="danger"] { color: var(--oq-danger); }
+.app-shell[data-app-id="oddity"] .oq-mini.is-loading { opacity: 0.6; }
+
+/* 成排出现时(卡片里的 `.oq-panel-row`、卡片外的 `.oq-anon-acts`)收成小胶囊。
+   一排纯文字挨在一起点不准,也分不清哪个字是哪个键。 */
+.app-shell[data-app-id="oddity"] .oq-panel-row > .oq-mini,
+.app-shell[data-app-id="oddity"] .oq-anon-acts > .oq-mini {
+    flex: 0 1 auto;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: var(--oq-surface-2);
+    border: 1px solid var(--oq-line-soft);
+}
+.app-shell[data-app-id="oddity"] .oq-panel-row > .oq-mini:hover:not(:disabled),
+.app-shell[data-app-id="oddity"] .oq-anon-acts > .oq-mini:hover:not(:disabled) {
+    border-color: var(--oq-line);
+}
+
+/* 空态 / 加载 / 标签 */
+.app-shell[data-app-id="oddity"] .oq-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    padding: 36px 20px;
+    text-align: center;
+}
+.app-shell[data-app-id="oddity"] .oq-empty-icon { --oq-icon-size: 26px; color: var(--oq-ink-faint); }
+.app-shell[data-app-id="oddity"] .oq-empty-text { margin: 0; font-size: 13px; color: var(--oq-ink-soft); }
+.app-shell[data-app-id="oddity"] .oq-empty-hint { margin: 0; font-size: 11.5px; color: var(--oq-ink-faint); }
+.app-shell[data-app-id="oddity"] .oq-empty-action:empty { display: none; }
+
+.app-shell[data-app-id="oddity"] .oq-spinner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 11px;
+    padding: 52px 20px;
+}
+.app-shell[data-app-id="oddity"] .oq-spinner-ring {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2.5px solid var(--oq-line);
+    border-top-color: var(--oq-accent);
+    animation: oqSpin 0.8s linear infinite;
+}
+.app-shell[data-app-id="oddity"] .oq-spinner-label { font-size: 12px; color: var(--oq-ink-faint); letter-spacing: 0.08em; }
+
+.app-shell[data-app-id="oddity"] .oq-tag {
+    display: inline-block;
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--oq-surface-2);
+    color: var(--oq-ink-soft);
+}
+.app-shell[data-app-id="oddity"] .oq-tag[data-tone="good"] { background: var(--oq-p1-mist); color: var(--oq-p1-deep); }
+.app-shell[data-app-id="oddity"] .oq-tag[data-tone="bad"] { background: var(--oq-p2-mist); color: var(--oq-p2-deep); }
+
+/* ==========================================================================
+   6. 纯 CSS 爱心
+   用户明确要求「『雷』用纯 css 爱心表示不要 emoji」。
+   经典三件套：旋转 45° 的方块 + 两个圆形伪元素。
+   ========================================================================== */
+
+.app-shell[data-app-id="oddity"] .oq-heart {
+    position: relative;
+    display: inline-block;
+    width: 15px;
+    height: 13px;
+    flex: 0 0 auto;
+}
+.app-shell[data-app-id="oddity"] .oq-heart::before,
+.app-shell[data-app-id="oddity"] .oq-heart::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    width: 9.5px;
+    height: 14px;
+    background: var(--oq-mine);
+    border-radius: 9.5px 9.5px 0 0;
+}
+.app-shell[data-app-id="oddity"] .oq-heart::before {
+    left: 7px;
+    transform: rotate(-45deg);
+    transform-origin: 0 100%;
+}
+.app-shell[data-app-id="oddity"] .oq-heart::after {
+    left: 0;
+    transform: rotate(45deg);
+    transform-origin: 100% 100%;
+}
+
+.app-shell[data-app-id="oddity"] .oq-heart--mini { width: 10px; height: 9px; }
+.app-shell[data-app-id="oddity"] .oq-heart--mini::before,
+.app-shell[data-app-id="oddity"] .oq-heart--mini::after { width: 6.5px; height: 9.5px; border-radius: 6.5px 6.5px 0 0; }
+.app-shell[data-app-id="oddity"] .oq-heart--mini::before { left: 4.7px; }
+
+.app-shell[data-app-id="oddity"] .oq-heart.is-empty::before,
+.app-shell[data-app-id="oddity"] .oq-heart.is-empty::after {
+    background: transparent;
+    box-shadow: inset 0 0 0 1.5px var(--oq-ink-faint);
+}
+
+.app-shell[data-app-id="oddity"] .oq-lives { display: inline-flex; gap: 3px; align-items: center; }
+
+/* ==========================================================================
+   7. 双人扫雷
+   ========================================================================== */
+
+.app-shell[data-app-id="oddity"] .oq-ms { position: relative; }
+
+.app-shell[data-app-id="oddity"] .oq-ms-frame { display: flex; flex-direction: column; gap: 3px; }
+
+.app-shell[data-app-id="oddity"] .oq-ms-axis-x {
+    display: grid;
+    grid-template-columns: 18px repeat(9, 1fr);
+    gap: 3px;
+}
+.app-shell[data-app-id="oddity"] .oq-ms-body {
+    display: grid;
+    grid-template-columns: 18px 1fr;
+    gap: 3px;
+}
+.app-shell[data-app-id="oddity"] .oq-ms-axis-y {
+    display: grid;
+    grid-template-rows: repeat(9, 1fr);
+    gap: 3px;
+}
+
+.app-shell[data-app-id="oddity"] .oq-ms-axis-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: var(--oq-ink-faint);
+    font-variant-numeric: tabular-nums;
+}
+.app-shell[data-app-id="oddity"] .oq-ms-axis-x .oq-ms-axis-cell { height: 15px; }
+
+.app-shell[data-app-id="oddity"] .oq-ms-grid {
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    gap: 3px;
+}
+
+.app-shell[data-app-id="oddity"] .oq-ms-cell {
+    position: relative;
+    aspect-ratio: 1;
+    border: none;
+    padding: 0;
+    border-radius: 6px;
+    background: var(--oq-cell);
+    box-shadow: inset 0 -1.5px 0 rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+    cursor: default;
+    transition: background 0.16s var(--oq-ease), transform 0.1s var(--oq-ease), box-shadow 0.16s var(--oq-ease);
+}
+
+/* 真扫雷:格子直接可点。锁住(AI 回合 / 终局)时降透明度提示 */
+.app-shell[data-app-id="oddity"] .oq-ms-cell { cursor: pointer; touch-action: manipulation; }
+.app-shell[data-app-id="oddity"] .oq-ms-grid.is-locked .oq-ms-cell:not(.is-open) { opacity: 0.82; cursor: default; }
+
+/* 插旗:长按出来的小旗,纯 CSS 画(旗面 + 旗杆) */
+.app-shell[data-app-id="oddity"] .oq-ms-cell.is-flag { background: var(--oq-cell-hi); }
+.app-shell[data-app-id="oddity"] .oq-ms-flagmark {
+    position: relative;
+    width: 12px;
+    height: 14px;
+}
+.app-shell[data-app-id="oddity"] .oq-ms-flagmark::before {
+    content: '';
+    position: absolute;
+    left: 2.5px;
+    top: 0;
+    width: 2px;
+    height: 14px;
+    border-radius: 1px;
+    background: var(--oq-ink-soft);
+}
+.app-shell[data-app-id="oddity"] .oq-ms-flagmark::after {
+    content: '';
+    position: absolute;
+    left: 4.5px;
+    top: 1px;
+    width: 8px;
+    height: 6px;
+    background: var(--oq-danger);
+    clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+
+.app-shell[data-app-id="oddity"] .oq-ms-cell.is-open {
+    background: var(--oq-cell-open);
+    box-shadow: inset 0 0 0 1px var(--oq-line);
+}
+.app-shell[data-app-id="oddity"] .oq-ms-cell.is-mine {
+    background: var(--oq-cell-boom);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--oq-mine) 45%, transparent);
+}
+.app-shell[data-app-id="oddity"] .oq-ms-cell.is-flash { animation: oqCellFlash 0.5s var(--oq-ease); }
+
+@keyframes oqCellFlash {
+    0% { transform: scale(1); }
+    35% { transform: scale(1.14); }
+    100% { transform: scale(1); }
+}
+
+.app-shell[data-app-id="oddity"] .oq-ms-num {
+    font-size: 14px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+.app-shell[data-app-id="oddity"] .oq-ms-cell[data-n="1"] .oq-ms-num { color: var(--oq-n1); }
+.app-shell[data-app-id="oddity"] .oq-ms-cell[data-n="2"] .oq-ms-num { color: var(--oq-n2); }
+.app-shell[data-app-id="oddity"] .oq-ms-cell[data-n="3"] .oq-ms-num { color: var(--oq-n3); }
+.app-shell[data-app-id="oddity"] .oq-ms-cell[data-n="4"] .oq-ms-num { color: var(--oq-n4); }
+.app-shell[data-app-id="oddity"] .oq-ms-cell[data-n="5"] .oq-ms-num { color: var(--oq-n5); }
+.app-shell[data-app-id="oddity"] .oq-ms-cell[data-n="6"] .oq-ms-num { color: var(--oq-n6); }
+.app-shell[data-app-id="oddity"] .oq-ms-cell[data-n="7"] .oq-ms-num { color: var(--oq-n7); }
+.app-shell[data-app-id="oddity"] .oq-ms-cell[data-n="8"] .oq-ms-num { color: var(--oq-n8); }
+
+/* 翻开后左下角那一点：标记这格是谁扫的。
+   ★ 必须写死 left/bottom —— 只给 absolute 不给定位值,伪元素会停在
+     「静态位置」,而父级是 flex 居中,那个位置会跟着字号飘。 */
+.app-shell[data-app-id="oddity"] .oq-ms-cell[data-by]::after {
+    content: '';
+    position: absolute;
+    left: 4px;
+    bottom: 4px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+}
+.app-shell[data-app-id="oddity"] .oq-ms-cell[data-by="p1"]::after { background: var(--oq-p1); }
+.app-shell[data-app-id="oddity"] .oq-ms-cell[data-by="p2"]::after { background: var(--oq-p2); }
+
+.app-shell[data-app-id="oddity"] .oq-ms-tip {
+    margin: 11px 0 0;
+    font-size: 11px;
+    line-height: 1.65;
+    color: var(--oq-ink-faint);
+}
+
+/* 牌桌:两个座位(真人 / AI 通用),比分和回合状态都在这一条里 */
+.app-shell[data-app-id="oddity"] .oq-ms-seats { display: flex; align-items: stretch; }
+.app-shell[data-app-id="oddity"] .oq-ms-seat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 7px 6px;
+    border-radius: var(--oq-radius-sm);
+    transition: background 0.18s var(--oq-ease);
+}
+.app-shell[data-app-id="oddity"] .oq-ms-seat + .oq-ms-seat { margin-left: 10px; }
+.app-shell[data-app-id="oddity"] .oq-ms-seat.is-turn { background: var(--oq-surface-2); box-shadow: inset 0 0 0 1.5px var(--oq-accent-deep); }
+.app-shell[data-app-id="oddity"] .oq-ms-seat.is-win { box-shadow: inset 0 0 0 1.5px var(--oq-accent-deep); }
+.app-shell[data-app-id="oddity"] .oq-ms-seat-name { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; }
+.app-shell[data-app-id="oddity"] .oq-ms-seat-score {
+    font-size: 27px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.2;
+}
+.app-shell[data-app-id="oddity"] .oq-ms-seat[data-owner="p1"] .oq-ms-seat-score { color: var(--oq-p1-deep); }
+.app-shell[data-app-id="oddity"] .oq-ms-seat[data-owner="p2"] .oq-ms-seat-score { color: var(--oq-p2-deep); }
+.app-shell[data-app-id="oddity"] .oq-ms-seat-state { font-size: 10.5px; color: var(--oq-ink-faint); min-height: 15px; }
+
+/* 收尾按钮排 */
+.app-shell[data-app-id="oddity"] .oq-ms-endacts { display: flex; flex-wrap: wrap; gap: 8px; }
+.app-shell[data-app-id="oddity"] .oq-ms-endacts .oq-btn { flex: 1 1 auto; }
+
+/* 对局信息 */
+.app-shell[data-app-id="oddity"] .oq-ms-log {
+    max-height: 190px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    -webkit-overflow-scrolling: touch;
+}
+.app-shell[data-app-id="oddity"] .oq-ms-log-empty { margin: 0; font-size: 12px; color: var(--oq-ink-faint); }
+.app-shell[data-app-id="oddity"] .oq-ms-log-line {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.72;
+    padding: 8px 10px;
+    border-radius: var(--oq-radius-sm);
+    background: var(--oq-surface-2);
+    border-left: 2.5px solid var(--oq-line);
+    word-break: break-all;
+}
+.app-shell[data-app-id="oddity"] .oq-ms-log-line[data-owner="p1"] { background: var(--oq-p1-mist); border-left-color: var(--oq-p1); }
+.app-shell[data-app-id="oddity"] .oq-ms-log-line[data-owner="p2"] { background: var(--oq-p2-mist); border-left-color: var(--oq-p2); }
+.app-shell[data-app-id="oddity"] .oq-ms-log-line[data-kind="system"] { color: var(--oq-ink-soft); }
+/* AI 的台词:斜体区分「说的话」和「发生的事」 */
+.app-shell[data-app-id="oddity"] .oq-ms-log-line[data-kind="flavor"] {
+    font-style: italic;
+    color: var(--oq-ink-soft);
+    border-left-color: var(--oq-accent-deep);
+}
+
+/* ==========================================================================
+   8. 你有我没有
+   ========================================================================== */
+
+.app-shell[data-app-id="oddity"] .oq-hy { position: relative; }
+
+.app-shell[data-app-id="oddity"] .oq-hy-rules { margin: 0; padding-left: 18px; font-size: 12px; line-height: 1.8; color: var(--oq-ink-soft); }
+.app-shell[data-app-id="oddity"] .oq-hy-rules li { margin-bottom: 2px; }
+
+.app-shell[data-app-id="oddity"] .oq-hy-picker { display: flex; flex-direction: column; gap: 8px; }
+.app-shell[data-app-id="oddity"] .oq-hy-pick {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    text-align: left;
+    border: 1px solid var(--oq-line);
+    background: var(--oq-surface-2);
+    color: var(--oq-ink);
+    font-family: inherit;
+    padding: 10px 12px;
+    border-radius: var(--oq-radius-sm);
+    cursor: pointer;
+}
+/* ★ 组件里用的是 is-on(和全 App 的选中态一致)。之前这里写成 is-active,
+   选中的人设永远不高亮 —— 类名对不上是纯视觉 bug,零报错 */
+.app-shell[data-app-id="oddity"] .oq-hy-pick.is-on,
+.app-shell[data-app-id="oddity"] .oq-hy-pick.is-active { border-color: var(--oq-accent-deep); background: var(--oq-p1-mist); }
+.app-shell[data-app-id="oddity"] .oq-hy-pick-name { font-size: 13px; font-weight: 600; }
+.app-shell[data-app-id="oddity"] .oq-hy-pick-sub { font-size: 11px; color: var(--oq-ink-faint); }
+
+.app-shell[data-app-id="oddity"] .oq-hy-seats { display: flex; flex-direction: column; gap: 7px; }
+.app-shell[data-app-id="oddity"] .oq-hy-seat {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 11px;
+    border-radius: var(--oq-radius-sm);
+    background: var(--oq-surface-2);
+    border: 1px solid transparent;
+}
+.app-shell[data-app-id="oddity"] .oq-hy-seat.is-turn { border-color: var(--oq-accent); background: var(--oq-p1-mist); }
+.app-shell[data-app-id="oddity"] .oq-hy-seat.is-out { opacity: 0.45; }
+.app-shell[data-app-id="oddity"] .oq-hy-seat-name { font-size: 13px; font-weight: 600; flex: 1; min-width: 0; }
+.app-shell[data-app-id="oddity"] .oq-hy-seat-state { font-size: 11px; color: var(--oq-ink-faint); }
+
+.app-shell[data-app-id="oddity"] .oq-hy-feed {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 260px;
+    overflow-y: auto;
+}
+.app-shell[data-app-id="oddity"] .oq-hy-line {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.7;
+    padding: 8px 11px;
+    border-radius: var(--oq-radius-sm);
+    background: var(--oq-surface-2);
+}
+.app-shell[data-app-id="oddity"] .oq-hy-line[data-kind="claim"] { background: var(--oq-p1-mist); }
+.app-shell[data-app-id="oddity"] .oq-hy-line[data-kind="out"] { background: var(--oq-p2-mist); }
+.app-shell[data-app-id="oddity"] .oq-hy-line[data-kind="system"] { color: var(--oq-ink-soft); }
+
+.app-shell[data-app-id="oddity"] .oq-hy-ask { display: flex; flex-direction: column; gap: 9px; }
+.app-shell[data-app-id="oddity"] .oq-hy-actions { display: flex; gap: 8px; }
+.app-shell[data-app-id="oddity"] .oq-hy-actions .oq-btn { flex: 1; }
+.app-shell[data-app-id="oddity"] .oq-hy-count { font-size: 11px; color: var(--oq-ink-faint); text-align: right; }
+.app-shell[data-app-id="oddity"] .oq-hy-tip { margin: 10px 0 0; font-size: 11px; line-height: 1.65; color: var(--oq-ink-faint); }
+.app-shell[data-app-id="oddity"] .oq-hy-winner { text-align: center; font-size: 15px; font-weight: 600; letter-spacing: 0.1em; padding: 8px 0; }
+
+.app-shell[data-app-id="oddity"] .oq-hy-dots { display: inline-flex; gap: 4px; }
+
+.app-shell[data-app-id="oddity"] .oq-hy-context { display: flex; flex-direction: column; gap: 8px; }
+.app-shell[data-app-id="oddity"] .oq-hy-part {
+    border: 1px solid var(--oq-line);
+    border-radius: var(--oq-radius-sm);
+    overflow: hidden;
+}
+.app-shell[data-app-id="oddity"] .oq-hy-part-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 11px;
+    background: var(--oq-surface-2);
+}
+.app-shell[data-app-id="oddity"] .oq-hy-part-title { font-size: 12.5px; font-weight: 600; flex: 1; }
+.app-shell[data-app-id="oddity"] .oq-hy-part-meta { font-size: 10.5px; color: var(--oq-ink-faint); }
+.app-shell[data-app-id="oddity"] .oq-hy-part-body {
+    padding: 9px 11px;
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: var(--oq-ink-soft);
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 190px;
+    overflow-y: auto;
+}
+
+/* ==========================================================================
+   9. 果冻心 (粉红 AI 之心与精致工具栏)
+   ========================================================================== */
+
+/*
+   ★ 高度改成「撑满舞台」而不是 `min-height: 440px` + space-between。
+
+     旧写法在小屏手机上恰好比可视区高一点点,于是这一页**总是**能往下拖两下,
+     拖出来的是一片空白 —— 用户说的「手机端下滑体验不是很好」就是这个。
+     现在整块按可视高度铺,内容垂直居中,拖不动也没什么可拖的。
+*/
+.app-shell[data-app-id="oddity"] .oq-jelly {
+    position: relative;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 4px 14px 8px;
+    touch-action: none;
+}
+
+.app-shell[data-app-id="oddity"] .oq-jelly-header {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-top: 2px;
+}
+
+.app-shell[data-app-id="oddity"] .oq-jelly-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: var(--oq-surface-2);
+    border: 1px solid var(--oq-line-soft);
+    font-size: 11.5px;
+}
+
+.app-shell[data-app-id="oddity"] .oq-jelly-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #f48fb1;
+    box-shadow: 0 0 8px #f48fb1;
+    animation: oqHeartPulse 2s ease-in-out infinite;
+}
+
+@keyframes oqHeartPulse {
+    0%, 100% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.3); opacity: 1; }
+}
+
+.app-shell[data-app-id="oddity"] .oq-jelly-persona-name {
+    font-weight: 600;
+    color: var(--oq-ink);
+}
+
+.app-shell[data-app-id="oddity"] .oq-jelly-count {
+    color: var(--oq-ink-faint);
+    font-size: 10.5px;
+}
+
+.app-shell[data-app-id="oddity"] .oq-jelly-heart-box {
+    position: relative;
+    width: min(72vw, 270px);
+    height: min(72vw, 270px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 12px 0;
+}
+
+.app-shell[data-app-id="oddity"] .oq-jelly-heart {
+    width: 100%;
+    height: 100%;
+    fill: rgba(244, 162, 197, 0.78);
+    filter: drop-shadow(0 12px 28px rgba(244, 143, 177, 0.42));
+    transition: transform 0.62s var(--oq-ease-bounce), fill 0.3s ease;
+    will-change: transform;
+    cursor: grab;
+}
+
+.app-shell[data-app-id="oddity"] .oq-jelly-heart:active {
+    cursor: grabbing;
+}
+
+.app-shell[data-app-id="oddity"] .oq-jelly-heart.is-fast {
+    transition: transform 0.08s linear;
+}
+
+.app-shell[data-app-id="oddity"] .oq-jelly-heart.is-damage {
+    fill: rgba(255, 100, 140, 0.9);
+    animation: oqHeartHurt 0.5s var(--oq-ease);
+}
+
+@keyframes oqHeartHurt {
+    0%, 100% { filter: drop-shadow(0 12px 28px rgba(244, 143, 177, 0.42)); }
+    30% { filter: drop-shadow(0 14px 34px rgba(255, 64, 129, 0.85)) saturate(1.8); }
+}
+
+.app-shell[data-app-id="oddity"] .oq-jelly-bubbles {
+    position: absolute;
+    inset: -20px;
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="oddity"] .oq-jelly-bubble {
+    position: absolute;
+    max-width: 68%;
+    font-size: 12px;
+    line-height: 1.5;
+    padding: 7px 13px;
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--oq-surface) 94%, transparent);
+    border: 1px solid var(--oq-line-soft);
+    color: var(--oq-ink);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+    animation: oqBubbleIn 0.34s var(--oq-ease-bounce);
+    white-space: pre-wrap;
+    word-break: break-word;
+    transform: translate(-50%, -50%);
+}
+
+.app-shell[data-app-id="oddity"] .oq-jelly-bubble[data-tone="damage"] {
+    background: rgba(255, 235, 240, 0.94);
+    border-color: rgba(255, 128, 171, 0.6);
+    color: #880e4f;
+}
+
+.app-shell[data-app-id="oddity"] .oq-jelly-bubble[data-tone="soothe"] {
+    background: rgba(252, 238, 246, 0.94);
+    border-color: rgba(244, 143, 177, 0.6);
+    color: #4a148c;
+}
+
+.app-shell[data-app-id="oddity"] .oq-jelly-bubble[data-tone="ai"] {
+    background: rgba(240, 243, 255, 0.96);
+    border-color: rgba(144, 202, 249, 0.8);
+    color: #0d47a1;
+    font-weight: 500;
+}
+
+/*
+   果冻心原来在这里有一条五格工具条(心语/投喂/人设/收藏/设定)和一张投喂浮层。
+   两个都删了 —— 工具条挤在自绘底栏上面,投喂浮层是它自己的一套弹层写法。
+   现在统一走 OqPanel,样式在文件后面的「面板」一节。
+*/
+.app-shell[data-app-id="oddity"] .oq-jelly-hint {
+    font-size: 11px;
+    color: var(--oq-ink-faint);
+}
+
+/* ==========================================================================
+   10. 沙漏 (双面心语 · 黑白颠倒)
+   ========================================================================== */
+
+.app-shell[data-app-id="oddity"] .oq-hg {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    background: #fbf9f6;
+    touch-action: none;
+    user-select: none;
+    transition: background 0.9s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.app-shell[data-app-id="oddity"] .oq-hg.is-flipped {
+    background: #0d0d11;
+}
+
+.app-shell[data-app-id="oddity"] .oq-hg-white-layer {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px 100px;
+    transition: opacity 0.8s ease;
+    z-index: 1;
+}
+
+.app-shell[data-app-id="oddity"] .oq-hg-white-layer.is-faded {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="oddity"] .oq-hg-black-fluid {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #0d0d11;
+    z-index: 2;
+    transition: height 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="oddity"] .oq-hg-status-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.05);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: #75716b;
+    margin-bottom: 24px;
+}
+
+.app-shell[data-app-id="oddity"] .oq-hg-status-tag.is-dark {
+    background: rgba(255, 255, 255, 0.1);
+    color: #a8a49c;
+}
+
+.app-shell[data-app-id="oddity"] .oq-hg-tag-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #75716b;
+}
+
+.app-shell[data-app-id="oddity"] .oq-hg-tag-dot.is-dark {
+    background: #e6b8c8;
+}
+
+.app-shell[data-app-id="oddity"] .oq-hg-content-box {
+    text-align: center;
+    max-width: 86%;
+}
+
+.app-shell[data-app-id="oddity"] .oq-hg-content-box.is-inverted {
+    transform: rotate(180deg);
+}
+
+.app-shell[data-app-id="oddity"] .oq-hg-surface-text {
+    margin: 0;
+    font-family: Georgia, "Times New Roman", "Songti SC", serif;
+    font-size: clamp(20px, 5.8vw, 28px);
+    line-height: 1.8;
+    letter-spacing: 0.16em;
+    color: #1a191f;
+    font-weight: 400;
+}
+
+.app-shell[data-app-id="oddity"] .oq-hg-deep-wrapper {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px 100px;
+    opacity: 0;
+    transition: opacity 0.8s ease 0.3s;
+}
+
+.app-shell[data-app-id="oddity"] .oq-hg-deep-wrapper.is-visible {
+    opacity: 1;
+}
+
+.app-shell[data-app-id="oddity"] .oq-hg-deep-text {
+    margin: 0;
+    font-family: Georgia, "Times New Roman", "Songti SC", serif;
+    font-size: clamp(20px, 5.8vw, 28px);
+    line-height: 1.8;
+    letter-spacing: 0.16em;
+    color: #f7f5f2;
+    font-weight: 300;
+}
+
+.app-shell[data-app-id="oddity"] .oq-hg-waves {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -18px;
+    height: 20px;
+    fill: #0d0d11;
+}
+
+.app-shell[data-app-id="oddity"] .oq-hg-sheen {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 40%);
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="oddity"] .oq-hg-particles { position: absolute; inset: 0; pointer-events: none; }
+
+.app-shell[data-app-id="oddity"] .oq-hg-particles i {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.45);
+    animation: oqDrift 7s linear infinite;
+}
+
+.app-shell[data-app-id="oddity"] .oq-hg-ripple {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    margin: -7px 0 0 -7px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    animation: oqRipple 0.85s var(--oq-ease) forwards;
+    pointer-events: none;
+}
+
+/*
+   ★ 原来这里挂着 `.oq-hg-actionbar`(心语/翻转/人设/收藏/设定,五个键横着摊在
+     底部)。用户说「沙漏的工具组也不太好用」—— 它压在自绘底栏正上方,
+     手指够不着,还挡住了黑水面。整条删掉,五个动作搬进细浮条的工具面板。
+
+   剩下的是空态。以前这一页写死了几组预设句子,所以永远不会空;
+   现在预设全撤了,第一次进来必须有话说清楚「这儿要先去要一句」。
+*/
+.app-shell[data-app-id="oddity"] .oq-hg-blank {
+    text-align: center;
+    max-width: 78%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="oddity"] .oq-hg-blank-title {
+    margin: 0;
+    font-family: Georgia, "Times New Roman", "Songti SC", serif;
+    font-size: 19px;
+    letter-spacing: 0.2em;
+    color: #b9b4ab;
+}
+
+.app-shell[data-app-id="oddity"] .oq-hg-blank-hint {
+    margin: 0;
+    font-size: 11.5px;
+    line-height: 1.9;
+    letter-spacing: 0.06em;
+    color: #c5c0b7;
+}
+
+/* ==========================================================================
+   11. 打字机 (欲言又止 · 犹豫动效)
+   ========================================================================== */
+
+/*
+   ★ 这里就是用户截图里那条「草稿箱里的思念 · 顾漾」和「在输入框里写下又删除的
+     是什么…」之间那道大空隙。
+
+     原因是 `min-height: 440px` 配 `justify-content: space-between`:标题钉在
+     顶,工具条钉在底,中间那截打字区被撑开的高度全数吐给了两个 gap。
+     底部工具条一撤走,只剩两个孩子,空隙就更夸张了。
+
+     改成整块居中:标题 → 打字区 → 进度条,三样贴着彼此,一起浮在屏幕中间。
+     这也正好是打字机该有的样子 —— 眼睛不用来回跳。
+*/
+.app-shell[data-app-id="oddity"] .oq-tw-root {
+    position: relative;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 4px 14px 8px;
+}
+
+.app-shell[data-app-id="oddity"] .oq-tw-top {
+    display: flex;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="oddity"] .oq-tw-title-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
+    border-radius: 999px;
+    background: var(--oq-surface-2);
+    border: 1px solid var(--oq-line-soft);
+    font-size: 11.5px;
+}
+
+.app-shell[data-app-id="oddity"] .oq-tw-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--oq-accent);
+}
+
+.app-shell[data-app-id="oddity"] .oq-tw-title {
+    font-weight: 600;
+    color: var(--oq-ink);
+}
+
+.app-shell[data-app-id="oddity"] .oq-tw-author {
+    color: var(--oq-ink-faint);
+}
+
+.app-shell[data-app-id="oddity"] .oq-tw-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+}
+
+.app-shell[data-app-id="oddity"] .oq-tw-prompt-hint {
+    font-size: 11.5px;
+    letter-spacing: 0.08em;
+    color: var(--oq-ink-faint);
+}
+
+.app-shell[data-app-id="oddity"] .oq-tw-input-shell {
+    width: 100%;
+    max-width: 320px;
+    min-height: 120px;
+    padding: 18px 16px;
+    border-radius: 18px;
+    background: var(--oq-surface);
+    border: 1.5px solid var(--oq-line);
+    box-shadow: var(--oq-shadow);
+    display: flex;
+    align-items: flex-start;
+}
+
+.app-shell[data-app-id="oddity"] .oq-tw-screen {
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--oq-ink);
+    letter-spacing: 0.04em;
+    word-break: break-word;
+    white-space: pre-wrap;
+    min-height: 52px;
+}
+
+.app-shell[data-app-id="oddity"] .oq-tw-cursor {
+    display: inline-block;
+    font-weight: bold;
+    color: var(--oq-accent);
+    margin-left: 2px;
+    animation: oqCursorBlink 0.8s infinite;
+}
+
+@keyframes oqCursorBlink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+.app-shell[data-app-id="oddity"] .oq-tw-progress-bar {
+    width: 100%;
+    max-width: 320px;
+    height: 3px;
+    border-radius: 999px;
+    background: var(--oq-line-soft);
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="oddity"] .oq-tw-progress-fill {
+    height: 100%;
+    background: var(--oq-accent);
+    transition: width 0.2s ease;
+}
+
+/* 暂停/继续。只留这一个键在正文里 —— 它是看的时候随手要按的,
+   塞进面板反而绕远。其余六个都进面板。 */
+.app-shell[data-app-id="oddity"] .oq-tw-toggle {
+    border: 1px solid var(--oq-line-soft);
+    background: var(--oq-surface-2);
+    color: var(--oq-ink-soft);
+    font-family: inherit;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    padding: 5px 16px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: color 0.15s var(--oq-ease), border-color 0.15s var(--oq-ease);
+}
+.app-shell[data-app-id="oddity"] .oq-tw-toggle:hover {
+    color: var(--oq-ink);
+    border-color: var(--oq-line);
+}
+
+/* 底部那条 `.oq-tw-toolbar`(暂停/召唤/草稿箱/自建/收藏/设定)已删,进面板。 */
+
+/* 空态:预设撤掉之后,第一次进来是白的 */
+.app-shell[data-app-id="oddity"] .oq-tw-blank {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 26px 10px;
+    text-align: center;
+}
+
+.app-shell[data-app-id="oddity"] .oq-tw-blank-title {
+    margin: 0;
+    font-size: 14px;
+    letter-spacing: 0.14em;
+    color: var(--oq-ink-soft);
+}
+
+.app-shell[data-app-id="oddity"] .oq-tw-blank-hint {
+    margin: 0;
+    font-size: 11.5px;
+    line-height: 1.9;
+    color: var(--oq-ink-faint);
+    max-width: 240px;
+}
+
+/* ==========================================================================
+   12. 心事夹 (统一收藏页)
+   ========================================================================== */
+
+.app-shell[data-app-id="oddity"] .oq-fav-root {
+    position: relative;
+    padding: 4px 12px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.app-shell[data-app-id="oddity"] .oq-fav-filter-bar {
+    display: flex;
+    gap: 7px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+}
+
+.app-shell[data-app-id="oddity"] .oq-fav-filter-bar::-webkit-scrollbar { display: none; }
+
+.app-shell[data-app-id="oddity"] .oq-fav-chip {
+    flex: 0 0 auto;
+    padding: 6px 13px;
+    border-radius: 999px;
+    border: 1px solid var(--oq-line-soft);
+    background: var(--oq-surface-2);
+    font-size: 12px;
+    font-family: inherit;
+    color: var(--oq-ink-soft);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.app-shell[data-app-id="oddity"] .oq-fav-chip.is-active {
+    background: var(--oq-accent-deep);
+    color: #fff;
+    border-color: var(--oq-accent-deep);
+}
+
+.app-shell[data-app-id="oddity"] .oq-fav-chip-count {
+    font-size: 11px;
+    opacity: 0.8;
+}
+
+.app-shell[data-app-id="oddity"] .oq-fav-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="oddity"] .oq-fav-card {
+    padding: 13px 14px;
+    border-radius: var(--oq-radius);
+    background: var(--oq-surface);
+    border: 1px solid var(--oq-line);
+    box-shadow: var(--oq-shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="oddity"] .oq-fav-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.app-shell[data-app-id="oddity"] .oq-fav-card-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="oddity"] .oq-fav-tag {
+    font-size: 10.5px;
+    padding: 2px 7px;
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.app-shell[data-app-id="oddity"] .oq-fav-tag[data-tone="heart"] {
+    background: rgba(244, 143, 177, 0.2);
+    color: #ad1457;
+}
+
+.app-shell[data-app-id="oddity"] .oq-fav-tag[data-tone="hourglass"] {
+    background: rgba(120, 144, 156, 0.2);
+    color: #37474f;
+}
+
+.app-shell[data-app-id="oddity"] .oq-fav-tag[data-tone="typewriter"] {
+    background: rgba(149, 117, 205, 0.2);
+    color: #512da8;
+}
+
+.app-shell[data-app-id="oddity"] .oq-fav-tag[data-tone="default"] {
+    background: var(--oq-surface-2);
+    color: var(--oq-ink-soft);
+}
+
+.app-shell[data-app-id="oddity"] .oq-fav-card-title {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--oq-ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="oddity"] .oq-fav-card-date {
+    font-size: 10.5px;
+    color: var(--oq-ink-faint);
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="oddity"] .oq-fav-card-body {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--oq-ink);
+}
+
+.app-shell[data-app-id="oddity"] .oq-fav-dual {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 10px;
+    border-radius: var(--oq-radius-sm);
+    background: var(--oq-surface-2);
+}
+
+.app-shell[data-app-id="oddity"] .oq-fav-dual-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 12.5px;
+}
+
+.app-shell[data-app-id="oddity"] .oq-fav-dual-label {
+    font-size: 10.5px;
+    font-weight: bold;
+    padding: 1px 5px;
+    border-radius: 4px;
+}
+
+.app-shell[data-app-id="oddity"] .oq-fav-dual-row.is-surface .oq-fav-dual-label {
+    background: rgba(0, 0, 0, 0.08);
+    color: #424242;
+}
+
+.app-shell[data-app-id="oddity"] .oq-fav-dual-row.is-deep .oq-fav-dual-label {
+    background: #212121;
+    color: #fff;
+}
+
+.app-shell[data-app-id="oddity"] .oq-fav-main-text {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.app-shell[data-app-id="oddity"] .oq-fav-card-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    border-top: 1px dashed var(--oq-line-soft);
+    padding-top: 8px;
+}
+
+.app-shell[data-app-id="oddity"] .oq-btn-svg {
+    width: 14px;
+    height: 14px;
+}
+
+.app-shell[data-app-id="oddity"] .oq-fav-empty {
+    padding: 50px 20px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="oddity"] .oq-fav-empty-icon {
+    width: 44px;
+    height: 44px;
+    color: var(--oq-ink-faint);
+}
+
+.app-shell[data-app-id="oddity"] .oq-fav-empty-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--oq-ink-soft);
+}
+
+.app-shell[data-app-id="oddity"] .oq-fav-empty-hint {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--oq-ink-faint);
+    max-width: 260px;
+}
+
+/* ==========================================================================
+   13.5 匿名三件套 (回答箱 / 收信箱 / 漂流瓶)
+
+   三页共用一套皮。它们的内容形状本来就是一样的:一叠卡片,每张卡片顶上一行
+   代号和状态,中间一段话,底下几个小动作,展开是一串对话。
+
+   基调:纸。没有头像,没有气泡尾巴,没有 emoji —— 匿名的东西一旦有了脸就
+   不匿名了。灰度为主,只有「我」说的那一句借一点点 accent。
+   ========================================================================== */
+
+.app-shell[data-app-id="oddity"] .oq-anon {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-bottom: 8px;
+}
+
+/* 顶上那行小字:几封信 / 正在写 / 出错了 */
+.app-shell[data-app-id="oddity"] .oq-anon-status {
+    padding: 2px 2px 0;
+}
+.app-shell[data-app-id="oddity"] .oq-anon-status-line {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--oq-ink-faint);
+}
+.app-shell[data-app-id="oddity"] .oq-anon-status-line.is-busy { color: var(--oq-ink-soft); }
+.app-shell[data-app-id="oddity"] .oq-anon-status-line.is-bad { color: var(--oq-danger); }
+
+.app-shell[data-app-id="oddity"] .oq-anon-spin {
+    width: 9px;
+    height: 9px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    border: 1.5px solid var(--oq-line);
+    border-top-color: var(--oq-accent);
+    animation: oqSpin 0.8s linear infinite;
+}
+
+.app-shell[data-app-id="oddity"] .oq-anon-list {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+/* 一张卡 = 一个问题 / 一封信 */
+.app-shell[data-app-id="oddity"] .oq-anon-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 13px;
+    border-radius: var(--oq-radius);
+    background: var(--oq-surface);
+    border: 1px solid var(--oq-line-soft);
+    transition: border-color 0.16s var(--oq-ease);
+}
+.app-shell[data-app-id="oddity"] .oq-anon-card.is-open { border-color: var(--oq-line); }
+.app-shell[data-app-id="oddity"] .oq-anon-card.is-draft {
+    border-style: dashed;
+    background: var(--oq-surface-2);
+}
+
+.app-shell[data-app-id="oddity"] .oq-anon-card-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+/* 代号。等宽字,让「匿名 A / 匿名 K」看起来像编号而不像名字 */
+.app-shell[data-app-id="oddity"] .oq-anon-alias {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: var(--oq-ink-soft);
+}
+
+.app-shell[data-app-id="oddity"] .oq-anon-flag {
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    color: var(--oq-ink-faint);
+}
+
+.app-shell[data-app-id="oddity"] .oq-anon-ask {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.85;
+    letter-spacing: 0.02em;
+    color: var(--oq-ink);
+}
+/* 「我」寄出去的那封,左边一道细线,和别人问我的区分开 */
+.app-shell[data-app-id="oddity"] .oq-anon-ask.is-mine {
+    padding-left: 10px;
+    border-left: 2px solid color-mix(in srgb, var(--oq-accent) 55%, transparent);
+    color: var(--oq-ink-soft);
+}
+
+.app-shell[data-app-id="oddity"] .oq-anon-acts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding-top: 1px;
+}
+
+.app-shell[data-app-id="oddity"] .oq-anon-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.app-shell[data-app-id="oddity"] .oq-anon-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 9px;
+    padding: 44px 22px;
+    text-align: center;
+}
+.app-shell[data-app-id="oddity"] .oq-anon-empty-title {
+    margin: 0;
+    font-size: 14px;
+    letter-spacing: 0.14em;
+    color: var(--oq-ink-soft);
+}
+.app-shell[data-app-id="oddity"] .oq-anon-empty-hint {
+    margin: 0 0 4px;
+    font-size: 11.5px;
+    line-height: 2;
+    color: var(--oq-ink-faint);
+    max-width: 250px;
+}
+
+/* 对话串 */
+.app-shell[data-app-id="oddity"] .oq-thread {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding: 9px 0 2px;
+    border-top: 1px solid var(--oq-line-soft);
+}
+
+.app-shell[data-app-id="oddity"] .oq-thread-more {
+    align-self: flex-start;
+    border: none;
+    background: none;
+    padding: 0;
+    font-family: inherit;
+    font-size: 10.5px;
+    color: var(--oq-ink-faint);
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="oddity"] .oq-turn {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.app-shell[data-app-id="oddity"] .oq-turn-who {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--oq-ink-faint);
+}
+.app-shell[data-app-id="oddity"] .oq-turn-text {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.85;
+    color: var(--oq-ink-soft);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.app-shell[data-app-id="oddity"] .oq-turn.is-me .oq-turn-text {
+    color: var(--oq-ink);
+}
+
+/* 写字的地方 */
+.app-shell[data-app-id="oddity"] .oq-composer {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.app-shell[data-app-id="oddity"] .oq-composer-area {
+    resize: none;
+    line-height: 1.8;
+}
+.app-shell[data-app-id="oddity"] .oq-composer-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.app-shell[data-app-id="oddity"] .oq-composer-count {
+    font-size: 10.5px;
+    color: var(--oq-ink-faint);
+}
+.app-shell[data-app-id="oddity"] .oq-composer-acts { display: flex; gap: 6px; }
+
+/* `.oq-mini` 的皮在前面「小键」那一节,和面板里的那排共用同一套。 */
+
+/* ── 漂流瓶特有:一轮配对 ── */
+.app-shell[data-app-id="oddity"] .oq-bottle-round {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 13px;
+    border-radius: var(--oq-radius);
+    background: var(--oq-surface);
+    border: 1px solid var(--oq-line-soft);
+}
+
+.app-shell[data-app-id="oddity"] .oq-bottle-round-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.app-shell[data-app-id="oddity"] .oq-bottle-round-title {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--oq-ink-soft);
+}
+
+.app-shell[data-app-id="oddity"] .oq-bottle-map {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/*
+   一行 = 一次投递。左边一根竖线把整轮串起来,看着像一条洋流。
+   `data-tone` 有三档:mine(我扔的)、got(漂到我这儿的)、other(与我无关)。
+   与我有关的两档才点亮,其余压暗 —— 一轮十几行,不压暗会糊成一片。
+*/
+.app-shell[data-app-id="oddity"] .oq-bottle-line {
+    position: relative;
+    padding-left: 13px;
+}
+.app-shell[data-app-id="oddity"] .oq-bottle-line::before {
+    content: '';
+    position: absolute;
+    left: 3px;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--oq-line-soft);
+}
+.app-shell[data-app-id="oddity"] .oq-bottle-line:first-child::before { top: 50%; }
+.app-shell[data-app-id="oddity"] .oq-bottle-line:last-child::before { bottom: 50%; }
+.app-shell[data-app-id="oddity"] .oq-bottle-line::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    margin-top: -3.5px;
+    border-radius: 50%;
+    border: 1px solid var(--oq-line);
+    background: var(--oq-surface);
+}
+.app-shell[data-app-id="oddity"] .oq-bottle-line[data-tone="mine"]::after,
+.app-shell[data-app-id="oddity"] .oq-bottle-line[data-tone="got"]::after {
+    border-color: var(--oq-accent);
+    background: var(--oq-accent);
+}
+
+.app-shell[data-app-id="oddity"] .oq-bottle-line-btn {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    text-align: left;
+    border: none;
+    background: none;
+    font-family: inherit;
+    padding: 7px 2px;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="oddity"] .oq-bottle-line-text {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--oq-ink-faint);
+}
+.app-shell[data-app-id="oddity"] .oq-bottle-line[data-tone="mine"] .oq-bottle-line-text,
+.app-shell[data-app-id="oddity"] .oq-bottle-line[data-tone="got"] .oq-bottle-line-text {
+    color: var(--oq-ink);
+}
+
+.app-shell[data-app-id="oddity"] .oq-bottle-line-mark {
+    flex: 0 0 auto;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--oq-ink-faint);
+}
+
+/* 拆开面板里那张便条 */
+.app-shell[data-app-id="oddity"] .oq-bottle-note {
+    padding: 12px 13px;
+    border-radius: var(--oq-radius-sm);
+    background: var(--oq-surface-2);
+    border: 1px solid var(--oq-line-soft);
+}
+.app-shell[data-app-id="oddity"] .oq-bottle-note-text {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.9;
+    color: var(--oq-ink);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* 说明块 `.oq-panel-list` 的皮在前面「小浮窗」那一节。 */
+
+/* ==========================================================================
+   14. 弹窗 / 配色列表 / 提示
+   ========================================================================== */
+
+/* ★ OqModal 把 class 透传到根元素 `.ac-overlay`,不是 `.ac-modal` ——
+   业务钩子一律写后代选择器。
+   ★ 框架给 `.ac-overlay` 的是 z-index 9999。在这个 App 里必须压下来:
+     `.app-bottom`(home 指示条)是 6,被盖住就退不出 App(AGENTS.md §5)。
+     oq-modal.js 的注释里一直写着「压制写在 index.css」,但这条其实一直没写。 */
+.app-shell[data-app-id="oddity"] .oq-modal.ac-overlay { z-index: 5; }
+
+.app-shell[data-app-id="oddity"] .oq-modal .ac-modal {
+    background: var(--oq-surface);
+    color: var(--oq-ink);
+    border-radius: var(--oq-radius);
+}
+.app-shell[data-app-id="oddity"] .oq-modal .ac-modal-body { color: var(--oq-ink); }
+
+.app-shell[data-app-id="oddity"] .oq-themelist { display: flex; flex-direction: column; gap: 8px; }
+
+.app-shell[data-app-id="oddity"] .oq-themerow {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 10px 12px;
+    border: 1px solid var(--oq-line);
+    border-radius: var(--oq-radius-sm);
+    background: var(--oq-surface-2);
+    color: var(--oq-ink);
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.app-shell[data-app-id="oddity"] .oq-themerow.is-active { border-color: var(--oq-accent); }
+
+.app-shell[data-app-id="oddity"] .oq-themerow-swatch {
+    flex: 0 0 auto;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 1px solid var(--oq-line);
+}
+.app-shell[data-app-id="oddity"] .oq-themerow[data-theme="morandi"] .oq-themerow-swatch { background: linear-gradient(135deg, #8fa9a3 0 50%, #c8a19c 50% 100%); }
+.app-shell[data-app-id="oddity"] .oq-themerow[data-theme="ink"] .oq-themerow-swatch { background: linear-gradient(135deg, #8d8f88 0 50%, #b3a49c 50% 100%); }
+.app-shell[data-app-id="oddity"] .oq-themerow[data-theme="dusk"] .oq-themerow-swatch { background: linear-gradient(135deg, #33353f 0 50%, #c08f8a 50% 100%); }
+
+.app-shell[data-app-id="oddity"] .oq-themerow-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.app-shell[data-app-id="oddity"] .oq-themerow-name { font-size: 13px; font-weight: 600; }
+.app-shell[data-app-id="oddity"] .oq-themerow-desc { font-size: 11px; color: var(--oq-ink-faint); }
+
+/* 提示条。★ z-index 5 —— 仍然 < `.app-bottom` 的 6 */
+.app-shell[data-app-id="oddity"] .oq-toast {
+    position: absolute;
+    left: 50%;
+    bottom: calc(96px + var(--app-safe-bottom, 0px));
+    transform: translateX(-50%);
+    z-index: 5;
+    max-width: 82%;
+    margin: 0;
+    padding: 9px 17px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--oq-ink) 94%, transparent);
+    color: var(--oq-surface);
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    text-align: center;
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="oddity"] .oq-toast-enter-active,
+.app-shell[data-app-id="oddity"] .oq-toast-leave-active { transition: opacity 0.22s var(--oq-ease), transform 0.22s var(--oq-ease); }
+.app-shell[data-app-id="oddity"] .oq-toast-enter-from,
+.app-shell[data-app-id="oddity"] .oq-toast-leave-to { opacity: 0; transform: translate(-50%, 10px); }
+
+/* ==========================================================================
+   15. 窄屏兜底
+   ========================================================================== */
+
+@media (max-width: 340px) {
+    .app-shell[data-app-id="oddity"] .oq-ms-axis-x { grid-template-columns: 15px repeat(9, 1fr); gap: 2px; }
+    .app-shell[data-app-id="oddity"] .oq-ms-body { grid-template-columns: 15px 1fr; gap: 2px; }
+    .app-shell[data-app-id="oddity"] .oq-ms-grid { gap: 2px; }
+    .app-shell[data-app-id="oddity"] .oq-ms-num { font-size: 12px; }
+}
+
+/* color-mix 不支持时的兜底（老 iOS） */
+@supports not (background: color-mix(in srgb, red 50%, white)) {
+    .app-shell[data-app-id="oddity"] .oq-tabbar-shell { background: rgba(251, 249, 246, 0.92); }
+    .app-shell[data-app-id="oddity"] .oq-slimbar { background: rgba(251, 249, 246, 0.82); }
+    .app-shell[data-app-id="oddity"] .oq-toast { background: rgba(91, 84, 80, 0.94); }
+    .app-shell[data-app-id="oddity"] .oq-jelly-bubble { background: rgba(251, 249, 246, 0.94); }
+}
+
+/* ==========================================================================
+   16. 顶栏动作键（提示词库 / 游戏数据概要）
+   ========================================================================== */
+
+.app-shell[data-app-id="oddity"] .oq-topbar-acts {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+.app-shell[data-app-id="oddity"] .oq-topbar-act {
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--oq-line);
+    border-radius: 50%;
+    background: var(--oq-surface);
+    color: var(--oq-ink-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+}
+.app-shell[data-app-id="oddity"] .oq-topbar-act .oq-icon { --oq-icon-size: 15px; }
+
+/* 非沉浸页(「捏」)的工具入口。抽屉开着的时候这个键要亮,
+   否则用户不知道刚才那一下按到了没有。 */
+.app-shell[data-app-id="oddity"] .oq-topbar-act.is-active {
+    background: var(--oq-accent);
+    border-color: var(--oq-accent);
+    color: var(--oq-surface);
+}
+
+/* ==========================================================================
+   17. 开局挑对手
+   ========================================================================== */
+
+.app-shell[data-app-id="oddity"] .oq-seatmodes {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 11px;
+}
+.app-shell[data-app-id="oddity"] .oq-seatmode {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    text-align: left;
+    border: 1px solid var(--oq-line);
+    background: var(--oq-surface-2);
+    color: var(--oq-ink);
+    font-family: inherit;
+    padding: 10px 12px;
+    border-radius: var(--oq-radius-sm);
+    cursor: pointer;
+    transition: border-color 0.16s var(--oq-ease), background 0.16s var(--oq-ease);
+}
+.app-shell[data-app-id="oddity"] .oq-seatmode b { font-size: 13px; font-weight: 600; }
+.app-shell[data-app-id="oddity"] .oq-seatmode i { font-style: normal; font-size: 10.5px; color: var(--oq-ink-faint); line-height: 1.55; }
+.app-shell[data-app-id="oddity"] .oq-seatmode.is-on { border-color: var(--oq-accent-deep); background: var(--oq-p1-mist); }
+.app-shell[data-app-id="oddity"] .oq-seatmode.is-off { opacity: 0.55; }
+.app-shell[data-app-id="oddity"] .oq-hy-picker { margin-bottom: 11px; }
+.app-shell[data-app-id="oddity"] .oq-seatmodes + .oq-btn,
+.app-shell[data-app-id="oddity"] .oq-hy-picker + .oq-btn { margin-top: 2px; }
+
+/* ==========================================================================
+   18. 五子棋
+   ========================================================================== */
+
+.app-shell[data-app-id="oddity"] .oq-go { position: relative; }
+
+/* 棋盘:一块木色底 + 每格画右/下边线拼成网格。
+   格子是「交叉点」的容器,棋子圆片盖在中间。 */
+.app-shell[data-app-id="oddity"] .oq-go-board {
+    --oq-go-size: 15;
+    display: grid;
+    grid-template-columns: repeat(var(--oq-go-size), 1fr);
+    width: 100%;
+    aspect-ratio: 1;
+    padding: 4px;
+    border-radius: var(--oq-radius-sm);
+    background: var(--oq-go-wood, #e8d5b5);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08), inset 0 -2px 0 rgba(0, 0, 0, 0.05);
+    touch-action: manipulation;
+}
+.app-shell[data-app-id="oddity"] .oq-go-cell {
+    position: relative;
+    border: none;
+    padding: 0;
+    background: transparent;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+/* 网格线:横竖各一条细线穿过格子中心 */
+.app-shell[data-app-id="oddity"] .oq-go-cell::before,
+.app-shell[data-app-id="oddity"] .oq-go-cell::after {
+    content: '';
+    position: absolute;
+    background: rgba(0, 0, 0, 0.22);
+    pointer-events: none;
+}
+.app-shell[data-app-id="oddity"] .oq-go-cell::before {
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 1px;
+    transform: translateY(-0.5px);
+}
+.app-shell[data-app-id="oddity"] .oq-go-cell::after {
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 1px;
+    transform: translateX(-0.5px);
+}
+/* 边缘的线只画到中心为止 —— 棋盘外圈不能有出头线 */
+.app-shell[data-app-id="oddity"] .oq-go-cell:nth-child(15n + 1)::before { left: 50%; }
+.app-shell[data-app-id="oddity"] .oq-go-cell:nth-child(15n)::before { right: 50%; }
+.app-shell[data-app-id="oddity"] .oq-go-cell:nth-child(-n + 15)::after { top: 50%; }
+.app-shell[data-app-id="oddity"] .oq-go-cell:nth-last-child(-n + 15)::after { bottom: 50%; }
+
+/* 棋子 */
+.app-shell[data-app-id="oddity"] .oq-go-stone {
+    position: absolute;
+    inset: 12%;
+    border-radius: 50%;
+    z-index: 1;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: opacity 0.14s var(--oq-ease), transform 0.14s var(--oq-ease);
+    pointer-events: none;
+}
+.app-shell[data-app-id="oddity"] .oq-go-cell.has-stone .oq-go-stone { opacity: 1; transform: scale(1); }
+.app-shell[data-app-id="oddity"] .oq-go-cell.is-black .oq-go-stone {
+    background: radial-gradient(circle at 32% 28%, #6b6b6b, #191919 68%);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+.app-shell[data-app-id="oddity"] .oq-go-cell.is-white .oq-go-stone {
+    background: radial-gradient(circle at 32% 28%, #ffffff, #d9d4cc 72%);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.28), inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+/* 最后一手:描个圈 */
+.app-shell[data-app-id="oddity"] .oq-go-cell.is-last .oq-go-stone {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 0 0 2px var(--oq-accent-deep);
+}
+/* 赢的那条五连:整条亮起 */
+.app-shell[data-app-id="oddity"] .oq-go-cell.is-winline .oq-go-stone {
+    box-shadow: 0 0 0 2.5px var(--oq-danger), 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+.app-shell[data-app-id="oddity"] .oq-go-board.is-locked .oq-go-cell { cursor: default; }
+
+/* 座位行里的执子标记 */
+.app-shell[data-app-id="oddity"] .oq-go-stonemark {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+}
+.app-shell[data-app-id="oddity"] .oq-go-stonemark[data-stone="black"] {
+    background: radial-gradient(circle at 32% 28%, #6b6b6b, #191919 68%);
+}
+.app-shell[data-app-id="oddity"] .oq-go-stonemark[data-stone="white"] {
+    background: radial-gradient(circle at 32% 28%, #ffffff, #d9d4cc 72%);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.14);
+}
+
+/* dusk(暗底)下网格线要亮一点才看得见 */
+.app-shell[data-app-id="oddity"][data-oq-theme="dusk"] .oq-go-cell::before,
+.app-shell[data-app-id="oddity"][data-oq-theme="dusk"] .oq-go-cell::after,
+.app-shell[data-app-id="oddity"] [data-oq-theme="dusk"] .oq-go-cell::before,
+.app-shell[data-app-id="oddity"] [data-oq-theme="dusk"] .oq-go-cell::after { background: rgba(255, 255, 255, 0.2); }
+
+/* ==========================================================================
+   19. 分享到 murmur
+   ========================================================================== */
+
+.app-shell[data-app-id="oddity"] .oq-sharelist {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    max-height: 250px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.app-shell[data-app-id="oddity"] .oq-sharerow {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    text-align: left;
+    border: 1px solid var(--oq-line);
+    background: var(--oq-surface-2);
+    color: var(--oq-ink);
+    font-family: inherit;
+    padding: 9px 12px;
+    border-radius: var(--oq-radius-sm);
+    cursor: pointer;
+}
+.app-shell[data-app-id="oddity"] .oq-sharerow.is-on { border-color: var(--oq-accent-deep); background: var(--oq-p1-mist); }
+.app-shell[data-app-id="oddity"] .oq-sharerow-name { font-size: 13px; font-weight: 600; }
+.app-shell[data-app-id="oddity"] .oq-sharerow-sub {
+    font-size: 10.5px;
+    color: var(--oq-ink-faint);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ==========================================================================
+   20. 提示词库
+   ========================================================================== */
+
+.app-shell[data-app-id="oddity"] .oq-plib {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    max-height: 380px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.app-shell[data-app-id="oddity"] .oq-plib-hint {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.7;
+    color: var(--oq-ink-faint);
+}
+.app-shell[data-app-id="oddity"] .oq-plib-empty {
+    font-size: 12px;
+    color: var(--oq-ink-faint);
+    text-align: center;
+    padding: 10px 0;
+}
+.app-shell[data-app-id="oddity"] .oq-plib-row {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    border: 1px solid var(--oq-line);
+    border-radius: var(--oq-radius-sm);
+    background: var(--oq-surface-2);
+    padding: 10px 12px;
+}
+.app-shell[data-app-id="oddity"] .oq-plib-row.is-off { opacity: 0.55; }
+.app-shell[data-app-id="oddity"] .oq-plib-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.app-shell[data-app-id="oddity"] .oq-plib-title { font-size: 12.5px; font-weight: 600; }
+.app-shell[data-app-id="oddity"] .oq-plib-body {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--oq-ink-soft);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.app-shell[data-app-id="oddity"] .oq-plib-acts {
+    display: flex;
+    justify-content: flex-end;
+    gap: 7px;
+}
+.app-shell[data-app-id="oddity"] .oq-plib-textarea {
+    width: 100%;
+    border: 1px solid var(--oq-line);
+    border-radius: var(--oq-radius-sm);
+    background: var(--oq-surface);
+    color: var(--oq-ink);
+    font-family: inherit;
+    font-size: 12.5px;
+    line-height: 1.7;
+    padding: 9px 11px;
+    resize: vertical;
+    outline: none;
+}
+.app-shell[data-app-id="oddity"] .oq-plib-textarea:focus { border-color: var(--oq-accent-deep); }
+
+/* ==========================================================================
+   21. 游戏数据概要
+   ========================================================================== */
+
+.app-shell[data-app-id="oddity"] .oq-scorelist {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 380px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.app-shell[data-app-id="oddity"] .oq-scorerow {
+    border: 1px solid var(--oq-line);
+    border-radius: var(--oq-radius-sm);
+    background: var(--oq-surface-2);
+    padding: 9px 12px;
+}
+.app-shell[data-app-id="oddity"] .oq-scorerow-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+.app-shell[data-app-id="oddity"] .oq-scorerow-head b { font-size: 12.5px; font-weight: 600; }
+.app-shell[data-app-id="oddity"] .oq-scorerow-when { font-size: 10px; color: var(--oq-ink-faint); }
+.app-shell[data-app-id="oddity"] .oq-scorerow-body {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
+    margin-top: 4px;
+    font-size: 11.5px;
+    color: var(--oq-ink-soft);
+}
+.app-shell[data-app-id="oddity"] .oq-scorerow-seat.is-win { color: var(--oq-ink); font-weight: 600; }
+.app-shell[data-app-id="oddity"] .oq-scorerow-note { font-size: 10.5px; color: var(--oq-ink-faint); }

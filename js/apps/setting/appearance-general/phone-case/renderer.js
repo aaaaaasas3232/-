@@ -13,7 +13,7 @@
  */
 
 import { escapeHtml } from '@/src/core/escape.js';
-import { buildBackground, normalizeHex, isGradient } from './state.js';
+import { buildBackground, normalizeHex } from './state.js';
 import {
     SOLID_PRESETS,
     GRADIENT_PRESETS,

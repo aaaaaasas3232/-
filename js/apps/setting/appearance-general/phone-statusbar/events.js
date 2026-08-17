@@ -17,7 +17,7 @@
  *                这里不需要额外动作，仅做接口占位（未来若要加 transition / 动效 在这里加）。
  */
 
-import { getState, setState } from './state.js';
+import { setState } from './state.js';
 
 // ============================================
 // 回调管理

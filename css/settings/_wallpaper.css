@@ -179,7 +179,7 @@
     justify-content: center;
     gap: 5px;
     background: var(--settings-color-fill-tertiary);
-    color: var(--settings-color-label);
+    color: var(--settings-color-secondary);
     border: 0;
     border-radius: 8px;
     padding: 6px;
@@ -198,7 +198,7 @@
 
 .settings-app .sw-upload-btn:hover {
     background: var(--settings-color-fill-secondary);
-    color: var(--settings-color-blue);
+    color: var(--settings-color-secondary);
 }
 
 .settings-app .sw-file-input {

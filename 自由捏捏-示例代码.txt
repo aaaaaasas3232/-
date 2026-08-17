@@ -1,0 +1,677 @@
+════════════════════════════════════════════════════════════
+  「我的捏捏」示例代码
+════════════════════════════════════════════════════════════
+
+编辑页最上面那栏「做法」有三档,自由度依次递增:
+
+  格子板   只写一格的样子,板子自动复制铺满。气泡纸、巧克力那种。
+  自由做   整块画一个东西,不复制。交互靠 data-hb 标记,不写 JS。
+           摇杆、鼠标、旋钮、控制盒都属于这一档。
+  写代码   HTML + CSS + JS 三样全放开,跑在一个隔离的沙箱里。
+           想做什么做什么 —— 有物理、有随机、有累积状态的东西只能用这档。
+
+本文件里:例 1~3 是「自由做」,例 4~5 是「写代码」。
+
+
+────────────────────────────────────────
+怎么用这个文件
+────────────────────────────────────────
+
+1. 解压角 →「捏捏」→ 点「我的捏捏」→ 点「写 HTML / 换模板」
+2. 最上面那栏「做法」,选对应的那一档(每个例子标题上写了)
+3. 从下面挑一个例子,把它下面的那几个 ``` 代码块整段选中复制
+   (连着 ``` 一起复制没关系,不用自己拆)
+4. 切到「让 AI 帮忙」那一栏,拉到最下面的「把 AI 的回复贴回来」,
+   粘进去,点「拆开填进编辑器」
+5. 会自动跳回「改代码」。预览那块是**真的能玩的** —— 直接在编辑页里试
+   (「写代码」那档改完 JS 要自己点一下「重新运行」)
+6. 满意了点「应用到主体」,再点左上角「返回」
+
+
+════════════════════════════════════════════════════════════
+  第一部分:自由做
+════════════════════════════════════════════════════════════
+
+────────────────────────────────────────
+五种零件(打在自己的元素上)
+────────────────────────────────────────
+
+data-hb="press"    按钮。按住给 --hb-p(0/1),按住时加 .is-press
+data-hb="toggle"   开关。点一下翻面,给 --hb-on,加 .is-on。会存档
+data-hb="stick"    摇杆。拖动给 --hb-x / --hb-y(-1~1),松手自动回中
+data-hb="slide"    滑块。拖动给 --hb-x / --hb-y(0~1),停在原地。会存档
+data-hb="dial"     旋钮。绕中心转,给 --hb-deg(累计角度)。会存档
+
+拖动中的零件会带 .is-active。
+
+
+────────────────────────────────────────
+三条最容易踩的坑
+────────────────────────────────────────
+
+1. 变量都是**纯数字**,自己乘单位,而且要带兜底值:
+       transform: rotate(calc(var(--hb-deg, 0) * 1deg));
+       transform: translateX(calc(var(--hb-x, 0) * 50%));
+   不带兜底的话第一帧变量还没写进去,整个 calc 会失效。
+
+2. 盖在零件上面的装饰层,一律写 pointer-events: none。
+   高光、刻度、中缝这些挡住手指的话,那块就「怎么按都没反应」。
+
+3. 摇杆的 data-hb 打在**底座**上,不是帽子上;帽子要 pointer-events: none。
+   而且 .is-active 时要把帽子的 transition 关掉,否则手指走一步、帽子晚半拍。
+
+
+────────────────────────────────────────
+还能加的属性
+────────────────────────────────────────
+
+data-id="left"        给零件起名。存档按它对号入座,别的元素也能读到
+                      镜像变量 var(--hb-left)。**建议每个都写**
+data-axis="x|y|xy"    只给 slide,选能拖的方向。默认 xy
+data-step="0.1"       每走这么多响一下。slide 填 0~1 的比例,
+                      dial 填角度,stick 填方向数(比如 8)
+data-wrap             只给 slide。拖到头从另一头绕回来(滚轮靠它)
+data-gain="0.4"       只给 slide。零件很小就调小,不然一碰到底
+data-min / data-max   只给 dial。限位,单位是度
+data-once             只给 press。按过一次永久留 .is-popped,存档
+data-hold             只给 press。按住不放一直出声一直震
+data-release          只给 press。松手再响一声
+data-rate="1.3"       这个零件的音调。1 是原声
+data-mute             这个零件不出声
+data-heavy            震得重一点
+
+
+────────────────────────────────────────
+能直接用的其他变量
+────────────────────────────────────────
+
+--hb-unit             这块区域的短边长度(带 px)。所有尺寸都从它算,
+                      别写死 px,也别用 width:70% + height:70% 撑圆形
+--htmlbubble-tint     用户在「捏捏」面板里选的主题色
+--rx-ease-bounce      全局的弹性缓动曲线,做回弹用它
+
+
+════════════════════════════════════════════════════════════
+  例 1 · 最小按钮   〔自由做〕
+  用到:press
+  玩法:按下去会陷进去,松手弹回来
+  先拿这个把 --hb-p 搞明白,后面都是它的变奏
+════════════════════════════════════════════════════════════
+
+```html
+<div class="mn-btn" data-hb="press" data-id="btn" data-release></div>
+```
+
+```css
+.mn-btn {
+    width: calc(var(--hb-unit, 280px) * .42);
+    height: calc(var(--hb-unit, 280px) * .42);
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 36% 28%, rgba(255,255,255,.95), transparent 52%),
+        radial-gradient(circle at 50% 62%,
+            color-mix(in srgb, var(--htmlbubble-tint) 88%, #fff),
+            color-mix(in srgb, var(--htmlbubble-tint) 44%, #7c4f60));
+    box-shadow:
+        0 9px 0 color-mix(in srgb, var(--htmlbubble-tint) 26%, #4a3742),
+        0 16px 24px rgba(0,0,0,.26);
+    /* --hb-p 按住是 1,松开是 0 */
+    transform: translateY(calc(var(--hb-p, 0) * 7px));
+    filter: brightness(calc(1 - var(--hb-p, 0) * .1));
+    transition: transform .09s ease, filter .09s ease;
+}
+```
+
+
+════════════════════════════════════════════════════════════
+  例 2 · 游戏手柄   〔自由做〕
+  用到:stick + press ×6
+  玩法:左边摇杆拖着走、松手回中;右边四个键各按各的;
+        上面两个肩键震得更重;中间的灯在按 A 或 B 时亮
+  这个例子专门演示「镜像变量」—— 灯不是按键的子元素,
+  靠 var(--hb-a) / var(--hb-b) 隔空读到按键状态
+════════════════════════════════════════════════════════════
+
+```html
+<div class="gp-body">
+    <span class="gp-lb" data-hb="press" data-id="lb" data-rate="0.7" data-heavy></span>
+    <span class="gp-rb" data-hb="press" data-id="rb" data-rate="0.75" data-heavy></span>
+    <span class="gp-led"></span>
+
+    <div class="gp-stick" data-hb="stick" data-id="stick" data-step="8">
+        <span class="gp-knob"></span>
+    </div>
+
+    <div class="gp-face">
+        <span class="gp-key gp-y" data-hb="press" data-id="y" data-release data-rate="1.45"></span>
+        <span class="gp-key gp-x" data-hb="press" data-id="x" data-release data-rate="1.25"></span>
+        <span class="gp-key gp-b" data-hb="press" data-id="b" data-release data-rate="1.05"></span>
+        <span class="gp-key gp-a" data-hb="press" data-id="a" data-release data-rate="0.9"></span>
+    </div>
+</div>
+```
+
+```css
+.gp-body {
+    position: relative;
+    width: calc(var(--hb-unit, 280px) * .95);
+    height: calc(var(--hb-unit, 280px) * .56);
+    border-radius: 44% 44% 38% 38% / 32% 32% 46% 46%;
+    background:
+        radial-gradient(90% 70% at 50% 4%, rgba(255,255,255,.5), transparent 58%),
+        linear-gradient(170deg, #6d6270 0%, #3c3441 100%);
+    box-shadow:
+        inset 0 3px 6px rgba(255,255,255,.2),
+        inset 0 -10px 20px rgba(0,0,0,.42),
+        0 16px 28px rgba(40,30,42,.4);
+}
+
+/* ---- 肩键:探出机身上沿 ---- */
+.gp-lb,
+.gp-rb {
+    position: absolute;
+    top: -4%;
+    width: 30%;
+    height: 11%;
+    border-radius: 40% 40% 6px 6px / 90% 90% 6px 6px;
+    background: linear-gradient(180deg, #877b94 0%, #4a4150 100%);
+    box-shadow: 0 -2px 5px rgba(0,0,0,.3);
+    transform: translateY(calc(var(--hb-p, 0) * 4px));
+    transition: transform .08s ease;
+}
+.gp-lb { left: 4%; }
+.gp-rb { right: 4%; }
+
+/* ---- 摇杆:data-hb 打在底座上 ---- */
+.gp-stick {
+    position: absolute;
+    left: 10%;
+    top: 28%;
+    width: 31%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 26%, #241f2b, #453c4c 66%, #5b5165);
+    box-shadow: inset 0 5px 11px rgba(0,0,0,.62), 0 1px 2px rgba(255,255,255,.12);
+}
+
+.gp-knob {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 62%;
+    height: 62%;
+    margin: -31% 0 0 -31%;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 36% 26%, #fff 0%, rgba(255,255,255,.5) 18%, transparent 52%),
+        radial-gradient(circle at 50% 62%,
+            color-mix(in srgb, var(--htmlbubble-tint) 50%, #6d4756),
+            color-mix(in srgb, var(--htmlbubble-tint) 92%, #fff));
+    box-shadow: 0 5px 10px rgba(0,0,0,.48), inset 0 -3px 7px rgba(90,55,70,.3);
+    /* -1 ~ 1,乘个百分比就是帽子能走多远 */
+    transform: translate(calc(var(--hb-x, 0) * 38%), calc(var(--hb-y, 0) * 38%));
+    transition: transform .32s var(--rx-ease-bounce);
+    pointer-events: none;
+}
+
+/* 拖动中不要过渡,不然跟不上手指 */
+.gp-stick.is-active .gp-knob { transition: none; }
+
+/* ---- ABXY:菱形排布 ---- */
+.gp-face {
+    position: absolute;
+    right: 8%;
+    top: 22%;
+    width: 35%;
+    aspect-ratio: 1;
+}
+
+.gp-key {
+    position: absolute;
+    width: 40%;
+    height: 40%;
+    border-radius: 50%;
+    box-shadow: 0 3px 0 rgba(0,0,0,.34), 0 6px 9px rgba(0,0,0,.3);
+    transform: translateY(calc(var(--hb-p, 0) * 3px));
+    filter: brightness(calc(1 - var(--hb-p, 0) * .18));
+    transition: transform .08s ease, filter .08s ease;
+}
+.gp-y { left: 30%; top: 0;      background: radial-gradient(circle at 36% 30%, #fff8b4, #d6ae35); }
+.gp-x { left: 0;   top: 30%;    background: radial-gradient(circle at 36% 30%, #c2e1ff, #4b8ed6); }
+.gp-b { right: 0;  top: 30%;    background: radial-gradient(circle at 36% 30%, #ffc3c3, #d55555); }
+.gp-a { left: 30%; bottom: 0;   background: radial-gradient(circle at 36% 30%, #c6f1ca, #4da75d); }
+
+/* ---- 指示灯:读 A / B 的镜像变量 ---- */
+.gp-led {
+    position: absolute;
+    left: 50%;
+    top: 13%;
+    width: 13%;
+    height: 5px;
+    margin-left: -6.5%;
+    border-radius: 999px;
+    background: #7cf5a0;
+    opacity: calc(.18 + max(var(--hb-a, 0), var(--hb-b, 0)) * .82);
+    box-shadow: 0 0 calc(max(var(--hb-a, 0), var(--hb-b, 0)) * 15px) rgba(124,245,160,.9);
+    transition: opacity .1s ease, box-shadow .1s ease;
+    pointer-events: none;
+}
+```
+
+
+════════════════════════════════════════════════════════════
+  例 3 · 调音台   〔自由做〕
+  用到:slide ×3 + dial + toggle
+  玩法:三根推子上下推(每走一格咔一下);右上旋钮绕着转,每 20 度一格;
+        右下电源键点一下开关。顶上的电平条 = 电源开着 + 推子推得越高越亮
+  这个例子演示 slide / dial / toggle 三种「会存档」的零件:
+  推到哪、转到哪、开没开,退出再进来还是那样
+════════════════════════════════════════════════════════════
+
+```html
+<div class="mx-desk">
+    <span class="mx-meter"></span>
+
+    <div class="mx-strip">
+        <span class="mx-fader" data-hb="slide" data-id="f1" data-axis="y" data-step="0.08" data-rate="1.5"><i></i></span>
+        <span class="mx-fader" data-hb="slide" data-id="f2" data-axis="y" data-step="0.08" data-rate="1.3"><i></i></span>
+        <span class="mx-fader" data-hb="slide" data-id="f3" data-axis="y" data-step="0.08" data-rate="1.1"><i></i></span>
+    </div>
+
+    <div class="mx-right">
+        <span class="mx-knob" data-hb="dial" data-id="gain" data-step="20" data-rate="1.8"><i></i></span>
+        <span class="mx-power" data-hb="toggle" data-id="pw" data-rate="0.9"></span>
+    </div>
+</div>
+```
+
+```css
+.mx-desk {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8%;
+    width: calc(var(--hb-unit, 280px) * .84);
+    height: calc(var(--hb-unit, 280px) * .84);
+    padding: 15% 8% 9%;
+    box-sizing: border-box;
+    border-radius: 20px 22px 18px 20px;
+    background: linear-gradient(165deg, #4d4653 0%, #2b2632 100%);
+    box-shadow:
+        inset 0 2px 4px rgba(255,255,255,.14),
+        inset 0 -7px 15px rgba(0,0,0,.45),
+        0 14px 26px rgba(30,24,34,.4);
+}
+
+/* ---- 推子 ---- */
+.mx-strip {
+    display: flex;
+    gap: 13%;
+}
+
+.mx-fader {
+    position: relative;
+    flex: 1;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #1c1821 0%, #362f3d 100%);
+    box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.07), inset 0 3px 7px rgba(0,0,0,.6);
+}
+
+/* ★ --hb-y 跟屏幕坐标同向:0 在顶上,往下拖变大 */
+.mx-fader i {
+    position: absolute;
+    left: -24%;
+    right: -24%;
+    height: 12%;
+    top: calc(var(--hb-y, 0) * 88%);
+    border-radius: 5px;
+    background: linear-gradient(180deg, #fffaf6 0%, #ab9da4 100%);
+    box-shadow: 0 4px 8px rgba(0,0,0,.5);
+    pointer-events: none;
+}
+
+.mx-fader.is-active i {
+    background: linear-gradient(180deg, #fff 0%,
+        color-mix(in srgb, var(--htmlbubble-tint) 70%, #9c8d94) 100%);
+}
+
+/* ---- 旋钮 + 电源 ---- */
+.mx-right {
+    display: grid;
+    gap: 18%;
+    align-content: center;
+    justify-items: center;
+}
+
+.mx-knob {
+    position: relative;
+    width: calc(var(--hb-unit, 280px) * .21);
+    height: calc(var(--hb-unit, 280px) * .21);
+    border-radius: 50%;
+    background: conic-gradient(from 0deg,
+        #e8dcd6, #b6a7a1 14%, #f0e6e0 30%, #b1a29c 48%,
+        #ede3dd 66%, #b8a9a3 84%, #e8dcd6);
+    box-shadow:
+        0 5px 11px rgba(0,0,0,.4),
+        inset 0 -3px 7px rgba(0,0,0,.26),
+        inset 0 3px 6px rgba(255,255,255,.72);
+    /* 累计角度是纯数字,自己乘 1deg */
+    transform: rotate(calc(var(--hb-deg, 0) * 1deg));
+    transition: transform .07s linear;
+}
+
+.mx-knob.is-active { transition: none; }
+
+.mx-knob i {
+    position: absolute;
+    left: 50%;
+    top: 9%;
+    width: 8%;
+    height: 28%;
+    margin-left: -4%;
+    border-radius: 999px;
+    background: #443a41;
+    pointer-events: none;
+}
+
+.mx-power {
+    width: calc(var(--hb-unit, 280px) * .13);
+    height: calc(var(--hb-unit, 280px) * .13);
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 38% 30%, rgba(255,255,255,.75), transparent 50%),
+        #6b3947;
+    box-shadow: inset 0 2px 5px rgba(0,0,0,.5);
+    transition: background .18s ease, box-shadow .18s ease;
+}
+
+.mx-power.is-on {
+    background:
+        radial-gradient(circle at 38% 30%, rgba(255,255,255,.9), transparent 50%),
+        color-mix(in srgb, var(--htmlbubble-tint) 80%, #ff4d7a);
+    box-shadow: 0 0 13px color-mix(in srgb, var(--htmlbubble-tint) 70%, #ff4d7a);
+}
+
+/* ---- 电平条:电源 × 三根推子的平均高度 ---- */
+.mx-meter {
+    position: absolute;
+    left: 9%;
+    right: 9%;
+    top: 6%;
+    height: 5px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--htmlbubble-tint) 85%, #fff);
+    opacity: calc(
+        var(--hb-pw, 0) *
+        (.12 + (3 - var(--hb-f1-y, 0) - var(--hb-f2-y, 0) - var(--hb-f3-y, 0)) / 3 * .88)
+    );
+    transition: opacity .2s ease;
+    pointer-events: none;
+}
+```
+
+
+════════════════════════════════════════════════════════════
+  第二部分:写代码
+════════════════════════════════════════════════════════════
+
+这一档 HTML / CSS / JS 三样全放开,跑在一个 <iframe sandbox> 里。
+
+────────────────────────────────────────
+沙箱是什么意思
+────────────────────────────────────────
+
+你的代码在一个**独立的页面**里跑,和小听不同源。所以:
+
+  · 它读不到你的聊天记录、存档、界面 —— 就算是从别处粘来的代码也翻不到
+  · 它完全上不了网:fetch、外部图片、外部字体、CDN 上的库全都被拦
+  · 要出声、震动、存档,只能走下面这个 hb
+
+页面结构是固定的,外层不用你写:
+
+    <body>
+      <div id="stage">   ← 你的 HTML 放这儿,也就是 hb.el
+      </div>
+    </body>
+
+#stage 已经铺满画布、居中、清好边距、禁掉了长按选词。
+
+────────────────────────────────────────
+hb —— 和外面说话的唯一通道
+────────────────────────────────────────
+
+  hb.el                       你的容器(#stage)
+  hb.width / hb.height        画布当前像素尺寸
+  hb.unit                     画布短边,按比例算尺寸时用
+  hb.tint                     用户选的主题色;CSS 里是 var(--tint)
+  hb.sound({ rate })          播一次音,rate 是音调(1 是原声)
+  hb.haptic('light'|'medium'|'heavy')    震动
+  hb.notify(标题, 内容)       走顶上的灵动岛。别频繁调
+  hb.state                    存档对象,一进来就有值
+  hb.save({ 键: 值 })         写存档,浅合并 + 自动防抖
+  hb.on('resize', fn)         画布尺寸变了(canvas 要在这里重设宽高)
+  hb.on('tint', fn)           用户换了主题色
+
+CSS 里另有 var(--tint) 和 var(--hb-unit)。
+
+────────────────────────────────────────
+三条会让你踩坑的
+────────────────────────────────────────
+
+1. **绝对不要写 while(true) 或 for(;;)。**
+   沙箱和界面共用一个线程,死循环会把整个 App 卡死,只能杀掉重开
+   (存档不会丢,但当下什么都点不动)。要持续动画一律用
+   requestAnimationFrame。
+
+2. **一秒最多放 24 声。**
+   超了会被丢掉。别在每一帧里 hb.sound(),只在「真的发生了什么」时响。
+
+3. **canvas 记得乘 devicePixelRatio,并且在 hb.on('resize') 里重设宽高。**
+   不然在手机上是糊的,转屏之后还会错位。
+
+
+════════════════════════════════════════════════════════════
+  例 4 · 敲木鱼   〔写代码〕
+  玩法:点一下计一次数,数字显示在上面,退出再进来还接着数
+  最短的一个「有状态」例子,先拿它把 hb.state / hb.save 搞明白
+════════════════════════════════════════════════════════════
+
+```html
+<div class="wd-fish">
+    <span class="wd-num">0</span>
+</div>
+```
+
+```css
+.wd-fish {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: calc(var(--hb-unit, 280px) * .58);
+    height: calc(var(--hb-unit, 280px) * .5);
+    border-radius: 52% 48% 46% 54% / 60% 60% 40% 40%;
+    background:
+        radial-gradient(60% 45% at 34% 26%, rgba(255,255,255,.55), transparent 70%),
+        linear-gradient(165deg, #a9704a 0%, #7d4a2c 55%, #5e3520 100%);
+    box-shadow:
+        inset 0 -8px 16px rgba(0,0,0,.35),
+        inset 0 5px 12px rgba(255,255,255,.28),
+        0 12px 24px rgba(60,35,20,.38);
+    cursor: pointer;
+}
+
+/* 敲下去的那一下:压扁一点再弹回来 */
+.wd-fish.is-hit {
+    animation: wdHit .34s var(--rx-ease-bounce, cubic-bezier(.34,1.4,.64,1));
+}
+
+@keyframes wdHit {
+    0%   { transform: scale(1, 1); }
+    30%  { transform: scale(1.06, .9); }
+    62%  { transform: scale(.98, 1.03); }
+    100% { transform: scale(1, 1); }
+}
+
+.wd-num {
+    font-size: calc(var(--hb-unit, 280px) * .11);
+    font-weight: 700;
+    color: rgba(255,246,232,.9);
+    text-shadow: 0 2px 4px rgba(0,0,0,.4);
+    pointer-events: none;
+}
+```
+
+```js
+var fish = hb.el.querySelector('.wd-fish');
+var num = hb.el.querySelector('.wd-num');
+
+// 一进来先把存档读回来,记得给默认值
+var n = hb.state.n || 0;
+num.textContent = n;
+
+fish.addEventListener('pointerdown', function () {
+    n += 1;
+    num.textContent = n;
+
+    // 重播动画:先摘类、强制重排、再加回去
+    fish.classList.remove('is-hit');
+    void fish.offsetWidth;
+    fish.classList.add('is-hit');
+
+    hb.sound({ rate: 0.88 + Math.random() * 0.28 });
+    hb.haptic('medium');
+    hb.save({ n: n });
+
+    if (n % 108 === 0) hb.notify('功德 +1', '已经敲了 ' + n + ' 下');
+});
+```
+
+
+════════════════════════════════════════════════════════════
+  例 5 · 骰子   〔写代码〕
+  玩法:点一下开始翻,点数飞快乱跳,大约 0.7 秒后停在一个数上
+  这个例子演示 setInterval 做定时、随机数、以及「结果也要存下来」
+════════════════════════════════════════════════════════════
+
+```html
+<div class="dc-die"></div>
+```
+
+```css
+.dc-die {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 6%;
+    padding: 12%;
+    box-sizing: border-box;
+    width: calc(var(--hb-unit, 280px) * .52);
+    height: calc(var(--hb-unit, 280px) * .52);
+    border-radius: 22%;
+    background:
+        radial-gradient(70% 55% at 30% 22%, rgba(255,255,255,.95), transparent 70%),
+        linear-gradient(160deg, #fffaf4 0%, #e6d9cf 100%);
+    box-shadow:
+        inset 0 -6px 14px rgba(107,85,96,.22),
+        inset 0 4px 10px rgba(255,255,255,.9),
+        0 12px 24px rgba(107,85,96,.3);
+    cursor: pointer;
+    transition: transform .18s ease;
+}
+
+.dc-die.is-rolling {
+    animation: dcShake .16s linear infinite;
+}
+
+@keyframes dcShake {
+    0%   { transform: rotate(-5deg) scale(1.02); }
+    50%  { transform: rotate(5deg) scale(.98); }
+    100% { transform: rotate(-5deg) scale(1.02); }
+}
+
+.dc-pip {
+    border-radius: 50%;
+    background: radial-gradient(circle at 34% 30%, #8a5f6d, #5a3a46);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,.4);
+    opacity: 0;
+    transition: opacity .06s linear;
+    pointer-events: none;
+}
+```
+
+```js
+var die = hb.el.querySelector('.dc-die');
+
+// 九宫格的九个点,按点数决定亮哪几个
+var PIPS = {
+    1: [4],
+    2: [0, 8],
+    3: [0, 4, 8],
+    4: [0, 2, 6, 8],
+    5: [0, 2, 4, 6, 8],
+    6: [0, 2, 3, 5, 6, 8]
+};
+
+var cells = [];
+for (var i = 0; i < 9; i += 1) {
+    var pip = document.createElement('span');
+    pip.className = 'dc-pip';
+    die.appendChild(pip);
+    cells.push(pip);
+}
+
+function show(n) {
+    var on = PIPS[n] || PIPS[1];
+    for (var i = 0; i < 9; i += 1) {
+        cells[i].style.opacity = on.indexOf(i) >= 0 ? '1' : '0';
+    }
+}
+
+var value = hb.state.value || 1;
+show(value);
+
+var rolling = false;
+
+function roll() {
+    if (rolling) return;
+    rolling = true;
+    die.classList.add('is-rolling');
+
+    var ticks = 0;
+    // ★ 用 setInterval,不是 while 循环 —— 循环会把整个 App 卡死
+    var timer = setInterval(function () {
+        ticks += 1;
+        show(1 + Math.floor(Math.random() * 6));
+        hb.sound({ rate: 1.25 + Math.random() * 0.5 });
+        hb.haptic('light');
+
+        if (ticks >= 9) {
+            clearInterval(timer);
+            value = 1 + Math.floor(Math.random() * 6);
+            show(value);
+            die.classList.remove('is-rolling');
+            rolling = false;
+            hb.sound({ rate: 0.68 });
+            hb.haptic('heavy');
+            hb.save({ value: value });
+        }
+    }, 80);
+}
+
+die.addEventListener('pointerdown', roll);
+```
+
+
+════════════════════════════════════════════════════════════
+  想让 AI 给你写新的?
+════════════════════════════════════════════════════════════
+
+编辑页的「让 AI 帮忙」那一栏,提示词是按「做法」现算的:
+选了「自由做」就出零件那套契约,选了「写代码」就出沙箱和 hb 那套,
+里面把上面这些规矩、每种写法、还有一份自查清单都写全了。
+
+「自由做」那档记得在「要能动的地方」勾上需要的零件 —— 只有勾到的
+才会写进提示词,没勾的不会浪费 AI 的注意力。
+
+复制走发给任意一个会写代码的 AI,把它回的整段话贴回「把 AI 的回复
+贴回来」就行,HTML / CSS / JS 会自动拆开填进三个框。

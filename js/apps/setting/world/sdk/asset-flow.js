@@ -164,9 +164,25 @@ export function createAssetFlowApi(sdk) {
             if (dup) {
                 return { ok: true, duplicated: true, entry: dup };
             }
+            // ★ v0.67.x 余额校验:支出方向必须保证余额 >= 金额
+            //   - 防止「adjust() 用 Math.max(0, ...) 兜底」导致余额为 0 还能发红包
+            //   - 入口路径(chat-asset-service.userSendRedpacket)有同样的检查,
+            //     但加在 SDK 里是最后一道防线,任何绕过 service 直接调 add() 都会被拦
+            const assetApi = sdk.persona?.asset;
+            if (assetApi?.getBalance && fullEntry.direction === 'out') {
+                const currentBalance = assetApi.getBalance(entityType, entityId) || 0;
+                if (currentBalance < fullEntry.amount) {
+                    return {
+                        ok: false,
+                        error: '余额不足',
+                        insufficientBalance: true,
+                        currentBalance,
+                        amount: fullEntry.amount,
+                    };
+                }
+            }
             // 调 persona.asset.adjust 改余额 + 落盘
             const delta = fullEntry.direction === 'in' ? fullEntry.amount : -fullEntry.amount;
-            const assetApi = sdk.persona?.asset;
             let newBalance = null;
             if (assetApi?.adjust) {
                 newBalance = await assetApi.adjust(delta, fullEntry.note, entityType, entityId);

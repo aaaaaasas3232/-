@@ -1,0 +1,226 @@
+/**
+ * relax-app / Tab 栏(简化版)
+ *
+ * 原液态 tab 栏由「白色胶囊栏 + 白色鼓包 + 彩色液体球 + 小灰点 + 文字标签」组成,
+ * 现在去掉胶囊栏容器,只保留按钮本身和它的彩色液体球 / 小灰点 / 文字标签。
+ * 按钮在「沉在底部的小圆点」和「浮起的彩色球」之间切换,本身不再有白鼓包。
+ *
+ * 视觉要点(原效果照搬过来的部分):
+ *   - tab-item 默认下沉,激活时被「托」出来
+ *   - 弹性曲线统一 cubic-bezier(0.34, 1.4, 0.64, 1)
+ *   - 允许打断:旧 blob 立刻退场(由 Vue 组件管)
+ *
+ * 几何:
+ *   - tabbar 自身只做一行布局,不再有 height / padding-top 算 item 高度的约束
+ *   - item 高度 = 自身高度 44px,内容区 = 44px
+ *   - 激活上浮 -32px 让 blob 顶出来
+ */
+
+.app-shell[data-app-id="relax"] .rx-tabbar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    /* 想把 tab 栏整体上下挪，改 _base.css 里的 --rx-tabbar-bottom 一个地方就行；
+       抽屉的避让高度 --rx-tabbar-h 是从它算出来的，会自动跟着走。 */
+    bottom: var(--rx-tabbar-bottom);
+    z-index: 80;
+    display: flex;
+    justify-content: space-evenly;
+    align-items: flex-end;
+    padding: 0 14px;
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="relax"] .rx-tabbar-shell {
+    /* 不再有胶囊:只是包一层,让按钮水平铺开 */
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-evenly;
+    width: 100%;
+    max-width: 380px;
+    height: 44px;
+    padding: 0;
+    margin: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+    pointer-events: auto;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+/* ============================
+   Tab item
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-tab-item {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    overflow: visible;
+    z-index: 1;
+    font-family: inherit;
+    /* 默认状态:小灰点居中显示在按钮里,文字标签贴在底部 */
+    transform: translateY(0);
+    transition: transform 0.6s var(--rx-ease-bounce);
+}
+
+/* 激活:整体稍稍「沉」下去,blob 反而被按得更紧贴桌面 */
+.app-shell[data-app-id="relax"] .rx-tab-item.is-active {
+    transform: translateY(2px);
+}
+
+/* 按下瞬间:再往里按一下,呼应 blob 的「按压感」 */
+.app-shell[data-app-id="relax"] .rx-tab-item.is-active:active {
+    transform: translateY(4px);
+    transition: transform 0.12s ease-out;
+}
+
+/* ============================
+   鼓包(原 .rx-tab-shape)—— 已删除,不再需要白色同色块
+   ============================ */
+
+/* ============================
+   Dot(未激活时的彩色小圆球)
+   - 用每个 tab 自己的 color,跟激活态的大矩形同色系
+   - 大小介于原来的 9px 灰点和激活态 60×44 矩形之间,做成看得清的圆球
+   - 顶部高光 + 触底阴影,跟 blob 同一套软糖语言
+   - 激活时 scale(0) 收回,留给大矩形登场
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-tab-dot {
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    box-shadow:
+        inset 0 -2px 0 rgba(0, 0, 0, 0.16),
+        inset 0 1px 0 rgba(255, 255, 255, 0.30),
+        0 3px 6px rgba(107, 85, 96, 0.22),
+        0 1px 0 rgba(107, 85, 96, 0.14);
+    transition: transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.45s ease;
+    z-index: 2;
+}
+
+.app-shell[data-app-id="relax"] .rx-tab-item.is-active .rx-tab-dot {
+    transform: scale(0);
+    opacity: 0;
+}
+
+/* ============================
+   Blob(液体块,激活时浮起来的不规则八圆角矩形)
+   - 默认形态:scale(0),圆球
+   - 激活形态:scale(1),八圆角矩形 (border-radius 用四个角的两个半径,做出柔和但不规则的有机感)
+   - 加 inset highlight + 双层投影,模拟被按下又弹起的软糖感
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-tab-blob {
+    --rx-tab-radius: 18px 22px 16px 24px / 22px 18px 24px 16px;   /* 不规则八圆角 */
+    position: absolute;
+    width: 60px;
+    height: 44px;
+    flex: 0 0 auto;
+    border-radius: var(--rx-tab-radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    z-index: 3;
+    transform: scale(0);
+    opacity: 0;
+    pointer-events: none;
+    will-change: transform, border-radius, box-shadow;
+    /* 主体阴影(浮起感) + 底部接触阴影(按压触底) + 顶部高光(糖面反光) */
+    box-shadow:
+        inset 0 -3px 0 rgba(0, 0, 0, 0.18),                 /* 底部内阴影:被按下的"压痕" */
+        inset 0 2px 0 rgba(255, 255, 255, 0.32),           /* 顶部高光:糖面亮带 */
+        0 6px 14px rgba(107, 85, 96, 0.28),                /* 浮起外阴影 */
+        0 2px 0 rgba(107, 85, 96, 0.18);                   /* 触底投影,强化按压层级 */
+}
+
+.app-shell[data-app-id="relax"] .rx-tab-blob.is-in {
+    animation: rxBlobIn 0.7s var(--rx-ease-bounce) forwards;
+}
+
+.app-shell[data-app-id="relax"] .rx-tab-blob.is-out {
+    animation: rxBlobOut 0.45s cubic-bezier(0.55, 0, 0.85, 0.35) forwards;
+}
+
+/* 入场:从圆球挤压成不规则矩形,带弹性回弹 */
+@keyframes rxBlobIn {
+    0%   { transform: scale(0)    rotate(0deg);  border-radius: 50%;                                          opacity: 0; }
+    20%  { transform: scale(0.55) rotate(-6deg); border-radius: 50%;                                          opacity: 1; }
+    45%  { transform: scale(1.16) rotate(3deg);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%;             }
+    65%  { transform: scale(0.92) rotate(-2deg); border-radius: 22px 18px 24px 16px / 18px 22px 16px 24px;     }
+    82%  { transform: scale(1.04) rotate(1deg);  border-radius: 16px 24px 18px 22px / 24px 16px 22px 18px;     }
+    100% { transform: scale(1)    rotate(0deg);  border-radius: var(--rx-tab-radius);                        opacity: 1; }
+}
+
+/* 退场:矩形收回到圆球再缩没 */
+@keyframes rxBlobOut {
+    0%   { transform: scale(1)    rotate(0deg);  border-radius: var(--rx-tab-radius);                        opacity: 1; }
+    40%  { transform: scale(1.10) rotate(4deg);  border-radius: 50%;                                          }
+    75%  { transform: scale(0.55) rotate(-3deg); border-radius: 50%;                                          }
+    100% { transform: scale(0)    rotate(0deg);  border-radius: 50%;                                         opacity: 0; }
+}
+
+/* blob 里的字:跟着浮起 / 沉下 */
+.app-shell[data-app-id="relax"] .rx-tab-blob-glyph {
+    display: inline-block;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0;
+    transform: translateY(8px);
+    opacity: 0;
+}
+
+.app-shell[data-app-id="relax"] .rx-tab-blob.is-in .rx-tab-blob-glyph {
+    animation: rxGlyphUp 0.7s var(--rx-ease-bounce) forwards;
+}
+
+.app-shell[data-app-id="relax"] .rx-tab-blob.is-out .rx-tab-blob-glyph {
+    animation: rxGlyphDown 0.45s cubic-bezier(0.55, 0, 0.85, 0.35) forwards;
+}
+
+@keyframes rxGlyphUp {
+    0%   { transform: translateY(10px) scale(0.4); opacity: 0; }
+    35%  { transform: translateY(-1px) scale(1.08); opacity: 1; }
+    65%  { transform: translateY(2px) scale(0.95); }
+    100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes rxGlyphDown {
+    0%   { transform: translateY(0) scale(1); opacity: 1; }
+    100% { transform: translateY(10px) scale(0.4); opacity: 0; }
+}
+
+/* ============================
+   Tab 文字标签(贴在按钮下方)
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-tab-label {
+    position: absolute;
+    bottom: -14px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--rx-ink-soft);
+    white-space: nowrap;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.app-shell[data-app-id="relax"] .rx-tab-item.is-active .rx-tab-label {
+    opacity: 0;
+    transform: translateY(6px);
+}
+
+/* 小屏:等比缩一档 */
+@media (max-width: 360px) {
+    .app-shell[data-app-id="relax"] .rx-tab-item { width: 40px; height: 40px; }
+    .app-shell[data-app-id="relax"] .rx-tab-blob { width: 54px; height: 40px; }
+}

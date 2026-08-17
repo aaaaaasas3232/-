@@ -61,14 +61,22 @@ export function renderTextBubble(msg, contact = {}, options = {}) {
     // ★ v0.43 把 aiPersonId/mode 透传到操作按钮,确保 data-app-action 的 payload 完整
     // ★ v0.44 同时透传 text/senderLabel 用于引用回复预览
     const senderLabel = msg.senderName || (msg.sender === 'user' ? '我' : (contact?.name || ''));
+    // ★ v0.72 透传 conversationType + senderId,让重roll 按钮能识别群聊/具体 AI 成员
     const actionsCtx = {
         sender: msg.sender || 'user',
         aiPersonId: options.aiPersonId || contact?.aiPersonId || contact?.id || '',
         mode: options.mode || 'calendar',
         text: msg.content || '',
         senderLabel,
+        conversationType: options.conversationType || msg.conversationType || 'private',
+        senderId: msg.senderId || '',
     };
-    const actionsHtml = renderMessageActions(msg.id, actionsCtx, options);
+    // ★ v0.85:透传 showSendToAi 选项给 renderMessageActions
+    const actionsHtml = renderMessageActions(msg.id, actionsCtx, {
+        showEdit: options.showEdit !== false,
+        showForward: options.showForward !== false,
+        showSendToAi: options.showSendToAi || false,
+    });
     const selectBtnHtml = renderSelectButton(msg.id, actionsCtx);
     // ★ v0.31 chat-page 把 ai 实时 avatar / avatarBg 塞进 contact,
     //   用实时社媒头像替换旧的「派生首字母 + fallback 色」逻辑

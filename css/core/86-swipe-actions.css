@@ -1,0 +1,69 @@
+/**
+ * 左滑露出操作按钮 —— 裸 class 基线
+ * 配套 src/core/components/swipe-actions.js
+ *
+ * 这里只定「结构必须成立的那部分」（层叠、裁剪、按钮区贴右），
+ * 颜色 / 宽度 / 圆角交给各 App 用变量覆盖：
+ *
+ *   .my-list .swipe-row { --swipe-action-w: 210px; }
+ *   .my-list .swipe-row__action--danger { background: #ff3b30; }
+ *
+ * ⚠️ 按钮区宽度由 JS 读 offsetWidth 现算，所以改 --swipe-action-w
+ *    不需要同步改 JS —— 但**必须**让按钮区真的有宽度，
+ *    display:none 或者宽度为 0 的话 JS 会直接判定「这行不支持滑动」。
+ */
+
+.swipe-row {
+    --swipe-action-w: 210px;
+    position: relative;
+    overflow: hidden;
+    /* 手势由 JS 在方向锁定后 preventDefault 接管。
+       这里不能写 touch-action: pan-y —— 那会让浏览器抢走纵向手势，
+       之后 preventDefault 失效，横滑变成时灵时不灵。 */
+}
+
+.swipe-row__actions {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 0;
+    display: flex;
+    align-items: stretch;
+    width: var(--swipe-action-w);
+}
+
+.swipe-row__action {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    border: none;
+    padding: 0;
+    background: #9aa0a6;
+    color: #ffffff;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.swipe-row__action svg {
+    width: 18px;
+    height: 18px;
+}
+
+.swipe-row__action:active {
+    filter: brightness(0.92);
+}
+
+.swipe-row__content {
+    position: relative;
+    z-index: 1;
+    /* 正文必须不透明，否则滑动时会看到下面的按钮透出来 */
+    background: #ffffff;
+    will-change: transform;
+}

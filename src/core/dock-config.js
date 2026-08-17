@@ -46,6 +46,17 @@ function getStoredOrder() {
 }
 
 /**
+ * 是否已经由用户改过 Dock。
+ * 老配置没有 customized 字段时，非空 order 只可能来自旧版的 Dock 编辑或迁移。
+ */
+function hasCustomizedDock() {
+    const dock = getDockConfig()?.dock;
+    if (!dock) return false;
+    if (typeof dock.customized === 'boolean') return dock.customized;
+    return Array.isArray(dock.order) && dock.order.length > 0;
+}
+
+/**
  * 从配置中读取某个 app 的 dock 状态
  */
 function readFromConfig(appId) {
@@ -71,7 +82,7 @@ function persistLayout() {
     entries.sort((a, b) => a.order - b.order);
     const order = entries.map(e => e.appId);
 
-    saveDockConfig({ visible: true, order });
+    saveDockConfig({ visible: true, order, customized: true });
 }
 
 /**
@@ -82,19 +93,18 @@ function ensureDockMeta(app) {
     let meta = layoutState.get(app.id);
     if (meta) return meta;
 
-    // 优先级：desktop-config 持久化（用户操作过） > appConfig 默认（首次启动兜底）
-    // ★ 修复：appConfig 里的 dock 字段只是"默认值"，不能在每次启动时覆盖用户拖拽后
-    // 存到 localStorage 里的真实顺序。只有当持久化配置里完全没有这个 app 的记录时，
-    // 才用 appConfig 声明的默认值。
+    // 优先级：用户自定义布局 > appConfig 默认布局。
+    // customized=true 时，order 中缺少某个 App 表示用户明确把它移出了 Dock，
+    // 不能再用 App 默认值把它加回来。
     const fromApp = app.dock || {};
     const fromConfig = readFromConfig(app.id);
-    const hasPersisted = fromConfig.visible; // readFromConfig 只有在 order 数组里找到才算 visible
+    const customized = hasCustomizedDock();
 
     meta = {
-        visible: hasPersisted
-            ? true
+        visible: customized
+            ? fromConfig.visible
             : (typeof fromApp.visible === 'boolean' ? fromApp.visible : false),
-        order: hasPersisted
+        order: customized && fromConfig.visible
             ? fromConfig.order
             : (typeof fromApp.order === 'number' ? fromApp.order : Number.MAX_SAFE_INTEGER),
         name: app.name || app.id,

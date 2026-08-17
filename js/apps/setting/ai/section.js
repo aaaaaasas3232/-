@@ -11,6 +11,7 @@
 
 import { escapeHtml } from '@/src/core/escape.js';
 import { renderPersonaEditor } from '../persona/renderer.js';
+import { renderPersonaAvatarContent } from '../persona/avatar.js';
 
 function wvAction(method, payload = {}) {
     const obj = { action: 'appMethod', appId: 'settings', method, payload };
@@ -26,13 +27,6 @@ function formatDateTime(timestamp) {
     const d = new Date(timestamp);
     const pad = n => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-function getInitial(name) {
-    if (!name) return '?';
-    const trimmed = String(name).trim();
-    if (!trimmed) return '?';
-    return trimmed.charAt(0).toUpperCase();
 }
 
 function filterAiList(items, keyword) {
@@ -122,7 +116,7 @@ function renderOverview(activeAi) {
 
     return `
         <div class="persona-overview persona-overview--clickable" ${homeAction}>
-            <div class="persona-overview__avatar">${escapeHtml(getInitial(activeAi.name))}</div>
+            <div class="persona-overview__avatar">${renderPersonaAvatarContent(activeAi)}</div>
             <div class="persona-overview__body">
                 <div class="persona-overview__name">${escapeHtml(activeAi.name || activeAi.id)}</div>
                 ${meta ? `<div class="persona-overview__meta">${escapeHtml(meta)}</div>` : ''}
@@ -185,7 +179,7 @@ function renderAiList(app, allItems, filteredItems, activeId, searchKeyword) {
                         <div class="persona-card ${isActive ? 'is-active' : ''}" ${wvAction('aiSetActive', { id: item.id })}>
                             ${isActive ? '<span class="persona-card__badge">当前</span>' : ''}
                             <div class="persona-card__head">
-                                <div class="persona-card__avatar">${escapeHtml(getInitial(item.name))}</div>
+                                <div class="persona-card__avatar">${renderPersonaAvatarContent(item)}</div>
                                 <div class="persona-card__name">${escapeHtml(item.name || item.id)}</div>
                             </div>
                             <div class="persona-card__meta">

@@ -1,0 +1,496 @@
+/**
+ * 日记 · 今日页
+ *
+ * 版面顺序是产品逻辑的直接映射：
+ *   时段条 → 今天这一篇 → 便利贴 → 生理期 → 纪念日/倒计时
+ *
+ * 时段条排在最上面，是因为「现在写的到底是日记还是便利贴」
+ * 是用户每次进来第一个要知道的事 —— 藏在下面的话，
+ * 他会写完一段才发现存成了便利贴。
+ */
+
+/* ============================================================
+   日期头
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-dateline {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.app-shell[data-app-id="diary"] .dy-dateline__day {
+    font-size: 30px;
+    font-weight: 300;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="diary"] .dy-dateline__rest {
+    font-size: var(--dy-fs-sm);
+    color: var(--dy-text-3);
+    letter-spacing: 0.1em;
+}
+
+/* ============================================================
+   写作时段条
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-window {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 10px 13px;
+    margin-bottom: 16px;
+    border: var(--dy-hair) solid var(--dy-border-soft);
+    border-radius: var(--dy-radius-sm);
+    background: var(--dy-surface-alt);
+    font-size: var(--dy-fs-sm);
+    color: var(--dy-text-2);
+}
+
+/* 时段开着的时候左边加一道竖线，是整页唯一的"强调" */
+.app-shell[data-app-id="diary"] .dy-window.is-open {
+    border-left: 2px solid var(--dy-primary);
+    background: var(--dy-primary-soft);
+    color: var(--dy-text);
+}
+
+.app-shell[data-app-id="diary"] .dy-window svg {
+    width: 15px;
+    height: 15px;
+    color: var(--dy-text-3);
+}
+
+.app-shell[data-app-id="diary"] .dy-window.is-open svg {
+    color: var(--dy-primary);
+}
+
+.app-shell[data-app-id="diary"] .dy-window__main {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="diary"] .dy-window__time {
+    flex: 0 0 auto;
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.06em;
+}
+
+/* ============================================================
+   今天这一篇
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-entry {
+    border: var(--dy-hair) solid var(--dy-border-soft);
+    border-radius: var(--dy-radius);
+    background: var(--dy-surface);
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="diary"] .dy-entry__head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border-bottom: var(--dy-hair) solid var(--dy-divider);
+}
+
+.app-shell[data-app-id="diary"] .dy-entry__kind {
+    font-size: var(--dy-fs-xs);
+    letter-spacing: 0.16em;
+    color: var(--dy-text-3);
+}
+
+.app-shell[data-app-id="diary"] .dy-entry__mood {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-2);
+}
+
+.app-shell[data-app-id="diary"] .dy-entry__mood::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--dy-mood, var(--dy-text-3));
+}
+
+.app-shell[data-app-id="diary"] .dy-entry__by {
+    margin-left: auto;
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+}
+
+.app-shell[data-app-id="diary"] .dy-entry__body {
+    padding: 16px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 2;
+    font-size: var(--dy-fs-md);
+}
+
+/* 横线纸 / 方格纸：只在正文区生效，不影响其他卡片 */
+.app-shell[data-app-id="diary"] .dy-root[data-diary-layout="ruled"] .dy-entry__body {
+    background-image: repeating-linear-gradient(
+        to bottom,
+        transparent,
+        transparent calc(2em - var(--dy-hair)),
+        var(--dy-border-soft) calc(2em - var(--dy-hair)),
+        var(--dy-border-soft) 2em
+    );
+    background-position: 0 16px;
+}
+
+.app-shell[data-app-id="diary"] .dy-root[data-diary-layout="grid"] .dy-entry__body {
+    background-image:
+        repeating-linear-gradient(to bottom, transparent, transparent calc(2em - var(--dy-hair)), var(--dy-border-soft) calc(2em - var(--dy-hair)), var(--dy-border-soft) 2em),
+        repeating-linear-gradient(to right, transparent, transparent calc(2em - var(--dy-hair)), var(--dy-border-soft) calc(2em - var(--dy-hair)), var(--dy-border-soft) 2em);
+    background-position: 0 16px;
+}
+
+.app-shell[data-app-id="diary"] .dy-root[data-diary-scale="sm"] .dy-entry__body { font-size: var(--dy-fs-sm); }
+.app-shell[data-app-id="diary"] .dy-root[data-diary-scale="lg"] .dy-entry__body { font-size: var(--dy-fs-lg); }
+
+.app-shell[data-app-id="diary"] .dy-entry__foot {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 10px;
+    border-top: var(--dy-hair) solid var(--dy-divider);
+    background: var(--dy-surface-alt);
+}
+
+.app-shell[data-app-id="diary"] .dy-entry__foot .dy-btn {
+    border-color: transparent;
+    padding: 6px 10px;
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-2);
+}
+
+.app-shell[data-app-id="diary"] .dy-entry__foot .dy-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.app-shell[data-app-id="diary"] .dy-entry__foot .dy-btn--danger { color: var(--dy-danger); }
+.app-shell[data-app-id="diary"] .dy-entry__spacer { margin-left: auto; }
+
+/* 空白态：一张什么都没有的纸 */
+.app-shell[data-app-id="diary"] .dy-entry__blank {
+    padding: 30px 16px;
+    text-align: center;
+    color: var(--dy-text-3);
+    font-size: var(--dy-fs-sm);
+    line-height: 2;
+}
+
+/* ============================================================
+   编辑器
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-composer {
+    border: var(--dy-hair) solid var(--dy-border);
+    border-radius: var(--dy-radius);
+    background: var(--dy-surface);
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="diary"] .dy-composer__input {
+    width: 100%;
+    min-height: 150px;
+    padding: 16px;
+    border: 0;
+    background: transparent;
+    color: var(--dy-text);
+    font: inherit;
+    line-height: 2;
+    resize: none;
+    outline: none;
+}
+
+.app-shell[data-app-id="diary"] .dy-composer__input::placeholder {
+    color: var(--dy-text-3);
+}
+
+.app-shell[data-app-id="diary"] .dy-composer__bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    border-top: var(--dy-hair) solid var(--dy-divider);
+    background: var(--dy-surface-alt);
+}
+
+.app-shell[data-app-id="diary"] .dy-composer__count {
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="diary"] .dy-composer__actions {
+    margin-left: auto;
+    display: flex;
+    gap: 6px;
+}
+
+/* 心情选择：一排小圆点 */
+.app-shell[data-app-id="diary"] .dy-moods {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px 12px;
+    border-top: var(--dy-hair) solid var(--dy-divider);
+}
+
+.app-shell[data-app-id="diary"] .dy-mood-pick {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border: var(--dy-hair) solid transparent;
+    border-radius: var(--dy-radius-sm);
+    background: transparent;
+    color: var(--dy-text-3);
+    font-size: var(--dy-fs-xs);
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="diary"] .dy-mood-pick::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--dy-mood, var(--dy-text-3));
+    opacity: 0.4;
+}
+
+.app-shell[data-app-id="diary"] .dy-mood-pick.is-on {
+    border-color: var(--dy-border);
+    color: var(--dy-text);
+}
+
+.app-shell[data-app-id="diary"] .dy-mood-pick.is-on::before {
+    opacity: 1;
+}
+
+/* ============================================================
+   便利贴
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-notes {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="diary"] .dy-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 11px 13px;
+    border: var(--dy-hair) solid var(--dy-border-soft);
+    border-radius: var(--dy-radius-sm);
+    background: var(--dy-surface);
+}
+
+/* 便利贴左上角折一个小角 —— 不用图片，一个三角形伪元素就够 */
+.app-shell[data-app-id="diary"] .dy-note::before {
+    content: '';
+    flex: 0 0 auto;
+    width: 0;
+    height: 0;
+    margin-top: 4px;
+    border-left: 5px solid var(--dy-primary-dim);
+    border-top: 5px solid var(--dy-primary-dim);
+    border-right: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+}
+
+.app-shell[data-app-id="diary"] .dy-note__text {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: var(--dy-fs-sm);
+    line-height: 1.85;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.app-shell[data-app-id="diary"] .dy-note__meta {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="diary"] .dy-note__del {
+    border: 0;
+    background: transparent;
+    color: var(--dy-text-3);
+    cursor: pointer;
+    padding: 0;
+    display: inline-flex;
+}
+
+.app-shell[data-app-id="diary"] .dy-note__del svg {
+    width: 13px;
+    height: 13px;
+}
+
+/* 便利贴快写框 */
+.app-shell[data-app-id="diary"] .dy-quicknote {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    padding: 9px 10px;
+    border: var(--dy-hair) solid var(--dy-border);
+    border-radius: var(--dy-radius-sm);
+    background: var(--dy-surface);
+}
+
+.app-shell[data-app-id="diary"] .dy-quicknote__input {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 34px;
+    max-height: 100px;
+    border: 0;
+    background: transparent;
+    color: var(--dy-text);
+    font: inherit;
+    font-size: var(--dy-fs-sm);
+    line-height: 1.8;
+    resize: none;
+    outline: none;
+}
+
+/* ============================================================
+   小组件区：纪念日 / 倒计时
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-widgets {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.app-shell[data-app-id="diary"] .dy-widget {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 13px 14px;
+    border: var(--dy-hair) solid var(--dy-border-soft);
+    border-radius: var(--dy-radius-sm);
+    background: var(--dy-surface);
+    text-align: left;
+    cursor: pointer;
+    color: inherit;
+    font: inherit;
+}
+
+.app-shell[data-app-id="diary"] .dy-widget__title {
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-2);
+    letter-spacing: 0.08em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="diary"] .dy-widget__num {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    color: var(--dy-primary);
+}
+
+.app-shell[data-app-id="diary"] .dy-widget__value {
+    font-size: 24px;
+    font-weight: 300;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="diary"] .dy-widget__unit {
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+}
+
+.app-shell[data-app-id="diary"] .dy-widget__date {
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+    font-variant-numeric: tabular-nums;
+}
+
+/* 今天就是这个日子 —— 整块反白 */
+.app-shell[data-app-id="diary"] .dy-widget.is-today {
+    background: var(--dy-primary);
+    border-color: var(--dy-primary);
+}
+
+.app-shell[data-app-id="diary"] .dy-widget.is-today .dy-widget__title,
+.app-shell[data-app-id="diary"] .dy-widget.is-today .dy-widget__date,
+.app-shell[data-app-id="diary"] .dy-widget.is-today .dy-widget__unit,
+.app-shell[data-app-id="diary"] .dy-widget.is-today .dy-widget__num {
+    color: var(--dy-on-primary);
+}
+
+/* ============================================================
+   今日生理期小卡
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-cyclemini {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 15px;
+    border: var(--dy-hair) solid var(--dy-border-soft);
+    border-radius: var(--dy-radius);
+    background: var(--dy-surface);
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+    color: inherit;
+    font: inherit;
+}
+
+.app-shell[data-app-id="diary"] .dy-cyclemini__dot {
+    flex: 0 0 auto;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--dy-cycle-period);
+}
+
+.app-shell[data-app-id="diary"] .dy-cyclemini__dot[data-state="safe"],
+.app-shell[data-app-id="diary"] .dy-cyclemini__dot[data-state="unknown"] {
+    background: var(--dy-cycle-none);
+}
+
+.app-shell[data-app-id="diary"] .dy-cyclemini__dot[data-state="pre"],
+.app-shell[data-app-id="diary"] .dy-cyclemini__dot[data-state="due"] {
+    background: var(--dy-cycle-predicted);
+    border: var(--dy-hair) solid var(--dy-cycle-period);
+}
+
+.app-shell[data-app-id="diary"] .dy-cyclemini__main {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="diary"] .dy-cyclemini__state {
+    font-size: var(--dy-fs-md);
+}
+
+.app-shell[data-app-id="diary"] .dy-cyclemini__sub {
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+    margin-top: 1px;
+}
+
+.app-shell[data-app-id="diary"] .dy-cyclemini__quick {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 5px;
+}

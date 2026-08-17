@@ -35,6 +35,8 @@
  */
 
 import { escapeHtml } from '@/src/core/escape.js';
+// 框架级「左滑露出操作」：结构 + 手势都在这里，收藏页只提供按钮内容
+import { renderSwipeRow } from '@/src/core/components/swipe-actions.js';
 
 // ─── SVG 图标 ─────────────────────────────────────────────
 
@@ -53,6 +55,37 @@ const ICON_EXPAND = `<svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9" 
 const ICON_COLLAPSE = `<svg viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const ICON_PRIVATE = `<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="7" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>`;
 const ICON_GROUP = `<svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="7" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M23 21v-2a4 4 0 0 0-3-3.87" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M16 3.13a4 4 0 0 1 0 7.75" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>`;
+const ICON_SHARE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="10.5" x2="15.4" y2="6.5"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/></svg>`;
+const ICON_EDIT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>`;
+const ICON_TRASH = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`;
+
+/**
+ * 一条收藏左滑露出的三个按钮：分享 / 编辑 / 删除。
+ * 三个都走 data-app-action，由 framework 派发到 chat-app 的 methods。
+ * 结构（外壳 / 层叠 / 手势）来自框架级 swipe-actions 组件，这里只给内容。
+ */
+function renderFavoriteSwipeActions(favId, favType) {
+    const mk = (method) => escapeHtml(JSON.stringify({
+        action: 'appMethod',
+        appId: 'chat',
+        method,
+        payload: { favoriteId: favId, type: favType },
+    }));
+    return `
+        <button type="button" class="swipe-row__action fav-swipe-action--share"
+            data-app-action='${mk('shareFavorite')}' aria-label="分享">
+            ${ICON_SHARE}<span>分享</span>
+        </button>
+        <button type="button" class="swipe-row__action fav-swipe-action--edit"
+            data-app-action='${mk('editFavorite')}' aria-label="编辑">
+            ${ICON_EDIT}<span>编辑</span>
+        </button>
+        <button type="button" class="swipe-row__action fav-swipe-action--delete"
+            data-app-action='${mk('deleteFavorite')}' aria-label="删除">
+            ${ICON_TRASH}<span>删除</span>
+        </button>
+    `;
+}
 
 // ─── 分类配置 ─────────────────────────────────────────────
 // 注意:全部(showConversation=true)显示对话片段,其他显示单条收藏
@@ -65,244 +98,17 @@ const CATEGORIES = [
     { id: 'game', label: '游戏', icon: ICON_GAME, showConversation: false },
     { id: 'video_call', label: '视频通话', icon: ICON_VIDEO, showConversation: false },
     { id: 'voice_call', label: '语音通话', icon: ICON_VOICE, showConversation: false },
+    { id: 'moments', label: '朋友圈', icon: `<svg viewBox="0 0 24 24" width="16" height="16"><rect x="2" y="2" width="20" height="20" rx="5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="10" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 20.5c0-2.5 2-4.5 5-4.5s5 2 5 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`, showConversation: false },
 ];
 
 // ─── 演示数据 ─────────────────────────────────────────────
-
-const DEMO_FAVORITES = [
-    // ========== 对话片段收藏(type='conversation') ==========
-    // 示例:用户选择了多条消息(文字+图片+文字)收藏成一个片段
-    {
-        favoriteId: 'conv-1',
-        type: 'conversation',
-        sourceType: 'private',
-        sourceId: 'ai-1',
-        sourceName: '小美',
-        time: '今天 09:32',
-        messageCount: 5,
-        messages: [
-            { id: 'm5', sender: 'user', senderName: '我', senderColor: 'pink', type: 'text', content: '好的，我想了解如何更好地使用 AI 助手', time: '昨天 20:08' },
-            { id: 'm6', sender: 'ai', senderName: '小美', senderColor: 'blue', type: 'text', content: '使用 AI 助手的技巧：\n1. 问清楚具体的问题\n2. 分步骤提问\n3. 可以让我帮你修改润色文章\n4. 代码问题可以发给我帮你 review', time: '昨天 20:10' },
-            { id: 'img-1', sender: 'ai', senderName: '小美', senderColor: 'blue', type: 'descriptive_image', content: '阳光洒在窗台上，一只橘猫正慵懒地躺在毛茸茸的垫子上，眯着眼睛享受午后的温暖时光。背景是淡蓝色的窗帘随风轻摇。', imagePreview: '🌅 猫咪图', cardColor: '#FFF3E0', time: '昨天 20:12' },
-            { id: 'm7', sender: 'user', senderName: '我', senderColor: 'pink', type: 'text', content: '太棒了！谢谢小美', time: '昨天 20:15' },
-            { id: 'm8', sender: 'ai', senderName: '小美', senderColor: 'blue', type: 'text', content: '不客气~ 有问题随时问我哦！', time: '昨天 20:16' },
-        ],
-    },
-    // 另一个对话片段收藏
-    {
-        favoriteId: 'conv-2',
-        type: 'conversation',
-        sourceType: 'private',
-        sourceId: 'ai-1',
-        sourceName: '小美',
-        time: '昨天 21:30',
-        messageCount: 4,
-        messages: [
-            { id: 'm10', sender: 'user', senderName: '我', senderColor: 'pink', type: 'text', content: '小美，昨天看的电影太精彩了！', time: '昨天 20:00' },
-            { id: 'm18', sender: 'ai', senderName: '小美', senderColor: 'blue', type: 'text', content: '是呀！那段特效太震撼了', time: '昨天 20:05' },
-            { id: 'm19', sender: 'user', senderName: '我', senderColor: 'pink', type: 'text', content: '下次再一起看~', time: '昨天 20:08' },
-            { id: 'm20', sender: 'ai', senderName: '小美', senderColor: 'blue', type: 'text', content: '好呀！期待下一次~', time: '昨天 20:10' },
-        ],
-    },
-    // 群聊对话片段收藏
-    {
-        favoriteId: 'conv-3',
-        type: 'conversation',
-        sourceType: 'group',
-        sourceId: 'group-1',
-        sourceName: '游戏群',
-        time: '今天 14:15',
-        messageCount: 6,
-        messages: [
-            { id: 'game-msg-1', sender: 'system', senderName: '系统', senderColor: 'gray', type: 'system', content: '【狼人杀】游戏已创建,参与者:小美、小明、小蓝、小红、玩家', time: '14:00' },
-            { id: 'game-msg-2', sender: 'ai', senderName: '小蓝', senderColor: 'blue', type: 'text', content: '我是预言家,昨晚验了3号是狼人,归票3号', time: '14:06' },
-            { id: 'game-msg-3', sender: 'ai', senderName: '小美', senderColor: 'pink', type: 'text', content: '我觉得2号不像狼人,他一直在帮好人说话', time: '14:07' },
-            { id: 'game-msg-4', sender: 'ai', senderName: '小明', senderColor: 'purple', type: 'text', content: '同意,3号发言太爆了,肯定是狼', time: '14:08' },
-            { id: 'game-msg-5', sender: 'user', senderName: '我', senderColor: 'pink', type: 'text', content: '投3号', time: '14:10' },
-            { id: 'game-msg-6', sender: 'system', senderName: '系统', senderColor: 'gray', type: 'system', content: '3号被投票出局,遗言说昨晚查验了4号是好人', time: '14:12' },
-        ],
-    },
-
-    // ========== 单条收藏(text) ==========
-    {
-        favoriteId: 'fav-1',
-        messageId: 'm1',
-        type: 'text',
-        sender: 'ai',
-        senderName: '小美',
-        senderColor: 'blue',
-        content: '当然可以！我是你的 AI 助手小美，可以帮你回答问题、聊天、写作、编程等各种任务。有什么具体想了解的吗？',
-        time: '今天 09:32',
-        sourceType: 'private',
-        sourceId: 'ai-1',
-        sourceName: '小美',
-    },
-    {
-        favoriteId: 'fav-12',
-        messageId: 'grp-1',
-        type: 'text',
-        sender: 'ai',
-        senderName: '小红',
-        senderColor: 'pink',
-        content: '周末大家有没有空?想组织一次聚餐~',
-        time: '昨天 18:00',
-        sourceType: 'group',
-        sourceId: 'group-1',
-        sourceName: '游戏群',
-    },
-
-    // ========== 单条收藏(image) ==========
-    {
-        favoriteId: 'fav-4',
-        messageId: 'img-1',
-        type: 'image',
-        sender: 'ai',
-        senderName: '小美',
-        senderColor: 'blue',
-        content: '阳光洒在窗台上，一只橘猫正慵懒地躺在毛茸茸的垫子上，眯着眼睛享受午后的温暖时光。背景是淡蓝色的窗帘随风轻摇。',
-        imagePreview: '🌅 猫咪图',
-        cardColor: '#FFF3E0',
-        time: '今天 14:26',
-        sourceType: 'private',
-        sourceId: 'ai-1',
-        sourceName: '小美',
-    },
-    {
-        favoriteId: 'fav-5',
-        messageId: 'img-2',
-        type: 'image',
-        sender: 'user',
-        senderName: '我',
-        senderColor: 'pink',
-        content: '海边日落的壮丽景色，橙红色的晚霞映照在波光粼粼的海面上，一群海鸥在天空飞翔，远处帆船点点。',
-        imagePreview: '🌊 日落图',
-        cardColor: '#E8F2FF',
-        time: '今天 14:31',
-        sourceType: 'private',
-        sourceId: 'ai-1',
-        sourceName: '小美',
-    },
-
-    // ========== 单条收藏(location) ==========
-    {
-        favoriteId: 'fav-6',
-        messageId: 'loc-1',
-        type: 'location',
-        sender: 'ai',
-        senderName: '小美',
-        senderColor: 'blue',
-        content: '上海中心大厦',
-        locationAddress: '上海市浦东新区陆家嘴环路 501 号',
-        locationName: '上海中心大厦',
-        time: '今天 13:00',
-        sourceType: 'private',
-        sourceId: 'ai-1',
-        sourceName: '小美',
-    },
-    {
-        favoriteId: 'fav-7',
-        messageId: 'loc-2',
-        type: 'location',
-        sender: 'user',
-        senderName: '我',
-        senderColor: 'pink',
-        content: '那家日料店',
-        locationAddress: '上海市黄浦区南京东路 100 号 3 楼',
-        locationName: '那家日料店',
-        time: '今天 13:15',
-        sourceType: 'private',
-        sourceId: 'ai-1',
-        sourceName: '小美',
-    },
-
-    // ========== 单条收藏(voice_call) ==========
-    {
-        favoriteId: 'fav-8',
-        messageId: 'cr-voice-1',
-        type: 'voice_call',
-        sender: 'system',
-        senderName: '语音通话',
-        senderColor: 'blue',
-        content: '语音通话 5分26秒',
-        duration: 326,
-        summary: '聊了下周末去哪儿吃饭、推荐了新开的那家日料店',
-        time: '今天 14:00',
-        sourceType: 'private',
-        sourceId: 'ai-1',
-        sourceName: '小美',
-        contextMessages: [
-            { role: 'user', content: '小美,周末要不要一起吃饭呀?', time: '14:00', senderName: '我' },
-            { role: 'ai', content: '好呀!你有什么想吃的吗?上次那家日料店我还挺想再去的~', time: '14:01', senderName: '小美' },
-            { role: 'user', content: '我也正想说那家店呢!晚上七点?', time: '14:02', senderName: '我' },
-            { role: 'ai', content: '没问题,我订个位~今天有点累,吃完想回家躺一会儿', time: '14:05', senderName: '小美' },
-            { role: 'user', content: '工作辛苦啦,那我请你吃大餐补补', time: '14:10', senderName: '我' },
-            { role: 'ai', content: '(撒娇)那我要吃三文鱼、烤鳗鱼还有甜虾哦~谢谢老公~', time: '14:12', senderName: '小美' },
-            { role: 'user', content: '都依你', time: '14:14', senderName: '我' },
-            { role: 'ai', content: '嘻嘻,那我先去忙了,晚上见~', time: '14:15', senderName: '小美' },
-            { role: 'user', content: '好,晚上见', time: '14:16', senderName: '我' },
-        ],
-    },
-
-    // ========== 单条收藏(video_call) ==========
-    {
-        favoriteId: 'fav-9',
-        messageId: 'cr-video-1',
-        type: 'video_call',
-        sender: 'system',
-        senderName: '视频通话',
-        senderColor: 'pink',
-        content: '视频通话 30分25秒',
-        duration: 1825,
-        summary: '视频看了一下午的旅行照片,讨论了国庆小长假去京都的计划',
-        time: '昨天 21:30',
-        sourceType: 'private',
-        sourceId: 'ai-1',
-        sourceName: '小美',
-        contextMessages: [
-            { role: 'user', content: '小美,我把今天的照片整理了一下,视频看看?', time: '21:30', senderName: '我' },
-            { role: 'ai', content: '好呀!我刚洗完澡等你呢~', time: '21:31', senderName: '小美' },
-            { role: 'user', content: '看这张,在清水寺拍的,光影好好看', time: '21:35', senderName: '我' },
-            { role: 'ai', content: '哇,这也太美了吧!你看地上的影子~下次我们也去吧?', time: '21:36', senderName: '小美' },
-            { role: 'user', content: '国庆节?正好七天假', time: '21:40', senderName: '我' },
-            { role: 'ai', content: '太好了!那我们早点订机票 and 住宿,京都秋天红叶超美的~', time: '21:42', senderName: '小美' },
-            { role: 'user', content: '预算大概多少?机票+酒店', time: '21:46', senderName: '我' },
-            { role: 'ai', content: '我查了下,人均五六千左右应该够住好一些的町屋了', time: '21:48', senderName: '小美' },
-            { role: 'user', content: '那就这么定了!我去做攻略', time: '21:55', senderName: '我' },
-            { role: 'ai', content: '辛苦啦~我先去吹头发啦,晚安~', time: '22:00', senderName: '小美' },
-            { role: 'user', content: '晚安,做美梦~', time: '22:01', senderName: '我' },
-        ],
-    },
-
-    // ========== 单条收藏(game) ==========
-    {
-        favoriteId: 'fav-10',
-        messageId: 'game-1',
-        type: 'game',
-        sender: 'ai',
-        senderName: '小蓝',
-        senderColor: 'blue',
-        content: '狼人杀游戏已开始',
-        gameType: 'werewolf',
-        gameTitle: '狼人杀',
-        summary: '第3天:2号被投票出局,遗言说昨晚查验了3号是狼人',
-        time: '今天 14:15',
-        sourceType: 'group',
-        sourceId: 'group-1',
-        sourceName: '游戏群',
-        contextMessages: [
-            { role: 'system', content: '【狼人杀】游戏已创建,参与者:小美、小明、小蓝、小红、玩家', time: '14:00', senderName: '系统' },
-            { role: 'system', content: '天亮了,昨夜 2 号玩家被狼人击杀', time: '14:05', senderName: '系统' },
-            { role: 'ai', content: '我是预言家,昨晚验了3号是狼人,归票3号', time: '14:06', senderName: '小蓝' },
-            { role: 'ai', content: '我觉得2号不像狼人,他一直在帮好人说话', time: '14:07', senderName: '小美' },
-            { role: 'ai', content: '同意,3号发言太爆了,肯定是狼', time: '14:08', senderName: '小明' },
-            { role: 'user', content: '投3号', time: '14:10', senderName: '我' },
-        ],
-    },
-];
+// ★ v0.80 移除 DEMO_FAVORITES 占位收藏 — 收藏数据全部从 SDK chatFavorites 读,
+//   对话片段收藏从内存 + localStorage 读,没有就展示「还没有收藏」空状态。
+const DEMO_FAVORITES = [];
 
 // ─── 导出到全局（供交互逻辑使用）─────────────────────────────
 
-// 将数据导出到全局，供 index.js 中的交互逻辑使用
+// ★ v0.80 不再导出 demo favorites(已无数据)
 if (typeof window !== 'undefined') {
     window.__chatDemoFavorites = DEMO_FAVORITES;
     window.__chatFavoritesRenderer = {
@@ -610,6 +416,21 @@ function renderFavoriteItem(item, isExpanded = false) {
                 </div>
             </div>
         `;
+    } else if (type === 'moments') {
+        // ★ v0.87 朋友圈收藏：正文 + 图片数量 + 位置。
+        //   图片本身不在这里画（收藏卡片高度要可控），只给个计数提示。
+        const imgCount = (item.momentImages?.length || 0) + (item.momentAiImages?.length || 0);
+        const metaBits = [];
+        if (imgCount > 0) metaBits.push(`${imgCount} 张图`);
+        if (item.momentLocation) metaBits.push(item.momentLocation);
+        contentHtml = `
+            <div class="fav-moment-preview">
+                <div class="fav-moment-text">${escapeHtml(content || '(空动态)')}</div>
+                ${metaBits.length > 0
+                    ? `<div class="fav-moment-meta">${metaBits.map(b => `<span>${escapeHtml(b)}</span>`).join('')}</div>`
+                    : ''}
+            </div>
+        `;
     } else {
         contentHtml = `<div class="fav-text-content">${escapeHtml(content)}</div>`;
     }
@@ -768,13 +589,20 @@ function renderFavoriteList(favorites, category = 'all', state = {}) {
     const showConversation = category === 'all';
     return favorites.map(item => {
         const favId = item.id || item.favoriteId;
-        if (showConversation) {
+        const contentHtml = showConversation
             // 全部分类:渲染对话片段
-            return renderConversationItem(item, expandedConv.has(favId));
-        } else {
+            ? renderConversationItem(item, expandedConv.has(favId))
             // 其他分类:渲染单条收藏
-            return renderFavoriteItem(item, expandedContext.has(favId));
-        }
+            : renderFavoriteItem(item, expandedContext.has(favId));
+        // 每条都包一层「左滑露出分享/编辑/删除」的外壳。
+        // 手势由 src/core/components/swipe-actions.js 统一处理，
+        // chat-app 侧只在 initFavoritesInteractions 里 attach 一次。
+        return renderSwipeRow({
+            extraClass: 'fav-swipe-row',
+            dataAttrs: `data-favorite-id="${escapeHtml(favId)}" data-favorite-type="${escapeHtml(item.type || '')}"`,
+            actionsHtml: renderFavoriteSwipeActions(favId, item.type || ''),
+            contentHtml,
+        });
     }).join('');
 }
 
@@ -845,24 +673,13 @@ export function renderFavoritesPage(app, options = {}) {
     const sourceName = options?.sourceName;
     const realFavorites = Array.isArray(options.realFavorites) ? options.realFavorites : [];
 
-    // ★ v0.44 修复:收藏数据来源
+    // ★ v0.44 收藏数据来源:
     //   favoriteMessage 写入 sdk.chatFavorites(单条收藏,id=fav-xxx),
-    //   favoriteMulti 写入 app.state._conversationFavorites(对话片段,id=conv-xxx),
-    //   两者合并后还需要跟 DEMO_FAVORITES 合并(兜底演示数据)
-    //   合并策略:用 id 或 favoriteId 作为唯一标识去重
-    const getFavKey = f => f.id || f.favoriteId || '';
-    const seen = new Set(realFavorites.map(getFavKey));
-    const mergedFavorites = [
-        ...realFavorites,
-        ...DEMO_FAVORITES.filter(f => !seen.has(getFavKey(f))),
-    ];
-
-    // 根据筛选条件过滤收藏
-    let filteredFavorites = mergedFavorites;
+    //   favoriteMulti 写入 app.state._conversationFavorites(对话片段,id=conv-xxx)
+    // ★ v0.80 不再合并 DEMO_FAVORITES 兜底数据,没真实收藏就展示空状态
+    let filteredFavorites = realFavorites;
     if (contactId && sourceType) {
-        // ★ v0.44 修复:必须从 mergedFavorites 过滤,不能只读 DEMO_FAVORITES
-        //   真实收藏(sourceId=undefined)用 aiPersonId 匹配,DEMO 用 sourceId 匹配
-        filteredFavorites = mergedFavorites.filter(f =>
+        filteredFavorites = realFavorites.filter(f =>
             f.sourceType === sourceType && (
                 f.sourceId === contactId ||
                 f.aiPersonId === contactId

@@ -13,7 +13,6 @@ import { bootstrapSettingsSdk } from '../world/sdk/bootstrap.js';
 import { installPersonaDiaryApi } from './persona-bridge.js';
 import { getApiSdk } from '../api-manager/api-manager-section.js';
 import { formatDate } from './diary-generator.js';
-import { escapeHtml } from '@/src/core/escape.js';
 import {
     settlePersona,
     migrateLegacyAssets,
@@ -22,7 +21,9 @@ import {
 } from './income-engine.js';
 import { buildPersonaContextText, buildContextFromPersona } from './home-section.js';
 import { getGroupImages, getImageSrcByCode } from '../gallery/gallery-db.js';
-import { getSocialProfile, clearOnlineStatusCache } from './social-profile.js';
+// ★ 已删除:clearOnlineStatusCache 导入 — chat-app 不再使用在线状态缓存
+import { getSocialProfile } from './social-profile.js';
+import { getSocialApp } from '@/src/core/social-app-registry.js';
 import {
     callAiRaw,
     parseAiJsonOrFallback,
@@ -289,12 +290,12 @@ export function buildPersonaHomeMethods() {
             }
 
             await api.update(persona.id, { socialProfiles: profiles });
-            clearOnlineStatusCache();
+            // ★ 已删除:clearOnlineStatusCache() 调用 — chat-app 不再使用在线状态缓存
             this.toolkit?.island?.notify?.('success', selected ? `${type === 'avatar' ? '头像' : '背景'}已更新` : '已清除');
             return selected;
         },
 
-        /** 保存社媒配置（网名+在线时间） */
+        /** 保存社媒配置（网名） */
         async socialProfileSave(payload = {}) {
             const appId = payload.appId || 'chat';
             const route = this.app.state.personaHome || {};
@@ -303,39 +304,35 @@ export function buildPersonaHomeMethods() {
             const persona = api?.get(route.entityId);
             if (!persona) return null;
 
-            // 从 DOM 收集网名
-            const nicknameInput = document.querySelector(`[data-social-nickname="${appId}"]`);
-            const nickname = nicknameInput?.value?.trim() || '';
+            // 只收集这个 App 声明过的字段。面板本来就不渲染没声明的行，
+            // 这里再无条件写一遍的话，会把已有值覆盖成空字符串。
+            const fields = getSocialApp(appId)?.fields || ['nickname', 'avatar', 'background'];
+            const readInput = (attr) => document.querySelector(`[${attr}="${appId}"]`)?.value?.trim() || '';
 
-            // 从 DOM 收集拍一拍后缀
-            const patInput = document.querySelector(`[data-social-pat-setting="${appId}"]`);
-            const patSetting = patInput?.value?.trim() || '';
-
-            // 从 DOM 收集在线时间
-            const startH = document.querySelector(`[data-social-time="${appId}-start-h"]`)?.value || '00';
-            const startM = document.querySelector(`[data-social-time="${appId}-start-m"]`)?.value || '00';
-            const endH = document.querySelector(`[data-social-time="${appId}-end-h"]`)?.value || '23';
-            const endM = document.querySelector(`[data-social-time="${appId}-end-m"]`)?.value || '59';
+            // ★ 已删除:在线时间收集 — chat-app 不再展示"在线/离线",
+            //   也不再让用户设置在线时间段(socialProfile.onlineHours 不再写)。
 
             const profiles = { ...(persona.socialProfiles || {}) };
             if (!profiles[appId]) profiles[appId] = {};
 
-            profiles[appId].nickname = nickname;
-            profiles[appId].patSetting = patSetting;
-            if (appId === 'chat') {
-                profiles[appId].onlineHours = {
-                    start: `${startH}:${startM}`,
-                    end: `${endH}:${endM}`,
-                };
+            if (fields.includes('nickname')) {
+                profiles[appId].nickname = readInput('data-social-nickname');
             }
+            if (fields.includes('signature')) {
+                profiles[appId].signature = readInput('data-social-signature');
+            }
+            if (fields.includes('pat')) {
+                profiles[appId].patSetting = readInput('data-social-pat-setting');
+            }
+            // ★ 已删除:onlineHours 字段不再写入 persona.socialProfiles[appId]
 
             // 合并 pending 中的头像和背景（AI 生成的结果）
             const pending = route.socialProfilePending || {};
-            if (pending.avatarCode) {
+            if (fields.includes('avatar') && pending.avatarCode) {
                 profiles[appId].avatarCode = pending.avatarCode;
                 profiles[appId].avatar = pending.avatar || '';
             }
-            if (pending.backgroundCode) {
+            if (fields.includes('background') && pending.backgroundCode) {
                 profiles[appId].backgroundCode = pending.backgroundCode;
                 profiles[appId].background = pending.background || '';
             }
@@ -354,8 +351,7 @@ export function buildPersonaHomeMethods() {
             await api.update(persona.id, { socialProfiles: profiles });
             // 清除 pending 状态
             route.socialProfilePending = null;
-            // 清除 chat-app 的在线状态缓存，使其重新加载
-            clearOnlineStatusCache();
+            // ★ 已删除:clearOnlineStatusCache() 调用 — chat-app 不再使用在线状态缓存
             this.toolkit?.island?.notify?.('success', '社媒配置已保存');
             refresh();
             return profiles[appId];
@@ -412,7 +408,12 @@ export function buildPersonaHomeMethods() {
                 }));
 
                 // 构建 prompt
-                const appName = appId === 'chat' ? 'murmur（社交聊天软件）' : appId === 'blog' ? '博客平台' : '日记软件';
+                // 名字从社交 App 注册表读，别再写三目链 —— 那样每接一个新社交 App
+                // 都要回来改一次，而漏改的表现只是 prompt 里少一个词，没人会发现。
+                const socialEntry = getSocialApp(appId);
+                const appName = socialEntry
+                    ? `${socialEntry.label}${socialEntry.desc ? `（${socialEntry.desc}）` : ''}`
+                    : appId;
                 let systemPrompt = `你是一个社交媒体形象顾问。根据用户的人设信息，为其在${appName}上生成合适的形象配置。
 
 请分析人设的性格、身份、年龄等因素，选择：
@@ -423,18 +424,13 @@ ${avatarList.length > 0 ? `4. 从以下背景图列表中选择最合适的1个�
 
 请以JSON格式返回：
 {
-  "nickname": "网名",
-  "onlineHours": {
-    "start": "HH:MM",
-    "end": "HH:MM"
-  }${avatarList.length > 0 ? `,
+  "nickname": "网名"${avatarList.length > 0 ? `,
   "avatarCode": "头像编号",
   "backgroundCode": "背景图编号"` : ''}
 }
 
 注意：
 - 网名要符合人设身份和性格
-- 在线时间段要合理，如非特殊职业不应在深夜或凌晨在线
 - 返回纯JSON，不要其他内容
 ${avatarList.length > 0 ? `- 头像和背景图编号必须从提供的列表中选择，请选择最符合人设气质的外形` : ''}`;
 
@@ -443,7 +439,7 @@ ${personaInfo.join('\n')}
 ${worldInfo ? worldInfo + '\n' : ''}
 ${avatarList.length > 0 ? `可选头像/背景图编号列表：\n${avatarList.map(a => `${a.code}: ${a.name}`).join('\n')}` : ''}
 
-请为这个人在${appName}上生成合适的网名、在线时间段${avatarList.length > 0 ? '、头像和背景图' : ''}。`;
+请为这个人在${appName}上生成合适的网名${avatarList.length > 0 ? '、头像和背景图' : ''}。`;
 
                 // 打印发送给 AI 的内容
                 console.log('[socialProfileGenerate] 发送给 AI 的内容：');
@@ -500,10 +496,10 @@ ${avatarList.length > 0 ? `可选头像/背景图编号列表：\n${avatarList.m
                 }
 
                 // 设置待生成结果到 state
+                // ★ 已删除:socialProfilePending.onlineHours — chat-app 不再展示"在线/离线"
                 route.socialProfilePending = {
                     appId,
                     nickname: result.nickname || '',
-                    onlineHours: result.onlineHours || { start: '09:00', end: '22:00' },
                 };
 
                 // 如果有头像库，解析头像和背景
@@ -528,24 +524,7 @@ ${avatarList.length > 0 ? `可选头像/背景图编号列表：\n${avatarList.m
                     nicknameInput.value = result.nickname;
                 }
 
-                // 如果是 chat app，更新在线时间选择器
-                if (appId === 'chat' && result.onlineHours) {
-                    const { start, end } = result.onlineHours;
-                    if (start) {
-                        const [sh, sm] = start.split(':');
-                        const startH = document.querySelector(`[data-social-time="${appId}-start-h"]`);
-                        const startM = document.querySelector(`[data-social-time="${appId}-start-m"]`);
-                        if (startH) startH.value = sh || '09';
-                        if (startM) startM.value = sm || '00';
-                    }
-                    if (end) {
-                        const [eh, em] = end.split(':');
-                        const endH = document.querySelector(`[data-social-time="${appId}-end-h"]`);
-                        const endM = document.querySelector(`[data-social-time="${appId}-end-m"]`);
-                        if (endH) endH.value = eh || '22';
-                        if (endM) endM.value = em || '00';
-                    }
-                }
+                // ★ 已删除:在线时间选择器更新逻辑(chat-app 不再展示在线/离线)
 
                 toolkit.island.dismiss();
                 toolkit.island.notify('success', '已生成配置', '可自行调整后保存');
@@ -1742,8 +1721,13 @@ ${avatarList.length > 0 ? `可选头像/背景图编号列表：\n${avatarList.m
                 notify(this.toolkit, 'warning', '提示', '当前人设未绑定世界观');
                 return;
             }
-            const action = { action: 'detail', appId: 'settings', pageId: `world:assets` };
-            window.dispatchEvent(new CustomEvent('app:page-action', { detail: action }));
+            const worldState = this.app.state.world || (this.app.state.world = {});
+            worldState.currentWorldId = persona.boundWorldId;
+            worldState.sub = 'overview';
+            worldState.activeSettingsSection = 'assets';
+            window.dispatchEvent(new CustomEvent('app:page-action', {
+                detail: { action: 'detail', appId: 'settings', pageId: 'world' },
+            }));
         },
 
         /**

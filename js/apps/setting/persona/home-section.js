@@ -23,6 +23,7 @@
  */
 
 import { escapeHtml } from '@/src/core/escape.js';
+import { renderPersonaAvatarContent } from './avatar.js';
 import { formatDate } from '@/src/core/mood.js';
 import { MOOD_LABELS, getMoodIsPositive, getMoodColor, getMoodBorderColor, getMoodIntensityStyle } from '@/src/core/mood.js';
 import { renderSpaceBlock } from './space-block.js';
@@ -44,13 +45,6 @@ function wvAction(method, payload = {}) {
 
 function wvDetail(pageId) {
     return `data-app-action='${escapeHtml(JSON.stringify({ action: 'detail', appId: 'settings', pageId }))}'`;
-}
-
-function getInitial(name) {
-    if (!name) return '?';
-    const trimmed = String(name).trim();
-    if (!trimmed) return '?';
-    return Array.from(trimmed)[0].toUpperCase();
 }
 
 /**
@@ -127,14 +121,6 @@ function pickEntityId(app) {
     }
 }
 
-function renderAvatarContent(persona) {
-    const avatar = typeof persona?.avatar === 'string' ? persona.avatar.trim() : '';
-    if (avatar) {
-        return `<img class="persona-avatar-image" src="${escapeHtml(avatar)}" alt="" />`;
-    }
-    return escapeHtml(getInitial(persona?.name));
-}
-
 function renderAvatarPicker(app, persona) {
     const route = app.state.personaHome || {};
     if (!route.avatarPickerOpen) return '';
@@ -205,7 +191,7 @@ function renderTopBlock(app, persona) {
     return `
         <div class="phome-hero-wrap ${app.state.personaHome?.avatarPickerOpen ? 'is-open' : ''}">
             <button class="phome-hero" ${wvAction('personaAvatarPickerToggle')} aria-expanded="${app.state.personaHome?.avatarPickerOpen ? 'true' : 'false'}">
-                <div class="phome-hero__avatar">${renderAvatarContent(persona)}</div>
+                <div class="phome-hero__avatar">${renderPersonaAvatarContent(persona)}</div>
                 <div class="phome-hero__body">
                     <div class="phome-hero__name">${escapeHtml(persona?.name || persona?.id || '未命名')}</div>
                     ${meta ? `<div class="phome-hero__meta">${escapeHtml(meta)}</div>` : ''}
@@ -1501,7 +1487,10 @@ function renderBalanceEditForm(currentBalance) {
 // 社媒形象配置（v0.19 murmur/博客/日记）
 // ============================================
 
-import { getSocialProfile, isOnline, formatOnlineHours } from './social-profile.js';
+// ★ 已删除:isOnline / formatOnlineHours 导入(chat-app 不再展示"在线/离线")
+import { getSocialProfile } from './social-profile.js';
+// 社交 App 注册表：人设页上有哪几张「社媒形象」卡由它决定
+import { listSocialApps } from '@/src/core/social-app-registry.js';
 
 /**
  * 渲染单个社媒软件配置卡片
@@ -1511,44 +1500,45 @@ function renderSocialAppCard(app, persona, appId, appInfo) {
     const route = app.state.personaHome || {};
     const isExpanded = route.socialProfileExpanded === appId;
     const pending = route.socialProfilePending || {};
+    const fields = appInfo.fields;
 
     // 当前配置状态（考虑 pending）
     const effectiveNickname = pending.nickname || profile.nickname || '';
+    const effectiveSignature = pending.signature || profile.signature || '';
     const effectiveAvatarCode = pending.avatarCode || profile.avatarCode || '';
     const effectiveBackgroundCode = pending.backgroundCode || profile.backgroundCode || '';
-    const effectiveOnlineHours = pending.onlineHours || profile.onlineHours;
+    // ★ 已删除:effectiveOnlineHours(原用于在线/离线 badge,chat-app 已下线)
 
-    const hasNickname = !!effectiveNickname;
-    const hasAvatar = !!effectiveAvatarCode;
-    const hasBackground = !!effectiveBackgroundCode;
-    const hasOnlineHours = !!(effectiveOnlineHours?.start || effectiveOnlineHours?.end);
-    const onlineStatus = isOnline(effectiveOnlineHours);
-
-    // 在线状态图标
-    const onlineBadge = onlineStatus
-        ? '<span class="phome-social__online-badge phome-social__online-badge--online">在线</span>'
-        : '<span class="phome-social__online-badge phome-social__online-badge--offline">离线</span>';
-
-    // 配置状态摘要
+    // 摘要只统计这个 App 真的会配的字段 —— 否则 murmur 时代残留在
+    // socialProfiles 里的签名会跑到氧气/萤火的卡上当作「已配置」。
     const configParts = [];
-    if (hasNickname) configParts.push(`网名: ${escapeHtml(effectiveNickname)}`);
-    if (hasAvatar) configParts.push('已选头像');
-    if (hasBackground) configParts.push('已选背景');
-    if (hasOnlineHours) configParts.push(formatOnlineHours(effectiveOnlineHours));
+    if (fields.includes('nickname') && effectiveNickname) {
+        configParts.push(`网名: ${escapeHtml(effectiveNickname)}`);
+    }
+    if (fields.includes('signature') && effectiveSignature) {
+        configParts.push(`签名: ${escapeHtml(effectiveSignature.substring(0, 10))}${effectiveSignature.length > 10 ? '...' : ''}`);
+    }
+    if (fields.includes('avatar') && effectiveAvatarCode) configParts.push('已选头像');
+    if (fields.includes('background') && effectiveBackgroundCode) configParts.push('已选背景');
+    // ★ 已删除:formatOnlineHours(configParts)
 
     const configSummary = configParts.length > 0
         ? configParts.join(' · ')
         : '点击配置';
 
+    // 底色跟着 App 走。少了它，图标就是一个飘在白底上的图形
+    // （murmur 的两颗星、萤火的播放键本来都是靠底色撑起来的）。
+    const iconStyle = appInfo.iconBg ? ` style="background:${escapeHtml(appInfo.iconBg)}"` : '';
+
     return `
         <div class="phome-social__app-card ${isExpanded ? 'is-expanded' : ''}">
             <div class="phome-social__app-header" ${wvAction('socialProfileToggle', { appId })}>
-                <div class="phome-social__app-icon">
+                <div class="phome-social__app-icon"${iconStyle}>
                     ${appInfo.icon}
                 </div>
                 <div class="phome-social__app-info">
                     <div class="phome-social__app-name">${escapeHtml(appInfo.name)}</div>
-                    <div class="phome-social__app-status">${onlineBadge} · ${escapeHtml(configSummary)}</div>
+                    <div class="phome-social__app-status">${escapeHtml(configSummary)}</div>
                 </div>
                 <div class="phome-social__app-chevron">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1586,11 +1576,8 @@ function renderSocialAppPanel(app, persona, appId, appInfo, profile) {
     const selectedAvatarCode = effectiveAvatarCode;
     const selectedBackgroundCode = effectiveBackgroundCode;
 
-    // 在线时间段
-    const startHour = profile.onlineHours?.start?.split(':')[0] || '09';
-    const startMinute = profile.onlineHours?.start?.split(':')[1] || '00';
-    const endHour = profile.onlineHours?.end?.split(':')[0] || '22';
-    const endMinute = profile.onlineHours?.end?.split(':')[1] || '00';
+    // ★ 已删除:startHour / startMinute / endHour / endMinute 读取 profile.onlineHours 的代码
+    //   (chat-app 不再展示"在线/离线",时间选择器也已下线)
 
     const avatarOptions = images.length > 0 ? images.map(img => `
         <button class="phome-social__image-option ${img.code === selectedAvatarCode ? 'is-active' : ''}"
@@ -1606,19 +1593,33 @@ function renderSocialAppPanel(app, persona, appId, appInfo, profile) {
         </button>
     `).join('') : '<div class="phome-social__image-empty">暂无背景库图片</div>';
 
-    return `
-        <div class="phome-social__app-panel">
-            <!-- 网名 -->
+    // 只渲染这个 App 声明过的字段。以前这里写死五行，结果每个 App 的面板
+    // 长得一模一样 —— 氧气 / 萤火 也有「拍一拍」，而拍一拍只有 murmur
+    // (chat-page 读 socialProfiles.chat.patSetting) 会用，填了就是白填。
+    const fields = appInfo.fields;
+
+    const nicknameRow = !fields.includes('nickname') ? '' : `
             <div class="phome-social__config-row">
                 <label class="phome-social__config-label">网名</label>
                 <input class="phome-social__config-input"
                        type="text"
                        value="${escapeHtml(profile.nickname || '')}"
-                       placeholder="设置在此软件的显示名称"
+                       placeholder="设置在${escapeHtml(appInfo.name)}的显示名称"
                        data-social-nickname="${escapeHtml(appId)}" />
-            </div>
+            </div>`;
 
-            <!-- 拍一拍后缀 (murmur/chat 专用,给 AI 回复拍一拍时用) -->
+    const signatureRow = !fields.includes('signature') ? '' : `
+            <div class="phome-social__config-row">
+                <label class="phome-social__config-label">签名</label>
+                <input class="phome-social__config-input"
+                       type="text"
+                       value="${escapeHtml(profile.signature || '')}"
+                       placeholder="一句话介绍自己,展示在通讯录中"
+                       maxlength="50"
+                       data-social-signature="${escapeHtml(appId)}" />
+            </div>`;
+
+    const patRow = !fields.includes('pat') ? '' : `
             <div class="phome-social__config-row">
                 <label class="phome-social__config-label">拍一拍</label>
                 <input class="phome-social__config-input"
@@ -1627,9 +1628,9 @@ function renderSocialAppPanel(app, persona, appId, appInfo, profile) {
                        placeholder="对方拍你时的文案,例如「揉了揉我的脑袋」"
                        maxlength="30"
                        data-social-pat-setting="${escapeHtml(appId)}" />
-            </div>
+            </div>`;
 
-            <!-- 头像选择 -->
+    const avatarRow = !fields.includes('avatar') ? '' : `
             <div class="phome-social__config-row">
                 <label class="phome-social__config-label">头像</label>
                 <div class="phome-social__image-picker-wrap">
@@ -1642,15 +1643,13 @@ function renderSocialAppPanel(app, persona, appId, appInfo, profile) {
                     ${selectedAvatarCode ? `<button class="phome-social__clear-btn" ${wvAction('socialImageSelect', { appId, type: 'avatar', code: '' })}>清除</button>` : ''}
                 </div>
             </div>
-
-            <!-- 头像选择面板 -->
             ${imagePickerOpen && imagePickerMode === 'avatar' ? `
                 <div class="phome-social__image-grid">
                     ${loading ? '<div class="phome-social__image-empty">加载中...</div>' : avatarOptions}
                 </div>
-            ` : ''}
+            ` : ''}`;
 
-            <!-- 背景选择 -->
+    const backgroundRow = !fields.includes('background') ? '' : `
             <div class="phome-social__config-row">
                 <label class="phome-social__config-label">背景</label>
                 <div class="phome-social__image-picker-wrap">
@@ -1663,41 +1662,29 @@ function renderSocialAppPanel(app, persona, appId, appInfo, profile) {
                     ${selectedBackgroundCode ? `<button class="phome-social__clear-btn" ${wvAction('socialImageSelect', { appId, type: 'background', code: '' })}>清除</button>` : ''}
                 </div>
             </div>
-
-            <!-- 背景选择面板 -->
             ${imagePickerOpen && imagePickerMode === 'background' ? `
                 <div class="phome-social__image-grid">
                     ${loading ? '<div class="phome-social__image-empty">加载中...</div>' : backgroundOptions}
                 </div>
-            ` : ''}
+            ` : ''}`;
 
-            ${appId === 'chat' ? `
-            <!-- 在线时间段 (仅 chat) -->
-            <div class="phome-social__config-row">
-                <label class="phome-social__config-label">在线时间</label>
-                <div class="phome-social__time-range">
-                    <select class="phome-social__time-select" data-social-time="${appId}-start-h">
-                        ${Array.from({length: 24}, (_, i) => `<option value="${String(i).padStart(2, '0')}" ${String(i).padStart(2, '0') === startHour ? 'selected' : ''}>${String(i).padStart(2, '0')}</option>`).join('')}
-                    </select>
-                    <span>:</span>
-                    <select class="phome-social__time-select" data-social-time="${appId}-start-m">
-                        ${Array.from({length: 60}, (_, i) => `<option value="${String(i).padStart(2, '0')}" ${String(i).padStart(2, '0') === startMinute ? 'selected' : ''}>${String(i).padStart(2, '0')}</option>`).join('')}
-                    </select>
-                    <span class="phome-social__time-sep">至</span>
-                    <select class="phome-social__time-select" data-social-time="${appId}-end-h">
-                        ${Array.from({length: 24}, (_, i) => `<option value="${String(i).padStart(2, '0')}" ${String(i).padStart(2, '0') === endHour ? 'selected' : ''}>${String(i).padStart(2, '0')}</option>`).join('')}
-                    </select>
-                    <span>:</span>
-                    <select class="phome-social__time-select" data-social-time="${appId}-end-m">
-                        ${Array.from({length: 60}, (_, i) => `<option value="${String(i).padStart(2, '0')}" ${String(i).padStart(2, '0') === endMinute ? 'selected' : ''}>${String(i).padStart(2, '0')}</option>`).join('')}
-                    </select>
-                </div>
-            </div>
-            ` : ''}
+    // AI 生成只产出网名 / 头像 / 背景，一个都不配的 App 就别放这个按钮
+    const canGenerate = fields.some(f => f === 'nickname' || f === 'avatar' || f === 'background');
 
-            <!-- 操作按钮 -->
+    return `
+        <div class="phome-social__app-panel">
+            ${nicknameRow}
+            ${signatureRow}
+            ${patRow}
+            ${avatarRow}
+            ${backgroundRow}
+
+            <!-- ★ 已删除:在线时间段 (chat 专用) 配置 UI。
+                 chat-app 不再展示"在线/离线"指示,用户也不需要设置在线时间。
+                 persona.socialProfiles[appId].onlineHours 字段不再使用。 -->
+
             <div class="phome-social__config-actions">
-                <button class="persona-btn persona-btn--small persona-btn--ghost" ${wvAction('socialProfileGenerate', { appId })}>AI 生成</button>
+                ${canGenerate ? `<button class="persona-btn persona-btn--small persona-btn--ghost" ${wvAction('socialProfileGenerate', { appId })}>AI 生成</button>` : ''}
                 <button class="persona-btn persona-btn--small" ${wvAction('socialProfileSave', { appId })}>保存配置</button>
             </div>
         </div>
@@ -1805,28 +1792,30 @@ function renderTransactionHistoryBlock(app, persona) {
 }
 
 function renderSocialBlock(app, persona) {
-    // 社媒软件列表
-    const socialApps = [
-        {
-            id: 'chat',
-            name: 'murmur',
-            icon: '<svg viewBox="0 0 60 60" style="width:36px;height:36px;"><path d="M0,-22 Q2.5,-4 15,0 Q2.5,4 0,22 Q-2.5,4 -15,0 Q-2.5,-4 0,-22Z" fill="#4a9eca" transform="translate(15, 12) scale(1.5)"/><path d="M0,-22 Q2.5,-4 15,0 Q2.5,4 0,22 Q-2.5,4 -15,0 Q-2.5,-4 0,-22Z" fill="#3d8ab8" transform="translate(45, 49) scale(1.5)"/></svg>',
-        },
-        {
-            id: 'blog',
-            name: '博客',
-            icon: '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#FF6B6B" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
-        },
-        {
-            id: 'diary',
-            name: '日记',
-            icon: '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#9B59B6" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
-        },
-    ];
+    // 社媒软件列表从框架级注册表读，不再在这里硬编码。
+    //
+    // 以前这里写死了 [chat, blog, diary] 三项（连图标 SVG 都内联）。
+    // 那意味着「再做一个 murmur 那样的社交 App」必须来改 settings 的
+    // 内部实现 —— 而 App 之间本来只应该通过 registerPhoneApp 这一个口子
+    // 打交道。新 App 作者最容易漏的就是这一步，漏了之后的症状是
+    // 「人设页里没有我的 App」，而且没有任何报错。
+    //
+    // 现在 App 只要在 appConfig 里声明 socialProfile 就会自动出现在这里。
+    // 详见 src/core/social-app-registry.js。
+    const socialApps = listSocialApps().map((entry) => ({
+        id: entry.id,
+        name: entry.label,
+        icon: entry.icon,
+        // iconBg / fields 都要带上：前者决定图标底色，后者决定面板上有哪几行。
+        // 漏掉任何一个都不会报错，症状只是「所有卡长得一样」。
+        iconBg: entry.iconBg,
+        desc: entry.desc,
+        fields: Array.isArray(entry.fields) ? entry.fields : ['nickname', 'avatar', 'background'],
+    }));
 
-    const cardsHtml = socialApps.map(appInfo =>
-        renderSocialAppCard(app, persona, appInfo.id, appInfo)
-    ).join('');
+    const cardsHtml = socialApps.length > 0
+        ? socialApps.map(appInfo => renderSocialAppCard(app, persona, appInfo.id, appInfo)).join('')
+        : '<div class="phome-social__empty">还没有 App 声明社媒形象</div>';
 
     return `
         <section class="phome-card">

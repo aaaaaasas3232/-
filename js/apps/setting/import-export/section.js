@@ -7,13 +7,7 @@
  *   - 世界观       (sdkWorlds / sdkWorldGroups / sdkPlaces / sdkLocations / sdkFactions / sdkTagGroups / sdkTags)
  *   - Prompt 库    (不归 settings SDK 管，仍走 IndexedDB)
  *
- * 与「数据库管理」不同：
- *   - 数据库管理 → 暴露所有 db 表，可查看 / 编辑 / 保存 / 删除
- *   - 导入与导出 → 高层业务语义，一键导出整类（角色卡、世界观），导入时按 ID 合并/覆盖
- *
- * 操作策略：
- *   导出时用 SDK 的 list()（内存副本最权威），没有 SDK 时直接从 IndexedDB 读。
- *   导入时按 record.id 做合并：用户决定「覆盖 / 跳过 / 新建」。
+ * UI 设计：简洁大方，无左侧竖线，无渐变，卡片精致小巧
  */
 
 import { escapeHtml } from '@/src/core/escape.js';
@@ -56,7 +50,6 @@ const BUSINESS_GROUPS = [
         id: 'users',
         label: '用户角色卡',
         desc: '所有用户人设数据',
-        color: '#2196F3',
         scopes: [
             { kind: 'sdk', name: 'users', label: '用户' },
         ],
@@ -66,7 +59,6 @@ const BUSINESS_GROUPS = [
         id: 'ai',
         label: 'AI 人设卡',
         desc: '所有AI角色配置',
-        color: '#4CAF50',
         scopes: [
             { kind: 'sdk', name: 'aiPersons', label: 'AI 人设' },
         ],
@@ -76,7 +68,6 @@ const BUSINESS_GROUPS = [
         id: 'world',
         label: '世界观',
         desc: '世界观及其下属人设数据',
-        color: '#FF9800',
         scopes: [
             { kind: 'sdk', name: 'worlds',         label: '世界观' },
             { kind: 'sdk', name: 'worldGroups',    label: '世界观组' },
@@ -92,7 +83,6 @@ const BUSINESS_GROUPS = [
         id: 'prompt',
         label: 'Prompt 库',
         desc: '提示词模板与变量',
-        color: '#9C27B0',
         scopes: [],
         fallbackStores: ['promptTemplates', 'promptVariables'],
     },
@@ -124,7 +114,6 @@ async function fetchScopeData(scope) {
 }
 
 async function putScopeItems(scope, items, policy) {
-    // policy: 'overwrite' | 'skip' | 'rename'
     const sdk = getSdk();
     const storeName = scopeToStoreName(scope);
     const results = { total: items.length, created: 0, updated: 0, skipped: 0, renamed: 0 };
@@ -150,7 +139,6 @@ async function putScopeItems(scope, items, policy) {
         return results;
     }
 
-    // 兜底写 IndexedDB
     const db = getDb();
     if (!db || !storeName) return { ...results, error: '数据库 / SDK 不可用' };
     for (const item of items) {
@@ -227,14 +215,12 @@ async function putStoreItems(storeName, items, policy) {
 
 async function exportGroup(group) {
     const out = { group: group.id, exportTime: new Date().toISOString(), data: {} };
-    // 业务 SDK scope
     for (const scope of group.scopes) {
         const { items } = await fetchScopeData(scope.name);
         out.data[scope.name] = items;
     }
-    // 兜底 IndexedDB 表
     for (const storeName of group.fallbackStores || []) {
-        if (out.data[storeName]) continue; // 已被 scope 覆盖
+        if (out.data[storeName]) continue;
         const items = await fetchStoreList(storeName);
         out.data[storeName] = items;
     }
@@ -271,14 +257,12 @@ function summarizeResult(perScope) {
 
 async function importGroup(group, payload, policy) {
     const perScope = {};
-    // 业务 SDK scope
     for (const scope of group.scopes) {
         const items = payload?.data?.[scope.name];
         if (Array.isArray(items)) {
             perScope[scope.name] = await putScopeItems(scope.name, items, policy);
         }
     }
-    // 兜底 IndexedDB 表
     for (const storeName of group.fallbackStores || []) {
         if (perScope[storeName]) continue;
         const items = payload?.data?.[storeName];
@@ -333,34 +317,61 @@ export function renderImportExportSection(app) {
 function renderExportTab() {
     return `
         <div class="ie-content">
-            <div class="ie-section">
-                <div class="ie-section-title">按业务分组导出</div>
-                <p class="ie-desc">每个分组都包含自己旗下的全部数据。导出文件为 JSON，可用于备份、迁移、分享。</p>
+            ${renderExportGroups()}
+            ${renderExportAllCard()}
+        </div>
+    `;
+}
+
+function renderExportGroups() {
+    return `
+        <div class="ie-card">
+            <div class="ie-card__head">
+                <div class="ie-card__head-text">
+                    <span class="ie-card__title">按业务分组导出</span>
+                    <p class="ie-card__sub">每个分组包含旗下全部数据，导出为 JSON 文件。</p>
+                </div>
+            </div>
+            <div class="ie-card__body">
                 <div class="ie-group-list">
                     ${BUSINESS_GROUPS.map(g => `
-                        <div class="ie-group" style="--ie-accent:${g.color}">
+                        <div class="ie-group">
                             <div class="ie-group__head">
-                                <span class="ie-group__dot"></span>
                                 <span class="ie-group__label">${escapeHtml(g.label)}</span>
                             </div>
                             <p class="ie-group__desc">${escapeHtml(g.desc)}</p>
                             <div class="ie-group__scopes">
-                                ${[...g.scopes.map(s => s.label), ...(g.fallbackStores || []).map(s => s)].map(t => `
+                                ${[...g.scopes.map(s => s.label), ...(g.fallbackStores || [])].map(t => `
                                     <span class="ie-scope-chip">${escapeHtml(t)}</span>
                                 `).join('')}
                             </div>
                             <div class="ie-group__actions">
-                                <button class="ie-btn ie-btn--primary" data-ie-action="export-group" data-group="${escapeHtml(g.id)}">导出该分组</button>
+                                <button class="ie-btn ie-btn--primary ie-btn--small"
+                                    data-ie-action="export-group"
+                                    data-group="${escapeHtml(g.id)}">
+                                    导出
+                                </button>
                             </div>
                         </div>
                     `).join('')}
                 </div>
             </div>
+        </div>
+    `;
+}
 
-            <div class="ie-section">
-                <div class="ie-section-title">一键导出全部业务数据</div>
-                <p class="ie-desc">把所有分组打包到一个文件，结构为 { groups: { users: {...}, ai: {...}, world: {...}, prompt: {...} } }。</p>
-                <button class="ie-btn ie-btn--primary" data-ie-action="export-all">导出全部</button>
+function renderExportAllCard() {
+    return `
+        <div class="ie-card">
+            <div class="ie-card__head">
+                <span class="ie-card__title">一键导出</span>
+            </div>
+            <div class="ie-card__body">
+                <p class="ie-card__sub">导出全部数据到一个文件</p>
+                <button class="ie-btn ie-btn--primary ie-btn--block"
+                    data-ie-action="export-all">
+                    导出全部
+                </button>
             </div>
         </div>
     `;
@@ -373,50 +384,87 @@ function renderExportTab() {
 function renderImportTab(importTarget, policy, lastResult) {
     return `
         <div class="ie-content">
-            <div class="ie-section">
-                <div class="ie-section-title">选择文件与目标</div>
-                <p class="ie-desc">导入逻辑：按主键 id 合并记录。冲突时按下方「冲突策略」处理。</p>
-
-                <div class="ie-form-row">
-                    <label class="ie-form-label">目标分组</label>
-                    <select class="ie-form-select" data-ie-input="target">
-                        <option value="">-- 请选择要导入到哪个分组 --</option>
-                        ${BUSINESS_GROUPS.map(g => `
-                            <option value="${escapeHtml(g.id)}" ${importTarget === g.id ? 'selected' : ''}>
-                                ${escapeHtml(g.label)}
-                            </option>
-                        `).join('')}
-                        <option value="__full__" ${importTarget === '__full__' ? 'selected' : ''}>全部（用全库导出文件）</option>
-                    </select>
+            <div class="ie-card">
+                <div class="ie-card__head">
+                    <span class="ie-card__title">导入数据</span>
                 </div>
+                <div class="ie-card__body">
+                    <div class="ie-form-row">
+                        <label class="ie-form-label">目标分组</label>
+                        <select class="ie-form-select" data-ie-input="target">
+                            <option value="">-- 请选择 --</option>
+                            ${BUSINESS_GROUPS.map(g => `
+                                <option value="${escapeHtml(g.id)}" ${importTarget === g.id ? 'selected' : ''}>
+                                    ${escapeHtml(g.label)}
+                                </option>
+                            `).join('')}
+                            <option value="__full__" ${importTarget === '__full__' ? 'selected' : ''}>全部</option>
+                        </select>
+                    </div>
 
-                <div class="ie-form-row">
-                    <label class="ie-form-label">冲突策略</label>
-                    <div class="ie-policy-group">
-                        ${[
-                            { id: 'overwrite', label: '覆盖', desc: '用新数据覆盖同 id 的旧记录（默认）' },
-                            { id: 'skip',      label: '跳过', desc: '同 id 的旧记录保留，只新增' },
-                            { id: 'rename',    label: '新建副本', desc: '给新记录加上时间戳后缀，保留旧记录' },
-                        ].map(p => `
-                            <label class="ie-policy ${policy === p.id ? 'is-active' : ''}">
-                                <input type="radio" name="ie-policy" value="${escapeHtml(p.id)}" ${policy === p.id ? 'checked' : ''} data-ie-input="policy" />
-                                <span class="ie-policy__label">${escapeHtml(p.label)}</span>
-                                <span class="ie-policy__desc">${escapeHtml(p.desc)}</span>
-                            </label>
-                        `).join('')}
+                    <div class="ie-form-row">
+                        <label class="ie-form-label">冲突策略</label>
+                        <div class="ie-policy-group">
+                            ${[
+                                { id: 'overwrite', label: '覆盖', desc: '用新数据替换同 ID 记录' },
+                                { id: 'skip',      label: '跳过', desc: '保留旧记录，只新增' },
+                                { id: 'rename',    label: '新建副本', desc: '给新记录加时间戳' },
+                            ].map(p => `
+                                <label class="ie-policy ${policy === p.id ? 'is-active' : ''}">
+                                    <div class="ie-policy__header">
+                                        <input type="radio" name="ie-policy" value="${escapeHtml(p.id)}"
+                                            ${policy === p.id ? 'checked' : ''}
+                                            data-ie-input="policy" />
+                                        <span class="ie-policy__label">${escapeHtml(p.label)}</span>
+                                    </div>
+                                    <span class="ie-policy__desc">${escapeHtml(p.desc)}</span>
+                                </label>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div class="ie-upload-zone">
+                        <div class="ie-upload-zone__icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                <path d="M12 3v11M8 10l4 4 4-4"/>
+                                <path d="M4 17v2.5A1.5 1.5 0 0 0 5.5 21h13a1.5 1.5 0 0 0 1.5-1.5V17"/>
+                            </svg>
+                        </div>
+                        <p class="ie-upload-hint">支持 .json 格式导出文件</p>
+                        <input type="file" id="ie-import-file" accept=".json" style="display:none;" />
+                        <button class="ie-btn ie-btn--primary"
+                            data-ie-action="pick-file">
+                            选择文件并导入
+                        </button>
                     </div>
                 </div>
-
-                <input type="file" id="ie-import-file" accept=".json" style="display:none;" />
-                <button class="ie-btn ie-btn--primary" data-ie-action="pick-file">选择 JSON 并导入</button>
             </div>
 
-            ${lastResult ? `
-                <div class="ie-section">
-                    <div class="ie-section-title">上次导入结果</div>
-                    <pre class="ie-result">${escapeHtml(safeJSONStringify(lastResult))}</pre>
-                </div>
-            ` : ''}
+            ${lastResult ? renderImportResult(lastResult) : ''}
+        </div>
+    `;
+}
+
+function renderImportResult(result) {
+    const stats = summarizeResult(result);
+    const hasStats = stats.total > 0;
+
+    return `
+        <div class="ie-card">
+            <div class="ie-card__head">
+                <span class="ie-card__title">导入结果</span>
+            </div>
+            <div class="ie-card__body">
+                ${hasStats ? `
+                    <div class="ie-stats">
+                        ${stats.created > 0 ? `<span class="ie-stat ie-stat--created">新增 ${stats.created}</span>` : ''}
+                        ${stats.updated > 0 ? `<span class="ie-stat ie-stat--updated">更新 ${stats.updated}</span>` : ''}
+                        ${stats.skipped > 0 ? `<span class="ie-stat ie-stat--skipped">跳过 ${stats.skipped}</span>` : ''}
+                        ${stats.renamed > 0 ? `<span class="ie-stat ie-stat--renamed">重命名 ${stats.renamed}</span>` : ''}
+                    </div>
+                ` : ''}
+                <pre class="ie-result">${escapeHtml(safeJSONStringify(result))}</pre>
+            </div>
         </div>
     `;
 }
@@ -427,6 +475,15 @@ function renderImportTab(importTarget, policy, lastResult) {
 
 export function buildImportExportMethods() {
     function refresh() {
+        if (typeof window === 'undefined') return;
+        // 三段式刷新:++tick + bridge.syncNow + refreshPhoneApps
+        if (window.__detailRenderTick && typeof window.__detailRenderTick.value === 'number') {
+            window.__detailRenderTick.value++;
+        }
+        const bridge = window.__appRendererBridge;
+        if (bridge && typeof bridge.syncNow === 'function') {
+            try { bridge.syncNow({ force: true }); } catch (_) {}
+        }
         try { window.refreshPhoneApps?.(); } catch (_) {}
     }
 
@@ -435,18 +492,12 @@ export function buildImportExportMethods() {
         Object.assign(app.state.importExport, patch);
     }
 
-    function notify(kind, title, sub) {
-        try { window.settingsApp?.toolkit?.island?.notify(kind, title, sub); } catch (_) {}
-    }
-
     return {
-        // ---- tab 切换 ----
         ieSetTab({ tab }) {
             setState(this.app, { tab });
             refresh();
         },
 
-        // ---- 表单状态同步 ----
         ieSetPolicy({ policy }) {
             setState(this.app, { policy });
             refresh();
@@ -457,17 +508,16 @@ export function buildImportExportMethods() {
             refresh();
         },
 
-        // ---- 导出 ----
         async ieExportGroup({ group }) {
             const g = BUSINESS_GROUPS.find(x => x.id === group);
-            if (!g) return notify('error', '未知分组', group);
+            if (!g) return this.app.toolkit.island.notify('error', '未知分组', group);
             try {
                 const payload = await exportGroup(g);
                 const filename = `xiaoting_${g.id}_${Date.now()}.json`;
                 downloadBlob(new Blob([safeJSONStringify(payload)], { type: 'application/json' }), filename);
-                notify('success', '已导出', `${g.label} → ${filename}`);
+                this.app.toolkit.island.notify('success', '已导出', g.label);
             } catch (e) {
-                notify('error', '导出失败', e.message || String(e));
+                this.app.toolkit.island.notify('error', '导出失败', e.message || String(e));
             }
         },
 
@@ -476,36 +526,34 @@ export function buildImportExportMethods() {
                 const payload = await exportAll();
                 const filename = `xiaoting_business_full_${Date.now()}.json`;
                 downloadBlob(new Blob([safeJSONStringify(payload)], { type: 'application/json' }), filename);
-                notify('success', '已导出全部业务数据', filename);
+                this.app.toolkit.island.notify('success', '已导出全部数据', filename);
             } catch (e) {
-                notify('error', '导出失败', e.message || String(e));
+                this.app.toolkit.island.notify('error', '导出失败', e.message || String(e));
             }
         },
 
-        // ---- 导入：点击按钮 → 触发文件选择 ----
         iePickFile() {
             const app = this.app;
             const target = app.state.importExport?.importTarget || '';
             if (!target) {
-                notify('warning', '请先选择目标分组', '');
+                app.toolkit.island.notify('warning', '请先选择目标分组', '');
                 return;
             }
             const input = document.getElementById('ie-import-file');
             if (input) input.click();
         },
 
-        // ---- 真正导入（异步文件读取后派发） ----
         async ieDoImport({ json }) {
             const app = this.app;
             const state = app.state.importExport || {};
             const target = state.importTarget;
             const policy = state.policy || 'overwrite';
-            if (!target) return notify('warning', '请先选择目标分组', '');
-            if (!json) return notify('error', '文件为空', '');
+            if (!target) return app.toolkit.island.notify('warning', '请先选择目标分组', '');
+            if (!json) return app.toolkit.island.notify('error', '文件为空', '');
 
             let payload;
             try { payload = JSON.parse(json); }
-            catch (e) { return notify('error', 'JSON 解析失败', e.message); }
+            catch (e) { return app.toolkit.island.notify('error', 'JSON 解析失败', e.message); }
 
             try {
                 let summary;
@@ -513,23 +561,23 @@ export function buildImportExportMethods() {
                     summary = await importAll(payload, policy);
                 } else {
                     const g = BUSINESS_GROUPS.find(x => x.id === target);
-                    if (!g) return notify('error', '未知分组', target);
+                    if (!g) return app.toolkit.island.notify('error', '未知分组', target);
                     const groupPayload = payload?.groups?.[target] || payload;
                     const perScope = await importGroup(g, groupPayload, policy);
                     summary = { [target]: summarizeResult(perScope) };
                 }
                 setState(app, { lastResult: summary });
-                notify('success', '导入完成', '');
+                app.toolkit.island.notify('success', '导入完成', '');
                 refresh();
             } catch (e) {
-                notify('error', '导入失败', e.message || String(e));
+                app.toolkit.island.notify('error', '导入失败', e.message || String(e));
             }
         },
     };
 }
 
 // ============================================
-// 全局事件监听（无需手动注册到 framework）
+// 全局事件监听
 // ============================================
 
 if (typeof window !== 'undefined') {
@@ -538,7 +586,6 @@ if (typeof window !== 'undefined') {
         if (!(target instanceof HTMLElement)) return;
         const btn = target.closest('[data-ie-action]');
         if (!btn) return;
-        // 只在 settings app 内响应
         const shell = target.closest('.app-shell');
         if (!shell) return;
 
@@ -564,7 +611,6 @@ if (typeof window !== 'undefined') {
         }
     }, true);
 
-    // tab 切换
     document.addEventListener('click', (event) => {
         const t = event.target;
         if (!(t instanceof HTMLElement)) return;
@@ -577,7 +623,6 @@ if (typeof window !== 'undefined') {
         }));
     }, true);
 
-    // 表单同步
     document.addEventListener('change', (event) => {
         const t = event.target;
         if (!(t instanceof HTMLElement)) return;
@@ -594,7 +639,6 @@ if (typeof window !== 'undefined') {
         }
     }, true);
 
-    // 文件选择
     document.addEventListener('change', async (event) => {
         const t = event.target;
         if (!(t instanceof HTMLElement)) return;

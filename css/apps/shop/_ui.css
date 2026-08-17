@@ -1,0 +1,392 @@
+/* 四叶草 · 通用控件 */
+
+/* ── 按钮 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 15px;
+    height: 38px;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    background: transparent;
+    color: var(--sp-text);
+    font-size: 13.5px;
+    font-weight: 520;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.16s ease, border-color 0.16s ease, opacity 0.16s ease, transform 0.12s ease;
+}
+
+.app-shell[data-app-id="shop"] .sp-btn:active:not(:disabled) { transform: scale(0.975); }
+.app-shell[data-app-id="shop"] .sp-btn:disabled { opacity: 0.42; cursor: not-allowed; }
+.app-shell[data-app-id="shop"] .sp-btn.is-block { flex: 1; }
+
+.app-shell[data-app-id="shop"] .sp-btn--primary {
+    background: var(--sp-primary);
+    color: var(--sp-on-primary);
+}
+.app-shell[data-app-id="shop"] .sp-btn--primary:active:not(:disabled) { background: var(--sp-primary-strong); }
+
+.app-shell[data-app-id="shop"] .sp-btn--soft {
+    background: var(--sp-primary-soft);
+    color: var(--sp-primary-strong);
+}
+
+.app-shell[data-app-id="shop"] .sp-btn--line {
+    border-color: var(--sp-line-strong);
+    color: var(--sp-text-2);
+}
+
+.app-shell[data-app-id="shop"] .sp-btn--ghost { color: var(--sp-text-2); padding: 0 10px; }
+.app-shell[data-app-id="shop"] .sp-btn--ghost:active:not(:disabled) { background: var(--sp-surface-2); }
+
+.app-shell[data-app-id="shop"] .sp-btn--danger {
+    background: var(--sp-danger);
+    color: var(--sp-text-inverse);
+}
+
+.app-shell[data-app-id="shop"] .sp-btn--sm { height: 30px; padding: 0 11px; font-size: 12px; border-radius: 9px; }
+.app-shell[data-app-id="shop"] .sp-btn--lg { height: 46px; font-size: 15px; border-radius: 13px; }
+
+.app-shell[data-app-id="shop"] .sp-btn__spin {
+    width: 13px;
+    height: 13px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spSpin 0.7s linear infinite;
+}
+
+@keyframes spSpin { to { transform: rotate(360deg); } }
+
+.app-shell[data-app-id="shop"] .sp-iconbtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--sp-text-2);
+    cursor: pointer;
+}
+.app-shell[data-app-id="shop"] .sp-iconbtn:active { background: var(--sp-surface-2); }
+
+.app-shell[data-app-id="shop"] .sp-linkbtn {
+    border: 0;
+    background: none;
+    padding: 0 4px;
+    color: var(--sp-primary-strong);
+    font: inherit;
+    font-size: 12.5px;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* ── chip ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+.app-shell[data-app-id="shop"] .sp-chip {
+    padding: 5px 12px;
+    border: 1px solid var(--sp-line);
+    border-radius: 15px;
+    background: var(--sp-surface);
+    color: var(--sp-text-2);
+    font-size: 12.5px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.app-shell[data-app-id="shop"] .sp-chip.is-active {
+    background: var(--sp-primary-soft);
+    border-color: var(--sp-primary);
+    color: var(--sp-primary-strong);
+    font-weight: 560;
+}
+
+.app-shell[data-app-id="shop"] .sp-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border: 1px solid var(--sp-tag-line);
+    border-radius: 6px;
+    background: var(--sp-tag-bg);
+    color: var(--sp-tag-text);
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+/* ── 表单 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-field { margin-bottom: 14px; }
+
+.app-shell[data-app-id="shop"] .sp-field__head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.app-shell[data-app-id="shop"] .sp-field__label {
+    font-size: 12.5px;
+    font-weight: 560;
+    color: var(--sp-text-2);
+}
+
+.app-shell[data-app-id="shop"] .sp-field__hint {
+    margin: 5px 0 0;
+    font-size: 11.5px;
+    color: var(--sp-text-3);
+}
+
+.app-shell[data-app-id="shop"] .sp-input,
+.app-shell[data-app-id="shop"] .sp-textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--sp-input-line);
+    border-radius: 10px;
+    background: var(--sp-input-bg);
+    color: var(--sp-text);
+    font-size: 13.5px;
+    font-family: inherit;
+    line-height: 1.55;
+    outline: none;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.app-shell[data-app-id="shop"] .sp-input:focus,
+.app-shell[data-app-id="shop"] .sp-textarea:focus {
+    border-color: var(--sp-primary);
+    box-shadow: 0 0 0 3px var(--sp-input-focus);
+}
+
+.app-shell[data-app-id="shop"] .sp-input::placeholder,
+.app-shell[data-app-id="shop"] .sp-textarea::placeholder { color: var(--sp-text-3); }
+
+.app-shell[data-app-id="shop"] .sp-textarea { resize: none; }
+
+.app-shell[data-app-id="shop"] .sp-switch {
+    width: 42px;
+    height: 25px;
+    padding: 2px;
+    border: 0;
+    border-radius: 13px;
+    background: var(--sp-line-strong);
+    cursor: pointer;
+    transition: background 0.18s ease;
+}
+.app-shell[data-app-id="shop"] .sp-switch.is-on { background: var(--sp-primary); }
+
+.app-shell[data-app-id="shop"] .sp-switch__dot {
+    display: block;
+    width: 21px;
+    height: 21px;
+    border-radius: 50%;
+    background: var(--sp-surface);
+    transition: transform 0.18s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+.app-shell[data-app-id="shop"] .sp-switch.is-on .sp-switch__dot { transform: translateX(17px); }
+
+/* ── 分区 / 键值 ──────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-section { margin-bottom: 20px; }
+
+.app-shell[data-app-id="shop"] .sp-section__head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 9px;
+}
+
+.app-shell[data-app-id="shop"] .sp-section__title {
+    margin: 0;
+    font-size: 13.5px;
+    font-weight: 620;
+    color: var(--sp-text);
+}
+
+.app-shell[data-app-id="shop"] .sp-section__sub {
+    font-size: 11.5px;
+    color: var(--sp-text-3);
+}
+
+.app-shell[data-app-id="shop"] .sp-kv {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--sp-line-soft);
+    font-size: 13px;
+}
+.app-shell[data-app-id="shop"] .sp-kv:last-child { border-bottom: 0; }
+.app-shell[data-app-id="shop"] .sp-kv__k { color: var(--sp-text-3); flex: 0 0 auto; }
+.app-shell[data-app-id="shop"] .sp-kv__v { color: var(--sp-text); text-align: right; min-width: 0; }
+.app-shell[data-app-id="shop"] .sp-kv.is-strong .sp-kv__v { font-weight: 600; }
+
+/* ── 价格 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-price {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 3px;
+    color: var(--sp-price);
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="shop"] .sp-price__prefix { font-size: 11px; color: var(--sp-text-3); }
+.app-shell[data-app-id="shop"] .sp-price__num { font-size: 16px; font-weight: 640; }
+.app-shell[data-app-id="shop"] .sp-price__unit { font-size: 11px; opacity: 0.82; }
+.app-shell[data-app-id="shop"] .sp-price__was { font-size: 11px; color: var(--sp-text-3); margin-left: 3px; }
+
+.app-shell[data-app-id="shop"] .sp-price--sm .sp-price__num { font-size: 13.5px; }
+.app-shell[data-app-id="shop"] .sp-price--lg .sp-price__num { font-size: 24px; font-weight: 660; }
+.app-shell[data-app-id="shop"] .sp-price--lg .sp-price__unit { font-size: 12.5px; }
+
+/* ── 空态 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    padding: 44px 24px;
+    text-align: center;
+}
+
+.app-shell[data-app-id="shop"] .sp-empty__mark {
+    display: inline-flex;
+    color: var(--sp-text-3);
+    opacity: 0.7;
+    margin-bottom: 3px;
+}
+
+.app-shell[data-app-id="shop"] .sp-empty__title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 560;
+    color: var(--sp-text-2);
+}
+
+.app-shell[data-app-id="shop"] .sp-empty__desc {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--sp-text-3);
+    max-width: 250px;
+    line-height: 1.65;
+}
+
+.app-shell[data-app-id="shop"] .sp-empty__slot:not(:empty) { margin-top: 10px; }
+
+/* ── 骨架 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-skeleton { display: grid; gap: 11px; }
+
+.app-shell[data-app-id="shop"] .sp-skeleton__item {
+    border-radius: 13px;
+    background: linear-gradient(
+        100deg,
+        var(--sp-skeleton) 32%,
+        var(--sp-skeleton-shine) 50%,
+        var(--sp-skeleton) 68%
+    );
+    background-size: 240% 100%;
+    animation: spShine 1.5s ease-in-out infinite;
+}
+
+.app-shell[data-app-id="shop"] .sp-skeleton--card .sp-skeleton__item { height: 104px; }
+.app-shell[data-app-id="shop"] .sp-skeleton--line .sp-skeleton__item { height: 15px; border-radius: 7px; }
+
+@keyframes spShine {
+    from { background-position: 160% 0; }
+    to { background-position: -60% 0; }
+}
+
+/* ── 加载动画 ─────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.app-shell[data-app-id="shop"] .sp-loading__clover {
+    position: relative;
+    width: 58px;
+    height: 58px;
+    display: grid;
+    place-items: center;
+}
+
+/* 四瓣依次亮起，一圈 1.6 秒。用户能数圈 ——
+   「等了多久」变成可感知的，比匀速转圈耐等得多 */
+.app-shell[data-app-id="shop"] .sp-loading__leaf {
+    position: absolute;
+    width: 17px;
+    height: 17px;
+    border-radius: 60% 0 60% 60%;
+    background: var(--sp-primary);
+    opacity: 0.2;
+    animation: spLeaf 1.6s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.4s);
+}
+
+.app-shell[data-app-id="shop"] .sp-loading__leaf:nth-child(1) { top: 4px; left: 12px; transform: rotate(-45deg); }
+.app-shell[data-app-id="shop"] .sp-loading__leaf:nth-child(2) { top: 12px; right: 4px; transform: rotate(45deg); }
+.app-shell[data-app-id="shop"] .sp-loading__leaf:nth-child(3) { bottom: 4px; right: 12px; transform: rotate(135deg); }
+.app-shell[data-app-id="shop"] .sp-loading__leaf:nth-child(4) { bottom: 12px; left: 4px; transform: rotate(-135deg); }
+
+@keyframes spLeaf {
+    0%, 70%, 100% { opacity: 0.18; }
+    22% { opacity: 1; }
+}
+
+.app-shell[data-app-id="shop"] .sp-loading__mark {
+    position: relative;
+    display: inline-flex;
+    width: 26px;
+    height: 26px;
+    color: var(--sp-primary-strong);
+    opacity: 0.55;
+}
+.app-shell[data-app-id="shop"] .sp-loading__mark svg { width: 26px; height: 26px; }
+
+.app-shell[data-app-id="shop"] .sp-loading__text {
+    margin: 0;
+    font-size: 13px;
+    color: var(--sp-text-2);
+    animation: spFadeSwap 2.4s ease-in-out infinite;
+}
+
+@keyframes spFadeSwap {
+    0%, 8% { opacity: 0; transform: translateY(3px); }
+    18%, 88% { opacity: 1; transform: none; }
+    100% { opacity: 0; transform: translateY(-3px); }
+}
+
+.app-shell[data-app-id="shop"] .sp-loading__slow {
+    margin: 0;
+    font-size: 11.5px;
+    color: var(--sp-text-3);
+}
+
+.app-shell[data-app-id="shop"] .sp-loading--sm .sp-loading__clover { width: 40px; height: 40px; transform: scale(0.7); }
+.app-shell[data-app-id="shop"] .sp-loading--lg .sp-loading__clover { transform: scale(1.15); margin-bottom: 6px; }
+
+.app-shell[data-app-id="shop"] .sp-loading-screen {
+    flex: 1;
+    min-height: 260px;
+    display: grid;
+    place-items: center;
+    padding: 40px 20px;
+}

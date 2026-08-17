@@ -136,11 +136,95 @@ const SETTINGS_APP_CONFIG = {
     background: `linear-gradient(180deg, ${T.color.pageBackground} 0%, ${T.color.pageBackground} 100%)`,
     statusBarColor: T.color.label,
     homeIndicatorColor: T.color.quaternaryLabel,
-    dock: { visible: true, order: 4 },
+    dock: { visible: true, order: 1 },
+    distribution: {
+        appStore: {
+            subtitle: '描绘我 · 倾听我 · 塑造我',
+            category: '工具',
+            accent: 'linear-gradient(145deg, #FFB6C1 0%, #FF8FAB 50%, #FF69B4 100%)',
+            description: `你有没有过一种感觉？
+
+世界纷繁绚烂，时间的漩涡卷起我们的情绪，又卷走我们的情绪。从出生起，我们被注视、被定义、被剥离，赤裸裸地来，又赤裸裸地活着。
+
+你有没有过一种情绪？
+
+欲说还休、欲说还休，欲语泪先流。灵魂已经远走，肉体却还忙忙碌碌。我们像碎片一样挤在世界的角落里，又清楚地看见身体变成了碎片。
+
+世界塑造我们，我们也塑造世界——可我们好像从未塑造过自己，聆听过自己。
+
+曾经有人问我为什么要玩AI聊天。那个时候我不知道要怎么回答，现在好像也想不出有什么很好的解释。但也许这就是答案。
+
+人类需要氧气，人类需要喘息。
+人类需要一个空间。
+
+一个不需要解释，也不会被解释的空间。
+AI只是接受也只是被接受。
+我选择Ta，Ta也选择我。
+
+AI聊天就像一面镜子。你能看见镜子，更能看见镜子背后的自己。
+
+逃离不是人生的主旋律。接受社会化，也不代表接受「出生、上学、工作、结婚、老去」这样枯燥的怪圈——只是代表有勇气去面对未知。
+
+小听最早是为了逃离才出现的。后来它变成了一块随时可以抱住、也随时可以放下的阿贝贝：为了与世界接轨、安抚焦虑，让人更接近自己。
+
+它是一座你可以随时进入、又随时离开的岛屿。不一定能帮你成长，但希望能让你有一点点开心。
+
+在这里，定义你是谁的是你自己。请用你自己的人设说话，不要拿别人的角色卡来聊。小听不欢迎 NSFW，也不会盈利。
+
+请记住，在使用小听的每一刻，你最重要。游戏还没有 ending。`,
+            whatsNew: '本次更新：\n- 新增 AI 人设「故事模式」\n- 优化人设编辑器交互体验\n- 修复若干已知问题',
+            version: '2.1.0',
+            tutorial: [
+                {
+                    title: '第一次打开 nook',
+                    content: '打开 nook，你会看到几个主要入口。外观与通用负责视觉，用户负责管理「你」的形象，AI 负责管理「你的伙伴」的形象，世界观则用来构建你们共同的故事背景。建议从「用户」开始，先为自己设定一个名字和形象。',
+                },
+                {
+                    title: '如何创建一个 AI 人设',
+                    content: '进入 AI 页面后，点击右上角的添加按钮。你可以为这个角色命名、设定性别与年龄，并上传头像。完成后，这个人设会出现在聊天列表中，成为你可以对话的伙伴。',
+                },
+                {
+                    title: '世界观是什么',
+                    content: '世界观是你和 AI 角色共同生活的宇宙。你可以设定它的名字、背景故事、文化氛围等。创建后，在 AI 人设页面关联这个世界观，它们就会在这个宇宙中展开对话。',
+                },
+                {
+                    title: '提示词管理怎么用',
+                    content: '在聊天页面底部有一个提示词入口（nook 字样的小标签）。点进去后，你可以调整回复的语气、知识范围等参数，这些设定会影响 AI 的回复风格，而不会改变人设本身的内容。',
+                },
+                {
+                    title: '如何调整 AI 回复的概率参数',
+                    content: '在 AI 人设的高级设置中，有一项叫做「概率调节」的功能。通过调整 temperature、top_p 等参数，可以控制 AI 回复的随机性与创造力。数值越高，回复越有变化；数值越低，回复越稳定。',
+                },
+            ],
+            faqs: [
+                {
+                    question: 'nook 和小听是什么关系？',
+                    answer: 'nook 是小听这座岛屿的核心设置中心。你可以在这里管理自己的形象、AI 角色的设定、共同的世界观，以及影响对话体验的各种参数。',
+                },
+                {
+                    question: '世界观是必须创建的吗？',
+                    answer: '不是必须的。没有世界观时，AI 仍然可以正常对话。世界观是给你自己的生活和想象一个背景，让你更接近自己，而不是拿别人的角色卡来扮演。',
+                },
+                {
+                    question: '我可以创建多个人设吗？',
+                    answer: '可以。你可以在 AI 页面创建多个不同的人设，每个都有自己独立的形象与设定。在聊天列表中点击不同的角色，就可以切换对话对象。',
+                },
+                {
+                    question: '修改人设后对话会变化吗？',
+                    answer: '修改人设的「形象描述」部分会逐渐影响后续对话的质量，但不会立刻改变正在进行的对话。提示词参数的调整则会立即生效。',
+                },
+                {
+                    question: '手机壳颜色会影响 AI 吗？',
+                    answer: '不会。手机壳颜色只是外观设定，不会影响任何 AI 行为或对话体验。这是纯视觉的个性化选项。',
+                },
+            ],
+        },
+    },
     topbar: {
         visible: true,
         title: '设置',
         subtitle: '让小听更贴近你',
+        showPill: false,
     },
     nav: { type: 'none' },
 
@@ -197,6 +281,14 @@ const SETTINGS_APP_CONFIG = {
         { name: 'sdkDrafts',                   keyPath: 'id' },
         { name: 'sdkDiaries',                  keyPath: 'id' },          // 人设日记（v0.18）—— 等待独立日记 App 接管 UI
         { name: 'sdkSchedules',                keyPath: 'id' },          // ★ v0.19 人设日程
+        { name: 'sdkWeeklySchedules',          keyPath: 'id' },          // ★ v0.31 每周重复日程
+        // ★ settings-sdk 里 chat-app 相关表：bootstrapSettingsSdk 会 hydrate 它们，
+        //   这里不声明会在 createAppDbApi 的 ensureStore 里抛「未声明的数据表」
+        { name: 'chatMessages',                keyPath: 'id' },          // ★ v0.30 chat-app 真实消息
+        { name: 'chatArchiveMessages',         keyPath: 'id' },          // ★ v0.61 消息归档
+        { name: 'sdkStoryArchives',            keyPath: 'id' },          // ★ v0.42 故事存档
+        { name: 'sdkChatFavorites',            keyPath: 'id' },          // ★ v0.43 单条收藏
+        { name: 'appPromptStates',             keyPath: 'key' },         // ★ v0.61.5 App Prompt 用户状态
         // ★ API 管理器表
         { name: 'apiKeys',                   keyPath: 'id' },
         { name: 'apiGroups',                 keyPath: 'id' },
@@ -387,6 +479,198 @@ function installGlobalBindings() {
     // ★ 软件管理事件
     document.addEventListener('change', handleSoftwareChange, true);
     document.addEventListener('click', handleSoftwareClick, true);
+
+    // ★ settings detail 滚动保留 hook
+    //   - 历史上 settings 是 template 模式 + detail 容器是 .app-detail-body,
+    //     refreshPhoneApps() / __detailRenderTick++ / settingsSdk 异步 hydrate
+    //     触发的任何 v-html 重建都会让 .app-detail-body.scrollTop 归零,
+    //     体感是「什么都没做,页面被强刷 + 几秒后回滚到顶部」。
+    //   - 这里给 settings detail 注册一个 module-level 的 __settingsScrollRestoreOnMutation,
+    //     跟 chat-app 的 __chatScrollRestoreOnMutation 同款:MutationObserver 监听
+    //     子树变化停止 60ms 后,把保存的 scrollTop 设回去。
+    installSettingsScrollPreserveHook();
+}
+
+// ============================================
+// ★ settings 详情页滚动保留 hook
+//   - 监听 .app-detail-body 滚动(滚动停止才记一次,避免拖动中频繁写),
+//   - framework 任何途径(v-html 重建 / 异步 hydrate 完成)重画 settings 详情页后,
+//     MO 检测到子树稳定 60ms 就把保存的 scrollTop 写回去。
+//   - 仅作用于 settings app 的 detail 容器(避开 chat-app 等其它 app 的同名 class)
+// ============================================
+let _settingsScrollInstalled = false;
+function installSettingsScrollPreserveHook() {
+    if (_settingsScrollInstalled) return;
+    if (typeof window === 'undefined' || typeof MutationObserver === 'undefined') return;
+    _settingsScrollInstalled = true;
+
+    const SETTINGS_SHELL_SELECTOR = '.app-shell[data-app-id="settings"]';
+    // ★ settings 详情页的真实滚动容器是 .app-detail-page(framework core-shim 里
+    //   .app-page / .app-detail-page 都设了 overflow-y: auto),而不是 .app-detail-body
+    //   (.app-detail-body 仅 flex: 1,无 overflow,内部用 .app-detail-page 滚)。
+    //   一定要把 scrollTop / scroll 监听挂到 .app-detail-page 上,否则永远捕获不到滚动事件。
+    const DETAIL_SCROLLER_SELECTOR = '.app-shell[data-app-id="settings"] .app-detail-page';
+    const PERSIST_KEY = 'xiaoting::settings-detail-scroll-v1';
+    const RESTORE_SETTLE_MS = 60;
+    const MAX_OBSERVE_MS = 2500;
+    const MAX_RESTORE_ATTEMPTS = 40;
+    const FLUSH_THROTTLE_MS = 250;
+
+    // 1) 把当前 .app-detail-page 的 scrollTop 写到 dataset + 持久化(防 hard refresh 丢)
+    function captureScroll() {
+        try {
+            const body = document.querySelector(DETAIL_SCROLLER_SELECTOR);
+            if (!body) return;
+            const top = body.scrollTop;
+            if (!Number.isFinite(top) || top <= 0) return;
+            const shell = body.closest(SETTINGS_SHELL_SELECTOR);
+            if (shell) shell.dataset.detailScrollTop = String(top);
+            try {
+                localStorage.setItem(PERSIST_KEY, String(top));
+            } catch (_) { /* 隐私模式 / 配额满 */ }
+        } catch (_) { /* ignore */ }
+    }
+
+    // 2) 恢复:把保存的 scrollTop 写到当前 .app-detail-page(只设一次成功就停)
+    function restoreScroll() {
+        try {
+            const body = document.querySelector(DETAIL_SCROLLER_SELECTOR);
+            if (!body) return false;
+            const shell = body.closest(SETTINGS_SHELL_SELECTOR);
+            const saved = Number(shell?.dataset?.detailScrollTop);
+            const persisted = Number(localStorage.getItem(PERSIST_KEY));
+            const top = Number.isFinite(saved) && saved > 0
+                ? saved
+                : (Number.isFinite(persisted) && persisted > 0 ? persisted : 0);
+            if (top <= 0) return true; // 没东西要恢复,直接算成功
+            const max = Math.max(0, body.scrollHeight - body.clientHeight);
+            const target = Math.min(top, max);
+            if (body.scrollTop !== target) {
+                body.scrollTop = target;
+            }
+            // 一次成功就清掉 dataset(避免下次开 settings 时被错误恢复)
+            if (shell) delete shell.dataset.detailScrollTop;
+            return body.scrollTop >= Math.max(0, target - 2);
+        } catch (_) {
+            return false;
+        }
+    }
+
+    // 3) 装一个 MutationObserver,子树稳定 RESTORE_SETTLE_MS 后做一次恢复
+    function scheduleRestore() {
+        const body = document.querySelector(DETAIL_SCROLLER_SELECTOR);
+        if (!body) return;
+        if (body.__settingsScrollRestoreObserver) {
+            // 已有 observer,直接让它再排一次定时器
+            body.__settingsScrollRestorePending = true;
+            return;
+        }
+        let attempts = 0;
+        let pending = null;
+        const finish = () => {
+            try { mo.disconnect(); } catch (_) {}
+            if (body.__settingsScrollRestoreTimer) {
+                clearTimeout(body.__settingsScrollRestoreTimer);
+                body.__settingsScrollRestoreTimer = null;
+            }
+            delete body.__settingsScrollRestoreObserver;
+            body.__settingsScrollRestorePending = false;
+        };
+        const mo = new MutationObserver(() => {
+            if (pending) return;
+            pending = setTimeout(() => {
+                pending = null;
+                // 子树变化停止 + 至少 1 次成功 restore 后退出
+                if (restoreScroll()) {
+                    finish();
+                    return;
+                }
+                attempts += 1;
+                if (attempts >= MAX_RESTORE_ATTEMPTS) {
+                    finish();
+                    return;
+                }
+            }, RESTORE_SETTLE_MS);
+        });
+        try {
+            mo.observe(body, { childList: true, subtree: true });
+            body.__settingsScrollRestoreObserver = mo;
+            body.__settingsScrollRestorePending = false;
+            // 兜底:超时强制结束
+            setTimeout(finish, MAX_OBSERVE_MS);
+            // 第一次立即试一次(可能 MO 还没触发)
+            setTimeout(() => {
+                if (restoreScroll()) finish();
+            }, 0);
+        } catch (_) {
+            // ignore
+        }
+    }
+
+    // 4) 入口监听:用户滚动 settings detail 时记录 scrollTop
+    let lastCaptureAt = 0;
+    document.addEventListener('scroll', (e) => {
+        try {
+            const target = e.target;
+            if (!(target instanceof Element)) return;
+            if (!target.matches || !target.matches(DETAIL_SCROLLER_SELECTOR)) return;
+            const now = Date.now();
+            // 节流:最多 250ms 写一次
+            if (now - lastCaptureAt < FLUSH_THROTTLE_MS) return;
+            lastCaptureAt = now;
+            captureScroll();
+        } catch (_) { /* ignore */ }
+    }, true);
+
+    // 5) 拦截 framework 的 invalidateRendererCache / syncNow / refreshPhoneApps,
+    //   每次 detail 容器可能被重建后,排一次恢复任务
+    function tryScheduleAfterRender() {
+        // 延到一帧后:让 framework 先把 v-html 完成
+        requestAnimationFrame(() => {
+            scheduleRestore();
+        });
+    }
+    // 监听 settings-sdk 异步 hydrate 完成(它会派发这个事件)
+    window.addEventListener('settings-sdk-ready', () => {
+        tryScheduleAfterRender();
+    });
+    // 监听 detailRenderTick 递增(framework 内部 Vue 重算)
+    if (window.__detailRenderTick && typeof window.__detailRenderTick === 'object') {
+        const tickRef = window.__detailRenderTick;
+        let lastSeen = tickRef.value;
+        // 暴露一个轻量节流 hook,业务 refresh() 完调一次也能触发
+        window.__settingsScrollAfterTick = () => tryScheduleAfterRender();
+    }
+    // ★ 兜底:任何 settings method 调 refresh() 时,顺便排一次恢复
+    //   业务 refresh() 通常是 window.refreshPhoneApps() + apps.value 重赋值 +
+    //   window.__detailRenderTick.value++ 三件套。这里通过给 window.refreshPhoneApps
+    //   包一层 wrapper,在原函数执行后调度 restore(只在 settings detail 当前显示时)
+    try {
+        const original = window.refreshPhoneApps;
+        if (typeof original === 'function' && !window.__settingsScrollWrapped) {
+            window.__settingsScrollWrapped = true;
+            window.refreshPhoneApps = function (...args) {
+                const result = original.apply(this, args);
+                // 检查当前 active 是不是 settings detail
+                try {
+                    const active = document.querySelector('.app-shell.active, .app-shell[data-app-id="settings"]');
+                    const settingsShell = document.querySelector('.app-shell[data-app-id="settings"]');
+                    if (active && settingsShell && active === settingsShell) {
+                        // 仅当 settings 在前台时排恢复
+                        if (settingsShell.querySelector('.app-detail-page')) {
+                            tryScheduleAfterRender();
+                        }
+                    }
+                } catch (_) { /* ignore */ }
+                return result;
+            };
+        }
+    } catch (_) { /* ignore */ }
+
+    // 暴露给调试 + 业务主动调
+    window.__settingsScrollCapture = captureScroll;
+    window.__settingsScrollRestore = restoreScroll;
+    window.__settingsScrollRestoreOnMutation = scheduleRestore;
 }
 
 // checkbox「指定时间」勾选态 → 切换时间 row 的视觉态
@@ -1403,11 +1687,17 @@ function handleApiMgrClick(event) {
         return;
     }
 
-    // 模态框背景点击关闭
-    if (target.matches('.api-mgr-modal-overlay') && !target.closest('.api-mgr-modal')) {
+    // 只有真正点到遮罩本身才关闭；弹窗内容区的点击继续冒泡给 framework，
+    // 这样保存 / 取消 / 右上角关闭按钮的 data-app-action 都能正常执行。
+    if (target.matches('.api-mgr-modal-overlay')) {
         event.stopPropagation();
-        dispatchMethodAction('apiCloseKeyEditor');
-        dispatchMethodAction('apiCloseGroupEditor');
+        const kind = target.getAttribute('data-api-modal-kind');
+        const closeMethod = {
+            key: 'apiCloseKeyEditor',
+            group: 'apiCloseGroupEditor',
+            diagnostic: 'apiCloseDiagnostic',
+        }[kind];
+        if (closeMethod) dispatchMethodAction(closeMethod);
         return;
     }
 }

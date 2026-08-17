@@ -11,6 +11,7 @@
 
 import { escapeHtml } from '@/src/core/escape.js';
 import { renderPersonaEditor } from '../persona/renderer.js';
+import { renderPersonaAvatarContent } from '../persona/avatar.js';
 
 function wvAction(method, payload = {}) {
     const obj = { action: 'appMethod', appId: 'settings', method, payload };
@@ -26,13 +27,6 @@ function formatDateTime(timestamp) {
     const d = new Date(timestamp);
     const pad = n => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-function getInitial(name) {
-    if (!name) return '?';
-    const trimmed = String(name).trim();
-    if (!trimmed) return '?';
-    return trimmed.charAt(0).toUpperCase();
 }
 
 function renderWorldCard(activeUser) {
@@ -73,12 +67,6 @@ function renderTabs(activeSub) {
     `;
 }
 
-function renderAvatarContent(persona) {
-    const avatar = typeof persona?.avatar === 'string' ? persona.avatar.trim() : '';
-    if (avatar) return `<img class="persona-avatar-image" src="${escapeHtml(avatar)}" alt="" />`;
-    return escapeHtml(getInitial(persona?.name));
-}
-
 function renderOverview(activeUser) {
     if (!activeUser) {
         return `
@@ -103,7 +91,7 @@ function renderOverview(activeUser) {
     const isDefaultUser = activeUser.id === (sdk?.defaultUserCard?.getDefaultId?.() || null);
     return `
         <div class="persona-overview persona-overview--clickable" ${homeAction}>
-            <div class="persona-overview__avatar">${renderAvatarContent(activeUser)}</div>
+            <div class="persona-overview__avatar">${renderPersonaAvatarContent(activeUser)}</div>
             <div class="persona-overview__body">
                 <div class="persona-overview__name">${escapeHtml(activeUser.name || activeUser.id)}</div>
                 ${meta ? `<div class="persona-overview__meta">${escapeHtml(meta)}</div>` : ''}
@@ -143,7 +131,7 @@ function renderUserList(app, users, activeId) {
                         <div class="persona-card ${isActive ? 'is-active' : ''} ${isDefault ? 'is-default' : ''}" ${wvAction('userSetActive', { id: item.id })}>
                             ${badges.join('')}
                             <div class="persona-card__head">
-                                <div class="persona-card__avatar">${renderAvatarContent(item)}</div>
+                                <div class="persona-card__avatar">${renderPersonaAvatarContent(item)}</div>
                                 <div class="persona-card__name">${escapeHtml(item.name || item.id)}</div>
                             </div>
                             <div class="persona-card__meta">

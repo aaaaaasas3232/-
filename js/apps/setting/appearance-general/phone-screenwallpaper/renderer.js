@@ -51,8 +51,12 @@ export function renderImagePicker(state) {
         <div class="sw-picker-section" data-picker-type="image">
             <div class="sw-image-actions">
                 <label class="sw-upload-btn" title="本地上传">
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                        <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-rose" aria-hidden="true">
+                        <path d="M17 10h-1a4 4 0 1 1 4-4v.534"/>
+                        <path d="M17 6h1a4 4 0 0 1 1.42 7.74l-2.29.87a6 6 0 0 1-5.339-10.68l2.069-1.31"/>
+                        <path d="M4.5 17c2.8-.5 4.4 0 5.5.8s1.8 2.2 2.3 3.7c-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2"/>
+                        <path d="M9.77 12C4 15 2 22 2 22"/>
+                        <circle cx="17" cy="8" r="2"/>
                     </svg>
                     <input type="file"
                            accept="image/*"

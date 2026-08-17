@@ -21,7 +21,20 @@
  *     isPinned          boolean
  *     avatar            string  群头像(默认渐变色 + 字母)
  *     remark            string  群备注(每个 mode 独立)
+ *     ownerId           string  群主 memberId。缺省 = 建群的那个 user.id
+ *     adminIds          string[] 管理员 memberId 列表(不含群主 —— 群主权限本来就更大)
+ *     memberNicknames   object  { [memberId]: string } 群昵称,空/缺失就用本名
  *     createdAt / updatedAt
+ *
+ *   ── memberId 约定 ─────────────────────────────────────
+ *   群里成员有两种:用户本人和各个 AI。「群主 / 管理员 / 群昵称」三套数据
+ *   都用同一个键索引:
+ *       用户本人 → user.id（如 'user0'）
+ *       AI 成员  → 它的 aiPersonId
+ *   ⚠️ 这三个字段名(ownerId / adminIds / memberNicknames)是 v0.81
+ *      群成员管理页就定下来的,SDK 后补的 helper 必须沿用同一套 ——
+ *      再起一套 ownerKey / adminKeys / nicknames 就会变成「同一份数据
+ *      两个字段名」,而那是本项目最高频的一类 bug(AGENTS2 §3.4)。
  *
  *   API:
  *     list(user, mode)                          读某 mode 下所有群聊
@@ -34,6 +47,17 @@
  *     addMember(user, groupId, mode, aiPersonId)
  *     removeMember(user, groupId, mode, aiPersonId)
  *     resolveMembers(sdk, user, group)          解析成员为 aiPerson 对象数组
+ *     ── 群管理 helper(2026-08-13 新增,字段沿用 v0.81 的三个)──
+ *     getOwnerId(group, fallbackUserId)         群主 memberId
+ *     isOwner(group, memberId, fallbackUserId)
+ *     isAdmin(group, memberId, fallbackUserId)  群主也算(权限是包含关系)
+ *     listMemberIds(group, userId)              [userId, ...members]
+ *     countMembers(group)                       群里几个人 = AI 数 + 1(用户本人)
+ *     setOwner(sdk, user, groupId, mode, memberId)
+ *     setAdmin(sdk, user, groupId, mode, memberId, on)
+ *     setNickname(sdk, user, groupId, mode, memberId, nickname)
+ *     getNickname(group, memberId)
+ *     resolveMemberName(sdk, group, memberId, userId, fallbackUserName)  群昵称优先的显示名
  *     MODES                                         常量
  *
  *   设计要点:
@@ -128,6 +152,12 @@ async function create(sdk, user, opts = {}) {
         isPinned: false,
         avatar: '',
         remark: '',
+        // 群是用户建的，所以用户默认就是群主。
+        // 之后可以在群成员管理页把群主转给某个 AI —— 那之后「谁当管理员、
+        // 谁叫什么群昵称」就归 AI 管，用户只能按一个按钮请 AI 去安排。
+        ownerId: user?.id || '',
+        adminIds: [],
+        memberNicknames: {},
         createdAt: t,
         updatedAt: t,
     };
@@ -232,6 +262,119 @@ function resolveMembers(sdk, user, group) {
     return out;
 }
 
+// ============================================================
+// 群管理 helper：群主 / 管理员 / 群昵称（2026-08-13）
+// ------------------------------------------------------------
+// 字段沿用 v0.81 群成员管理页定下来的 ownerId / adminIds / memberNicknames，
+// 不另起一套（见文件头的 ⚠️）。
+//
+// 这些 helper 的意义是：把「谁是群主」「显示名该用昵称还是本名」这两个判断
+// 收敛到一处。之前散在页面、methods、prompt-builder 三处各写一遍，
+// 结果是同一个人在成员管理页显示群昵称、在聊天气泡上显示本名。
+//
+// 所有写操作都走 update() 落盘，不直接改 arr[idx] —— 那样只改内存，刷新回滚。
+// ============================================================
+
+/** 群主 memberId。老群聊没有这个字段，视为建群的那个用户是群主。 */
+function getOwnerId(group, fallbackUserId = '') {
+    return String(group?.ownerId || fallbackUserId || '');
+}
+
+function isOwner(group, memberId, fallbackUserId = '') {
+    const owner = getOwnerId(group, fallbackUserId);
+    return !!owner && owner === String(memberId || '');
+}
+
+/**
+ * 是否有管理权限。
+ * 群主也返回 true —— 权限是包含关系，判断「能不能改群设置」时问这一句就够，
+ * 不用每处都写 `isOwner || isAdmin`（写着写着就会漏一处）。
+ */
+function isAdmin(group, memberId, fallbackUserId = '') {
+    const key = String(memberId || '');
+    if (!key) return false;
+    if (isOwner(group, key, fallbackUserId)) return true;
+    const admins = Array.isArray(group?.adminIds) ? group.adminIds : [];
+    return admins.map(String).includes(key);
+}
+
+/** 群里所有成员的 memberId：用户本人 + 各个 AI */
+function listMemberIds(group, userId = '') {
+    const members = Array.isArray(group?.members) ? group.members.map(String) : [];
+    return userId ? [String(userId), ...members] : members;
+}
+
+/**
+ * 群里一共几个人 —— **算上用户本人**。
+ *
+ * `group.members` 存的只有 AI 的 aiPersonId，用户不在里面（用户是「这个群的拥有者」，
+ * 不需要存 id 也能确定）。所以直接拿 members.length 去显示，两个 AI 的群会写成
+ * 「2 人」，但用户明明也在群里聊天，正确的说法是 3 位成员。
+ * 凡是要把人数画到界面上的地方都走这里，别再各自 .length。
+ */
+function countMembers(group) {
+    const aiCount = Array.isArray(group?.members) ? group.members.length : 0;
+    return aiCount + 1;
+}
+
+/** 转让群主。新群主如果原本挂在管理员名单里，顺手摘掉（群主不占管理员名额）。 */
+async function setOwner(sdk, user, groupId, mode, memberId) {
+    const group = get(user, groupId, mode);
+    if (!group) return null;
+    const key = String(memberId || '');
+    if (!listMemberIds(group, user?.id).includes(key)) return null;
+    const adminIds = (Array.isArray(group.adminIds) ? group.adminIds : [])
+        .map(String).filter((k) => k !== key);
+    return update(sdk, user, groupId, mode, { ownerId: key, adminIds });
+}
+
+/** 设 / 撤管理员。群主不能被设成管理员（它已经比管理员大了）。 */
+async function setAdmin(sdk, user, groupId, mode, memberId, on) {
+    const group = get(user, groupId, mode);
+    if (!group) return null;
+    const key = String(memberId || '');
+    if (!listMemberIds(group, user?.id).includes(key)) return null;
+    if (isOwner(group, key, user?.id)) return group;
+    const cur = (Array.isArray(group.adminIds) ? group.adminIds : []).map(String);
+    const already = cur.includes(key);
+    if (on === already) return group;
+    const next = on ? [...cur, key] : cur.filter((k) => k !== key);
+    return update(sdk, user, groupId, mode, { adminIds: next });
+}
+
+/** 设群昵称。传空串 = 清掉，回落到本名（而不是存一个空串当昵称）。 */
+async function setNickname(sdk, user, groupId, mode, memberId, nickname) {
+    const group = get(user, groupId, mode);
+    if (!group) return null;
+    const key = String(memberId || '');
+    if (!listMemberIds(group, user?.id).includes(key)) return null;
+    const map = { ...(group.memberNicknames || {}) };
+    const value = String(nickname || '').trim();
+    if (value) map[key] = value;
+    else delete map[key];
+    return update(sdk, user, groupId, mode, { memberNicknames: map });
+}
+
+function getNickname(group, memberId) {
+    const map = group?.memberNicknames || {};
+    const v = map[String(memberId || '')];
+    return (typeof v === 'string' && v.trim()) ? v.trim() : '';
+}
+
+/**
+ * 群里的显示名：群昵称优先，没有就用本名。
+ * 所有「要把成员名字画到屏幕上 / 写进 prompt」的地方都该走这里，
+ * 否则某个页面显示群昵称、另一个显示本名，用户会以为是两个人。
+ */
+function resolveMemberName(sdk, group, memberId, userId = '', fallbackUserName = '我') {
+    const key = String(memberId || '');
+    const nick = getNickname(group, key);
+    if (nick) return nick;
+    if (userId && key === String(userId)) return fallbackUserName || '我';
+    const ai = sdk?.aiPersons?.get?.(key);
+    return ai?.socialProfiles?.chat?.nickname || ai?.name || key;
+}
+
 export const chatGroups = {
     list,
     get,
@@ -243,6 +386,17 @@ export const chatGroups = {
     addMember,
     removeMember,
     resolveMembers,
+    // 群管理
+    getOwnerId,
+    isOwner,
+    isAdmin,
+    listMemberIds,
+    countMembers,
+    setOwner,
+    setAdmin,
+    setNickname,
+    getNickname,
+    resolveMemberName,
     MODES: { CALENDAR: 'calendar', STORY: 'story' },
     ARRAY_KEYS: { calendar: CAL_KEY, story: STO_KEY },
 };

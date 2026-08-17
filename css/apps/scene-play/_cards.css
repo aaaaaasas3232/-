@@ -1,0 +1,220 @@
+/**
+ * 情景剧场 · 卡片体裁(对话体 / 日记体 / 博客体 / 便签)
+ *
+ * ── 这一层的变量是 `--spc-*`,不是 `--sp-*` ────────────────────────
+ *
+ *   `--sp-*`   界面配色。全局的,跟着「界面配色」页走。
+ *   `--spc-*`  卡片配色。**跟着情景的外观主题走**,不同情景可以完全不一样。
+ *
+ * 用户在外观页里复制 / 粘贴的就是这一套。所有默认值写成
+ * `var(--spc-xxx, var(--sp-yyy))` 的 fallback 形式:
+ *
+ *   ⚠️ **不要**在 `.spc` 上集中声明 `--spc-bg: …` 这种默认值。
+ *      就近声明会赢过从 app-shell / 主题容器继承下来的值,
+ *      表现是「粘了变量没生效」,而且浅色下看不出来、深色下全错。
+ *      这条在项目里踩过(`docs/framework-总览.md` §7.1 第 2 条)。
+ *
+ * ── 四种体裁的来历 ────────────────────────────────────────────────
+ *
+ * 视觉参考「封面设计器」里的同名元素(`cd-diary-text` / `cd-blog-text` /
+ * `cd-chat-left` / `cd-chat-right`),但做了两处改动:
+ *   1. 那边所有颜色是写死的 hex,这里全部走变量,换主题跟着变
+ *   2. 那边毛玻璃是常开的,这里由外观主题的「毛玻璃」开关控制 ——
+ *      纯色背景下毛玻璃只会让卡片发灰,看不出任何效果
+ */
+
+/* ============================================================
+   公共
+   ============================================================ */
+.app-shell[data-app-id="scene-play"] .spc {
+    box-sizing: border-box;
+    width: 100%;
+    margin: 0;
+    padding: var(--spc-pad, 13px 15px);
+    border-radius: var(--spc-radius, 18px);
+    background: var(--spc-bg, var(--sp-surface));
+    color: var(--spc-text, var(--sp-text));
+    font-size: 12.5px;
+    line-height: 1.85;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+/* 边框类型由外观主题的 data 属性控制,写在 `.sp-stage` 上往下继承 */
+.app-shell[data-app-id="scene-play"] .spc {
+    border: 1px solid var(--spc-border, var(--sp-border));
+}
+
+/* ============================================================
+   日记体
+   ============================================================ */
+.app-shell[data-app-id="scene-play"] .spc-diary {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.app-shell[data-app-id="scene-play"] .spc-diary-title {
+    margin: 0;
+    font-size: 13.5px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    color: var(--spc-title, var(--sp-text));
+}
+.app-shell[data-app-id="scene-play"] .spc-diary-body {
+    white-space: pre-wrap;
+    letter-spacing: 0.3px;
+}
+.app-shell[data-app-id="scene-play"] .spc-diary-foot {
+    font-size: 10px;
+    color: var(--spc-meta, var(--sp-text-tertiary));
+    text-align: right;
+}
+
+/* ============================================================
+   博客体
+   ============================================================ */
+.app-shell[data-app-id="scene-play"] .spc-blog {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.app-shell[data-app-id="scene-play"] .spc-blog-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.app-shell[data-app-id="scene-play"] .spc-blog-avatar {
+    flex: 0 0 auto;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--spc-accent, var(--sp-primary-soft));
+}
+.app-shell[data-app-id="scene-play"] .spc-blog-who {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+.app-shell[data-app-id="scene-play"] .spc-blog-author {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--spc-title, var(--sp-text));
+}
+.app-shell[data-app-id="scene-play"] .spc-blog-place {
+    font-size: 9.5px;
+    font-style: normal;
+    color: var(--spc-meta, var(--sp-text-tertiary));
+}
+.app-shell[data-app-id="scene-play"] .spc-blog-title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    color: var(--spc-title, var(--sp-text));
+}
+.app-shell[data-app-id="scene-play"] .spc-blog-body {
+    white-space: pre-wrap;
+    letter-spacing: 0.4px;
+}
+.app-shell[data-app-id="scene-play"] .spc-blog-foot {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-top: 7px;
+    border-top: 1px solid var(--spc-border, var(--sp-divider));
+    font-size: 10px;
+    color: var(--spc-meta, var(--sp-text-tertiary));
+}
+.app-shell[data-app-id="scene-play"] .spc-blog-time { margin-left: auto; }
+
+/* ============================================================
+   对话体(正则产出的单句,不是气泡)
+   ============================================================
+   气泡是「一整条消息」的壳,而这个是「一条消息里的一句台词」——
+   AI 一段话里写了三个人对话时用它,不然三句话会被塞进同一个气泡。
+   ============================================================ */
+.app-shell[data-app-id="scene-play"] .spc-line {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    width: auto;
+    max-width: 88%;
+    padding: 9px 13px;
+    border-radius: var(--spc-radius, 16px);
+}
+.app-shell[data-app-id="scene-play"] .spc-line.is-left {
+    margin-right: auto;
+    border-bottom-left-radius: 6px;
+}
+.app-shell[data-app-id="scene-play"] .spc-line.is-right {
+    margin-left: auto;
+    border-bottom-right-radius: 6px;
+    background: var(--spc-accent, var(--sp-primary-soft));
+}
+.app-shell[data-app-id="scene-play"] .spc-line-who {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--spc-meta, var(--sp-text-tertiary));
+}
+.app-shell[data-app-id="scene-play"] .spc-line-body { white-space: pre-wrap; }
+
+/* ============================================================
+   便签
+   ============================================================ */
+.app-shell[data-app-id="scene-play"] .spc-note {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 9px 13px;
+    border-left: 3px solid var(--spc-accent, var(--sp-primary));
+    border-radius: var(--spc-radius, 12px);
+    font-size: 11.5px;
+}
+.app-shell[data-app-id="scene-play"] .spc-note-title {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    color: var(--spc-meta, var(--sp-text-tertiary));
+}
+.app-shell[data-app-id="scene-play"] .spc-note-body { white-space: pre-wrap; }
+.app-shell[data-app-id="scene-play"] .spc-note-meta {
+    font-size: 9.5px;
+    color: var(--spc-meta, var(--sp-text-tertiary));
+}
+
+/* ============================================================
+   纯文本
+   ============================================================ */
+.app-shell[data-app-id="scene-play"] .spc-plain {
+    padding: 2px 0;
+    border: none;
+    background: transparent;
+    white-space: pre-wrap;
+}
+
+/* ============================================================
+   外观主题的轻量调整
+   ============================================================
+   这几条挂在 `.sp-stage` 上,靠属性选择器往下影响所有卡片 ——
+   逐张卡片写 inline style 的话,卡片是 v-html 出来的,改不动。
+   ============================================================ */
+.app-shell[data-app-id="scene-play"] .sp-stage[data-card-border="none"] .spc { border-color: transparent; }
+.app-shell[data-app-id="scene-play"] .sp-stage[data-card-border="hairline"] .spc { border-width: 1px; border-style: solid; }
+.app-shell[data-app-id="scene-play"] .sp-stage[data-card-border="solid"] .spc { border-width: 2px; border-style: solid; }
+.app-shell[data-app-id="scene-play"] .sp-stage[data-card-border="dashed"] .spc { border-width: 1.5px; border-style: dashed; }
+
+.app-shell[data-app-id="scene-play"] .sp-stage[data-card-glass="1"] .spc {
+    backdrop-filter: blur(var(--spc-blur, 10px));
+    -webkit-backdrop-filter: blur(var(--spc-blur, 10px));
+}
+
+/* 卡片体裁的小预览(外观页里用) */
+.app-shell[data-app-id="scene-play"] .sp-card-demo {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    border-radius: var(--sp-r);
+    background: var(--sp-sunken);
+}

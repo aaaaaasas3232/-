@@ -271,6 +271,7 @@
     font-weight: 700;
     flex-shrink: 0;
     letter-spacing: -0.01em;
+    overflow: hidden;
 }
 
 .phome-hero__body {
@@ -844,16 +845,30 @@
     background: rgba(0, 0, 0, 0.03);
 }
 
+/* 底色由内联 style 覆盖（来自 App 的 iconBg）；#fff 只是没声明时的兜底。
+   overflow 必须裁：有些 App 的图标是一张自带满幅背景的方形 SVG
+   （四叶草就是），不裁的话方角会盖住圆角，只有那一张卡看着没圆角。 */
 .phome-social__app-icon {
     width: 36px;
     height: 36px;
     border-radius: 10px;
     background: #fff;
+    overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* 图标本身尺寸各 App 自己定（34 / 36 / 56 都有），统一压进 36px 方框，
+   不然大图标会把容器撑破或者被裁掉一半 */
+.phome-social__app-icon > svg,
+.phome-social__app-icon > img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
 }
 
 .phome-social__app-info {
@@ -877,24 +892,7 @@
     gap: 6px;
 }
 
-.phome-social__online-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 1px 6px;
-    border-radius: 999px;
-    font-size: 10px;
-    font-weight: 600;
-}
-
-.phome-social__online-badge--online {
-    background: rgba(52, 199, 89, 0.15);
-    color: #34c759;
-}
-
-.phome-social__online-badge--offline {
-    background: rgba(120, 120, 128, 0.12);
-    color: rgba(60, 60, 67, 0.6);
-}
+/* ★ 已删除:.phome-social__online-badge (在线/离线 badge)。chat-app 不再展示"在线/离线" */
 
 .phome-social__app-chevron {
     flex-shrink: 0;
@@ -916,6 +914,13 @@
 @keyframes phome-social-expand {
     from { opacity: 0; transform: translateY(-8px); }
     to { opacity: 1; transform: translateY(0); }
+}
+
+.phome-social__empty {
+    padding: 18px 14px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--settings-color-secondary, rgba(60, 60, 67, 0.72));
 }
 
 .phome-social__config-row {
@@ -1072,36 +1077,8 @@
     padding: 8px 0;
 }
 
-/* 在线时间段 */
-.phome-social__time-range {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    flex-wrap: wrap;
-}
-
-.phome-social__time-select {
-    padding: 4px 6px;
-    font-size: 12px;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    border-radius: 6px;
-    background: #fff;
-    color: var(--settings-color-label, #000);
-    font-family: inherit;
-    cursor: pointer;
-    outline: none;
-}
-
-.phome-social__time-select:focus {
-    border-color: #0A84FF;
-}
-
-.phome-social__time-sep {
-    font-size: 12px;
-    color: rgba(60, 60, 67, 0.5);
-    margin: 0 4px;
-}
+/* ★ 已删除:在线时间段相关样式(.phome-social__time-range / _time-select / _time-sep)
+   chat-app 不再展示"在线/离线",社媒设置中的在线时间选择器也已下线 */
 
 /* 保存按钮 */
 .phome-social__config-actions {

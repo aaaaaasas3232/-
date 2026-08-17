@@ -147,11 +147,11 @@ export const USER_SCHEMA = Object.freeze([
 export const PERSONA_BASE_FIELDS = Object.freeze([
     Object.freeze({
         key: 'name', label: '姓名', type: FIELD_TYPE.TEXT,
-        visibility: VISIBILITY.REQUIRED, placeholder: '小黄',
+        visibility: VISIBILITY.REQUIRED, placeholder: '乱码',
     }),
     Object.freeze({
         key: 'gender', label: '性别', type: FIELD_TYPE.TEXT,
-        visibility: VISIBILITY.OPTIONAL, placeholder: '男 / 女 / 其他',
+        visibility: VISIBILITY.OPTIONAL, placeholder: '自我认同性别',
     }),
     Object.freeze({
         key: 'age', label: '年龄', type: FIELD_TYPE.NUMBER,
@@ -555,6 +555,7 @@ export function getPersonaGroups(entityType) {
 export function parseFieldValue(field, raw) {
     const value = typeof raw === 'string' ? raw.trim() : raw;
     if (value == null || value === '') {
+        if (field.type === FIELD_TYPE.TEXT && field.listField) return [];
         if (field.type === FIELD_TYPE.JSON) return field.key === 'members'
             || field.key === 'weekly' || field.key === 'monthly' || field.key === 'goals'
             || field.key === 'events' || field.key === 'apiAccounts'

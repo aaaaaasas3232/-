@@ -1,0 +1,256 @@
+/**
+ * relax-app / 音色选择器(分组 + 折叠 + 长按收藏)
+ *
+ * 配套组件:js/apps/relax-app/components/sound-picker.js
+ *
+ * ★ 这个文件必须在 _panels.css **之后** import
+ *   瓦片本体(.rx-sound-chip / .rx-sound-grid)还是复用 _panels.css 里那套,
+ *   这里只加「分组外壳 + 收藏星标 + 长按反馈」。两边选择器权重一样,
+ *   靠 import 顺序决定谁覆盖谁 —— 顺序换了收藏态的描边就会被吃掉。
+ */
+
+.app-shell[data-app-id="relax"] .rx-sound-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* 一条还没收藏过任何音时的引导,收藏了就消失 */
+.app-shell[data-app-id="relax"] .rx-sound-tip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    padding: 8px 12px;
+    border-radius: 16px 12px 14px 18px;
+    background: var(--rx-surface-2);
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--rx-ink-soft);
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-tip .rx-icon {
+    width: 13px;
+    height: 13px;
+    color: var(--rx-primary-soft);
+}
+
+/* ============================
+   分组外壳
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-sound-group {
+    border-radius: 20px 16px 18px 22px;
+    background: var(--rx-surface-2);
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-group-head {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border: none;
+    border-radius: inherit;
+    background: transparent;
+    color: var(--rx-ink);
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-group-icon {
+    display: flex;
+    color: var(--rx-ink-soft);
+    transition: color 0.2s ease;
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-group.is-open .rx-sound-group-icon {
+    color: var(--rx-primary);
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-group-icon .rx-icon {
+    width: 15px;
+    height: 15px;
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-group-title {
+    flex: 1 1 auto;
+    text-align: left;
+    font-size: 12.5px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+}
+
+/* 组里有几个音 —— 折起来的时候这是唯一的信息量 */
+.app-shell[data-app-id="relax"] .rx-sound-group-count {
+    flex: 0 0 auto;
+    min-width: 20px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: #fff;
+    color: var(--rx-ink-soft);
+    font-size: 10px;
+    font-weight: 800;
+    text-align: center;
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-group-caret {
+    flex: 0 0 auto;
+    display: flex;
+    color: var(--rx-ink-soft);
+    transition: transform 0.26s var(--rx-ease-bounce);
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-group-caret .rx-icon {
+    width: 15px;
+    height: 15px;
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-group.is-open .rx-sound-group-caret {
+    transform: rotate(180deg);
+}
+
+/* 展开的内容是 v-if 挂上来的,用一小段淡入代替高度动画(高度动画要测量,不划算) */
+.app-shell[data-app-id="relax"] .rx-sound-group-body {
+    padding: 2px 10px 12px;
+    animation: rxGroupIn 0.22s ease;
+}
+
+@keyframes rxGroupIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: none; }
+}
+
+/* ============================
+   瓦片:收藏星标 + 长按反馈
+   ============================ */
+/* 删除按钮要浮在瓦片外面,所以瓦片外面再包一层定位容器 */
+.app-shell[data-app-id="relax"] .rx-sound-cell {
+    position: relative;
+    display: flex;
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-cell > .rx-sound-chip {
+    position: relative;
+    flex: 1 1 auto;
+    /* 长按不该弹出 iOS 的「拷贝/查询」气泡,也不该触发双击缩放 */
+    -webkit-touch-callout: none;
+    touch-action: manipulation;
+}
+
+/* 已收藏但没在用:给一圈浅描边,跟「使用中」的实心描边区分开 */
+.app-shell[data-app-id="relax"] .rx-sound-chip.is-fav:not(.is-active) {
+    box-shadow: 0 2px 0 var(--rx-primary-soft), inset 0 0 0 1.5px rgba(255, 179, 198, 0.55);
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-chip.is-fav .rx-sound-name {
+    /* 给右上角星标让出位置,免得长名字压在星星底下 */
+    padding-right: 16px;
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-fav {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    color: var(--rx-primary);
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-fav .rx-icon {
+    width: 12px;
+    height: 12px;
+    /* 实心 = 已收藏。stroke 图标靠填充切换状态,不用再准备一套实心图标 */
+    fill: currentColor;
+}
+
+/* 按住时整块微缩 + 逐渐泛粉,泛到顶正好是收藏触发的那一刻 */
+.app-shell[data-app-id="relax"] .rx-sound-chip.is-holding {
+    transform: scale(0.94);
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-hold {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--rx-primary-soft);
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* ⚠️ 600ms 必须跟 sound-picker.js 的 LONG_PRESS_MS 对齐,改一处要改两处 */
+.app-shell[data-app-id="relax"] .rx-sound-chip.is-holding .rx-sound-hold {
+    animation: rxHoldGlow 600ms linear forwards;
+}
+
+@keyframes rxHoldGlow {
+    from { opacity: 0; }
+    to   { opacity: 0.3; }
+}
+
+/* 收藏 / 取消收藏的瞬时反馈 */
+.app-shell[data-app-id="relax"] .rx-sound-chip.is-flash {
+    animation: rxFavPop 0.5s var(--rx-ease-bounce);
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-chip.is-flash .rx-sound-fav {
+    animation: rxFavStar 0.5s var(--rx-ease-bounce);
+}
+
+@keyframes rxFavPop {
+    0%   { transform: scale(0.94); }
+    40%  { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+@keyframes rxFavStar {
+    0%   { transform: scale(0.2) rotate(-50deg); opacity: 0; }
+    55%  { transform: scale(1.35) rotate(8deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0deg); }
+}
+
+/* 自定义音瓦片右下角的删除钮 —— 浮在瓦片外,不占瓦片内部空间 */
+.app-shell[data-app-id="relax"] .rx-sound-cell-del {
+    position: absolute;
+    right: -5px;
+    bottom: -5px;
+    z-index: 2;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: #fff;
+    color: var(--rx-ink-soft);
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(107, 85, 96, 0.2);
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-cell-del .rx-icon {
+    width: 11px;
+    height: 11px;
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-cell-del:active {
+    background: #ffe3e3;
+    color: #d6516b;
+}
+
+/* 关掉动画偏好的用户:只保留状态,不做位移和缩放 */
+@media (prefers-reduced-motion: reduce) {
+    .app-shell[data-app-id="relax"] .rx-sound-group-body,
+    .app-shell[data-app-id="relax"] .rx-sound-chip.is-flash,
+    .app-shell[data-app-id="relax"] .rx-sound-chip.is-flash .rx-sound-fav {
+        animation: none;
+    }
+
+    .app-shell[data-app-id="relax"] .rx-sound-chip.is-holding {
+        transform: none;
+    }
+
+    .app-shell[data-app-id="relax"] .rx-sound-chip.is-holding .rx-sound-hold {
+        animation: none;
+        opacity: 0.3;
+    }
+}

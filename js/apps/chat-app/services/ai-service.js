@@ -2,7 +2,8 @@
  * chat-app / AI 服务层（v0.62,真实 AI 对话）
  *
  * 职责:
- *   1) 拼装完整 systemPrompt — 走 window.__chatPromptBuilder.build()
+ *   1) 读取 prompt-manager 已生成的最终 pre（不再经过 prompt-builder）
+ *      pre = 发给 AI 的 systemPrompt,一字不动
  *   2) 调用 AI SDK — 走 window.__apiSdk + executeApiRequest({apiKeyId|groupId, ...})
  *   3) 解析 AI 返回内容 — 把 [发红包:88:祝福] / [发位置:名:地址] / [发图片:#xxx:#xxx:描述] /
  *      [发语音:秒数:内容] / [转账:金额:备注] / [引用:msgId:回复] 等特殊动作格式串拆出来,
@@ -17,152 +18,18 @@
  * 依赖:
  *   - window.settingsSdk(prewarm 已就绪)
  *   - window.__apiSdk(api manager 已加载)
- *   - window.__chatPromptBuilder(chat-app index.js 启动时挂)
+ *   - context-preview.js(prompt-manager 最终 pre 的镜像)
  *   - executeApiRequest 来自 api-key-sdk.js(为方便这里动态 import)
  */
 
-import { escapeHtml } from '@/src/core/escape.js';
+import { readContextPreview, writeContextPreview } from './context-preview.js';
+import { wrapPromptBlock, replacePromptBlock, hasPromptBlock, stripPromptBlock } from './prompt-tags.js';
 
-// ============================================================
-// 0) K链摘要生成（v0.63）
-// ============================================================
-
-/**
- * 生成K链压缩摘要
- *
- * 业务场景：当K链满了时，把最早的几个回合压缩成一条梗概。
- *
- * 流程：
- * 1. 把回合列表（每回合 = 一组连续user消息 + 一组连续ai消息）格式化成输入文本
- * 2. 构造压缩专用的system prompt（简短，节省token）
- * 3. 调用AI生成梗概
- * 4. 返回梗概文本
- *
- * @param {Array} rounds - 回合数组，每项 = [{sender, content, ...}, ...]
- * @param {object} opts
- * @param {string} opts.aiPersonId - AI人设ID（用于查找API key）
- * @param {string} [opts.mode='calendar'] - 模式
- * @param {string} [opts.summaryStyle='concise'] - 摘要风格（concise/detailed）
- * @returns {Promise<{ok: boolean, summary: string, error?: string}>}
- */
-export async function generateKChainSummary(rounds, opts = {}) {
-    const { aiPersonId, mode = 'calendar', summaryStyle = 'concise' } = opts;
-
-    if (!Array.isArray(rounds) || rounds.length === 0) {
-        return { ok: false, summary: '', error: '没有回合可压缩' };
-    }
-
-    const apiSdk = window.__apiSdk;
-    if (!apiSdk) {
-        return { ok: false, summary: '', error: 'API SDK未加载' };
-    }
-
-    // 1. 格式化回合列表
-    const formattedRounds = [];
-    for (let i = 0; i < rounds.length; i++) {
-        const round = rounds[i];
-        if (!Array.isArray(round)) continue;
-
-        const parts = [];
-        for (const msg of round) {
-            if (!msg || !msg.content) continue;
-            const sender = msg.sender === 'ai' ? 'AI' : '用户';
-            let text = String(msg.content || '').replace(/\s+/g, ' ').trim();
-
-            // 特殊消息类型处理
-            if (msg.stickerCode || msg.type === 'sticker') {
-                text = `[表情包]${msg.stickerName || msg.stickerCode || '表情包'}`;
-            } else if (msg.locationCard || msg.type === 'location') {
-                text = `[位置]${msg.locationCard?.name || msg.locationCard?.address || '位置'}`;
-            } else if (msg.imageDescription || (msg.type === 'image' && !msg.url)) {
-                text = `[图片]${msg.imageDescription || '图片'}`;
-            } else if (msg.redpacketCard || msg.type === 'redpacket') {
-                const amt = msg.redpacketCard?.amount || '';
-                const bless = msg.redpacketCard?.blessing || '';
-                text = `[红包]${amt}元 ${bless}`;
-            } else if (msg.transferCard || msg.type === 'transfer') {
-                const amt = msg.transferCard?.amount || '';
-                const note = msg.transferCard?.note || '';
-                text = `[转账]${amt}元 ${note}`;
-            }
-
-            if (!text) continue;
-            if (text.length > 200) text = text.slice(0, 200) + '…';
-            parts.push(`${sender}: ${text}`);
-        }
-        if (parts.length > 0) {
-            formattedRounds.push(`【回合${i + 1}】\n${parts.join('\n')}`);
-        }
-    }
-
-    if (formattedRounds.length === 0) {
-        return { ok: false, summary: '', error: '没有有效内容可压缩' };
-    }
-
-    const roundsText = formattedRounds.join('\n\n');
-
-    // 2. 构造压缩prompt
-    const styleDesc = summaryStyle === 'detailed'
-        ? '详细风格：涵盖话题、情感变化、重要细节'
-        : '简洁风格：1-3句话概括核心内容';
-
-    const systemPrompt = `# 压缩任务
-
-你是一个对话压缩助手。你的任务是把一段聊天记录压缩成简短的梗概。
-
-压缩规则：
-- ${styleDesc}
-- 保留关键信息：主要话题、人物互动、情感基调
-- 忽略细节和重复内容
-- 直接输出梗概，不要前缀说明，不要markdown格式
-- 语言风格自然，像在描述"用户和AI聊了什么"
-
-输入的聊天记录如下：
-${roundsText}
-
-请直接输出梗概（最多50字）：`;
-
-    // 3. 查找API key
-    const apiRef = getDefaultApiRef(aiPersonId);
-    if (!apiRef) {
-        return { ok: false, summary: '', error: '未找到可用的API Key' };
-    }
-
-    // 4. 调用AI
-    try {
-        const { executeApiRequest } = await import('../../setting/api-manager/api-key-sdk.js');
-
-        const apiResp = await executeApiRequest({
-            apiKeyId: apiRef.type === 'key' ? apiRef.refId : undefined,
-            groupId: apiRef.type === 'group' ? apiRef.refId : undefined,
-            endpoint: 'chat/completions',
-            method: 'POST',
-            body: {
-                messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: '请压缩这段对话' }],
-                temperature: 0.3, // 压缩任务用低温，保持一致
-                max_tokens: 100, // 梗概很短，不需要长输出
-            },
-            timeout: 30000, // 压缩任务30秒足够
-        });
-
-        if (!apiResp || apiResp.success === false) {
-            const errMsg = apiResp?.error || 'AI调用失败';
-            return { ok: false, summary: '', error: errMsg };
-        }
-
-        const raw = apiResp?.data?.choices?.[0]?.message?.content || '';
-        const summary = raw.trim().replace(/^["']|["']$/g, '').slice(0, 200);
-
-        if (!summary) {
-            return { ok: false, summary: '', error: 'AI返回为空' };
-        }
-
-        return { ok: true, summary };
-    } catch (err) {
-        console.warn('[generateKChainSummary] AI调用异常:', err);
-        return { ok: false, summary: '', error: err?.message || 'AI调用异常' };
-    }
-}
+// ★ v0.88:这里原来有个 `generateKChainSummary()` —— 第一版 K 链「攒够 N 轮就
+//   单独发一次压缩请求」的实现。K 链 SDK 2026-08-09 被删之后它就没人调了,
+//   但函数还留着(index.js 也还 import 着),看起来像还有一条压缩链路在跑。
+//   第二版 K 链改成「搭在正常回复那一次调用上」,不再需要独立请求 ——
+//   留着它就是第二份实现,迟早有人接错。整块删掉,新实现见 `k-chain-service.js`。
 
 // ============================================================
 // 1) 解析 AI 返回内容 → 消息数组
@@ -188,43 +55,87 @@ export function parseAiResponse(raw) {
     let i = 0;
     const len = raw.length;
 
+    /**
+     * 推一段纯文本。
+     * - 不再合并相邻 text 段:因为「|」分句的多条短消息需要各自独立气泡
+     * - 每条 push 出去的 text 都是「一条独立气泡」的原料
+     */
     function pushText(t) {
         const trimmed = String(t || '').replace(/^\s+|\s+$/g, '');
         if (!trimmed) return;
-        const last = out[out.length - 1];
-        if (last && last.type === 'text') {
-            last.text = (last.text + ' ' + trimmed).replace(/^\s+/, '');
-        } else {
-            out.push({ type: 'text', text: trimmed });
+        out.push({ type: 'text', text: trimmed });
+    }
+
+    /**
+     * 处理一段 raw 子串(可能含 | 分句 + [...] 特殊动作)
+     * - 按 | / | / \n / \r\n / /n 切(全角竖线 + 半角竖线 + 各种换行符都支持)
+     * - 修复 v0.85:AI 有时会用 /n 或换行符分割内容
+     * - 每个切分后的子段单独走 [...] token 识别
+     * - 这样能保证:
+     *     A) | / \n / /n 切出的每一段要么是纯 text,要么是单个特殊动作 token
+     *     B) text 和 [特殊动作] 永远不会在同一个 text 段里混排
+     *     C) [发图片:...] / [发红包:...] 始终是独立气泡,不会和文字拼接
+     */
+    function handleSegment(seg) {
+        if (!seg) return;
+        // ★ v0.85 修复:支持多种分隔符(| / | / \n / \r\n / /n)
+        const parts = String(seg).split(/[|｜\n\r]|(?:\/n)/);
+        for (const part of parts) {
+            handlePart(part);
         }
     }
 
-    while (i < len) {
-        // 找下一个 [
-        const open = raw.indexOf('[', i);
-        if (open === -1) {
-            pushText(raw.slice(i));
-            break;
-        }
-        if (open > i) pushText(raw.slice(i, open));
-        // 找匹配的 ]
-        const close = raw.indexOf(']', open + 1);
-        if (close === -1) {
-            pushText(raw.slice(open));
-            break;
-        }
-        const token = raw.slice(open + 1, close);
-        const parsed = _parseOneToken(token);
-        if (parsed) {
-            out.push(parsed);
-            i = close + 1;
-        } else {
-            // 不是合法 token,作为普通文本塞回去
-            pushText(raw.slice(open, close + 1));
-            i = close + 1;
+    /**
+     * 处理一个「| 切完后的子段」:走原 for-loop 的 [token] 识别逻辑
+     * 递归查找 [ ... ] 子串:
+     *   - token 前的 → pushText
+     *   - 合法 token  → out.push(tokenObj)
+     *   - 非法 token  → 原样 pushText(降级显示)
+     */
+    function handlePart(part) {
+        const s = String(part || '');
+        if (!s) return;
+        let j = 0;
+        const slen = s.length;
+        while (j < slen) {
+            const open = s.indexOf('[', j);
+            if (open === -1) {
+                pushText(s.slice(j));
+                return;
+            }
+            if (open > j) pushText(s.slice(j, open));
+            const close = s.indexOf(']', open + 1);
+            if (close === -1) {
+                pushText(s.slice(open));
+                return;
+            }
+            const token = s.slice(open + 1, close);
+            const parsed = _parseOneToken(token);
+            if (parsed) {
+                out.push(parsed);
+                j = close + 1;
+            } else {
+                // 不是合法 token,作为普通文本塞回去
+                pushText(s.slice(open, close + 1));
+                j = close + 1;
+            }
         }
     }
+
+    handleSegment(raw);
     return out;
+}
+
+/**
+ * 按歌名（+可选歌手）到音乐 App 的曲库里找歌。
+ * 音乐 App 没装或没找到都返回 null，卡片会退化成"只展示不能播"。
+ */
+function _lookupSongByTitle(title, artist) {
+    try {
+        return window.__musicListenTogether?.findSong?.(title, artist) || null;
+    } catch (_) {
+        return null;
+    }
 }
 
 function _parseOneToken(token) {
@@ -267,10 +178,22 @@ function _parseOneToken(token) {
             const count = Number(parts[1] || 5);
             return { type: 'share_chat_record', count };
         }
+        case '记忆': {
+            // ★ v0.88 K 链:这不是一条消息,是 AI 顺手交回来的记忆摘要。
+            //   `callAiAndSplit` 会在 segmentsToMessages 之前把它滤掉 ——
+            //   漏滤的话用户会看到一个装着三百字摘要的气泡。
+            const text = parts.slice(1).join(':').trim();
+            if (!text) return null;
+            return { type: 'kchain_memory', text };
+        }
         case '分享音乐': {
             const song = parts[1] || '';
             const artist = parts.slice(2).join(':') || '';
             return { type: 'share_music', song, artist };
+        }
+        case '一起听': {
+            const song = parts.slice(1).join(':').trim();
+            return { type: 'listen_together', song };
         }
         case '表情包': {
             // ★ v0.64 「AI 表情包」:跟其他特殊动作同款 [表情包:名称] 格式
@@ -280,12 +203,89 @@ function _parseOneToken(token) {
             if (!name) return null;
             return { type: 'sticker', name };
         }
+        // ★ v0.79 AI 发朋友圈
+        //   - 跟旧 chat.js 同款 [发朋友圈:内容] 格式
+        //   - chat-asset-service.aiSendMoment 会负责写完整朋友圈到 aiPerson.moments[] + 生成概要
+        case '发朋友圈': {
+            const content = parts.slice(1).join(':').trim();
+            if (!content) return null;
+            return { type: 'moment', content };
+        }
+        // ── 萤火视频(2026-08-15)──────────────────────────────
+        // AI 给用户分享一条「萤火」上的视频。这是普通卡片消息(和 [发位置] 同款,
+        // 无副作用),点击卡片走 contentCard 确认协议,由萤火按快照恢复/生成详情。
+        // 格式必须和 youtube-app/services/app-prompts.js 注册的说明逐字一致。
+        case '分享视频': {
+            const title = (parts[1] || '').trim();
+            if (!title) return null;
+            const blurb = parts.slice(2).join(':').trim();
+            return { type: 'youtube_share', title, blurb };
+        }
+        // ── 氧气博客(2026-08-15)──────────────────────────────
+        // AI 给用户分享一条「氧气」上的帖子。氧气是标签优先的博客:卡片只带
+        // 标签和一句预感,点击走 contentCard 确认协议,由氧气按快照建档 + 生成正文。
+        // 格式必须和 blog-app/services/app-prompts.js 注册的说明逐字一致。
+        case '分享帖子': {
+            const tags = (parts[1] || '').split('/').map((t) => t.trim()).filter(Boolean);
+            if (!tags.length) return null;
+            const blurb = parts.slice(2).join(':').trim();
+            return { type: 'blog_share', tags, blurb };
+        }
+        // ── 黑匣子(2026-08-15)────────────────────────────────
+        // 扮演结束后模型自己留下的一两句话。**不是消息**:
+        // callAiAndSplit 会在 segmentsToMessages 之前把它滤掉并送进氧气
+        // (blog)的黑匣子;黑匣子 prompt 卡没注入本轮 system prompt 时,
+        // 同形文本按普通文本显示(防误触发)。
+        case '黑匣子': {
+            const text = parts.slice(1).join(':').trim();
+            if (!text) return null;
+            return { type: 'blackbox', text };
+        }
+        // ── 四叶草购物(2026-08-13)─────────────────────────────
+        // AI 用自己的余额给用户买东西。和群管理同款:这不是消息,是**动作** ——
+        // 要扣 AI 的钱、写订单、勾掉心愿单,最后才产出一张礼物卡。
+        // 这里只识别成 shop_gift 段,真正执行在写盘那一层(需要 aiPersonId / mode,
+        // 而解析函数是纯函数、拿不到这些)。
+        case '送礼':
+        case '匿名送礼': {
+            const name = (parts[1] || '').trim();
+            if (!name) return null;
+            const price = Number(parts[2]) || 0;
+            const message = parts.slice(3).join(':').trim();
+            return { type: 'shop_gift', gift: { name, price, message, anonymous: head === '匿名送礼' } };
+        }
         // ★ v0.67 通话触发(AI 主动打来)
         case '打电话': {
             return { type: 'call', callType: 'voice' };
         }
         case '视频通话': {
             return { type: 'call', callType: 'video' };
+        }
+        // ── 群管理(2026-08-13)──────────────────────────────
+        // 这三个 token 不产生气泡,它们是「动作」:落库改群数据 + 写一条群公告。
+        // 这里只负责识别成 group_admin 段,真正执行在 chat-app 写盘那一层
+        // (services/group-admin-service.js),因为执行需要 user / groupId 上下文,
+        // 而解析函数是纯函数、拿不到这些。
+        case '群昵称': {
+            const target = (parts[1] || '').trim();
+            const nickname = parts.slice(2).join(':').trim();
+            if (!target) return null;
+            return { type: 'group_admin', action: { kind: 'nickname', target, nickname } };
+        }
+        case '我的群昵称': {
+            const nickname = parts.slice(1).join(':').trim();
+            if (!nickname) return null;
+            return { type: 'group_admin', action: { kind: 'self-nickname', nickname } };
+        }
+        case '设为管理员': {
+            const target = parts.slice(1).join(':').trim();
+            if (!target) return null;
+            return { type: 'group_admin', action: { kind: 'admin', target, on: true } };
+        }
+        case '取消管理员': {
+            const target = parts.slice(1).join(':').trim();
+            if (!target) return null;
+            return { type: 'group_admin', action: { kind: 'admin', target, on: false } };
         }
         default:
             return null;
@@ -400,11 +400,39 @@ export function segmentsToMessages(segments, ctxOpts = {}) {
                 timestamp: now + idx,
             });
         } else if (seg.type === 'share_music') {
+            // 落成真正的歌曲卡；songId 由 music app 按歌名反查（找不到就只当展示卡）
+            const matched = _lookupSongByTitle(seg.song, seg.artist);
             out.push({
                 id,
                 sender: 'ai',
-                type: 'text',
+                type: 'song_share',
                 content: `[分享音乐: ${seg.song}${seg.artist ? ' - ' + seg.artist : ''}]`,
+                songCard: {
+                    songId: matched?.id ?? null,
+                    title: seg.song || matched?.title || '未知歌曲',
+                    artist: seg.artist || matched?.artist || '未知歌手',
+                    cover: matched?.cover || '',
+                    color: matched?.color || '#fb7299',
+                },
+                timestamp: now + idx,
+            });
+        } else if (seg.type === 'listen_together') {
+            // AI 主动邀请一起听：发卡 + 通知 music app 开会话
+            const matched = _lookupSongByTitle(seg.song, '');
+            out.push({
+                id,
+                sender: 'ai',
+                type: 'listen_together_invite',
+                content: seg.song ? `[一起听: ${seg.song}]` : '[一起听]',
+                inviteCard: {
+                    songId: matched?.id ?? null,
+                    title: seg.song || matched?.title || '',
+                    artist: matched?.artist || '',
+                    cover: matched?.cover || '',
+                    color: matched?.color || '#7c5cff',
+                    invitedBy: 'ai',
+                },
+                listenTogetherRequest: { song: seg.song || '' },
                 timestamp: now + idx,
             });
         } else if (seg.type === 'sticker') {
@@ -422,6 +450,87 @@ export function segmentsToMessages(segments, ctxOpts = {}) {
                 stickerName: seg.name,
                 url: '',
                 aiStickerUnresolved: true, // ★ 标记:等 _resolveAiStickerFromHistory 处理
+                timestamp: now + idx,
+            });
+        } else if (seg.type === 'youtube_share') {
+            // 萤火视频卡。videoId 留空 —— AI 发的是「它口中的一条视频」,
+            // 用户点开卡片确认后,萤火用这份快照现场建档 + 生成详情。
+            // 写入 type / message-renderer 注册表 / share-cards 渲染器三处对齐。
+            out.push({
+                id,
+                sender: 'ai',
+                type: 'youtube_video_share',
+                content: `[视频] ${seg.title}`,
+                youtubeCard: {
+                    videoId: `aivid_${now}_${idx}`,
+                    title: seg.title,
+                    blurb: seg.blurb || '',
+                    coverText: seg.title.slice(0, 8),
+                    coverHue: (seg.title.length + idx) % 8,
+                    creatorName: '',
+                    kind: '',
+                    views: 0,
+                    durationSec: 0,
+                    fromAi: true,
+                },
+                timestamp: now + idx,
+            });
+        } else if (seg.type === 'blog_share') {
+            // 氧气帖子卡。postId 现造 —— AI 发的是「它口中的一条帖子」,
+            // 用户点开卡片确认后,氧气用这份快照现场建档 + 生成正文。
+            // 写入 type / message-renderer 注册表 / share-cards 渲染器三处对齐。
+            out.push({
+                id,
+                sender: 'ai',
+                type: 'blog_post_share',
+                content: `[帖子] ${seg.tags.join(' / ')}`,
+                blogCard: {
+                    postId: `aipost_${now}_${idx}`,
+                    tags: seg.tags,
+                    type: 'short',
+                    authorName: '',
+                    blurb: seg.blurb || '',
+                    fromAi: true,
+                },
+                timestamp: now + idx,
+            });
+        } else if (seg.type === 'moment') {
+            // ★ v0.79 AI 发朋友圈
+            //   - 这种消息类型是「AI 发朋友圈后由 chat-asset-service.aiSendMoment 写出来的」
+            //   - segmentsToMessages 不直接处理 —— 真实写入走 chat-asset-service.aiSendMoment
+            //   - 这里只产出一个 marker,表示「这一轮 AI 已经触发了发朋友圈」,
+            //     让 sendMessageWithAi 在循环里识别 + 调 aiSendMoment
+            out.push({
+                id,
+                sender: 'ai',
+                type: 'moment', // ★ marker — 走 aiSendMoment
+                content: seg.content,
+                momentContent: seg.content,
+                timestamp: now + idx,
+            });
+        } else if (seg.type === 'group_admin') {
+            // 群管理动作（设管理员 / 改群昵称）。
+            // 同样是 marker：不写 chatMessages，由写盘那一层交给
+            // group-admin-service 执行，执行完它自己会写一条群公告。
+            out.push({
+                id,
+                sender: 'ai',
+                type: 'group_admin',
+                content: '[群务]',
+                groupAdminAction: seg.action,
+                timestamp: now + idx,
+            });
+        } else if (seg.type === 'shop_gift') {
+            // 四叶草送礼。也是 marker：真正执行（扣 AI 的钱、写订单、
+            // 勾心愿单、产出礼物卡）由写盘那一层调 shop 的 service 完成。
+            // ★ 这里**不能**直接写一张礼物卡，否则会出现「卡片有了但钱没扣」——
+            //   而余额不足是很常见的情况。
+            out.push({
+                id,
+                sender: 'ai',
+                type: 'shop_gift_request',
+                content: '[礼物]',
+                shopGift: seg.gift,
                 timestamp: now + idx,
             });
         }
@@ -735,91 +844,152 @@ export function getDefaultApiRef(aiPersonId) {
  * @returns {Promise<{ ok:boolean, raw?:string, segments?:Array, messages?:Array, stats?:object, error?:string, prompt?:string, systemPrompt?:string }>}
  */
 export async function callAiAndSplit(opts = {}) {
-    const { aiPersonId, mode = 'calendar', userText, historyLimit = 12 } = opts;
+    const { aiPersonId, mode = 'calendar', userText, historyLimit = 12, groupId = '' } = opts;
     const sdk = window.settingsSdk;
     const apiSdk = window.__apiSdk;
-    const builder = window.__chatPromptBuilder;
 
     if (!sdk) return { ok: false, error: 'settingsSdk 未就绪' };
     if (!apiSdk) return { ok: false, error: 'API SDK 未加载,请先在设置中配置 API Key' };
-    if (!builder || typeof builder.build !== 'function') {
-        return { ok: false, error: 'prompt-builder 未挂载' };
-    }
 
-    // 1) 拼装 system prompt
-    let buildResult;
+    // 0) 先无头重跑一次 prompt-manager 的拼装，把 pre 刷到最新。
+    //    pre 一直是 renderPromptManagerPage 的副作用，用户不点进那一页它就是旧快照：
+    //    今天新聊的回合、刚改的人设、新装 App 的 prompt 全都进不去
+    //    （从没打开过时更惨，下面直接报错发不出去）。
+    //    这里是"发送前"这个时机的补刷；"打开私聊"那个时机在 index.js 里。
     try {
-        // ★ v0.62.x 「回复格式与聊天风格」开关
-        //   - 默认 true:注入到 systemPrompt 末尾
-        //   - false:完全不注入(用户主动关闭)
-        //   - 来源:跟 renderPromptManagerPage 同源,从 localStorage 读(防止 HMR 后内存丢失)
-        let replyFormatInject = { enabled: true };
-        try {
-            const raw = localStorage.getItem('xiaoting::chat-reply-format-inject-v1');
-            if (raw) {
-                const parsed = JSON.parse(raw);
-                if (parsed && typeof parsed === 'object' && aiPersonId) {
-                    replyFormatInject = { enabled: parsed[aiPersonId] !== false };
-                }
-            }
-        } catch (_) { /* ignore */ }
-
-        // ★ v0.63.2 K 链摘要注入开关(跟 replyFormatInject 同样的模式)
-        //   - 默认 true:把 buildKChainContext 拼出来的多 K 文本注入到 systemPrompt
-        //   - false:完全不注入(用户主动关闭 prompt-manager 上的「K 链」toggle,或总开关关闭)
-        //   - 两个条件都要看:
-        //     · rollingConfig.enabled(总开关,chat-settings #set-rolling-enabled)
-        //     · kChainActiveMap[aiPersonId] !== false(个人 toggle)
-        //   - 任一为 false → 不注入
-        let kChainInject = { enabled: true };
-        try {
-            // (1) 总开关:从 SDK 读 rollingConfig
-            const cfg = sdk.rollingSummaries?.getRollingConfig?.(aiPersonId);
-            const totalEnabled = !!(cfg && cfg.enabled);
-            // (2) 个人 toggle:从 localStorage 读
-            const raw = localStorage.getItem('xiaoting::chat-k-chain-active-v1');
-            let personalEnabled = true;
-            if (raw) {
-                try {
-                    const parsed = JSON.parse(raw);
-                    if (parsed && typeof parsed === 'object' && aiPersonId) {
-                        personalEnabled = parsed[aiPersonId] !== false;
-                    }
-                } catch (_) { /* ignore */ }
-            }
-        kChainInject = { enabled: totalEnabled && personalEnabled };
-    } catch (_) { /* ignore */ }
-
-    // ★ v0.66 memory summary inject override:读 app.state.chat.memorySummaryInject
-    //   让 prompt-builder 在拼「分级记忆」段时,把用户在 prompt-manager 里关闭的某条概要排除掉
-    let memorySummaryInjectOverride = {};
-    try {
-        const app = (typeof window !== 'undefined' && (window.__chatAppSingleton || window.externalAppRegistry?.getApp?.('chat'))) || null;
-        const aiMap = app?.state?.chat?.memorySummaryInject?.[aiPersonId];
-        if (aiMap && typeof aiMap === 'object') memorySummaryInjectOverride = { [aiPersonId]: aiMap };
-    } catch (_) { /* ignore */ }
-
-    buildResult = builder.build({
-        aiPersonId,
-        mode,
-        historyLimit,
-        replyFormatInject,
-        kChainInject,
-        memorySummaryInjectOverride,
-    });
-    // builder.build 可能是 async(基于 prompt-builder.js 的实现是 sync 函数),
-    // 这里兼容 await
-    if (buildResult && typeof buildResult.then === 'function') {
-        buildResult = await buildResult;
-    }
+        await window.__chatRefreshContextPreview?.({ aiPersonId, mode });
     } catch (err) {
-        console.error('[chat-ai-service] build prompt failed', err);
-        return { ok: false, error: '拼装 prompt 失败:' + (err?.message || String(err)) };
+        console.warn('[chat-ai-service] 发送前刷新 pre 失败，继续用缓存那份', err);
     }
-    const systemPrompt = buildResult?.systemPrompt || '';
+
+    // 1) 读取 prompt-manager 已按卡片顺序生成的最终 pre。
+    let systemPrompt = '';
+    try {
+        systemPrompt = readContextPreview({ aiPersonId, mode }) || '';
+        if (!systemPrompt) {
+            return { ok: false, error: 'prompt-manager 预览还没生成,请先在 prompt 管理页确认内容' };
+        }
+    } catch (err) {
+        console.error('[chat-ai-service] readContextPreview failed', err);
+        return { ok: false, error: '读取 prompt 预览失败:' + (err?.message || String(err)) };
+    }
+
+    // 1.5) 一起听：pre 是 prompt-manager 生成时的快照，歌词进度和已听时长会过期。
+    //      发送前把旧段落剪掉，换成音乐 App 现算的这一份。
+    //      音乐 App 没装 / 没在一起听时，getContext 返回空串，这里什么都不做。
+    try {
+        const lt = window.__musicListenTogether;
+        if (lt?.strip) systemPrompt = lt.strip(systemPrompt);
+        const ltBlock = lt?.getContext?.(aiPersonId) || '';
+        // 补回去时也要带标签，跟 pre 里其他段落保持同一种边界写法
+        if (ltBlock) systemPrompt = `${systemPrompt}\n\n${wrapPromptBlock('一起听', ltBlock)}`.trim();
+    } catch (err) {
+        console.warn('[chat-ai-service] 注入一起听上下文失败', err);
+    }
+
+    // 1.55) 四叶草购物：和一起听同一个理由，但多一条 —— 这段上下文
+    //       **对每个 AI 内容不一样**（心愿单里谁买过、匿不匿名）。
+    //       pre 是一份共用的快照，它做不到「按对话方分内容」。
+    try {
+        const shop = window.__shopContext;
+        if (shop?.strip) systemPrompt = shop.strip(systemPrompt);
+        const shopBlock = shop?.getContext?.(aiPersonId) || '';
+        if (shopBlock) systemPrompt = `${systemPrompt}\n\n${wrapPromptBlock('四叶草购物', shopBlock)}`.trim();
+    } catch (err) {
+        console.warn('[chat-ai-service] 注入四叶草上下文失败', err);
+    }
+
+    // 1.56) 灯塔求职：和四叶草同一条路。这段同样**对每个 AI 内容不一样** ——
+    //       同事知道办公室里发生了什么，不对付的那位立场相反，
+    //       毫无关系的第三个人只知道「她最近在上班」。
+    try {
+        const job = window.__jobContext;
+        if (job?.strip) systemPrompt = job.strip(systemPrompt);
+        const jobBlock = job?.getContext?.(aiPersonId) || '';
+        if (jobBlock) systemPrompt = `${systemPrompt}\n\n${wrapPromptBlock('灯塔求职', jobBlock)}`.trim();
+    } catch (err) {
+        console.warn('[chat-ai-service] 注入灯塔上下文失败', err);
+    }
+
+    // 1.565) 日记：和上面几段同一条路，但过期得更快 ——
+    //        「还有两天就要来月经」这句话每过一天就得变一次，
+    //        而 pre 只在用户打开 prompt 管理页时才重生成。
+    //        另外这段里有「她今天明确记录了还没来」这种**必须准确**的信息，
+    //        用过期快照会让 AI 说出用户当场就能发现的错话。
+    try {
+        const diary = window.__diaryContext;
+        if (diary?.strip) systemPrompt = diary.strip(systemPrompt);
+        const diaryBlock = diary?.getContext?.(aiPersonId) || '';
+        if (diaryBlock) systemPrompt = `${systemPrompt}\n\n${wrapPromptBlock('日记本', diaryBlock)}`.trim();
+    } catch (err) {
+        console.warn('[chat-ai-service] 注入日记上下文失败', err);
+    }
+
+    // 1.57) K 链记忆：和上面几段同一条路 —— pre 是快照，而「现在攒够几个回合了」
+    //       每一轮都在变，快照必然过期。
+    //       两段分开：当前记忆总是带；「顺手生成新记忆」那段**只在该压缩的那一轮才拼**，
+    //       其余轮次一个字都不发（用户明确要求的省 token 点，那段指令两百来字）。
+    let kChainPending = 0;
+    let kChainRequested = false;
+    try {
+        const kc = window.__chatKChain;
+        if (kc) {
+            systemPrompt = stripPromptBlock(stripPromptBlock(systemPrompt, kc.tag), kc.requestTag);
+            const kBlock = kc.getContext?.(aiPersonId, mode) || '';
+            if (kBlock) systemPrompt = `${systemPrompt}\n\n${wrapPromptBlock(kc.tag, kBlock)}`.trim();
+
+            kChainPending = kc.countPending?.(aiPersonId, mode) || 0;
+            const kReq = kc.getRequest?.(aiPersonId, mode, kChainPending) || '';
+            if (kReq) {
+                kChainRequested = true;
+                systemPrompt = `${systemPrompt}\n\n${wrapPromptBlock(kc.requestTag, kReq)}`.trim();
+            }
+        }
+    } catch (err) {
+        console.warn('[chat-ai-service] 注入 K 链失败', err);
+    }
+
+    // 1.6) 群聊：把「群成员与职务」这一段在发送时现算并追加。
+    //      和一起听同一个理由（§4.1）——群主是谁、谁是管理员、谁改了群昵称
+    //      随时都在变，pre 是快照，快照必然过期；而且这些数据挂在群上，
+    //      单 AI 维度的 pre 里本来就没有它。
+    if (groupId) {
+        try {
+            const groupUser = sdk.defaultUserCard?.getDefault?.() || sdk.users?.getActive?.();
+            const group = groupUser ? sdk.chatGroups?.get?.(groupUser, groupId, mode) : null;
+            if (group) {
+                const { buildGroupAdminPromptBlock } = await import('./group-admin-service.js');
+                const block = buildGroupAdminPromptBlock({
+                    sdk, user: groupUser, group, selfId: aiPersonId,
+                });
+                if (block) systemPrompt = `${systemPrompt}\n\n${wrapPromptBlock('群成员与职务', block)}`.trim();
+            }
+        } catch (err) {
+            console.warn('[chat-ai-service] 注入群成员与职务失败', err);
+        }
+    }
+
     console.log('[chat-ai-service] systemPrompt ====== START ======');
     console.log(systemPrompt);
     console.log('[chat-ai-service] systemPrompt ====== END (length=' + systemPrompt.length + ') ======');
+
+    // ★ v0.70 显示完整调用上下文,方便调试 mode 切换是否生效
+    //   用户原话:「在用户打电话打视频的时候 console.log 也显示完整上下文」
+    try {
+        const cm = window.__chatContextMode;
+        console.log('[chat-ai-service] fullContext ====== START ======');
+        console.log({
+            aiPersonId,
+            mode,
+            currentMode: cm?.getCurrentMode?.(),
+            currentModePromptLength: cm?.getCurrentModePrompt?.()?.length,
+            userText,
+            systemPromptLength: systemPrompt.length,
+            historyLimit,
+            apiRef: getDefaultApiRef(aiPersonId),
+        });
+        console.log('[chat-ai-service] fullContext ====== END ======');
+    } catch (_) {}
 
     // 2) 选 API ref
     const apiRef = getDefaultApiRef(aiPersonId);
@@ -836,8 +1006,7 @@ export async function callAiAndSplit(opts = {}) {
         return { ok: false, error: detail + ',请到「聊天设置 → API 调用」配置', prompt: systemPrompt };
     }
 
-    // 3) 拼 messages(只把 userText 作为本次输入;chat 历史已经走 prompt-builder 拼到 systemPrompt)
-    //    这样能让 LLM 更准确理解"我刚发的这句话"的上下文
+    // 3) 拼 messages（systemPrompt 就是 pre；本次用户输入单独作为 user message）
     const messages = [{ role: 'user', content: userText || '' }];
 
     // 4) 调用 AI
@@ -890,7 +1059,49 @@ export async function callAiAndSplit(opts = {}) {
         return { ok: false, error: 'AI 返回为空', raw: '', prompt: systemPrompt };
     }
 
-    const segments = parseAiResponse(raw);
+    const rawSegments = parseAiResponse(raw);
+
+    // ── 黑匣子（氧气 blog）─────────────────────────────────────
+    // `[黑匣子:…]` 是扮演结束后模型自己留下的话,**不是一条消息**。
+    // 门闸:只在黑匣子 prompt 卡真的注入了**本轮** system prompt 时才剥离
+    // （卡正文里带着字面量 `[黑匣子`,直接查发送文本最可靠）;
+    // 卡关着时同形文本按普通文本显示,防误触发。
+    // 剥离后送进氧气的黑匣子,带上本次调用真实使用的模型名;
+    // 氧气未启用时它自己会静默丢弃。黑匣子内容永不回注任何 prompt。
+    const blackboxInjected = systemPrompt.includes('[黑匣子');
+    const allSegments = [];
+    for (const seg of rawSegments) {
+        if (seg && seg.type === 'blackbox') {
+            if (!blackboxInjected) {
+                allSegments.push({ type: 'text', text: `[黑匣子:${seg.text}]` });
+                continue;
+            }
+            try {
+                const keyInfo = window.__apiSdk?.apiKeySdk?.get?.(apiResp?.apiKeyId) || null;
+                const aiInfo = sdk.aiPersons?.get?.(aiPersonId) || null;
+                // fire-and-forget:写黑匣子失败不该拖住这一轮回复的渲染
+                void window.__oxygenBlackbox?.append?.({
+                    text: seg.text,
+                    modelId: keyInfo?.model || '',
+                    modelLabel: keyInfo?.label || keyInfo?.model || '',
+                    aiPersonId,
+                    aiName: aiInfo?.name || '',
+                    mode,
+                });
+            } catch (err) {
+                console.warn('[chat-ai-service] 黑匣子转交失败', err);
+            }
+            continue;
+        }
+        allSegments.push(seg);
+    }
+
+    // ★ v0.88 K 链:`[记忆:…]` 是 AI 顺手交回来的摘要,**不是一条消息**。
+    //   必须在 segmentsToMessages 之前滤掉 —— 漏滤的话用户会看到一个
+    //   装着三百字摘要的气泡(而且还会被存进聊天记录)。
+    const memorySegments = allSegments.filter((s) => s && s.type === 'kchain_memory');
+    const segments = allSegments.filter((s) => !s || s.type !== 'kchain_memory');
+
     const aiMessages = segmentsToMessages(segments);
     if (aiMessages.length === 0) {
         // 解析失败也要落一条 text 占位,避免前端气泡空白
@@ -903,13 +1114,27 @@ export async function callAiAndSplit(opts = {}) {
         });
     }
 
+    // ★ v0.88 K 链:摘要要在 aiMessages **拿到时间戳之后**才落盘。
+    //   `applySummary` 会把「计数起点」推到 lastAt,而这一轮 AI 消息的
+    //   timestamp 已经在 segmentsToMessages 里定下来了 —— 起点必须盖过它们,
+    //   否则刚被压进去的这一轮下次又被数成待压缩,触发间隔永远差一。
+    if (memorySegments.length) {
+        const merged = memorySegments.map((s) => s.text).filter(Boolean).join('\n');
+        const newestAt = aiMessages.reduce((max, m) => Math.max(max, Number(m?.timestamp) || 0), 0);
+        // fire-and-forget:写记忆失败不该拖住这一轮回复的渲染,
+        // 下一轮 pending 还是够,会再要一次
+        void window.__chatKChain?.ingest?.(aiPersonId, mode, merged, kChainPending, newestAt + 1);
+    } else if (kChainRequested) {
+        // 要了但没给。不报错(这一轮回复本身是好的),只留一条能搜到的记录
+        console.warn('[chat-ai-service] 这一轮要求生成 K 链记忆,但 AI 没有返回 [记忆:…],下一轮会再要一次');
+    }
+
     return {
         ok: true,
         raw,
         segments,
         messages: aiMessages,
         stats: {
-            ...(buildResult?.stats || {}),
             ...(apiResp?.usage || {}),
             apiKeyId: apiResp?.apiKeyId,
             groupId: apiResp?.groupId,
@@ -917,4 +1142,128 @@ export async function callAiAndSplit(opts = {}) {
         },
         prompt: systemPrompt,
     };
+}
+
+// ============================================================
+// ★ v0.72 重roll 工具
+//   - 重roll 场景:删除该消息之后的所有消息,需要把 systemPrompt 里的
+//     「当前聊天回合」段同步替换成"不含后续消息"的新回合
+//   - 无状态工具:输入(原 systemPrompt, 新 contextRounds 文本) → 输出 newPrompt
+// ============================================================
+
+/**
+ * 把 systemPrompt 里的「当前聊天回合」整段替换/插入成新文本
+ *  - 段头锚:# 当前聊天回合(以 `# 当前聊天回合` 开头)
+ *  - 段边界:遇到下一个 `---` 分割线 或 文本末尾(对", 1 回合 = 1 组用户 + 1 组 AI)"收尾)
+ *  - 找不到旧段 → 在末尾追加
+ *  - 若 newContextRounds 为空 → 直接把旧段删掉
+ */
+export function replaceContextRoundsInPrompt(systemPrompt, newContextRounds) {
+    const src = String(systemPrompt || '');
+    let next = String(newContextRounds || '').trim();
+    // 去掉 newContextRounds 末尾可能多余的单换行(computeContextRoundsPrompt 用 join('\n') 会留一个 \n)
+    next = next.replace(/[\r\n]+$/, '').trim();
+    if (!src) return next ? wrapPromptBlock('当前聊天回合', next) : '';
+    // ★ v0.87 新版 pre 每段都带 `<当前聊天回合开始>…<当前聊天回合结束>`,按标签整段换最稳。
+    //   下面那套「找 # 标题 + 找下一个空行」的老逻辑留给还没刷新过的历史 pre。
+    if (hasPromptBlock(src, '当前聊天回合')) {
+        return replacePromptBlock(src, '当前聊天回合', next);
+    }
+    const startIdx = src.indexOf('# 当前聊天回合');
+    if (startIdx === -1) {
+        // 没有旧段 → 末尾追加
+        return next ? (src.replace(/[\r\n]+$/, '') + '\n\n' + next) : src;
+    }
+    // 找段结束:从 startIdx 开始,找下一个 '\n\n' 双换行分隔符或文末
+    let endIdx = src.length;
+    const after = src.slice(startIdx);
+    const doubleNl = after.indexOf('\n\n');
+    if (doubleNl !== -1) {
+        endIdx = startIdx + doubleNl;
+    }
+    const before = src.slice(0, startIdx).replace(/[\r\n]+$/, '');
+    const afterOk = src.slice(endIdx).replace(/^[\r\n]+/, '');
+    if (!next) {
+        return afterOk ? (before + '\n\n' + afterOk) : before;
+    }
+    const parts = [before, next, afterOk].filter(Boolean);
+    return parts.join('\n\n');
+}
+
+/**
+ * ★ v0.72 重roll 用:重算 contextRounds + 替换 systemPrompt 的对应段 + 写回 contextPreview 缓存
+ *   - 输入:旧系统 prompt(可空)、新的 messages 列表(已删除后续)、{ aiPersonId, mode }
+ *   - 必须传入 computeContextRoundsPrompt 来生成新回合文本(由 chat-app 注入,避免循环依赖)
+ *   - 返回:新的 systemPrompt 文本(同时已 writeContextPreview 写回缓存,后续 callAiAndSplit 直接读到新值)
+ */
+export function recomputeContextPreviewAfterReroll({
+    aiPersonId,
+    mode = 'calendar',
+    messages,
+    oldSystemPrompt,
+    computeContextRoundsPrompt,
+}) {
+    let newRounds = '';
+    try {
+        if (typeof computeContextRoundsPrompt === 'function') {
+            newRounds = computeContextRoundsPrompt(aiPersonId, messages || [], undefined) || '';
+        }
+    } catch (_) {
+        newRounds = '';
+    }
+    // 旧 prompt: 优先用调用方传入;否则从缓存/DOM 读
+    let base = String(oldSystemPrompt || '');
+    if (!base) {
+        try {
+            base = readContextPreview({ aiPersonId, mode }) || '';
+        } catch (_) {
+            base = '';
+        }
+    }
+    const next = replaceContextRoundsInPrompt(base, newRounds);
+    try {
+        writeContextPreview(aiPersonId, mode, next);
+    } catch (_) { /* 忽略,继续返回 next */ }
+    return next;
+}
+
+// ============================================================
+// ★ v0.79 AI 朋友圈概要生成
+//   - 由 chat-asset-service.aiSendMoment 在后台异步调用
+//   - 走 settings-sdk 的 API(跟 chat.js 旧版 generateKChainSummary 同款路径)
+//   - 默认返回「空 summary」 — 用户可手动调 regenerateMomentSummary 重生成
+//   - 主题去重由 prompt-builder 注入的 AI_MOMENTS_INSTRUCTIONS + AI 已发过的概要本身保证
+// ============================================================
+
+/**
+ * 为某条朋友圈生成概要
+ * @param {object} opts
+ * @param {string} opts.aiPersonId
+ * @param {string} opts.momentId
+ * @param {string} opts.content    朋友圈正文
+ * @param {string} [opts.mode]     'calendar' | 'story'
+ * @returns {Promise<{ok:boolean, summary?:string, error?:string}>}
+ */
+export async function _generateMomentSummary({ aiPersonId, momentId, content, mode = 'calendar' }) {
+    if (!aiPersonId || !momentId) return { ok: false, error: '参数缺失' };
+    const sdk = window.settingsSdk;
+    if (!sdk) return { ok: false, error: 'SDK 未就绪' };
+
+    // ★ 默认实现:留空 summary
+    //   - 不调 LLM(节省 token / 防止 LLM 误生成超长概要)
+    //   - 用户可手动调 chat-asset-service.regenerateMomentSummary 重生成
+    //   - prompt-builder 的 _renderAiMomentsContextBlock 只取有 summary 的条目
+    //   - summary 留空时,prompt 里 AI 朋友圈上下文段为空,不会注入
+    //   - 这样既实现了「防 AI 朋友圈过多 / 防重复主题」(因为列表里只有 summary 非空的才会被注入)
+    //     又保留了完整原文(aiPerson.moments[].content)在朋友圈列表页显示
+    //
+    // ★ 真实 LLM 生成版(本期不接 — 留空 + 控制台 debug):
+    //   const apiRef = getDefaultApiRef(aiPersonId);
+    //   if (!apiRef) return { ok: false, error: '未配置 API' };
+    //   const sys = '你是一个朋友圈概要生成助手。输出一句话概要(20字以内),只描述主题和情绪。';
+    //   const user = `朋友圈正文:${content}\n请输出一句话概要:`;
+    //   const resp = await executeApiRequest(apiRef, sys, user);
+    //   await sdk.moments.setSummary(aiPersonId, momentId, resp);
+    //   return { ok: true, summary: resp };
+    return { ok: true, summary: '' };
 }

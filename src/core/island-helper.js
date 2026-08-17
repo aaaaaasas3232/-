@@ -4,16 +4,22 @@
 //       并注入 ownerId + 暴露 onKicked/onLongPress/onClosed 注册口。
 // ============================================
 
+import { isIslandKindEnabled, isNotifyKindEnabled } from './app-presence.js';
+import { sanitizeIslandIcon, getIslandState } from './island-icon.js';
+
 const DEFAULT_NOTIFY_DURATION_MS = 3500;
 
 function normalizeInfoPayload(payload = {}, ownerId = '') {
     const safeOwnerId = payload.ownerId || ownerId || '';
     return {
+        // 声明式的岛形态 id（对应 appConfig.islandKinds[].id）。
+        // 带上它，用户才能在「灵动岛与小组件」里单独关掉这一种。
+        kind: payload.kind || '',
         type: payload.type || 'info',
         title: payload.title || '',
         message: payload.message || '',
         detail: payload.detail || '',
-        icon: payload.icon || '',
+        icon: sanitizeIslandIcon(payload.icon, getIslandState(payload.type || 'info').icon),
         islandTemplate: payload.islandTemplate || '',
         payload: payload.payload || null,
         // widget 模式下：是否合并显示多个 widget（同 app 多 widget 显示在同一个岛）。
@@ -24,6 +30,7 @@ function normalizeInfoPayload(payload = {}, ownerId = '') {
         lifecycle: payload.lifecycle || 'manual',
         duration: typeof payload.duration === 'number' ? payload.duration : 0,
         maxSize: payload.maxSize || null,
+        minSize: payload.minSize || null,
         closeReason: payload.closeReason || '',
         onKicked: typeof payload.onKicked === 'function' ? payload.onKicked : null,
         onLongPress: typeof payload.onLongPress === 'function' ? payload.onLongPress : null,
@@ -86,18 +93,49 @@ export function createIslandHelper(appId, appName) {
             && (currentContent.message || '') === (nextContent.message || '')
             && currentContent.lifecycle === nextContent.lifecycle
             && currentContent.duration === nextContent.duration
-            && currentContent.maxSize === nextContent.maxSize;
+            && currentContent.maxSize === nextContent.maxSize
+            && currentContent.minSize === nextContent.minSize;
+    }
+
+    /**
+     * 用户在「灵动岛与小组件」里把这种形态关掉了 → 直接不弹。
+     * 只对**声明过 kind** 的调用生效；没写 kind 的老代码行为完全不变。
+     */
+    function blockedByUser(kind) {
+        if (!kind) return false;
+        try {
+            return !isIslandKindEnabled(safeOwnerId, kind);
+        } catch (_) {
+            return false;
+        }
+    }
+
+    /** 同上，但查的是 notifyKinds（一次性提示那张表） */
+    function notifyBlockedByUser(kind) {
+        if (!kind) return false;
+        try {
+            return !isNotifyKindEnabled(safeOwnerId, kind);
+        } catch (_) {
+            return false;
+        }
     }
 
     return {
         // === 基础 5 个方法 ===
         show(size = 'mini', payload = {}) {
+            if (blockedByUser(payload?.kind)) return;
             window.myDynamicIsland?.showInfo?.(size, normalize(payload));
         },
         info(size = 'mini', payload = {}) {
+            if (blockedByUser(payload?.kind)) return;
             window.myDynamicIsland?.showInfo?.(size, normalize(payload));
         },
         notify(type = 'info', title = safeAppName, message = '', options = {}) {
+            if (notifyBlockedByUser(options?.kind)) return;
+            // ★ 修复：过滤无效的 type，防止第三方 app 传入无效值（如 'ctx'）导致图标不显示
+            const VALID_TYPES = ['success', 'warning', 'error', 'info', 'message', 'call', 'system'];
+            const safeType = VALID_TYPES.includes(type) ? type : 'info';
+
             // 通知默认就是 time 模式 + 3500ms 自动消失
             // 把扩展字段塞到 options.lifecycle / options.duration，
             // framework 的 showNotification 会把这些字段直接合并到 islandContent。
@@ -110,7 +148,7 @@ export function createIslandHelper(appId, appName) {
                 // 让 framework 知道是哪个 app 发的
                 ownerId: safeOwnerId,
             };
-            window.myDynamicIsland?.showNotification?.(type, title, message, merged);
+            window.myDynamicIsland?.showNotification?.(safeType, title, message, merged);
         },
         setSize(size = 'mini') {
             window.myDynamicIsland?.setSize?.(size);
@@ -127,6 +165,7 @@ export function createIslandHelper(appId, appName) {
             };
         },
         toggle(size = 'mini', payload = {}) {
+            if (blockedByUser(payload?.kind)) return false;
             const nextContent = normalize(payload);
             const currentState = window.myDynamicIsland?.getState?.();
             const currentContent = currentState?.content || {};

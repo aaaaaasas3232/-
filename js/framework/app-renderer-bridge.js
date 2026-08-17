@@ -53,50 +53,51 @@ export function bindAppRendererBridge({
     let pendingDetailMountId = 0;
     let inFlightDetailMount = 0; // 0 = 无 in-flight;非 0 = 当前正在执行的 mountId
 
-    async function syncRenderer(opts = {}) {
-        const force = !!opts.force;
-        if (pendingTickHandle) {
-            clearTimeout(pendingTickHandle);
-            pendingTickHandle = null;
-        }
+            async function syncRenderer(opts = {}) {
+                const force = !!opts.force;
+                if (pendingTickHandle) {
+                    clearTimeout(pendingTickHandle);
+                    pendingTickHandle = null;
+                }
 
-        const app = activeApp?.value;
-        // 支持 getScreenPanelEl 传 ref（Vue.ref(null)）或函数（() => el）
-        const screenEl = typeof getScreenPanelEl === 'function'
-            ? getScreenPanelEl()
-            : (getScreenPanelEl?.value !== undefined ? getScreenPanelEl.value : null);
-        const detailEl = typeof getDetailPanelEl === 'function'
-            ? getDetailPanelEl()
-            : (getDetailPanelEl?.value !== undefined ? getDetailPanelEl.value : null);
+                const app = activeApp?.value;
+                // 支持 getScreenPanelEl 传 ref（Vue.ref(null)）或函数（() => el）
+                const screenEl = typeof getScreenPanelEl === 'function'
+                    ? getScreenPanelEl()
+                    : (getScreenPanelEl?.value !== undefined ? getScreenPanelEl.value : null);
+                const detailEl = typeof getDetailPanelEl === 'function'
+                    ? getDetailPanelEl()
+                    : (getDetailPanelEl?.value !== undefined ? getDetailPanelEl.value : null);
 
-        // 防御：Vue ref 可能还没绑定（v-if 条件刚开始满足），直接查 DOM 作为 fallback
-        const finalDetailEl = detailEl || document.querySelector('.app-detail-panel');
+                // 防御：Vue ref 可能还没绑定（v-if 条件刚开始满足），直接查 DOM 作为 fallback
+                const finalDetailEl = detailEl || document.querySelector('.app-detail-panel');
 
-        if (typeof window !== 'undefined' && window.__APP_RENDERER_BRIDGE_DEBUG__) {
-            console.log('[bridge] syncRenderer', 'app=', app?.id, 'screenEl=', !!screenEl, 'detailEl=', !!detailEl, 'finalDetailEl=', !!finalDetailEl, 'detailPage=', currentDetailPage?.value?.id);
-        }
+                if (typeof window !== 'undefined' && window.__APP_RENDERER_BRIDGE_DEBUG__) {
+                    console.log('[bridge] syncRenderer', 'app=', app?.id, 'screenEl=', !!screenEl, 'detailEl=', !!detailEl, 'finalDetailEl=', !!finalDetailEl, 'detailPage=', currentDetailPage?.value?.id);
+                }
 
-        if (!app) {
-            // 没 app：清空
-            if (screenEl) unmountFrom(screenEl);
-            if (finalDetailEl) unmountFrom(finalDetailEl);
-            lastMountedKey.value = null;
-            return;
-        }
+                if (!app) {
+                    // 没 app：清空
+                    if (screenEl) unmountFrom(screenEl);
+                    if (finalDetailEl) unmountFrom(finalDetailEl);
+                    lastMountedKey.value = null;
+                    return;
+                }
 
-        // 防御：framework 的 #app-screen-panel 可能还没 mount（setup() 还没跑完）
-        if (!screenEl) {
-            // 等待 Vue 下一次 flush 后重试
-            pendingTickHandle = setTimeout(() => syncRenderer(), 50);
-            return;
-        }
+                // 防御：framework 的 #app-screen-panel 可能还没 mount（setup() 还没跑完）
+                if (!screenEl) {
+                    // 等待 Vue 下一次 flush 后重试
+                    pendingTickHandle = setTimeout(() => syncRenderer(), 50);
+                    return;
+                }
 
-        // 防御：detail panel 的 .app-detail-panel 可能还没出现在 DOM 中（v-if 刚满足）
-        // 如果需要渲染 detail 但 DOM 还没准备好，延迟重试
-        if (currentDetailPage?.value && !finalDetailEl) {
-            pendingTickHandle = setTimeout(() => syncRenderer(), 50);
-            return;
-        }
+                // 防御：detail panel 的 .app-detail-panel 可能还没出现在 DOM 中（v-if 刚满足）
+                // 如果需要渲染 detail 但 DOM 还没准备好，延迟重试
+                if (currentDetailPage?.value && !finalDetailEl) {
+                    console.log('[bridge] syncRenderer: detail needed but no DOM, retrying...', { force });
+                    pendingTickHandle = setTimeout(() => syncRenderer({ force }), 50);
+                    return;
+                }
 
         const mode = app.renderMode || 'template';
 
@@ -125,6 +126,15 @@ export function bindAppRendererBridge({
                     unmountFrom(screenEl);
                 } else {
                     // hybrid / vue：交给调度器（会 set innerHTML）
+                    // ★ v0.87 root tab 也要保滚动位置。
+                    //   之前只有 detail 区做了 capture/restore，root tab（朋友圈、消息列表…）
+                    //   一旦因为数据变化重画就弹回顶部 —— 用户在朋友圈里点个收藏就被踢回最上面。
+                    //   只在「同一个 page 内因 tick 变化重画」时恢复；真的换 tab 就该回到顶部。
+                    const samePage = !!lastKey && lastKey.appId === app.id && lastKey.pageKey === pageKey;
+                    let saved = null;
+                    if (samePage) {
+                        try { saved = window.__chatScrollCapture?.() || null; } catch (_) { saved = null; }
+                    }
                     pendingTickHandle = setTimeout(() => {
                         mountInto(
                             screenEl,
@@ -133,6 +143,13 @@ export function bindAppRendererBridge({
                             rootPage,
                             'page'
                         );
+                        if (saved?.selector) {
+                            try {
+                                (window.__chatScrollRestoreOnMutation || window.__chatScrollRestore)?.(
+                                    saved.selector, saved.scrollTop, saved.anchorPromptId,
+                                );
+                            } catch (_) { /* 恢复失败最多就是回到顶部 */ }
+                        }
                     }, 0);
                 }
                 lastMountedKey.value = { appId: app.id, pageKey, mode, tickVal };
@@ -161,7 +178,7 @@ export function bindAppRendererBridge({
                 //   - 但如果上次 mountInto 还在跑(inFlight),**不要**立刻 enqueue,
                 //     等 inFlight 完成后,lastKey 会更新到新 tick,后续 syncRenderer 自然跳过
                 //   - force=true(bridge.syncNow({ force:true })):忽略 inFlight,强制重画(业务 SDK ready 后用)
-                const needDetailRemount = (force || detailChanged || tickChanged) && !detailMountInFlight;
+                const needDetailRemount = (force || detailChanged || tickChanged) && (force || !detailMountInFlight);
                 if (needDetailRemount) {
                     if (mode === 'template') {
                         // 模板模式:v-html 响应式更新
@@ -273,9 +290,15 @@ export function bindAppRendererBridge({
     if (typeof window !== 'undefined') {
         window.__appRendererBridge = {
             syncNow: syncRenderer,
-            unmountApp(appId) {
-                if (screenEl) unmountFrom(screenEl);
-                if (detailEl) unmountFrom(detailEl);
+            unmountApp() {
+                // ★ screenEl / detailEl 是 syncRenderer 内部的局部 const，
+                // 这里拿不到，必须重新解析一次面板元素（否则 ReferenceError）。
+                const screen = (typeof getScreenPanelEl === 'function' ? getScreenPanelEl() : null)
+                    || document.querySelector('.app-screen-panel');
+                const detail = (typeof getDetailPanelEl === 'function' ? getDetailPanelEl() : null)
+                    || document.querySelector('.app-detail-panel');
+                if (screen) unmountFrom(screen);
+                if (detail) unmountFrom(detail);
             },
         };
     }

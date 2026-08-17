@@ -164,35 +164,13 @@
  * 卡片通用样式
  * ============================================ */
 
-.app-shell[data-app-id="chat"] .calendar-card,
-.app-shell[data-app-id="chat"] .calendar-context-card {
+.app-shell[data-app-id="chat"] .calendar-card {
     background: white;
     border-radius: 16px;
     box-shadow: 0 2px 12px rgba(168, 200, 236, 0.15);
     margin-bottom: 16px;
     overflow: hidden;
 }
-
-/* 区块标题(白底卡片内的小标题) */
-.app-shell[data-app-id="chat"] .calendar-section-title {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 12px 16px;
-    background: linear-gradient(135deg, rgba(168, 200, 236, 0.15), rgba(244, 166, 205, 0.1));
-    border-bottom: 1px solid #F0F0F0;
-    font-size: 13px;
-    font-weight: 600;
-    color: #4A6FA5;
-}
-
-.app-shell[data-app-id="chat"] .calendar-section-title svg {
-    width: 14px;
-    height: 14px;
-    fill: #4A6FA5;
-}
-
-/* v0.65 删除三按钮组样式（替换成 textarea） */
 
 /* ============================================
  * 日历主卡片(月导航 + 星期标题 + 日期网格)
@@ -204,7 +182,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 16px 20px;
-    background: linear-gradient(135deg, rgba(168, 200, 236, 0.1), rgba(244, 166, 205, 0.08));
+    background: transparent;
 }
 
 .app-shell[data-app-id="chat"] .calendar-nav-btn {
@@ -296,7 +274,7 @@
 
 /* 有聊天记录的日期 */
 .app-shell[data-app-id="chat"] .calendar-day.has-chat {
-    background: linear-gradient(135deg, #E8F2FF, #D6E4FF);
+    background: #E8F2FF;
     cursor: pointer;
 }
 
@@ -314,16 +292,26 @@
 
 /* 今日 */
 .app-shell[data-app-id="chat"] .calendar-day.is-today {
-    background: linear-gradient(135deg, #4A6FA5, #6B8FBD);
+    background: #E8F2FF;
+}
+
+/* 有聊天 + 今日 = 单纯淡粉色 */
+.app-shell[data-app-id="chat"] .calendar-day.has-chat.is-today {
+    background: #FFE8F0;
 }
 
 .app-shell[data-app-id="chat"] .calendar-day.is-today .calendar-day-num {
-    color: white;
+    color: #4A6FA5;
+    font-weight: 600;
+}
+
+.app-shell[data-app-id="chat"] .calendar-day.has-chat.is-today .calendar-day-num {
+    color: #C45A82;
     font-weight: 600;
 }
 
 .app-shell[data-app-id="chat"] .calendar-day.is-today .calendar-day-dot {
-    background: white;
+    background: #FF6B9D;
 }
 
 /* ============================================
@@ -425,14 +413,15 @@
     justify-content: space-between;
     align-items: center;
     padding: 16px 20px;
-    background: linear-gradient(135deg, rgba(168, 200, 236, 0.15), rgba(244, 166, 205, 0.10));
+    background: transparent;
     border-bottom: 1px solid #F0F0F0;
 }
 
 .app-shell[data-app-id="chat"] .cdd-header-left {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 8px;
     min-width: 0;
 }
 
@@ -449,90 +438,7 @@
     line-height: 1.2;
 }
 
-.app-shell[data-app-id="chat"] .cdd-close-btn {
-    width: 28px;
-    height: 28px;
-    border: none;
-    background: #F0F0F0;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #666;
-    transition: background 0.2s, transform 0.2s;
-    flex-shrink: 0;
-}
-
-.app-shell[data-app-id="chat"] .cdd-close-btn:hover {
-    background: #E5E5E5;
-    transform: scale(1.06);
-}
-
-.app-shell[data-app-id="chat"] .cdd-close-btn:active {
-    transform: scale(0.92);
-}
-
-.app-shell[data-app-id="chat"] .cdd-close-btn svg {
-    width: 14px;
-    height: 14px;
-}
-
-/* v0.65 「发给 AI Prompt」文本框（替换原本的 3 个按钮） */
-.app-shell[data-app-id="chat"] .calendar-prompt-textarea {
-    width: 100%;
-    min-height: 110px;
-    padding: 10px 12px;
-    border: 1px solid #E9ECEF;
-    border-radius: 10px;
-    font-size: 12px;
-    line-height: 1.6;
-    color: #1F2937;
-    background: #FAFBFC;
-    resize: vertical;
-    outline: none;
-    box-sizing: border-box;
-    font-family: inherit;
-    transition: border-color 0.15s, background 0.15s;
-}
-
-.app-shell[data-app-id="chat"] .calendar-prompt-textarea:focus {
-    border-color: #4A6FA5;
-    background: #FFFFFF;
-    box-shadow: 0 0 0 2px rgba(74, 111, 165, 0.12);
-}
-
-.app-shell[data-app-id="chat"] .calendar-prompt-textarea::placeholder {
-    color: #9CA3AF;
-}
-
-/* v0.66 ★ 自定义滚动条 + 内容溢出滚动 */
-.app-shell[data-app-id="chat"] .calendar-prompt-textarea {
-    overflow-y: auto;             /* 始终显示滚动条轨道(避免内容变高时跳动) */
-    scrollbar-width: thin;        /* Firefox:细滚动条 */
-    scrollbar-color: #C5C9D0 transparent;
-    -webkit-overflow-scrolling: touch;
-}
-/* WebKit / Blink(Chrome / Safari / Edge): 自定义滚动条 */
-.app-shell[data-app-id="chat"] .calendar-prompt-textarea::-webkit-scrollbar {
-    width: 6px;                   /* 垂直滚动条宽度 */
-    height: 6px;
-}
-.app-shell[data-app-id="chat"] .calendar-prompt-textarea::-webkit-scrollbar-track {
-    background: transparent;       /* 轨道透明,不抢视觉 */
-}
-.app-shell[data-app-id="chat"] .calendar-prompt-textarea::-webkit-scrollbar-thumb {
-    background: #C5C9D0;
-    border-radius: 3px;
-}
-.app-shell[data-app-id="chat"] .calendar-prompt-textarea::-webkit-scrollbar-thumb:hover {
-    background: #9CA3AF;
-}
-/* Firefox 火狐 */
-.app-shell[data-app-id="chat"] .calendar-prompt-textarea {
-    scrollbar-width: thin;
-    scrollbar-color: #C5C9D0 transparent;
-}
+/* ★ v0.68 关闭按钮已去除：原本的 .cdd-close-btn 样式全部移除 */
 
 /* v0.65 恢复「当日概要」区（v0.65 删的整段回归） */
 .app-shell[data-app-id="chat"] .cdd-summary {
@@ -593,21 +499,30 @@
 }
 
 .app-shell[data-app-id="chat"] .cdd-summary-placeholder {
-    padding: 20px;
+    /* ★ v0.68 占位提示「去装饰化」—— 不再要浅灰背景 + 圆角，只保留文字，上下左右居中 */
+    padding: 0;
     text-align: center;
     color: #999;
     font-size: 12px;
-    background: #FAFBFC;
-    border-radius: 10px;
+    background: transparent;
+    border-radius: 0;
+    /* 居中 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 12px;
 }
 
 /* ★ v0.66 已生成概要卡片 */
+/* ★ v0.68 概要卡 / 占位提示 / 应用按钮全部「去装饰化」—— 只保留纯文本 */
 .app-shell[data-app-id="chat"] .cdd-summary-card {
-    background: linear-gradient(180deg, #FFFFFF 0%, #F5F8FC 100%);
-    border: 1px solid #D6E4F5;
-    border-radius: 10px;
-    padding: 10px 12px;
+    /* 去掉渐变背景 + 边框 + 圆角 + padding + margin，只保留文字本身 */
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 4px 0;
     margin-bottom: 8px;
+    margin-top: 8px;
 }
 .app-shell[data-app-id="chat"] .cdd-summary-card:last-child {
     margin-bottom: 0;
@@ -624,57 +539,20 @@
     line-height: 1.55;
     white-space: pre-wrap;
     word-break: break-word;
-    max-height: 120px;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: #C5C9D0 transparent;
+    /* 去掉 max-height + overflow-y，让用户能看到完整概要 */
+    max-height: none;
+    overflow: visible;
 }
-.app-shell[data-app-id="chat"] .cdd-summary-card-body::-webkit-scrollbar {
-    width: 5px;
-}
-.app-shell[data-app-id="chat"] .cdd-summary-card-body::-webkit-scrollbar-thumb {
-    background: #C5C9D0;
-    border-radius: 3px;
-}
-.app-shell[data-app-id="chat"] .cdd-summary-card-actions {
-    margin-top: 8px;
-    display: flex;
-    justify-content: flex-end;
-}
-.app-shell[data-app-id="chat"] .cdd-summary-apply-btn {
-    padding: 6px 12px;
-    background: linear-gradient(135deg, #A8C8EC, #4A6FA5);
-    color: #FFFFFF;
-    border: none;
-    border-radius: 8px;
-    font-size: 11px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.15s;
-    box-shadow: 0 1px 3px rgba(74, 111, 165, 0.25);
-}
-.app-shell[data-app-id="chat"] .cdd-summary-apply-btn:hover:not(:disabled) {
-    box-shadow: 0 2px 6px rgba(74, 111, 165, 0.35);
-    transform: translateY(-1px);
-}
-.app-shell[data-app-id="chat"] .cdd-summary-apply-btn:active:not(:disabled) {
-    transform: translateY(0) scale(0.98);
-}
-.app-shell[data-app-id="chat"] .cdd-summary-apply-btn.is-applied,
-.app-shell[data-app-id="chat"] .cdd-summary-apply-btn:disabled {
-    background: rgba(120, 120, 128, 0.08);
-    color: #9CA3AF;
-    cursor: not-allowed;
-    box-shadow: none;
-}
+/* ★ 已应用到 Prompt 管理按钮相关样式全部移除（按钮本身不再渲染） */
+/* .cdd-summary-card-actions / .cdd-summary-apply-btn 已删除 */
 
 .app-shell[data-app-id="chat"] .cdd-summary-text {
     font-size: 12px;
     color: #333;
     line-height: 1.6;
-    background: #FAFBFC;
-    padding: 12px 14px;
-    border-radius: 10px;
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
     white-space: pre-wrap;
     word-break: break-word;
 }

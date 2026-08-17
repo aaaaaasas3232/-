@@ -12,8 +12,6 @@ import {
     getLibraryPackages,
     getPackageGroups,
     getGroupPrompts,
-    getGroup,
-    getGroupWithPath,
     createLibrary,
     updateLibrary,
     deleteLibrary,
@@ -118,29 +116,38 @@ const _toast = (type, title, msg) => {
     }
 };
 
-const _reloadAll = () => {
-    getAllLibraries().then(libs => {
-        _cache.libraries = libs;
-        if (_cache.currentView === 'packages' && _cache.currentLibraryId) {
-            return getLibraryPackages(_cache.currentLibraryId);
+const _reloadAll = async () => {
+    // 重新加载整条路径。★ 逐层校验 current*Id 是否还存在：被删掉的那一层要就地出栈，
+    //   否则 cache 里留着已删除的记录，视图照旧渲染 → 看起来「删了但没反应」。
+    try {
+        _cache.libraries = await getAllLibraries();
+        if (_cache.currentLibraryId && !_cache.libraries.some(l => l.id === _cache.currentLibraryId)) {
+            _cache.currentLibraryId = null;
+            _cache.currentPackageId = null;
+            _cache.currentGroupId = null;
         }
-        return null;
-    }).then(pkgs => {
-        if (pkgs) _cache.packages = pkgs;
-        if (_cache.currentView === 'groups' && _cache.currentPackageId) {
-            return getPackageGroups(_cache.currentPackageId);
+
+        _cache.packages = _cache.currentLibraryId ? await getLibraryPackages(_cache.currentLibraryId) : [];
+        if (_cache.currentPackageId && !_cache.packages.some(p => p.id === _cache.currentPackageId)) {
+            _cache.currentPackageId = null;
+            _cache.currentGroupId = null;
         }
-        return null;
-    }).then(groups => {
-        if (groups) _cache.groups = groups;
-        if (_cache.currentView === 'prompts' && _cache.currentGroupId) {
-            return getGroupPrompts(_cache.currentGroupId);
+
+        _cache.groups = _cache.currentPackageId ? await getPackageGroups(_cache.currentPackageId) : [];
+        if (_cache.currentGroupId && !_cache.groups.some(g => g.id === _cache.currentGroupId)) {
+            _cache.currentGroupId = null;
         }
-        return null;
-    }).then(prompts => {
-        if (prompts) _cache.prompts = prompts;
-        _invalidate();
-    }).catch(e => { console.error('[prompt] _reloadAll error:', e); _invalidate(); });
+
+        _cache.prompts = _cache.currentGroupId ? await getGroupPrompts(_cache.currentGroupId) : [];
+
+        _cache.currentView = _cache.currentGroupId ? 'prompts'
+            : _cache.currentPackageId ? 'groups'
+            : _cache.currentLibraryId ? 'packages'
+            : 'libraries';
+    } catch (e) {
+        console.error('[prompt] _reloadAll error:', e);
+    }
+    _invalidate();
 };
 
 const _reloadPackages = (libraryId) => {
@@ -391,8 +398,6 @@ export const buildPromptMethods = () => ({
     promptCreatePrompt: async ({ groupId }) => {
         const safeGroupId = groupId || _cache._tempGroupId;
         const text = _getTextareaValue('prompt-item-text')?.trim();
-        const keywordsRaw = _getInputValue('prompt-item-keywords')?.trim() || '';
-        const keywords = keywordsRaw ? keywordsRaw.split(/[,，]/).map(k => k.trim()).filter(Boolean) : [];
 
         if (!text) {
             _toast('error', '创建失败', 'Prompt 内容不能为空');
@@ -405,7 +410,6 @@ export const buildPromptMethods = () => ({
                 packageId: group?.packageId,
                 libraryId: group?.libraryId,
                 text,
-                keywords,
             });
             _closeModal();
             _reloadPrompts(safeGroupId);
@@ -419,7 +423,6 @@ export const buildPromptMethods = () => ({
         _showModal('editPrompt', {
             promptId,
             text: prompt.text || '',
-            keywords: (prompt.keywords || []).join(', '),
             priorityEnabled: prompt.priority?.enabled ?? false,
             priorityValue: prompt.priority?.value ?? 10,
             timeWindowEnabled: prompt.timeWindow?.enabled ?? false,
@@ -427,15 +430,11 @@ export const buildPromptMethods = () => ({
             timeWindowEnd: prompt.timeWindow?.end ?? '23:59',
             injectionDepthEnabled: prompt.injectionDepth?.enabled ?? false,
             injectionDepthValue: prompt.injectionDepth?.value ?? 0,
-            vectorFallback: prompt.vectorFallback ?? false,
-            vectorThreshold: prompt.vectorThreshold ?? 0.6,
         });
     },
 
     promptSavePrompt: async ({ promptId }) => {
         const text = _getTextareaValue('prompt-item-text')?.trim();
-        const keywordsRaw = _getInputValue('prompt-item-keywords')?.trim() || '';
-        const keywords = keywordsRaw ? keywordsRaw.split(/[,，]/).map(k => k.trim()).filter(Boolean) : [];
         const priorityEnabled = document.getElementById('prompt-item-priority-enable')?.checked ?? false;
         const priorityValue = parseInt(_getInputValue('prompt-item-priority-value') || '10', 10);
         const timeWindowEnabled = document.getElementById('prompt-item-tw-enable')?.checked ?? false;
@@ -443,8 +442,6 @@ export const buildPromptMethods = () => ({
         const timeWindowEnd = _getInputValue('prompt-item-tw-end') || '23:59';
         const injectionDepthEnabled = document.getElementById('prompt-item-depth-enable')?.checked ?? false;
         const injectionDepthValue = parseInt(_getInputValue('prompt-item-depth-value') || '0', 10);
-        const vectorFallback = document.getElementById('prompt-item-vector')?.checked ?? false;
-        const vectorThreshold = parseFloat(_getInputValue('prompt-item-threshold') || '0.6');
 
         if (!text) {
             _toast('error', '保存失败', 'Prompt 内容不能为空');
@@ -458,12 +455,9 @@ export const buildPromptMethods = () => ({
         try {
             await updatePrompt(promptId, {
                 text,
-                keywords,
                 priority: priorityEnabled ? { enabled: true, value: isNaN(priorityValue) ? 10 : priorityValue } : { enabled: false, value: 10 },
                 timeWindow,
                 injectionDepth: injectionDepthEnabled ? { enabled: true, value: isNaN(injectionDepthValue) ? 0 : injectionDepthValue } : { enabled: false, value: 0 },
-                vectorFallback,
-                vectorThreshold: isNaN(vectorThreshold) ? 0.6 : vectorThreshold,
             });
             _closeModal();
             const prompt = _cache.prompts.find(p => p.id === promptId);

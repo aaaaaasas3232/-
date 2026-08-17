@@ -18,16 +18,12 @@ import {
     ISLAND_RESTORE_DELAY_MS,
     createEmptyIslandContent,
 } from './utils.js';
-
-const stateColors = Object.freeze({
-    success: { bg: 'rgba(37,111,64,1)', color: '#4ade80', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' },
-    warning: { bg: 'rgba(126,96,18,1)', color: '#fbbf24', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L1 21h22L12 2zm0 3.99L19.53 19H4.47L12 5.99zM11 10v4h2v-4h-2zm0 6v2h2v-2h-2z"/></svg>' },
-    error: { bg: 'rgba(124,57,57,1)', color: '#f87171', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>' },
-    info: { bg: 'rgba(48,83,125,1)', color: '#60a5fa', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><path fill="#fff" d="M11 7h2v2h-2zm0 4h2v6h-2z"/></svg>' },
-    message: { bg: 'rgba(48,83,125,1)', color: '#60a5fa', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>' },
-    call: { bg: 'rgba(37,111,64,1)', color: '#4ade80', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>' },
-    system: { bg: 'rgba(71,71,74,1)', color: '#8e8e93', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>' },
-});
+import {
+    getIslandState,
+    sanitizeIslandIcon,
+    isSafeAvatarText,
+    isSafeSvgIcon,
+} from '@/src/core/island-icon.js';
 
 const safeCall = (fn, arg) => {
     if (typeof fn !== 'function') return;
@@ -49,8 +45,30 @@ export function useDynamicIsland() {
     // 历史快照栈，当灵动岛显示新内容时，将当前岛的快照推入栈中，当当前岛恢复时，将栈顶的快照恢复到当前岛中，栈里存的每个历史状态，都是包含{ mode, size, content, reason }字段的对象
     const previousOwnerStack = []; //用于存放被顶替的岛状态
 
-    const currentState = Vue.computed(() => stateColors[islandContent.value.type] || stateColors.info);
-    const currentIcon = Vue.computed(() => islandContent.value.icon ?? currentState.value.icon);
+    // ★ 调试：监控响应式变化
+    Vue.watch([islandMode, islandSize], ([newMode, newSize], [oldMode, oldSize]) => {
+        console.log('[Island] Vue.watch triggered: mode', oldMode, '→', newMode, '| size', oldSize, '→', newSize);
+        Vue.nextTick(() => {
+            const el = document.querySelector('.dynamic-island');
+            console.log('[Island] After nextTick, DOM classes:', el?.className);
+        });
+    });
+
+    const currentState = Vue.computed(() => getIslandState(islandContent.value?.type));
+    const currentIcon = Vue.computed(() => {
+        const fallback = currentState.value.icon || '';
+        return sanitizeIslandIcon(islandContent.value?.icon, fallback) || fallback;
+    });
+    const islandAvatarText = Vue.computed(() => {
+        const raw = islandContent.value?.senderAvatar;
+        return isSafeAvatarText(raw) ? String(raw).trim() : '';
+    });
+    const islandAvatarHtml = Vue.computed(() => {
+        const raw = islandContent.value?.senderAvatar;
+        if (isSafeSvgIcon(raw)) return String(raw).trim();
+        return currentIcon.value;
+    });
+    const safeSlotIcon = (slot) => sanitizeIslandIcon(slot?.icon, currentIcon.value) || currentIcon.value;
     const activeIslandTemplate = Vue.computed(() => {
         const templateName = islandContent.value?.islandTemplate;
         return templateName ? window.islandTemplates?.[templateName] || null : null;
@@ -133,13 +151,27 @@ export function useDynamicIsland() {
 
     const getCurrentSizeIndex = () => INFO_SIZES.indexOf(islandSize.value);
 
+    // minSize：收起时的下限。设了就表示"这个岛能收小但不能被点没"。
+    const getMinSizeIndex = () => {
+        const floor = islandContent.value.minSize;
+        const idx = floor ? INFO_SIZES.indexOf(floor) : -1;
+        return idx === -1 ? 0 : idx;
+    };
+
 
     // 顶替当前岛的通知 + 关闭（showInfo/showNotification 共用）
-
-    const kickIfActive = () => {
+    //
+    // 入栈规则（决定"被顶替的岛还能不能回来"）：
+    //   - notification 形态是一次性的，过期就该消失，不入栈
+    //   - 同一个 owner 自我刷新（音乐岛 medium ↔ large）不算被顶替，不入栈
+    const kickIfActive = (nextContent = null) => {
         if (islandMode.value === 'idle') return;
         safeCall(islandContent.value?.onKicked, { reason: ISLAND_CLOSE_REASONS.REPLACED });
-        closeIsland(ISLAND_CLOSE_REASONS.REPLACED);
+        const isTransient = islandMode.value === 'notification';
+        const currentOwner = islandContent.value?.ownerId || '';
+        const nextOwner = nextContent?.ownerId || '';
+        const sameOwner = Boolean(currentOwner) && currentOwner === nextOwner;
+        closeIsland(ISLAND_CLOSE_REASONS.REPLACED, { skipStack: isTransient || sameOwner });
     };
 
     const setIdle = () => {
@@ -149,11 +181,24 @@ export function useDynamicIsland() {
         islandContent.value = createEmptyIslandContent();
     };
 
+    // 会"让出"灵动岛（关完应该把上一个持有者放回来）的关闭原因。
+    // lifecycleExpired 也在内：通知到期后，被它顶掉的音乐岛必须自己回来，
+    // 否则播放中的音乐岛会被一条 3.5 秒的通知永久顶没。
+    const YIELDING_CLOSE_REASONS = new Set([
+        ISLAND_CLOSE_REASONS.REPLACED,
+        ISLAND_CLOSE_REASONS.LIFECYCLE_EXPIRED,
+        ISLAND_CLOSE_REASONS.EDIT_MODE,
+        ISLAND_CLOSE_REASONS.WIDGET_PICKER,
+    ]);
+
+    const MAX_OWNER_STACK = 4;
+
     /**
      * 关闭灵动岛（所有关闭路径的唯一入口）
      * @param {string} reason - 关闭原因（ISLAND_CLOSE_REASONS 之一）
+     * @param {{skipStack?: boolean}} [options] - skipStack：本次顶替不进恢复栈
      */
-    const closeIsland = (reason = ISLAND_CLOSE_REASONS.MANUAL) => {
+    const closeIsland = (reason = ISLAND_CLOSE_REASONS.MANUAL, options = {}) => {
         // 1. 防御：已经在 idle 就不做事（但恢复栈时仍要调度）
         const wasActive = islandMode.value !== 'idle';
 
@@ -166,25 +211,29 @@ export function useDynamicIsland() {
         // 3. 清所有 timer（lifecycle + idle，restore 由 scheduleRestoreFromStack 自己管）
         clearIslandTimers();
 
-        // 4. 如果是 replaced，把当前 owner 推入栈
-        if (wasActive && reason === ISLAND_CLOSE_REASONS.REPLACED) {
+        // 4. 如果是 replaced，把当前 owner 推入栈（同 owner 去重，避免同一个岛反复刷新时堆积）
+        if (wasActive && reason === ISLAND_CLOSE_REASONS.REPLACED && !options.skipStack) {
+            const ownerId = islandContent.value.ownerId;
+            if (ownerId) {
+                for (let i = previousOwnerStack.length - 1; i >= 0; i--) {
+                    if (previousOwnerStack[i].ownerId === ownerId) previousOwnerStack.splice(i, 1);
+                }
+            }
             previousOwnerStack.push({
                 mode: islandMode.value,
                 size: islandSize.value,
                 content: { ...islandContent.value },
-                ownerId: islandContent.value.ownerId,
+                ownerId,
             });
+            while (previousOwnerStack.length > MAX_OWNER_STACK) previousOwnerStack.shift();
         }
 
         // 5. 真正关岛
         setIdle();
         islandTemplateVersion.value += 1;
 
-        // 6. 调度栈顶恢复（仅当栈非空，且关岛原因是会"让出"的：replaced / editMode / widgetPicker）
-        if (previousOwnerStack.length > 0
-            && (reason === ISLAND_CLOSE_REASONS.REPLACED
-                || reason === ISLAND_CLOSE_REASONS.EDIT_MODE
-                || reason === ISLAND_CLOSE_REASONS.WIDGET_PICKER)) {
+        // 6. 调度栈顶恢复（仅当栈非空，且关岛原因是会"让出"的）
+        if (previousOwnerStack.length > 0 && YIELDING_CLOSE_REASONS.has(reason)) {
             scheduleRestoreFromStack();
         }
     };
@@ -199,7 +248,15 @@ export function useDynamicIsland() {
 
     function restoreTopOfStack() {
         if (previousOwnerStack.length === 0) return;
-        if (islandMode.value !== 'idle') return; // 期间又被别的占用了，不恢复
+        if (islandMode.value !== 'idle') {
+            // 期间又被占用了：如果占用者就是栈顶那位（它自己重新挂了岛），
+            // 这份快照已经没用，丢掉，否则会一直躺在栈里。
+            const top = previousOwnerStack[previousOwnerStack.length - 1];
+            if (top && top.ownerId && top.ownerId === islandContent.value?.ownerId) {
+                previousOwnerStack.pop();
+            }
+            return;
+        }
         const snapshot = previousOwnerStack.pop();
         if (!snapshot) return;
         islandMode.value = snapshot.mode;
@@ -263,11 +320,14 @@ export function useDynamicIsland() {
      *   - 否则 reason = MANUAL（不推栈，直接覆盖）
      */
     function showInfo(size, content) {
-        kickIfActive();
+        const nextContent = buildContent(content);
+        nextContent.icon = sanitizeIslandIcon(nextContent.icon, getIslandState(nextContent.type).icon);
+        kickIfActive(nextContent);
         islandMode.value = 'info';
         islandSize.value = size || 'mini';
-        islandContent.value = buildContent(content);
+        islandContent.value = nextContent;
         islandTemplateVersion.value += 1;
+        console.log('[Island] showInfo called, mode=', islandMode.value, 'size=', islandSize.value, 'DOM classes=', document.querySelector('.dynamic-island')?.className);
         triggerActiveFeedback();
         startLifecycleTimer();
     }
@@ -277,18 +337,25 @@ export function useDynamicIsland() {
      * 关键改动：通知默认走 time 模式 + 默认 duration（来自 content.duration 或 3500ms）
      */
     function showNotification(type, title, message, options = {}) {
+        // 不传 nextContent：通知即使来自同一个 app，也算"顶替"，
+        // 被它盖掉的常驻岛必须入栈，等通知过期后回来。
         kickIfActive();
         islandMode.value = 'notification';
         islandSize.value = 'compact';
+        const VALID_TYPES = ['success', 'warning', 'error', 'info', 'message', 'call', 'system'];
+        const safeType = VALID_TYPES.includes(type) ? type : 'info';
+        const typeIcon = getIslandState(safeType).icon;
         islandContent.value = buildContent({
-            type,
+            type: safeType,
             title,
             message,
             detail: options.detail,
-            icon: options.icon,
+            icon: sanitizeIslandIcon(options.icon, typeIcon),
             senderName: options.senderName ?? title ?? '',
             senderId: options.senderId ?? '',
-            senderAvatar: options.senderAvatar ?? '',
+            senderAvatar: isSafeSvgIcon(options.senderAvatar) || isSafeAvatarText(options.senderAvatar)
+                ? options.senderAvatar
+                : '',
             avatarBg: options.avatarBg ?? '',
             ownerId: options.ownerId ?? '',
             lifecycle: options.lifecycle ?? 'time',
@@ -344,15 +411,24 @@ export function useDynamicIsland() {
     }
 
     /**
-     * collapseInfo：受 maxSize 无关（一直能降到 mini）
-     *   - 当前 size 已是 mini → 关闭岛（按 closeReason 走）
+     * collapseInfo：降一档
+     *   - 已经到 minSize 下限 → 停在那，不关岛
+     *     （音乐这类"活动还在继续"的岛设 minSize:'mini'，在别的 App 里随手点几下
+     *       只会把它收成小豆子，不会把正在播放的状态点没）
+     *   - 没设 minSize 且当前已是 mini → 关闭岛
      */
     function collapseInfo() {
         if (islandMode.value !== 'info') return;
+        // compact 不在展开链里（那是通知/短提示尺寸），点外面直接关
+        if (islandSize.value === 'compact') {
+            closeIsland(ISLAND_CLOSE_REASONS.USER_OUTSIDE);
+            return;
+        }
         const idx = getCurrentSizeIndex();
         if (idx === -1) return;
-        if (idx === 0) {
-            // mini 再降一档：直接关闭
+        const minIdx = getMinSizeIndex();
+        if (idx <= minIdx) {
+            if (islandContent.value.minSize) return; // 收到底了，但这个岛不许被点没
             closeIsland(ISLAND_CLOSE_REASONS.USER_OUTSIDE);
             return;
         }
@@ -373,12 +449,40 @@ export function useDynamicIsland() {
         closeIsland(ISLAND_CLOSE_REASONS.USER_LONG_PRESS);
     }
 
-    function handleIslandClick() {
+    function handleIslandClick(e) {
+        console.log('[Island] handleIslandClick, target=', e?.target, 'size=', islandSize.value);
         triggerActiveFeedback();
-        if (isWidgetPicker()) return; // widget picker 模式下不展开/收起
+        if (isWidgetPicker()) return;
         if (runIslandTapInterceptor()) return;
         if (islandMode.value === 'notification') return;
-        expandInfo();
+        
+        const idx = getCurrentSizeIndex();
+        const maxIdx = getMaxSizeIndex();
+        
+        // 先检查是否点击了交互元素
+        const target = e?.target;
+        if (target) {
+            const isInteractive = target.closest('button, a, [data-action], [onclick], input, textarea, select, .interactive, [role="button"]');
+            if (isInteractive && (islandSize.value === 'medium' || islandSize.value === 'large')) {
+                console.log('[Island] clicked interactive element, not expanding');
+                return;
+            }
+        }
+        
+        // 点击的是空白区域或 mini 形态
+        if (islandSize.value === 'mini' && idx < maxIdx) {
+            console.log('[Island] mini -> expanding');
+            expandInfo();
+        } else if (islandSize.value === 'medium' && idx < maxIdx && maxIdx >= 2) {
+            console.log('[Island] medium -> expanding to large');
+            expandInfo();
+        } else if (idx >= maxIdx && idx > 0) {
+            // 已经是最大档:再点则收起一档(large → medium),形成 展开/收起 的来回切换
+            console.log('[Island] at max size -> collapsing one step');
+            collapseInfo();
+        } else {
+            console.log('[Island] not expanding, size=', islandSize.value, 'idx=', idx, 'maxIdx=', maxIdx);
+        }
     }
 
     /**
@@ -387,12 +491,14 @@ export function useDynamicIsland() {
      *   - info 形态：collapseInfo（降一档，mini 再点才关）
      */
     function handleOutsideClick() {
+        console.log('[Island] handleOutsideClick triggered, mode=', islandMode.value, 'size=', islandSize.value);
         if (islandMode.value !== 'info') {
             if (islandMode.value === 'notification') {
                 closeIsland(ISLAND_CLOSE_REASONS.USER_OUTSIDE);
             }
             return;
         }
+        console.log('[Island] calling collapseInfo...');
         collapseInfo();
     }
 
@@ -405,6 +511,9 @@ export function useDynamicIsland() {
         islandTemplateVersion,
         currentState,
         currentIcon,
+        islandAvatarText,
+        islandAvatarHtml,
+        safeSlotIcon,
         activeIslandTemplate,
         hasIslandTemplate,
         renderedIslandTemplate,

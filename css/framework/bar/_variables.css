@@ -1,0 +1,73 @@
+/**
+ * ================================================================
+ * 小听 Framework · 栏预设 CSS 变量
+ * ---------------------------------------------------------------
+ * 统一管理栏的 CSS 变量
+ * Phase 1: 基础设施
+ * ================================================================
+ */
+
+/* ================================================================
+   顶部栏变量
+   ================================================================ */
+
+:root {
+    /* 顶部栏间距 */
+    --topbar-button-gap: 8px;
+    --topbar-padding-x: 18px;
+    --topbar-padding-top: 54px;
+    --topbar-padding-bottom: 10px;
+
+    /* 顶部栏按钮尺寸 */
+    --topbar-button-size: 32px;
+    --topbar-icon-size: 16px;
+
+    /* 顶部栏颜色 */
+    --topbar-color: rgba(17, 24, 39, 0.92);
+    --topbar-bg: transparent;
+}
+
+/* ================================================================
+   底部栏变量
+   ================================================================ */
+
+:root {
+    /* 底部栏间距 */
+    --tabbar-button-gap: 12px;
+    --tabbar-height: 58px;
+
+    /* 底部栏对齐 */
+    --tabbar-justify: space-around;
+
+    /* 底部栏颜色 */
+    --tabbar-color: rgba(17, 24, 39, 0.48);
+    --tabbar-bg: rgba(255, 255, 255, 0.46);
+
+    /* 液球预设变量 */
+    --tabbar-liquid-color-1: #ff69b4;
+    --tabbar-liquid-color-2: #007aff;
+    --tabbar-liquid-color-3: #ff69b4;
+
+    /* 波浪预设变量 */
+    --tabbar-wave-color: rgba(251, 114, 153, 0.12);
+    --tabbar-wave-indicator: linear-gradient(135deg, #fb7299 0%, #ff9a9e 100%);
+
+    /* 指示器预设变量 */
+    --tabbar-indicator-width: 24px;
+    --tabbar-indicator-height: 3px;
+    --tabbar-indicator-color: #007aff;
+}
+
+/* ================================================================
+   App 级覆盖
+   ================================================================ */
+
+/* Music App */
+.app-shell[data-app-id="music"] {
+    --tabbar-height: 64px;
+}
+
+/* App Store */
+.app-shell[data-app-id="appstore"] {
+    --tabbar-height: 48px;
+}

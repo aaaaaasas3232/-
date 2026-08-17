@@ -22,6 +22,8 @@
  */
 
 import { escapeHtml } from '@/src/core/escape.js';
+import { DEFAULT_AI_AVATAR_BG } from '../aiMeta.js';
+import { SNAIL_EMPTY_SVG } from '../snail-icon.js';
 
 const VALID_MODES = new Set(['calendar', 'story']);
 
@@ -35,9 +37,7 @@ export function renderAiPickGrid(aiList, selectedIds = new Set()) {
     if (!Array.isArray(aiList) || aiList.length === 0) {
         return `
             <div class="new-group-empty">
-                <div class="new-group-empty-icon">
-                    <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-                </div>
+                <div class="new-group-empty-icon">${SNAIL_EMPTY_SVG}</div>
                 <div class="new-group-empty-text">当前世界观下还没有可用的 AI 人设</div>
             </div>
         `;
@@ -45,7 +45,7 @@ export function renderAiPickGrid(aiList, selectedIds = new Set()) {
     return aiList.map((ai) => {
         const checked = selectedIds.has(ai.id);
         const initial = escapeHtml((ai.name || ai.id || '?').charAt(0));
-        const avatarBg = ai.avatarBg || '#A8C8EC';
+        const avatarBg = ai.avatarBg || DEFAULT_AI_AVATAR_BG;
         const avatar = ai.avatar;
         const avatarInner = avatar
             ? `<img src="${escapeHtml(avatar)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;" />`

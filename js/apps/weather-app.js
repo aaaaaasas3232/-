@@ -15,17 +15,18 @@
 
 import { createActionAttr } from '@/src/core/actions.js';
 import { escapeHtml } from '@/src/core/escape.js';
+import WeatherAPI from '@/js/apps/weather-app/weather-api.js';
 
 // =========================================================================
 // 天气条件配置
 // =========================================================================
-const CONDITIONS = ['sunny', 'cloudy', 'partly_cloudy', 'rainy'];
+// 只在 API 没给 description 时兜底（老缓存里没有这个字段）
 const CONDITION_DESC = {
-    sunny: '晴朗',
-    cloudy: '多云',
-    partly_cloudy: '局部多云',
+    sunny: '晴',
+    cloudy: '阴',
+    partly_cloudy: '多云',
     rainy: '有雨',
-    stormy: '雷暴',
+    stormy: '雷阵雨',
     snowy: '有雪',
     foggy: '有雾',
     windy: '大风',
@@ -42,87 +43,188 @@ const GRADIENTS = {
     night: 'linear-gradient(135deg, #1A237E 0%, #3949AB 100%)',
 };
 
-const DAY_LABELS = ['今天', '明天', '后天', '周四', '周五', '周六', '周日'];
-
 // =========================================================================
-// 天气图标（Phosphor 风格 SVG，开发者手写固定 SVG，不需 escape）
+// 数据新鲜度
+// 之前 weatherCache 是「拉一次存一辈子」：_hydrated 置 true 后再也不会重新请求，
+// 页面不刷新就永远显示第一次拉到的那份数据，用户看到的自然不是实况。
 // =========================================================================
-const WEATHER_ICONS = {
-    sunny: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><path d="M120,40V16a8,8,0,0,1,16,0V40a8,8,0,0,1-16,0Zm72,88a64,64,0,1,1-64-64A64.07,64.07,0,0,1,192,128Zm-16,0a48,48,0,1,0-48,48A48.05,48.05,0,0,0,176,128ZM58.34,69.66A8,8,0,0,0,69.66,58.34l-16-16A8,8,0,0,0,42.34,53.66Zm0,116.68-16,16a8,8,0,0,0,11.32,11.32l16-16a8,8,0,0,0-11.32-11.32ZM192,72a8,8,0,0,0,5.66-2.34l16-16a8,8,0,0,0-11.32-11.32l-16,16A8,8,0,0,0,192,72Zm5.66,114.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32-11.32ZM48,128a8,8,0,0,0-8-8H16a8,8,0,0,0,0,16H40A8,8,0,0,0,48,128Zm80,80a8,8,0,0,0-8,8v24a8,8,0,0,0,16,0V216A8,8,0,0,0,128,208Zm112-88H216a8,8,0,0,0,0,16h24a8,8,0,0,0,0-16Z" fill="#ffffff"/></svg>',
-    cloudy: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><path d="M160,40A88.09,88.09,0,0,0,81.29,88.67,64,64,0,1,0,72,216h88a88,88,0,0,0,0-176Zm0,160H72a48,48,0,0,1,0-96c1.1,0,2.2,0,3.29.11A88,88,0,0,0,72,128a8,8,0,0,0,16,0,72,72,0,1,1,72,72Z" fill="#ffffff"/></svg>',
-    partly_cloudy: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><path d="M164,72a76.2,76.2,0,0,0-20.26,2.73,55.63,55.63,0,0,0-9.41-11.54l9.51-13.57a8,8,0,1,0-13.11-9.18L121.22,54A55.9,55.9,0,0,0,96,48c-.58,0-1.16,0-1.74,0L91.37,31.71a8,8,0,1,0-15.75,2.77L78.5,50.82A56.1,56.1,0,0,0,55.23,65.67L41.61,56.14a8,8,0,1,0-9.17,13.11L46,78.77A55.55,55.55,0,0,0,40,104c0,.57,0,1.15,0,1.72L23.71,108.6a8,8,0,0,0,1.38,15.88,8.24,8.24,0,0,0,1.39-.12l16.32-2.88a55.74,55.74,0,0,0,5.86,12.42A52,52,0,0,0,84,224h80a76,76,0,0,0,0-152ZM56,104a40,40,0,0,1,72.54-23.24,76.26,76.26,0,0,0-35.62,40,52.14,52.14,0,0,0-31,4.17A40,40,0,0,1,56,104ZM164,208H84a36,36,0,1,1,4.78-71.69c-.37,2.37-.63,4.79-.77,7.23a8,8,0,0,0,16,.92,58.91,58.91,0,0,1,1.88-11.81c0-.16.09-.32.12-.48A60.06,60.06,0,1,1,164,208Z" fill="#ffffff"/></svg>',
-    rainy: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><path d="M158.66,196.44l-32,48a8,8,0,1,1-13.32-8.88l32-48a8,8,0,0,1,13.32,8.88ZM232,92a76.08,76.08,0,0,1-76,76H132.28l-29.62,44.44a8,8,0,1,1-13.32-8.88L113.05,168H76A52,52,0,0,1,76,64a53.26,53.26,0,0,1,8.92.76A76.08,76.08,0,0,1,232,92Zm-16,0A60.06,60.06,0,0,0,96,88.46a8,8,0,0,1-16-.92q.21-3.66.77-7.23A38.11,38.11,0,0,0,76,80a36,36,0,0,0,0,72h80A60.07,60.07,0,0,0,216,92Z" fill="#ffffff"/></svg>',
-    stormy: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><path d="M156,16A76.2,76.2,0,0,0,84.92,64.76,53.26,53.26,0,0,0,76,64a52,52,0,0,0,0,104h37.87L97.14,195.88A8,8,0,0,0,104,208h25.87l-16.73,27.88a8,8,0,0,0,13.72,8.24l24-40A8,8,0,0,0,144,192H118.13l14.4-24H156a76,76,0,0,0,0-152Zm0,136H76a36,36,0,0,1,0-72,38.11,38.11,0,0,1,4.78.31q-.56,3.57-.77,7.23a8,8,0,0,0,16,.92A60.06,60.06,0,1,1,156,152Z" fill="#ffffff"/></svg>',
-    snowy: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><path d="M223.77,150.09a8,8,0,0,1-5.86,9.68l-24.64,6,6.46,24.11a8,8,0,0,1-5.66,9.8A8.25,8.25,0,0,1,192,200a8,8,0,0,1-7.72-5.93l-7.72-28.8L136,141.86v46.83l21.66,21.65a8,8,0,0,1-11.32,11.32L128,203.31l-18.34,18.35a8,8,0,0,1-11.32-11.32L120,188.69V141.86L79.45,165.27l-7.72,28.8A8,8,0,0,1,64,200a8.25,8.25,0,0,1-2.08-.27,8,8,0,0,1-5.66-9.8l6.46-24.11-24.64-6a8,8,0,0,1,3.82-15.54l29.45,7.23L112,128,71.36,104.54l-29.45,7.23A7.85,7.85,0,0,1,40,112a8,8,0,0,1-1.91-15.77l24.64-6L56.27,66.07a8,8,0,0,1,15.46-4.14l7.72,28.8L120,114.14V67.31L98.34,45.66a8,8,0,0,1,11.32-11.32L128,52.69l18.34-18.35a8,8,0,0,1,11.32,11.32L136,67.31v46.83l40.55-23.41,7.72-28.8a8,8,0,0,1,15.46,4.14l-6.46,24.11,24.64,6A8,8,0,0,1,216,112a7.85,7.85,0,0,1-1.91-.23l-29.45-7.23L144,128l40.64,23.46,29.45-7.23A8,8,0,0,1,223.77,150.09Z" fill="#ffffff"/></svg>',
-    foggy: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><path d="M120,208H72a8,8,0,0,1,0-16h48a8,8,0,0,1,0,16Zm64-16H160a8,8,0,0,0,0,16h24a8,8,0,0,0,0-16Zm-24,32H104a8,8,0,0,0,0,16h56a8,8,0,0,0,0-16Zm72-124a76.08,76.08,0,0,1-76,76H76A52,52,0,0,1,76,72a53.26,53.26,0,0,1,8.92.76A76.08,76.08,0,0,1,232,100Zm-16,0A60.06,60.06,0,0,0,96,96.46a8,8,0,0,1-16-.92q.21-3.66.77-7.23A38.11,38.11,0,0,0,76,88a36,36,0,0,0,0,72h80A60.07,60.07,0,0,0,216,100Z" fill="#ffffff"/></svg>',
-    windy: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><path d="M184,184a32,32,0,0,1-32,32c-13.7,0-26.95-8.93-31.5-21.22a8,8,0,0,1,15-5.56C137.74,195.27,145,200,152,200a16,16,0,0,0,0-32H40a8,8,0,0,1,0-16H152A32,32,0,0,1,184,184Zm-64-80a32,32,0,0,0,0-64c-13.7,0-26.95,8.93-31.5,21.22a8,8,0,0,0,15,5.56C105.74,60.73,113,56,120,56a16,16,0,0,1,0,32H24a8,8,0,0,0,0,16Zm88-32c-13.7,0-26.95,8.93-31.5,21.22a8,8,0,0,0,15,5.56C193.74,92.73,201,88,208,88a16,16,0,0,1,0,32H32a8,8,0,0,0,0,16H208a32,32,0,0,0,0-64Z" fill="#ffffff"/></svg>',
-    night: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><path d="M233.54,142.23a8,8,0,0,0-8-2,88.08,88.08,0,0,1-109.8-109.8,8,8,0,0,0-10-10,104.84,104.84,0,0,0-52.91,37A104,104,0,0,0,136,224a103.09,103.09,0,0,0,62.52-20.88,104.84,104.84,0,0,0,37-52.91A8,8,0,0,0,233.54,142.23ZM188.9,190.34A88,88,0,0,1,65.66,67.11a89,89,0,0,1,31.4-26A106,106,0,0,0,96,56,104.11,104.11,0,0,0,200,160a106,106,0,0,0,14.92-1.06A89,89,0,0,1,188.9,190.34Z" fill="#ffffff"/></svg>',
-    night_cloudy: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><path d="M160,40A88.09,88.09,0,0,0,81.29,88.67,64,64,0,1,0,72,216h88a88,88,0,0,0,0-176Zm0,160H72a48,48,0,0,1,0-96c1.1,0,2.2,0,3.29.11A88,88,0,0,0,72,128a8,8,0,0,0,16,0,72,72,0,1,1,72,72Z" fill="#ffffff"/></svg>',
-};
+const CURRENT_TTL = 30 * 60 * 1000;          // 实况超过 30 分钟视为过期，进 App 自动重拉
+const FORECAST_TTL = 3 * 60 * 60 * 1000;     // 预报变化慢，超过 3 小时才提示过期
+const OFFLINE_AFTER = 12 * 60 * 60 * 1000;   // 超过半天没拉到新数据，UI 必须标「离线数据」
+const AUTO_CHECK_INTERVAL = 60 * 1000;       // renderPage 每次重绘都会问一次，这里兜住频率
+const BACKGROUND_CHECK_INTERVAL = 5 * 60 * 1000; // 桌面 widget 也在显示天气，不能只在进 App 时才刷
 
-function getWeatherIcon(condition) {
-    return WEATHER_ICONS[condition] || WEATHER_ICONS.partly_cloudy;
+// framework 会缓存 renderPage 的 HTML（use-app-navigation.resolveAsyncRenderer），
+// 重新进 App 不一定会重新调 renderPage，只靠渲染钩子检查新鲜度会漏。
+let backgroundTimer = null;
+function startBackgroundRefresh(methods) {
+    if (backgroundTimer || typeof setInterval !== 'function') return;
+    backgroundTimer = setInterval(() => {
+        // 页面在后台时不打接口，回到前台后下一拍自然补上
+        if (typeof document !== 'undefined' && document.hidden) return;
+        try { methods._maybeAutoRefresh?.(); } catch (_) { /* 静默，定时器不能被单次异常打死 */ }
+    }, BACKGROUND_CHECK_INTERVAL);
 }
 
-function getWeatherGradient(condition) {
+// =========================================================================
+// 天气图标（线性 SVG，开发者手写固定字符串，不需 escape）
+// 只存路径，宽高由 renderIcon 注入 —— 详情页/预报行/widget 的图标尺寸差很多，
+// 而 CSS 里只有 .wth-temp-icon / .wth-widget-icon 声明了 svg 宽高。
+// =========================================================================
+const WEATHER_ICON_PATHS = {
+    sunny: '<circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path>',
+    partly_cloudy: '<path d="M12 2v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="M20 12h2"></path><path d="m19.07 4.93-1.41 1.41"></path><path d="M15.95 12.65a4 4 0 0 0-5.93-4.13"></path><path d="M13 22H7a5 5 0 1 1 4.9-6H13a3 3 0 0 1 0 6Z"></path>',
+    cloudy: '<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path>',
+    overcast: '<path d="M17.5 21H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path><path d="M22 10a3 3 0 0 0-3-3h-2.21a5.5 5.5 0 0 0-10.7.5"></path>',
+    rainy: '<path d="M4 14.9A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.24"></path><path d="M8 19v1"></path><path d="M8 14v1"></path><path d="M16 19v1"></path><path d="M16 14v1"></path><path d="M12 21v1"></path><path d="M12 16v1"></path>',
+    heavy_rain: '<path d="M4 14.9A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.24"></path><path d="m9 14-2 6"></path><path d="m13 14-2 6"></path><path d="m17 14-2 6"></path>',
+    stormy: '<path d="M6 16.33A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 .5 8.97"></path><path d="m13 12-3 5h4l-3 5"></path>',
+    snowy: '<path d="M4 14.9A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.24"></path><path d="M8 15h.01"></path><path d="M8 19h.01"></path><path d="M12 17h.01"></path><path d="M12 21h.01"></path><path d="M16 15h.01"></path><path d="M16 19h.01"></path>',
+    foggy: '<path d="M4 14.9A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.24"></path><path d="M16 17H7"></path><path d="M17 21H9"></path>',
+    windy: '<path d="M12.8 19.6A2 2 0 1 0 14 16H2"></path><path d="M17.5 8a2.5 2.5 0 1 1 2 4H2"></path><path d="M9.8 4.4A2 2 0 1 1 11 8H2"></path>',
+    night: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>',
+    night_cloudy: '<path d="M10.08 9A6 6 0 0 1 16 4a4.24 4.24 0 0 0 6 6c0 2.22-1.21 4.16-3 5.2"></path><path d="M13 22H7a5 5 0 1 1 4.9-6H13a3 3 0 0 1 0 6Z"></path>',
+};
+
+// 非天气类的功能图标，保持同一套线性风格
+const UI_ICON_PATHS = {
+    refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path>',
+    sunrise: '<path d="M12 2v8"></path><path d="m4.93 10.93 1.41 1.41"></path><path d="M2 18h2"></path><path d="M20 18h2"></path><path d="m19.07 10.93-1.41 1.41"></path><path d="M22 22H2"></path><path d="m8 6 4-4 4 4"></path><path d="M16 18a4 4 0 0 0-8 0"></path>',
+    sunset: '<path d="M12 10V2"></path><path d="m4.93 10.93 1.41 1.41"></path><path d="M2 18h2"></path><path d="M20 18h2"></path><path d="m19.07 10.93-1.41 1.41"></path><path d="M22 22H2"></path><path d="m16 6-4 4-4-4"></path><path d="M16 18a4 4 0 0 0-8 0"></path>',
+    droplet: '<path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7Z"></path>',
+    alert: '<path d="M12 9v4"></path><path d="M12 17h.01"></path><circle cx="12" cy="12" r="9"></circle>',
+};
+
+function renderIcon(paths, size) {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+}
+
+function getUiIcon(name, size = 18) {
+    return renderIcon(UI_ICON_PATHS[name] || UI_ICON_PATHS.alert, size);
+}
+
+/**
+ * 天气图标。entry 可以是完整天气对象（优先用 API 给的细分 icon 键，能区分
+ * 小雨/大雨/白天/夜间），也可以直接是 condition 字符串（兼容老缓存）。
+ */
+function getWeatherIcon(entry, size = 24) {
+    const key = typeof entry === 'string' ? entry : (entry?.icon || entry?.condition);
+    return renderIcon(WEATHER_ICON_PATHS[key] || WEATHER_ICON_PATHS.cloudy, size);
+}
+
+function getWeatherGradient(condition, isDay) {
+    // 夜里晴天还画成亮蓝色会很违和
+    if (isDay === false && (condition === 'sunny' || condition === 'partly_cloudy' || !condition)) {
+        return GRADIENTS.night;
+    }
     return GRADIENTS[condition] || GRADIENTS.sunny;
 }
 
 // =========================================================================
-// 模拟天气生成（fetchWeather → 返回 Promise<weatherObj>）
+// 数据展示工具
 // =========================================================================
-function generateForecast() {
-    const out = [];
-    for (let i = 0; i < 7; i++) {
-        const cond = CONDITIONS[Math.floor(Math.random() * CONDITIONS.length)];
-        const temp = Math.floor(Math.random() * 20) + 10;
-        out.push({
-            day: DAY_LABELS[i],
-            condition: cond,
-            high: temp + Math.floor(Math.random() * 5) + 2,
-            low: temp - Math.floor(Math.random() * 5) - 2,
-        });
-    }
-    return out;
+function conditionText(entry) {
+    if (!entry) return '';
+    return entry.description || CONDITION_DESC[entry.condition] || '';
 }
 
-function generateHourlyForecast() {
-    const out = [];
-    const conds = ['sunny', 'cloudy', 'partly_cloudy'];
-    const now = new Date();
-    for (let i = 0; i < 24; i++) {
-        const hour = (now.getHours() + i) % 24;
-        out.push({
-            hour: String(hour).padStart(2, '0') + ':00',
-            condition: conds[Math.floor(Math.random() * conds.length)],
-            temperature: Math.floor(Math.random() * 10) + 15,
-        });
-    }
-    return out;
+/** 数值缺失时统一显示 --（0 不算缺失）；顺手 escape，API 返回值一律不预设可信 */
+function num(value, fallback = '--') {
+    if (value === undefined || value === null || value === '') return fallback;
+    return escapeHtml(value);
 }
 
-function fetchWeather(cityName) {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            const condition = CONDITIONS[Math.floor(Math.random() * CONDITIONS.length)];
-            const temp = Math.floor(Math.random() * 20) + 10;
-            resolve({
-                city: cityName,
-                temperature: temp,
-                high: temp + Math.floor(Math.random() * 5) + 2,
-                low: temp - Math.floor(Math.random() * 5) - 2,
-                condition,
-                description: CONDITION_DESC[condition] || '晴',
-                humidity: Math.floor(Math.random() * 40) + 40,
-                wind: (Math.random() * 5 + 1).toFixed(1),
-                aqi: ['优', '良', '轻度'][Math.floor(Math.random() * 3)],
-                uv: ['弱', '中等', '强'][Math.floor(Math.random() * 3)],
-                forecast: generateForecast(),
-                hourly: generateHourlyForecast(),
-                updatedAt: Date.now(),
-            });
-        }, 800);
-    });
+function formatRelativeTime(timestamp) {
+    if (!timestamp) return '';
+    const diff = Date.now() - Number(timestamp);
+    if (diff < 0) return '刚刚';
+    if (diff < 60 * 1000) return '刚刚';
+    if (diff < 60 * 60 * 1000) return `${Math.floor(diff / 60000)} 分钟前`;
+    if (diff < 24 * 60 * 60 * 1000) return `${Math.floor(diff / (60 * 60 * 1000))} 小时前`;
+    return `${Math.floor(diff / (24 * 60 * 60 * 1000))} 天前`;
+}
+
+function isStaleWeather(weather) {
+    if (!weather || !weather.updatedAt) return true;
+    return Date.now() - weather.updatedAt > CURRENT_TTL;
+}
+
+function isOfflineWeather(weather) {
+    if (!weather || !weather.updatedAt) return false;
+    return Date.now() - weather.updatedAt > OFFLINE_AFTER;
+}
+
+function isForecastStale(weather) {
+    if (!weather || !weather.updatedAt) return false;
+    return Date.now() - weather.updatedAt > FORECAST_TTL;
+}
+
+/** 数据过期时给一句人话，别让用户把上次的缓存当实况 */
+function freshnessLabel(weather) {
+    if (!weather || !weather.updatedAt) return '';
+    const relative = formatRelativeTime(weather.updatedAt);
+    return isOfflineWeather(weather) ? `离线数据 · 更新于${relative}` : `更新于${relative}`;
+}
+
+// =========================================================================
+// 天气 API（使用 Open-Meteo 真实天气数据）
+// =========================================================================
+
+/**
+ * 根据城市名获取真实天气
+ * @param {string} cityName - 城市名称
+ * @param {Object} [options] - { force } 强制跳过 API 层内存缓存
+ * @returns {Promise<Object>} 天气数据
+ */
+async function fetchWeatherByName(cityName, options) {
+    try {
+        const weather = await WeatherAPI.fetchWeather(cityName, options);
+        return weather;
+    } catch (error) {
+        console.error('[weather] fetchWeatherByName 失败:', error);
+        throw error;
+    }
+}
+
+/**
+ * 根据坐标获取真实天气
+ * @param {Object} coords - {latitude, longitude, name, timezone}
+ * @param {Object} [options] - { force } 强制跳过 API 层内存缓存
+ * @returns {Promise<Object>} 天气数据
+ */
+async function fetchWeatherByCoords(coords, options) {
+    try {
+        const weather = await WeatherAPI.fetchWeather(coords, options);
+        return weather;
+    } catch (error) {
+        console.error('[weather] fetchWeatherByCoords 失败:', error);
+        throw error;
+    }
+}
+
+/**
+ * 搜索城市。异常继续往上抛 —— 吞掉的话「网络挂了」会被显示成「查无此城」。
+ * @param {string} query - 搜索关键词
+ * @returns {Promise<Array>} 城市列表
+ */
+function searchCities(query) {
+    return WeatherAPI.searchCities(query);
+}
+
+/**
+ * 保留旧接口兼容，内部调用新的真实API
+ * @param {string} cityName - 城市名称
+ * @param {Object} [options] - { force }
+ * @returns {Promise<Object>} 天气数据
+ */
+function fetchWeather(cityName, options) {
+    return fetchWeatherByName(cityName, options);
+}
+
+/** 统一把异常转成能直接给用户看的一句话 */
+function errorText(error) {
+    const message = error && error.message ? String(error.message) : '';
+    return message || '网络异常，暂时拿不到天气';
 }
 
 // =========================================================================
@@ -151,11 +253,29 @@ function findCity(state, cityName) {
     return (state.cities || []).find((c) => c && c.name === cityName) || null;
 }
 
+/**
+ * 每次渲染的入口钩子：先补齐持久化数据，再按 TTL 判断要不要重新拉实况。
+ * renderPage 是唯一「用户在看这个 App」的可靠信号（framework 没给 onShow），
+ * 所以自动刷新挂在这里，节流交给 methods._maybeAutoRefresh。
+ */
+function ensureFreshWeather(app) {
+    const methods = app.methods || {};
+    if (!app.state._hydrated && !app.state._hydrating) {
+        if (typeof methods.hydrate === 'function') {
+            Promise.resolve().then(() => methods.hydrate());
+        }
+        return;
+    }
+    if (typeof methods._maybeAutoRefresh === 'function') {
+        Promise.resolve().then(() => methods._maybeAutoRefresh());
+    }
+}
+
 // =========================================================================
 // 模块顶层渲染函数（renderPage 内只能 dispatch 到这里）
 // =========================================================================
 
-// 搜索栏 + 城市列表 + 空状态
+// 搜索栏 + 状态条 + 城市列表 + 空状态
 function renderHomePage(app) {
     const state = app.state;
     const citiesHtml = (state.cities || []).map((city) => renderCityCard(city, state, app)).join('');
@@ -163,8 +283,68 @@ function renderHomePage(app) {
     return `
         <div class="weather-app" style="padding:16px 14px 18px;">
             ${renderSearchBar(app)}
+            ${renderRefreshBar(app)}
+            ${renderErrorBanner(app)}
             <div class="wth-cities" id="wth-cities-container">${citiesHtml}</div>
             ${emptyHtml}
+            ${renderPresenceEntry(app)}
+        </div>
+    `;
+}
+
+/**
+ * 「灵动岛与小组件」入口。走 framework 的全局委托（data-presence-center），
+ * 不用注册 method、不占 detail 路由。
+ * 放在城市列表末尾：天气 App 没有设置页，这里是唯一合适的「附属功能」落点。
+ */
+function renderPresenceEntry(app) {
+    const icon = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="8" width="18" height="8" rx="4"/><circle cx="8" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg>`;
+    const arrow = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
+    return `
+        <button data-presence-center="${escapeHtml(app.id)}"
+                style="display:flex;align-items:center;gap:9px;width:100%;margin-top:14px;padding:12px 14px;border:0.5px solid rgba(255,255,255,0.22);border-radius:16px;background:rgba(255,255,255,0.14);color:#ffffff;font-size:13px;text-align:left;cursor:pointer;">
+            <span style="display:flex;flex-shrink:0;opacity:0.9;">${icon}</span>
+            <span style="flex:1;min-width:0;">灵动岛与小组件</span>
+            <span style="display:flex;flex-shrink:0;opacity:0.6;">${arrow}</span>
+        </button>
+    `;
+}
+
+/** 更新时间 + 手动刷新：不给这个入口，用户没法确认自己看的是不是实况 */
+function renderRefreshBar(app) {
+    const state = app.state;
+    if (!(state.cities || []).length) return '';
+    const attr = createActionAttr({ action: 'appMethod', method: 'refreshAll' }, app.id);
+    // 冷启动时 lastRefreshAt 还是 0，但缓存里的数据是有时间戳的，直接说「尚未获取」会误导
+    let updatedAt = state.lastRefreshAt || 0;
+    for (const city of state.cities) {
+        const cached = city && state.weatherCache[city.name];
+        if (cached && cached.updatedAt > updatedAt) updatedAt = cached.updatedAt;
+    }
+    const label = state.refreshing
+        ? '正在获取实时天气…'
+        : (updatedAt ? `更新于${formatRelativeTime(updatedAt)}` : '尚未获取实时数据');
+    return `
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:-8px 2px 14px;color:rgba(255,255,255,0.75);font-size:12px;">
+            <span>${escapeHtml(label)}</span>
+            <button ${attr} style="display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border:none;border-radius:20px;background:rgba(255,255,255,0.18);color:#ffffff;font-size:12px;cursor:pointer;${state.refreshing ? 'opacity:0.55;' : ''}">
+                ${getUiIcon('refresh', 13)}
+                <span>${state.refreshing ? '刷新中' : '刷新'}</span>
+            </button>
+        </div>
+    `;
+}
+
+/** API 报错必须让用户看见，不能只 console.warn 然后继续显示旧数据 */
+function renderErrorBanner(app) {
+    const state = app.state;
+    if (!state.lastError) return '';
+    const attr = createActionAttr({ action: 'appMethod', method: 'refreshAll' }, app.id);
+    return `
+        <div style="display:flex;align-items:center;gap:8px;margin:0 0 14px;padding:10px 12px;border-radius:12px;background:rgba(255,86,72,0.22);border:0.5px solid rgba(255,255,255,0.25);color:#ffffff;font-size:12px;line-height:1.5;">
+            <span style="flex-shrink:0;opacity:0.9;">${getUiIcon('alert', 15)}</span>
+            <span style="flex:1;min-width:0;">${escapeHtml(state.lastError)}</span>
+            <button ${attr} style="flex-shrink:0;border:none;border-radius:16px;padding:4px 10px;background:rgba(255,255,255,0.25);color:#ffffff;font-size:12px;cursor:pointer;">重试</button>
         </div>
     `;
 }
@@ -187,9 +367,12 @@ function renderSearchBar(app) {
 function renderCityCard(city, state, app) {
     const w = state.weatherCache[city.name] || {};
     const temp = w.temperature;
+    const hasTemp = temp !== undefined && temp !== null;
     // v0.27：显示名优先用 mappedName（地点编辑器映射后替换城市名），
     // city.name 保留为内部索引（weatherCache key / openCityDetail payload）。
     const displayName = city.mappedName || city.name;
+    const loading = state.refreshing || state.loadingCity === city.name;
+    const desc = conditionText(w) || (loading ? '获取中…' : '暂无数据');
     // 先调 setDetailCity 把 detailCity 写进 state，再推 city-detail 页
     const attr = createActionAttr({
         action: 'appMethod',
@@ -197,19 +380,21 @@ function renderCityCard(city, state, app) {
         payload: { cityName: city.name },
     }, app.id);
     return `
-        <div class="wth-card" style="background:${getWeatherGradient(w.condition)};" ${attr} data-city="${escapeHtml(city.name)}">
+        <div class="wth-card" style="background:${getWeatherGradient(w.condition, w.isDay)};" ${attr} data-city="${escapeHtml(city.name)}">
             ${city.backgroundImage ? `<div class="wth-card-bg" style="background-image:url('${escapeHtml(city.backgroundImage)}');"></div>` : ''}
             <div class="wth-card-body">
                 <div class="wth-card-head">
                     <div>
                         <div class="wth-card-name">${escapeHtml(displayName)}</div>
-                        <div class="wth-card-desc">${escapeHtml(w.description || '加载中...')}</div>
+                        <div class="wth-card-desc">${escapeHtml(desc)}</div>
                     </div>
+                    ${isOfflineWeather(w) ? `<div style="flex-shrink:0;padding:3px 9px;border-radius:10px;background:rgba(0,0,0,0.22);font-size:10px;">离线数据</div>` : ''}
                 </div>
                 <div class="wth-card-temp">
-                    <div class="${temp !== undefined ? 'wth-temp' : 'wth-temp-loading'}">${temp !== undefined ? temp + '°' : '--'}</div>
-                    <div class="wth-temp-icon">${getWeatherIcon(w.condition)}</div>
+                    <div class="${hasTemp ? 'wth-temp' : 'wth-temp-loading'}">${hasTemp ? temp + '°' : '--'}</div>
+                    <div class="wth-temp-icon">${getWeatherIcon(w, 56)}</div>
                 </div>
+                <div class="wth-card-hl">最高 ${num(w.high)}° 最低 ${num(w.low)}°${w.updatedAt ? ` · ${escapeHtml(formatRelativeTime(w.updatedAt))}` : ''}</div>
             </div>
         </div>
     `;
@@ -218,9 +403,7 @@ function renderCityCard(city, state, app) {
 function renderEmptyHint() {
     return `
         <div class="wth-empty">
-            <div class="wth-empty-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" viewBox="0 0 256 256"><path d="M160,40A88.09,88.09,0,0,0,81.29,88.67,64,64,0,1,0,72,216h88a88,88,0,0,0,0-176Zm0,160H72a48,48,0,0,1,0-96c1.1,0,2.2,0,3.29.11A88,88,0,0,0,72,128a8,8,0,0,0,16,0,72,72,0,1,1,72,72Z"></path></svg>
-            </div>
+            <div class="wth-empty-icon">${getWeatherIcon('partly_cloudy', 48)}</div>
             <div class="wth-empty-text">搜索并添加城市</div>
             <div class="wth-empty-sub">查看实时天气信息</div>
         </div>
@@ -231,23 +414,45 @@ function renderEmptyHint() {
 function renderSearchResultPage(app) {
     const state = app.state;
     const sr = state.searchResult || {};
+    // 使用真实天气数据的condition来确定背景，没有则用默认
+    const bgCondition = sr.weather?.condition || 'sunny';
     return `
-        <div class="weather-app wth-result-page" style="background:${getWeatherGradient(sr.condition)};">
+        <div class="weather-app wth-result-page" style="background:${getWeatherGradient(bgCondition, sr.weather?.isDay)};">
             <div class="wth-result-title">搜索结果</div>
             ${sr.loading ? renderSearchLoading() : ''}
-            ${sr.found === false && !sr.loading ? renderSearchEmpty() : ''}
+            ${sr.error && !sr.loading ? `<div class="wth-result-empty">${escapeHtml(sr.error)}</div>` : ''}
+            ${sr.found === false && !sr.loading && !sr.error ? renderSearchEmpty(sr.searchQuery) : ''}
             ${sr.weather ? renderSearchResultCard(sr.weather, app) : ''}
+            ${sr.weather && sr.alternatives?.length > 0 ? renderAlternativeCities(sr.alternatives, app) : ''}
             ${sr.weather ? renderAiBindCard(sr.weather.city, app) : ''}
         </div>
     `;
 }
 
 function renderSearchLoading() {
-    return `<div class="wth-result-loading">搜索中...</div>`;
+    return `<div class="wth-result-loading">正在搜索城市并获取天气...</div>`;
 }
 
-function renderSearchEmpty() {
-    return `<div class="wth-result-empty">未找到该城市的天气信息</div>`;
+function renderSearchEmpty(query) {
+    return `<div class="wth-result-empty">未找到与"${escapeHtml(query || '')}"相关的城市<br><span style="font-size:12px;opacity:0.7;">请尝试使用拼音或更通用的名称</span></div>`;
+}
+
+function renderAlternativeCities(alternatives, app) {
+    if (!alternatives || alternatives.length === 0) return '';
+    const items = alternatives.map(city => {
+        const attr = createActionAttr({
+            action: 'appMethod',
+            method: 'selectAlternativeCity',
+            payload: { city },
+        }, app.id);
+        return `<button class="wth-alternative-item" ${attr}>${escapeHtml(city.displayName || city.name)}</button>`;
+    }).join('');
+    return `
+        <div class="wth-alternatives">
+            <div class="wth-alternatives-title">其他可能的结果</div>
+            <div class="wth-alternatives-list">${items}</div>
+        </div>
+    `;
 }
 
 function renderSearchResultCard(weather, app) {
@@ -258,29 +463,29 @@ function renderSearchResultCard(weather, app) {
             <div class="wth-result-head">
                 <div>
                     <div class="wth-result-name">${escapeHtml(cityName)}</div>
-                    <div class="wth-result-desc">${escapeHtml(weather.description)}</div>
+                    <div class="wth-result-desc">${escapeHtml(conditionText(weather))}${weather.localTime ? ` · 当地 ${escapeHtml(weather.localTime)}` : ''}</div>
                 </div>
-                <div class="wth-temp-icon">${getWeatherIcon(weather.condition)}</div>
+                <div class="wth-temp-icon">${getWeatherIcon(weather, 56)}</div>
             </div>
             <div class="wth-result-temp">
-                <div class="wth-result-big-temp">${weather.temperature}°</div>
+                <div class="wth-result-big-temp">${num(weather.temperature)}°</div>
                 <div class="wth-result-hl">
-                    <div>最高 ${weather.high}°</div>
-                    <div>最低 ${weather.low}°</div>
+                    <div>最高 ${num(weather.high)}°</div>
+                    <div>最低 ${num(weather.low)}°</div>
                 </div>
             </div>
             <div class="wth-result-grid">
                 <div class="wth-result-cell">
                     <div class="wth-result-cell-label">湿度</div>
-                    <div class="wth-result-cell-val">${weather.humidity || '--'}%</div>
+                    <div class="wth-result-cell-val">${num(weather.humidity)}%</div>
                 </div>
                 <div class="wth-result-cell">
                     <div class="wth-result-cell-label">风速</div>
-                    <div class="wth-result-cell-val">${weather.wind || '--'}<span style="font-size:11px;opacity:0.7;">m/s</span></div>
+                    <div class="wth-result-cell-val">${num(weather.wind)}<span style="font-size:11px;opacity:0.7;">m/s</span></div>
                 </div>
                 <div class="wth-result-cell">
                     <div class="wth-result-cell-label">空气质量</div>
-                    <div class="wth-result-cell-val">${escapeHtml(weather.aqi || '优')}</div>
+                    <div class="wth-result-cell-val" style="font-size:15px;">${weather.aqi === null || weather.aqi === undefined ? '--' : `${weather.aqi} ${escapeHtml(weather.aqiLevel || '')}`}</div>
                 </div>
             </div>
             <div class="wth-result-actions">
@@ -325,6 +530,7 @@ function renderCityDetailPage(app) {
     return `
         <div class="weather-app wth-detail-page">
             ${renderDetailHead(city, weather)}
+            ${renderDetailRefreshBar(cityName, weather, app)}
             ${renderHourlyForecast(weather)}
             ${renderForecastCard(weather)}
             ${renderDetailGrid(weather)}
@@ -340,75 +546,150 @@ function renderDetailHead(city, weather) {
     return `
         <div class="wth-detail-head">
             <div class="wth-detail-city">${escapeHtml(displayName)}</div>
-            <div class="wth-detail-big-temp">${(weather.temperature !== undefined ? weather.temperature : '--')}°</div>
-            <div class="wth-detail-desc">${escapeHtml(weather.description || '')}</div>
-            <div class="wth-detail-hl">最高 ${(weather.high !== undefined ? weather.high : '--')}° 最低 ${(weather.low !== undefined ? weather.low : '--')}°</div>
+            <div class="wth-detail-big-temp">${num(weather.temperature)}°</div>
+            <div class="wth-detail-desc">${escapeHtml(conditionText(weather))}</div>
+            <div class="wth-detail-hl">最高 ${num(weather.high)}° 最低 ${num(weather.low)}°${weather.apparentTemp !== undefined && weather.apparentTemp !== null ? ` · 体感 ${weather.apparentTemp}°` : ''}</div>
         </div>
     `;
 }
 
+/** 详情页也要能单独刷新一座城市，并把数据时间摆在明面上 */
+function renderDetailRefreshBar(cityName, weather, app) {
+    const state = app.state;
+    const attr = createActionAttr({
+        action: 'appMethod',
+        method: 'refreshCity',
+        payload: { cityName },
+    }, app.id);
+    const busy = state.refreshing || state.loadingCity === cityName;
+    const label = busy ? '正在获取实时天气…' : (freshnessLabel(weather) || '尚未获取实时数据');
+    return `
+        <div style="display:flex;align-items:center;justify-content:center;gap:10px;padding:0 20px 14px;color:rgba(255,255,255,0.8);font-size:12px;">
+            <span>${escapeHtml(label)}</span>
+            <button ${attr} style="display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border:none;border-radius:20px;background:rgba(255,255,255,0.2);color:#ffffff;font-size:12px;cursor:pointer;${busy ? 'opacity:0.55;' : ''}">
+                ${getUiIcon('refresh', 13)}
+                <span>${busy ? '刷新中' : '刷新'}</span>
+            </button>
+        </div>
+        ${state.lastError ? `<div style="margin:0 20px 14px;padding:10px 12px;border-radius:12px;background:rgba(255,86,72,0.22);color:#ffffff;font-size:12px;line-height:1.5;">${escapeHtml(state.lastError)}</div>` : ''}
+    `;
+}
+
 function renderHourlyForecast(weather) {
-    if (!weather.hourly) return '';
-    const items = weather.hourly.slice(0, 12).map((hour) => `
+    if (!weather.hourly || !weather.hourly.length) return '';
+    const items = weather.hourly.slice(0, 24).map((hour) => `
         <div class="wth-hour-cell">
-            <div class="wth-hour-time">${escapeHtml(hour.hour)}</div>
-            <div class="wth-hour-icon">${getWeatherIcon(hour.condition)}</div>
-            <div class="wth-hour-temp">${hour.temperature}°</div>
+            <div class="wth-hour-time"${hour.isNow ? ' style="font-weight:600;"' : ''}>${escapeHtml(hour.hour)}</div>
+            <div class="wth-hour-icon" style="display:flex;justify-content:center;">${getWeatherIcon(hour, 22)}</div>
+            <div class="wth-hour-temp">${num(hour.temperature)}°</div>
+            <div style="font-size:10px;opacity:${hour.pop ? '0.85' : '0'};margin-top:3px;">${num(hour.pop, 0)}%</div>
         </div>
     `).join('');
     return `
         <div class="wth-hourly">
+            <div style="font-size:13px;opacity:0.8;margin-bottom:10px;">未来 24 小时</div>
             <div class="wth-hourly-scroll">${items}</div>
         </div>
     `;
 }
 
 function renderForecastCard(weather) {
-    if (!weather.forecast) return '';
-    const rows = weather.forecast.map((day, i) => `
+    const days = weather.forecast || [];
+    if (!days.length) return '';
+
+    // 温度条要按整周的极值定位，否则那根轨道就是纯装饰
+    const lows = days.map((d) => d.low).filter((v) => typeof v === 'number');
+    const highs = days.map((d) => d.high).filter((v) => typeof v === 'number');
+    const weekLow = lows.length ? Math.min(...lows) : 0;
+    const weekHigh = highs.length ? Math.max(...highs) : 1;
+    const span = Math.max(1, weekHigh - weekLow);
+
+    const rows = days.map((day) => {
+        const hasRange = typeof day.low === 'number' && typeof day.high === 'number';
+        const left = hasRange ? ((day.low - weekLow) / span) * 100 : 0;
+        const width = hasRange ? Math.max(10, ((day.high - day.low) / span) * 100) : 0;
+        const pop = (day.pop !== undefined && day.pop !== null && day.pop > 0) ? `${day.pop}%` : '';
+        return `
         <div class="wth-forecast-row">
-            <div class="wth-forecast-day">${escapeHtml(day.day)}</div>
-            <div class="wth-forecast-icon">${getWeatherIcon(day.condition)}</div>
-            <div class="wth-forecast-bar">
-                <span class="wth-forecast-low">${day.low}°</span>
-                <div class="wth-forecast-track"></div>
-                <span class="wth-forecast-high">${day.high}°</span>
+            <div class="wth-forecast-day">
+                <div>${escapeHtml(day.day)}</div>
+                ${day.dateLabel ? `<div style="font-size:10px;opacity:0.6;margin-top:2px;">${escapeHtml(day.dateLabel)}</div>` : ''}
+            </div>
+            <div class="wth-forecast-icon" style="margin:0 10px;display:flex;align-items:center;">${getWeatherIcon(day, 22)}</div>
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:13px;line-height:1.3;">${escapeHtml(conditionText(day) || '--')}</div>
+                ${pop ? `<div style="display:flex;align-items:center;gap:3px;font-size:11px;opacity:0.72;margin-top:2px;">${getUiIcon('droplet', 10)}<span>${pop}</span></div>` : ''}
+            </div>
+            <div class="wth-forecast-bar" style="flex:0 0 116px;">
+                <span class="wth-forecast-low">${num(day.low)}°</span>
+                <div class="wth-forecast-track" style="position:relative;overflow:hidden;">
+                    ${hasRange ? `<div style="position:absolute;top:0;bottom:0;left:${left.toFixed(1)}%;width:${width.toFixed(1)}%;border-radius:2px;background:linear-gradient(90deg,#8FD3FF,#FFD479);"></div>` : ''}
+                </div>
+                <span class="wth-forecast-high">${num(day.high)}°</span>
             </div>
         </div>
-    `).join('');
+    `;
+    }).join('');
+
+    const today = days[0] || {};
+    const sunLine = (today.sunrise || today.sunset) ? `
+        <div style="display:flex;justify-content:space-around;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.18);font-size:12px;">
+            <span style="display:inline-flex;align-items:center;gap:6px;">${getUiIcon('sunrise', 15)}日出 ${escapeHtml(today.sunrise || '--')}</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;">${getUiIcon('sunset', 15)}日落 ${escapeHtml(today.sunset || '--')}</span>
+        </div>
+    ` : '';
+
     return `
         <div class="wth-forecast">
-            <div class="wth-forecast-title">7 天预报</div>
+            <div class="wth-forecast-title" style="display:flex;justify-content:space-between;align-items:baseline;">
+                <span>7 天预报</span>
+                ${isForecastStale(weather) ? `<span style="font-size:11px;opacity:0.7;font-weight:400;">${escapeHtml(freshnessLabel(weather))}</span>` : ''}
+            </div>
             ${rows}
+            ${sunLine}
         </div>
     `;
 }
 
 function renderDetailGrid(weather) {
+    const aqiText = (weather.aqi === undefined || weather.aqi === null)
+        ? '--'
+        : `${weather.aqi}${weather.aqiLevel ? ` ${weather.aqiLevel}` : ''}`;
+    const uvText = (weather.uv === undefined || weather.uv === null)
+        ? '--'
+        : `${weather.uv}${weather.uvLevel ? ` ${weather.uvLevel}` : ''}`;
     return `
         <div class="wth-detail-grid">
             <div class="wth-detail-cell">
                 <div class="wth-detail-cell-label">湿度</div>
-                <div class="wth-detail-cell-val">${(weather.humidity || '--')}%</div>
+                <div class="wth-detail-cell-val">${num(weather.humidity)}<span class="wth-detail-cell-unit">%</span></div>
             </div>
             <div class="wth-detail-cell">
-                <div class="wth-detail-cell-label">风速</div>
-                <div class="wth-detail-cell-val">${(weather.wind || '--')}<span class="wth-detail-cell-unit">m/s</span></div>
+                <div class="wth-detail-cell-label" style="display:flex;align-items:center;gap:5px;">${getWeatherIcon('windy', 13)}风速</div>
+                <div class="wth-detail-cell-val">${num(weather.wind)}<span class="wth-detail-cell-unit">m/s</span></div>
+                ${weather.windDirectionLabel ? `<div style="font-size:11px;opacity:0.7;margin-top:2px;">${escapeHtml(weather.windDirectionLabel)}风</div>` : ''}
+            </div>
+            <div class="wth-detail-cell">
+                <div class="wth-detail-cell-label" style="display:flex;align-items:center;gap:5px;">${getUiIcon('droplet', 13)}降水概率</div>
+                <div class="wth-detail-cell-val">${num(weather.pop)}<span class="wth-detail-cell-unit">%</span></div>
+            </div>
+            <div class="wth-detail-cell">
+                <div class="wth-detail-cell-label">云量</div>
+                <div class="wth-detail-cell-val">${num(weather.cloudCover)}<span class="wth-detail-cell-unit">%</span></div>
             </div>
             <div class="wth-detail-cell">
                 <div class="wth-detail-cell-label">空气质量</div>
-                <div class="wth-detail-cell-val">${escapeHtml(weather.aqi || '优')}</div>
+                <div class="wth-detail-cell-val" style="font-size:20px;">${escapeHtml(aqiText)}</div>
             </div>
             <div class="wth-detail-cell">
                 <div class="wth-detail-cell-label">紫外线</div>
-                <div class="wth-detail-cell-val">${escapeHtml(weather.uv || '中等')}</div>
+                <div class="wth-detail-cell-val" style="font-size:20px;">${escapeHtml(uvText)}</div>
             </div>
         </div>
     `;
 }
 
 function renderDetailActions(cityName, app) {
-    const state = app.state;
     const removeAttr = createActionAttr({ action: 'appMethod', method: 'removeCityFromDetail' }, app.id);
     return `
         <div class="wth-detail-actions">
@@ -439,55 +720,61 @@ function renderWeatherWidget(size, payload) {
         return `<div class="wth-widget-empty" style="background:linear-gradient(135deg,#4A90D9,#67B8DE);">暂无天气数据</div>`;
     }
 
+    // widget 跟着实况变颜色，不再永远是那张蓝色底图
+    const bg = getWeatherGradient(weather.condition, weather.isDay);
+    const desc = conditionText(weather);
+    const stale = isOfflineWeather(weather);
+
     if (size === 'S') {
         return `
-            <div class="wth-widget" style="background:linear-gradient(135deg,#4A90D9,#67B8DE);">
+            <div class="wth-widget" style="background:${bg};">
                 <div>
                     <div class="wth-widget-city">${escapeHtml(cityName)}</div>
-                    <div class="wth-widget-temp">${weather.temperature}°</div>
+                    <div class="wth-widget-temp">${num(weather.temperature)}°</div>
                 </div>
-                <div class="wth-widget-icon">${getWeatherIcon(weather.condition)}</div>
+                <div class="wth-widget-icon">${getWeatherIcon(weather, 28)}</div>
             </div>
         `;
     }
 
     if (size === 'M') {
         return `
-            <div class="wth-widget" style="background:linear-gradient(135deg,#4A90D9,#67B8DE);flex-direction:column;justify-content:space-between;align-items:flex-start;padding:12px 14px;">
+            <div class="wth-widget" style="background:${bg};flex-direction:column;justify-content:space-between;align-items:flex-start;padding:12px 14px;">
                 <div style="display:flex;justify-content:space-between;width:100%;">
                     <div>
                         <div style="font-size:13px;font-weight:500;">${escapeHtml(cityName)}</div>
-                        <div style="font-size:11px;opacity:0.8;">${escapeHtml(weather.description)}</div>
+                        <div style="font-size:11px;opacity:0.8;">${escapeHtml(desc)}</div>
                     </div>
-                    <div class="wth-widget-icon">${getWeatherIcon(weather.condition)}</div>
+                    <div class="wth-widget-icon">${getWeatherIcon(weather, 28)}</div>
                 </div>
-                <div style="font-size:32px;font-weight:300;line-height:1;">${weather.temperature}°</div>
-                <div style="font-size:11px;opacity:0.8;">H:${weather.high}° L:${weather.low}°</div>
+                <div style="font-size:32px;font-weight:300;line-height:1;">${num(weather.temperature)}°</div>
+                <div style="font-size:11px;opacity:0.8;">H:${num(weather.high)}° L:${num(weather.low)}°${stale ? ' · 离线数据' : ''}</div>
             </div>
         `;
     }
 
-    // L
+    // L：一周天气，每天都要能看到状况文案而不只是图标
     const forecast = (weather.forecast || []).slice(0, 5).map((day) => `
-        <div style="text-align:center;">
+        <div style="flex:1;min-width:0;text-align:center;">
             <div style="font-size:10px;opacity:0.8;">${escapeHtml(day.day)}</div>
-            <div class="wth-widget-icon" style="font-size:18px;margin:4px 0;">${getWeatherIcon(day.condition)}</div>
-            <div style="font-size:11px;">${day.high}°</div>
-            <div style="font-size:10px;opacity:0.7;">${day.low}°</div>
+            <div class="wth-widget-icon" style="display:flex;justify-content:center;font-size:18px;margin:4px 0;">${getWeatherIcon(day, 18)}</div>
+            <div style="font-size:9px;opacity:0.85;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(conditionText(day))}</div>
+            <div style="font-size:11px;margin-top:2px;">${num(day.high)}°</div>
+            <div style="font-size:10px;opacity:0.7;">${num(day.low)}°</div>
         </div>
     `).join('');
 
     return `
-        <div class="wth-widget" style="background:linear-gradient(135deg,#4A90D9,#67B8DE);flex-direction:column;justify-content:space-between;align-items:flex-start;padding:12px 14px;">
+        <div class="wth-widget" style="background:${bg};flex-direction:column;justify-content:space-between;align-items:flex-start;padding:12px 14px;">
             <div style="display:flex;justify-content:space-between;width:100%;">
                 <div>
                     <div style="font-size:14px;font-weight:500;">${escapeHtml(cityName)}</div>
-                    <div style="font-size:11px;opacity:0.8;">${escapeHtml(weather.description)}</div>
-                    <div class="wth-widget-temp-large" style="margin-top:4px;">${weather.temperature}°</div>
+                    <div style="font-size:11px;opacity:0.8;">${escapeHtml(desc)}${stale ? ' · 离线数据' : ''}</div>
+                    <div class="wth-widget-temp-large" style="margin-top:4px;">${num(weather.temperature)}°</div>
                 </div>
-                <div class="wth-widget-icon" style="font-size:36px;">${getWeatherIcon(weather.condition)}</div>
+                <div class="wth-widget-icon" style="font-size:36px;">${getWeatherIcon(weather, 36)}</div>
             </div>
-            <div style="display:flex;justify-content:space-between;width:100%;padding-top:10px;border-top:1px solid rgba(255,255,255,0.2);">${forecast}</div>
+            <div style="display:flex;justify-content:space-between;gap:2px;width:100%;padding-top:10px;border-top:1px solid rgba(255,255,255,0.2);">${forecast}</div>
         </div>
     `;
 }
@@ -524,6 +811,19 @@ export default function createWeatherApp() {
         icon: WEATHER_APP_ICON,
         iconBg: 'transparent',
 
+        distribution: {
+            requiresInstall: false,
+            appStore: {
+                subtitle: '看一眼此刻的天',
+                category: '天气',
+                description:
+                    '出门以前，人通常只想先知道：现在是什么天气，往后几个小时会不会变。\n\n'
+                    + '天气可以搜索并留下多座城市，显示实时温度、体感、湿度、风、降水、空气质量与紫外线，也把未来 24 小时和 7 天预报放在同一处。数据旧了会标出更新时间，超过半天则明确写成离线数据。\n\n'
+                    + '第一座城市会出现在桌面小组件里。需要时，也可以把一座城市绑定给 AI 角色，让它读到那里的天气。',
+                accent: 'linear-gradient(145deg, #4A90D9 0%, #67B8DE 100%)',
+            },
+        },
+
         background: 'linear-gradient(180deg, #4A90D9 0%, #67B8DE 100%)',
         statusBarColor: '#ffffff',
         homeIndicatorColor: 'rgba(255,255,255,0.6)',
@@ -536,7 +836,30 @@ export default function createWeatherApp() {
             color: '#ffffff',
             // v0.28：去掉顶栏右侧的「药丸」app 名标签 —— 视觉更干净。
             showPill: false,
+            // 手动刷新入口走 framework 的 headerActions（见 AGENTS.md §16.23），
+            // 不自己在 v-html 里画顶栏按钮。
+            headerActions: [
+                {
+                    iconHtml: getUiIcon('refresh', 16),
+                    ariaLabel: '刷新天气',
+                    action: { action: 'appMethod', method: 'refreshAll' },
+                },
+            ],
         },
+
+        // ★ v0.87 声明天气 App 会占用灵动岛的时机。
+        //   用户在首页底部「灵动岛与小组件」里能预览、逐条关掉。
+        //   详见 docs/framework-灵动岛与小组件总览.md
+        islandKinds: [
+            {
+                id: 'weather-toast',
+                label: '操作反馈',
+                desc: '添加/移除城市、刷新失败之类的短提示，3.5 秒后自动消失。',
+                when: '添加或移除城市、刷新天气出错时',
+                sizes: ['compact'],
+                previewPayload: { title: '已添加城市', message: '北京 · 27° 雷阵雨' },
+            },
+        ],
         // v0.28：让 framework 的 .app-background-layer 跟随当前 detailCity 的天气
         // 状况切换渐变，让「投票 bar（.app-detail-header）」区域与下方内容区颜色一致。
         getBackground(state) {
@@ -545,7 +868,7 @@ export default function createWeatherApp() {
             const cache = state.weatherCache || {};
             const w = cache[detailCity];
             if (!w || !w.condition) return null;
-            return getWeatherGradient(w.condition);
+            return getWeatherGradient(w.condition, w.isDay);
         },
         nav: { type: 'none' },
 
@@ -580,8 +903,12 @@ export default function createWeatherApp() {
                 searchResult: null,    // { loading, weather, found, cityName }
                 detailCity: '',
                 loadingCity: '',
+                refreshing: false,
+                lastRefreshAt: 0,
+                lastError: '',
                 _hydrated: false,
                 _hydrating: false,
+                _autoCheckedAt: 0,
             };
             if (typeof window !== 'undefined') {
                 window.weatherAppState = snapshot(state);
@@ -612,9 +939,10 @@ export default function createWeatherApp() {
 
             // ---- 初始化：async 加载持久化数据 ----
             async hydrate(force = false) {
+                // renderPage / renderDetailPage 可能在同一帧各排一次 hydrate，
+                // 不挡住并发的话会打两轮 db.get + 两轮天气请求。
+                if (this.app.state._hydrating) return;
                 if (this.app.state._hydrated && !force) return;
-                // 注意：不要在 hydrate 一开始就置 _hydrated = true。
-                // 那会阻止后续 renderPage 重试。等真正尝试过 db + ls 之后再标记。
                 this.app.state._hydrating = true;
                 console.debug('[weather] hydrate() START');
 
@@ -653,17 +981,9 @@ export default function createWeatherApp() {
                     this.app.state.weatherCache = (data.weatherCache && typeof data.weatherCache === 'object') ? data.weatherCache : {};
                     console.debug('[weather] hydrate 恢复城市数=', this.app.state.cities.length);
 
-                    // 拉取列表里每个城市的最新天气（不阻塞渲染，先重绘一次）
+                    // 先用缓存把界面画出来，再补拉真实数据
                     this._forceRerender();
-                    for (const c of this.app.state.cities) {
-                        if (!c || !c.name) continue;
-                        try {
-                            const w = await fetchWeather(c.name);
-                            this.app.state.weatherCache[c.name] = w;
-                            this._forceRerender();
-                        } catch (e) { /* 单条失败不影响整体 */ }
-                    }
-                    await this._saveCities();
+                    await this._refreshCities(this.app.state.cities, { force: true });
                 } else {
                     console.debug('[weather] hydrate 没有持久化数据');
                 }
@@ -678,9 +998,12 @@ export default function createWeatherApp() {
                 } catch (e) { /* ignore */ }
 
                 this.app.state._hydrating = false;
-                // 只有当 hydrate 真正恢复到了数据，才标记 _hydrated 完成。
-                // 没数据时保持 _hydrated = false，下次 renderPage 会再次尝试。
-                if (data) this.app.state._hydrated = true;
+                // 无论有没有读到数据都要落 _hydrated：读不到通常就是「用户还没添加城市」，
+                // 保持 false 会让 renderPage 每次重绘都重新跑一遍 hydrate（db.get 重试 + 重渲染
+                // 互相触发）。真正的数据新鲜度交给 _maybeAutoRefresh 的 TTL 判断。
+                this.app.state._hydrated = true;
+
+                startBackgroundRefresh(this.methods);
 
                 // v0.27：从 places 表反向拉映射，刷新后 weather 卡片直接显示映射名。
                 // 防止「用户必须先开 settings 才有 mappedName」的体验断环。
@@ -710,7 +1033,7 @@ export default function createWeatherApp() {
                 // 把 state 挂到 window 让 widget render 能读
                 window.weatherAppState = snapshot(this.app.state);
                 // v0.27：派发 weather-hydrated 事件，让 settings app 监听做局部刷新。
-                // ⚠️ 不要在这里 refreshPhoneApps() —— 会导致循环：refresh → weather 重建
+                // 注意：不要在这里 refreshPhoneApps() —— 会导致循环：refresh → weather 重建
                 // → 再 hydrate → 再 refresh → 死循环，并且会冲掉 settings 的 world 页。
                 try {
                     window.dispatchEvent(new CustomEvent('weather-hydrated', {
@@ -762,8 +1085,118 @@ export default function createWeatherApp() {
             },
 
             _forceRerender() {
+                // widget 读的是 window.weatherAppState 快照，不在这里同步的话
+                // 桌面小组件会一直停在 hydrate 结束那一刻的数据上。
+                try { window.weatherAppState = snapshot(this.app.state); } catch (_) {}
                 try { if (window.__detailRenderTick) window.__detailRenderTick.value++; } catch (_) {}
+                try { window.__requestAppRerender?.(this.app.id, null); } catch (_) {}
                 if (typeof window.refreshPhoneApps === 'function') window.refreshPhoneApps();
+            },
+
+            // ============================================
+            // 实时性：TTL + 自动/手动刷新
+            // ============================================
+
+            /**
+             * 拉取一批城市的天气。逐个城市写回 state 并重绘，
+             * 失败的城市保留旧数据，但把错误抛到 state.lastError 让 UI 能显示。
+             */
+            async _refreshCities(cities, options = {}) {
+                const list = (cities || []).filter((c) => c && c.name);
+                if (!list.length) return { ok: 0, failed: 0 };
+                if (this.app.state.refreshing) return { ok: 0, failed: 0 };
+
+                this.app.state.refreshing = true;
+                this.app.state.lastError = '';
+                this._forceRerender();
+
+                let ok = 0;
+                let failed = 0;
+                let lastError = null;
+                for (const city of list) {
+                    this.app.state.loadingCity = city.name;
+                    try {
+                        const weather = await this._fetchCityWeather(city, options);
+                        this.app.state.weatherCache[city.name] = weather;
+                        ok++;
+                    } catch (e) {
+                        failed++;
+                        lastError = e;
+                        console.warn(`[weather] 获取 ${city.name} 天气失败:`, e);
+                    }
+                    this.app.state.loadingCity = '';
+                    this._forceRerender();
+                }
+
+                this.app.state.refreshing = false;
+                if (ok > 0) this.app.state.lastRefreshAt = Date.now();
+                const scope = list.length === 1 ? list[0].name : `${failed} 座城市`;
+                this.app.state.lastError = failed ? `${scope}天气获取失败：${errorText(lastError)}` : '';
+
+                if (ok > 0) await this._saveCities();
+                this._forceRerender();
+                return { ok, failed, error: lastError };
+            },
+
+            /** 有坐标就走坐标（更准，也省一次地理编码请求），没有才回退城市名 */
+            _fetchCityWeather(city, options = {}) {
+                const fetchOptions = { force: options.force !== false };
+                if (city.latitude !== undefined && city.longitude !== undefined) {
+                    return fetchWeatherByCoords({
+                        latitude: city.latitude,
+                        longitude: city.longitude,
+                        name: city.name,
+                        timezone: city.timezone || 'Asia/Shanghai',
+                    }, fetchOptions);
+                }
+                return fetchWeather(city.name, fetchOptions);
+            },
+
+            /** 顶栏 / 状态条上的手动刷新 */
+            async refreshAll() {
+                const cities = this.app.state.cities || [];
+                if (!cities.length) {
+                    this.toolkit.island.notify('info', '还没有城市', '先搜索并添加一个城市');
+                    return;
+                }
+                const result = await this._refreshCities(cities, { force: true });
+                if (result.failed) {
+                    this.toolkit.island.notify('error', '刷新失败', errorText(result.error));
+                } else if (result.ok) {
+                    this.toolkit.island.notify('success', '已更新', '天气数据已刷新到最新');
+                }
+            },
+
+            /** 详情页里只刷当前这一座城市 */
+            async refreshCity(payload) {
+                const cityName = (payload && payload.cityName) || this.app.state.detailCity;
+                const city = findCity(this.app.state, cityName);
+                if (!city) return;
+                const result = await this._refreshCities([city], { force: true });
+                if (result.failed) {
+                    this.toolkit.island.notify('error', '刷新失败', errorText(result.error));
+                } else if (result.ok) {
+                    this.toolkit.island.notify('success', '已更新', `${cityName} 天气已刷新`);
+                }
+            },
+
+            /**
+             * renderPage 每次重绘都会调，负责「进 App 看到的是不是实况」。
+             * 双重节流：AUTO_CHECK_INTERVAL 限制检查频率，CURRENT_TTL 决定是否真的发请求。
+             */
+            _maybeAutoRefresh() {
+                const state = this.app.state;
+                if (state.refreshing || state._hydrating) return;
+                const now = Date.now();
+                if (now - (state._autoCheckedAt || 0) < AUTO_CHECK_INTERVAL) return;
+                state._autoCheckedAt = now;
+
+                const stale = (state.cities || []).filter(
+                    (c) => c && c.name && isStaleWeather(state.weatherCache[c.name]),
+                );
+                if (!stale.length) return;
+                console.debug('[weather] 自动刷新过期城市:', stale.map((c) => c.name).join(', '));
+                this._refreshCities(stale, { force: true });
             },
 
             // ============================================
@@ -910,29 +1343,57 @@ export default function createWeatherApp() {
             // ---- 搜索 ----
             async searchCity() {
                 const input = document.querySelector('#wth-search-city');
-                const cityName = (input?.value || '').trim();
-                if (!cityName) {
+                const query = (input?.value || '').trim();
+                if (!query) {
                     this.toolkit.island.notify('warning', '请输入城市名', '');
                     return;
                 }
-                if ((this.app.state.cities || []).some((c) => c && c.name === cityName)) {
-                    this.toolkit.island.notify('info', '已添加', `${cityName} 已在城市列表中`);
-                    return;
-                }
-                // 打开搜索结果页
-                this.app.state.searchResult = { loading: true, weather: null, found: null, cityName };
+
+                // 先打开搜索结果页（loading状态）
+                this.app.state.searchResult = { loading: true, weather: null, found: null, cityName: query, searchQuery: query };
                 this.app.state.detailCity = '';
                 window.dispatchEvent(new CustomEvent('app:page-action', {
                     detail: { action: 'detail', appId: this.app.id, pageId: 'search-result' },
                 }));
-                // 拉取天气
+
                 try {
-                    const w = await fetchWeather(cityName);
-                    this.app.state.searchResult = { loading: false, weather: w, found: true, cityName };
-                    this.app.state.weatherCache[cityName] = w;
+                    // 先搜索城市列表
+                    const cities = await searchCities(query);
+                    
+                    if (cities.length === 0) {
+                        this.app.state.searchResult = { loading: false, weather: null, found: false, cityName: query, searchQuery: query };
+                        this.toolkit.island.notify('warning', '未找到', `未找到与"${query}"相关的城市`);
+                        this._forceRerender();
+                        return;
+                    }
+
+                    // 使用第一个匹配的城市获取天气
+                    const bestMatch = cities[0];
+                    const w = await fetchWeatherByCoords(bestMatch, { force: true });
+                    
+                    this.app.state.searchResult = { 
+                        loading: false, 
+                        weather: w, 
+                        found: true, 
+                        cityName: bestMatch.name,
+                        searchQuery: query,
+                        cityData: bestMatch, // 保存完整城市数据（包含坐标）
+                        alternatives: cities.slice(1, 5), // 其他可能的结果
+                    };
+                    this.app.state.weatherCache[bestMatch.name] = w;
                     this._forceRerender();
                 } catch (e) {
-                    this.app.state.searchResult = { loading: false, weather: null, found: false, cityName };
+                    console.error('[weather] 搜索城市失败:', e);
+                    // 把真实原因写进结果页：网络异常和「查无此城」是两回事
+                    this.app.state.searchResult = {
+                        loading: false,
+                        weather: null,
+                        found: false,
+                        cityName: query,
+                        searchQuery: query,
+                        error: errorText(e),
+                    };
+                    this.toolkit.island.notify('error', '获取失败', errorText(e));
                     this._forceRerender();
                 }
             },
@@ -943,8 +1404,19 @@ export default function createWeatherApp() {
                 if (!sr || !sr.weather) return;
                 const w = sr.weather;
                 const cityName = sr.cityName;
+                const cityData = sr.cityData; // 包含坐标等完整信息
+
                 if (!(this.app.state.cities || []).some((c) => c && c.name === cityName)) {
-                    this.app.state.cities.push({ name: cityName, addedAt: Date.now() });
+                    // 保存完整城市数据（包含坐标）
+                    this.app.state.cities.push({ 
+                        name: cityName, 
+                        addedAt: Date.now(),
+                        latitude: cityData?.latitude,
+                        longitude: cityData?.longitude,
+                        timezone: cityData?.timezone || 'Asia/Shanghai',
+                        country: cityData?.country,
+                        displayName: cityData?.displayName,
+                    });
                 }
                 this.app.state.weatherCache[cityName] = w;
                 this.app.state.searchResult = null;
@@ -954,6 +1426,49 @@ export default function createWeatherApp() {
                     this.toolkit.island.notify('success', '添加成功', `${cityName} 已添加到列表`);
                 }
                 this._fallbackCloseDetail();
+            },
+
+            // ---- 选择其他候选城市 ----
+            async selectAlternativeCity(payload) {
+                const city = payload?.city;
+                if (!city) return;
+
+                this.app.state.searchResult = { 
+                    loading: true, 
+                    weather: null, 
+                    found: null, 
+                    cityName: city.name,
+                    searchQuery: city.name,
+                    cityData: city,
+                };
+                this._forceRerender();
+
+                try {
+                    const w = await fetchWeatherByCoords(city, { force: true });
+                    this.app.state.searchResult = { 
+                        loading: false, 
+                        weather: w, 
+                        found: true, 
+                        cityName: city.name,
+                        searchQuery: city.name,
+                        cityData: city,
+                    };
+                    this.app.state.weatherCache[city.name] = w;
+                    this._forceRerender();
+                } catch (e) {
+                    console.error('[weather] selectAlternativeCity 失败:', e);
+                    this.app.state.searchResult = {
+                        loading: false,
+                        weather: null,
+                        found: false,
+                        cityName: city.name,
+                        searchQuery: city.name,
+                        cityData: city,
+                        error: errorText(e),
+                    };
+                    this.toolkit.island.notify('error', '获取失败', errorText(e));
+                    this._forceRerender();
+                }
             },
 
             _fallbackCloseDetail() {
@@ -1062,13 +1577,7 @@ export default function createWeatherApp() {
         // 渲染：renderPage 不带 this，必须是模块顶层路由
         // ============================================
         renderPage(content, page, app) {
-            // 首次进入页面时确保 hydrate（renderPage 会被 framework 调用多次）
-            // 但 _hydrating 期间不要重复触发（避免 race）。
-            if (!app.state._hydrated && !app.state._hydrating) {
-                if (app.methods && typeof app.methods.hydrate === 'function') {
-                    Promise.resolve().then(() => app.methods.hydrate());
-                }
-            }
+            ensureFreshWeather(app);
             if (page.id === 'home') return renderHomePage(app);
             if (page.id === 'search-result') return renderSearchResultPage(app);
             if (page.id === 'city-detail') {
@@ -1084,11 +1593,7 @@ export default function createWeatherApp() {
         renderDetailPage(content, page, app) {
             // renderPage / renderDetailPage 都是 framework 拿出来当独立函数调，
             // this 已丢失；直接复用顶层分发（不能用 this.renderPage）。
-            if (!app.state._hydrated && !app.state._hydrating) {
-                if (app.methods && typeof app.methods.hydrate === 'function') {
-                    Promise.resolve().then(() => app.methods.hydrate());
-                }
-            }
+            ensureFreshWeather(app);
             if (page.id === 'search-result') return renderSearchResultPage(app);
             if (page.id === 'city-detail') {
                 if (!app.state.detailCity && content) {
@@ -1167,7 +1672,12 @@ export default function createWeatherApp() {
             getWeatherSummaryForAI(aiId) {
                 const w = this.getWeatherForAI(aiId);
                 if (!w) return '天气信息暂不可用';
-                return `${w.displayCity}天气：当前${w.description}，${w.temperature}°C，湿度${w.humidity}%。`;
+                const today = (w.forecast || [])[0];
+                const parts = [`${w.displayCity}天气：当前${conditionText(w)}，${num(w.temperature)}°C，湿度${num(w.humidity)}%`];
+                if (today) parts.push(`今天${conditionText(today)}，${num(today.low)}~${num(today.high)}°C`);
+                // 数据太旧时明说，免得 AI 把上次的缓存当今天的天气播报
+                if (isOfflineWeather(w)) parts.push(`（数据更新于${formatRelativeTime(w.updatedAt)}）`);
+                return `${parts.join('。')}。`;
             },
 
             /**

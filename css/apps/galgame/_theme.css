@@ -1,0 +1,424 @@
+/**
+ * 湛蓝回忆 · 主题 token
+ *
+ * ★ 这个文件是整个 App 的**颜色唯一真相**。
+ *   其他 CSS 只允许写 `var(--gg-*)`,JS 里一个 hex 都不许出现。
+ *
+ * ★ 主题怎么切
+ *   `.app-shell[data-app-id="galgame"]` 上挂 `data-gg-theme="azure|dusk|night|ink"`。
+ *   用户自定义色由 JS 往同一个元素 `style.setProperty('--gg-xxx', value)` 覆盖 ——
+ *   这是**允许 JS 出现颜色值的唯一场景**:值来自用户,编译期不可能知道。
+ *
+ * ★ 每套主题写了**两个**选择器:shell 自身,以及 shell 内**任意带这个属性的后代**。
+ *   后一个不是冗余 —— `theme.js` 的 `readPresetColors()` 靠往 shell 里塞一个隐藏
+ *   探针 div、给它挂 `data-gg-theme` 再 `getComputedStyle` 读值,来拿到「另一套主题
+ *   长什么样」(主题卡片的迷你预览就靠这个)。只写 shell 自身的话探针永远匹配不上,
+ *   四张预览卡会**全部显示成当前主题** —— 而且它不报错,只是看起来「预览坏了」。
+ *
+ * ★ 派生规则
+ *   `-soft` / `-strong` 是同色系的浅/深版本,`-veil` / `-overlay` 一律 rgba。
+ *   新增颜色前先问一句「能不能从已有 token 派生」,能就别加新 token ——
+ *   token 越多,用户配一套主题就越痛苦。
+ */
+
+/* ============================================================
+   湛蓝 —— 原版配色(默认)
+   ============================================================ */
+.app-shell[data-app-id="galgame"],
+.app-shell[data-app-id="galgame"][data-gg-theme="azure"],
+.app-shell[data-app-id="galgame"] [data-gg-theme="azure"] {
+    /* 舞台 */
+    --gg-stage-bg: #0E1C24;
+    --gg-stage-veil: rgba(224, 242, 247, 0.10);
+    --gg-stage-vignette: rgba(12, 28, 40, 0.45);
+
+    /* 对话框 */
+    --gg-dialogue-bg: rgba(240, 248, 255, 0.92);
+    --gg-dialogue-border: #AED6F1;
+    --gg-dialogue-text: #2C3E50;
+    --gg-dialogue-narration: #4A6B84;
+    --gg-name-bg: #5DADE2;
+    --gg-name-text: #FFFFFF;
+    --gg-cursor: #3498DB;
+
+    /* 选项 */
+    --gg-option-bg: rgba(255, 255, 255, 0.94);
+    --gg-option-border: #AED6F1;
+    --gg-option-text: #2C3E50;
+    --gg-option-hover: #D6EAF8;
+    --gg-option-visited: #85C1E9;
+    --gg-option-custom: #F5B7B1;
+
+    /* 主色 */
+    --gg-primary: #5DADE2;
+    --gg-primary-soft: rgba(93, 173, 226, 0.16);
+    --gg-primary-strong: #3498DB;
+    --gg-on-primary: #FFFFFF;
+    --gg-secondary: #85C1E9;
+    --gg-secondary-soft: rgba(133, 193, 233, 0.18);
+    --gg-highlight: #F4D03F;
+
+    /* 面板 */
+    --gg-panel-bg: rgba(240, 248, 255, 0.96);
+    --gg-panel-header: rgba(214, 234, 248, 0.96);
+    --gg-panel-border: #AED6F1;
+    --gg-card-bg: #FFFFFF;
+    --gg-card-border: rgba(174, 214, 241, 0.7);
+    --gg-card-hover: #EAF4FC;
+
+    /* 文字 */
+    --gg-text: #2C3E50;
+    --gg-text-secondary: #5D7387;
+    --gg-text-tertiary: #92A6B6;
+    --gg-text-inverse: #FFFFFF;
+
+    /* 菜单按钮 */
+    --gg-menu-bg: rgba(255, 255, 255, 0.82);
+    --gg-menu-border: #AED6F1;
+    --gg-menu-icon: #5DADE2;
+    --gg-menu-active-bg: #5DADE2;
+    --gg-menu-active-icon: #FFFFFF;
+
+    /* 剧情树 */
+    --gg-tree-bg: #F2F9FD;
+    --gg-tree-grid: rgba(93, 173, 226, 0.12);
+    --gg-tree-edge: rgba(133, 193, 233, 0.55);
+    --gg-tree-edge-path: #3498DB;
+    --gg-tree-node: #FFFFFF;
+    --gg-tree-node-text: #2C3E50;
+    --gg-tree-node-path: #D6EAF8;
+    --gg-tree-node-current: #F4D03F;
+    --gg-tree-node-k: #A9DFBF;
+    --gg-tree-node-ghost: rgba(174, 214, 241, 0.35);
+
+    /* 记忆 / 标签 */
+    --gg-k-bg: rgba(169, 223, 191, 0.18);
+    --gg-k-border: #A9DFBF;
+    --gg-k-accent: #27AE60;
+    --gg-tag-bg: rgba(93, 173, 226, 0.14);
+    --gg-tag-text: #2E7BA6;
+    --gg-tag-border: rgba(93, 173, 226, 0.35);
+
+    /* 好感度 */
+    --gg-affection-track: rgba(44, 62, 80, 0.10);
+    --gg-affection-low: #AAB7C4;
+    --gg-affection-mid: #5DADE2;
+    --gg-affection-high: #EC7CA5;
+
+    /* 表单 */
+    --gg-input-bg: rgba(255, 255, 255, 0.9);
+    --gg-input-border: #AED6F1;
+    --gg-input-focus: rgba(93, 173, 226, 0.35);
+    --gg-input-text: #2C3E50;
+    --gg-placeholder: #A3B4C2;
+
+    /* 状态 */
+    --gg-success: #27AE60;
+    --gg-warning: #E9A23B;
+    --gg-danger: #E05C5C;
+    --gg-info: #5DADE2;
+    --gg-progress: #5DADE2;
+    --gg-progress-track: rgba(44, 62, 80, 0.10);
+
+    /* 轮廓 / 阴影 */
+    --gg-divider: rgba(44, 62, 80, 0.10);
+    --gg-overlay: rgba(16, 38, 52, 0.42);
+    --gg-shadow: rgba(44, 62, 80, 0.18);
+    --gg-glass-bg: rgba(255, 255, 255, 0.72);
+    --gg-glass-border: rgba(174, 214, 241, 0.6);
+    --gg-scrollbar: rgba(93, 173, 226, 0.35);
+
+    /* ── 以下不进色板(派生值 / 尺寸),用户不用管 ── */
+    --gg-shadow-sm: 0 1px 3px var(--gg-shadow);
+    --gg-shadow-md: 0 4px 14px var(--gg-shadow);
+    --gg-shadow-lg: 0 10px 32px var(--gg-shadow);
+    --gg-home-indicator: rgba(44, 62, 80, 0.3);
+}
+
+/* ============================================================
+   暮樱 —— 暖粉黄昏
+   ============================================================ */
+.app-shell[data-app-id="galgame"][data-gg-theme="dusk"],
+.app-shell[data-app-id="galgame"] [data-gg-theme="dusk"] {
+    --gg-stage-bg: #2A1A22;
+    --gg-stage-veil: rgba(255, 236, 231, 0.10);
+    --gg-stage-vignette: rgba(48, 24, 32, 0.42);
+
+    --gg-dialogue-bg: rgba(255, 247, 244, 0.93);
+    --gg-dialogue-border: #F0C4C0;
+    --gg-dialogue-text: #4A3038;
+    --gg-dialogue-narration: #7A5A60;
+    --gg-name-bg: #E58BA0;
+    --gg-name-text: #FFFFFF;
+    --gg-cursor: #D96A88;
+
+    --gg-option-bg: rgba(255, 255, 255, 0.94);
+    --gg-option-border: #F0C4C0;
+    --gg-option-text: #4A3038;
+    --gg-option-hover: #FBE3E0;
+    --gg-option-visited: #E8AFB8;
+    --gg-option-custom: #F2C879;
+
+    --gg-primary: #E58BA0;
+    --gg-primary-soft: rgba(229, 139, 160, 0.16);
+    --gg-primary-strong: #D96A88;
+    --gg-on-primary: #FFFFFF;
+    --gg-secondary: #F2B279;
+    --gg-secondary-soft: rgba(242, 178, 121, 0.18);
+    --gg-highlight: #EFC75E;
+
+    --gg-panel-bg: rgba(255, 247, 244, 0.96);
+    --gg-panel-header: rgba(251, 227, 224, 0.96);
+    --gg-panel-border: #F0C4C0;
+    --gg-card-bg: #FFFFFF;
+    --gg-card-border: rgba(240, 196, 192, 0.7);
+    --gg-card-hover: #FDF0EE;
+
+    --gg-text: #4A3038;
+    --gg-text-secondary: #7A5A60;
+    --gg-text-tertiary: #AE8F95;
+    --gg-text-inverse: #FFFFFF;
+
+    --gg-menu-bg: rgba(255, 255, 255, 0.84);
+    --gg-menu-border: #F0C4C0;
+    --gg-menu-icon: #E58BA0;
+    --gg-menu-active-bg: #E58BA0;
+    --gg-menu-active-icon: #FFFFFF;
+
+    --gg-tree-bg: #FDF6F4;
+    --gg-tree-grid: rgba(229, 139, 160, 0.12);
+    --gg-tree-edge: rgba(232, 175, 184, 0.55);
+    --gg-tree-edge-path: #D96A88;
+    --gg-tree-node: #FFFFFF;
+    --gg-tree-node-text: #4A3038;
+    --gg-tree-node-path: #FBE3E0;
+    --gg-tree-node-current: #EFC75E;
+    --gg-tree-node-k: #C8B6E2;
+    --gg-tree-node-ghost: rgba(240, 196, 192, 0.35);
+
+    --gg-k-bg: rgba(200, 182, 226, 0.20);
+    --gg-k-border: #C8B6E2;
+    --gg-k-accent: #8E6DBF;
+    --gg-tag-bg: rgba(229, 139, 160, 0.14);
+    --gg-tag-text: #B4506B;
+    --gg-tag-border: rgba(229, 139, 160, 0.35);
+
+    --gg-affection-track: rgba(74, 48, 56, 0.10);
+    --gg-affection-low: #C4AEB4;
+    --gg-affection-mid: #F2B279;
+    --gg-affection-high: #E5628A;
+
+    --gg-input-bg: rgba(255, 255, 255, 0.9);
+    --gg-input-border: #F0C4C0;
+    --gg-input-focus: rgba(229, 139, 160, 0.35);
+    --gg-input-text: #4A3038;
+    --gg-placeholder: #C0A5AB;
+
+    --gg-success: #59A96A;
+    --gg-warning: #E09B3D;
+    --gg-danger: #D9534F;
+    --gg-info: #E58BA0;
+    --gg-progress: #E58BA0;
+    --gg-progress-track: rgba(74, 48, 56, 0.10);
+
+    --gg-divider: rgba(74, 48, 56, 0.10);
+    --gg-overlay: rgba(48, 24, 32, 0.42);
+    --gg-shadow: rgba(74, 48, 56, 0.18);
+    --gg-glass-bg: rgba(255, 255, 255, 0.74);
+    --gg-glass-border: rgba(240, 196, 192, 0.6);
+    --gg-scrollbar: rgba(229, 139, 160, 0.35);
+
+    --gg-home-indicator: rgba(74, 48, 56, 0.3);
+}
+
+/* ============================================================
+   夜航 —— 深蓝夜色(暗色)
+   ============================================================ */
+.app-shell[data-app-id="galgame"][data-gg-theme="night"],
+.app-shell[data-app-id="galgame"] [data-gg-theme="night"] {
+    --gg-stage-bg: #070C14;
+    --gg-stage-veil: rgba(8, 14, 26, 0.36);
+    --gg-stage-vignette: rgba(2, 5, 12, 0.65);
+
+    --gg-dialogue-bg: rgba(17, 26, 44, 0.90);
+    --gg-dialogue-border: rgba(94, 140, 214, 0.42);
+    --gg-dialogue-text: #DCE6F5;
+    --gg-dialogue-narration: #9BB0CE;
+    --gg-name-bg: #4A78C8;
+    --gg-name-text: #F2F7FF;
+    --gg-cursor: #7FB3F5;
+
+    --gg-option-bg: rgba(24, 36, 60, 0.90);
+    --gg-option-border: rgba(94, 140, 214, 0.42);
+    --gg-option-text: #DCE6F5;
+    --gg-option-hover: rgba(74, 120, 200, 0.32);
+    --gg-option-visited: rgba(127, 179, 245, 0.55);
+    --gg-option-custom: #C8A2E0;
+
+    --gg-primary: #5E8CD6;
+    --gg-primary-soft: rgba(94, 140, 214, 0.18);
+    --gg-primary-strong: #7FB3F5;
+    --gg-on-primary: #0A1020;
+    --gg-secondary: #4FC3C7;
+    --gg-secondary-soft: rgba(79, 195, 199, 0.18);
+    --gg-highlight: #F0C674;
+
+    --gg-panel-bg: rgba(14, 22, 38, 0.96);
+    --gg-panel-header: rgba(21, 33, 56, 0.96);
+    --gg-panel-border: rgba(94, 140, 214, 0.32);
+    --gg-card-bg: rgba(24, 36, 60, 0.85);
+    --gg-card-border: rgba(94, 140, 214, 0.26);
+    --gg-card-hover: rgba(35, 52, 84, 0.9);
+
+    --gg-text: #DCE6F5;
+    --gg-text-secondary: #9BB0CE;
+    --gg-text-tertiary: #64789A;
+    --gg-text-inverse: #0A1020;
+
+    --gg-menu-bg: rgba(17, 26, 44, 0.78);
+    --gg-menu-border: rgba(94, 140, 214, 0.4);
+    --gg-menu-icon: #7FB3F5;
+    --gg-menu-active-bg: #5E8CD6;
+    --gg-menu-active-icon: #0A1020;
+
+    --gg-tree-bg: #0B1220;
+    --gg-tree-grid: rgba(94, 140, 214, 0.10);
+    --gg-tree-edge: rgba(94, 140, 214, 0.42);
+    --gg-tree-edge-path: #7FB3F5;
+    --gg-tree-node: rgba(24, 36, 60, 0.95);
+    --gg-tree-node-text: #DCE6F5;
+    --gg-tree-node-path: rgba(74, 120, 200, 0.42);
+    --gg-tree-node-current: #F0C674;
+    --gg-tree-node-k: #4FC3C7;
+    --gg-tree-node-ghost: rgba(94, 140, 214, 0.18);
+
+    --gg-k-bg: rgba(79, 195, 199, 0.14);
+    --gg-k-border: rgba(79, 195, 199, 0.5);
+    --gg-k-accent: #4FC3C7;
+    --gg-tag-bg: rgba(94, 140, 214, 0.18);
+    --gg-tag-text: #9EC4F5;
+    --gg-tag-border: rgba(94, 140, 214, 0.38);
+
+    --gg-affection-track: rgba(220, 230, 245, 0.12);
+    --gg-affection-low: #6B7C96;
+    --gg-affection-mid: #5E8CD6;
+    --gg-affection-high: #E084A8;
+
+    --gg-input-bg: rgba(255, 255, 255, 0.06);
+    --gg-input-border: rgba(94, 140, 214, 0.38);
+    --gg-input-focus: rgba(127, 179, 245, 0.4);
+    --gg-input-text: #DCE6F5;
+    --gg-placeholder: #64789A;
+
+    --gg-success: #4CAF7D;
+    --gg-warning: #E0A94A;
+    --gg-danger: #E06C6C;
+    --gg-info: #5E8CD6;
+    --gg-progress: #7FB3F5;
+    --gg-progress-track: rgba(220, 230, 245, 0.12);
+
+    --gg-divider: rgba(220, 230, 245, 0.12);
+    --gg-overlay: rgba(2, 6, 14, 0.62);
+    --gg-shadow: rgba(0, 0, 0, 0.55);
+    --gg-glass-bg: rgba(17, 26, 44, 0.72);
+    --gg-glass-border: rgba(94, 140, 214, 0.28);
+    --gg-scrollbar: rgba(94, 140, 214, 0.4);
+
+    --gg-home-indicator: rgba(220, 230, 245, 0.4);
+}
+
+/* ============================================================
+   墨林 —— 青绿水墨(暗色)
+   ============================================================ */
+.app-shell[data-app-id="galgame"][data-gg-theme="ink"],
+.app-shell[data-app-id="galgame"] [data-gg-theme="ink"] {
+    --gg-stage-bg: #0B1310;
+    --gg-stage-veil: rgba(10, 20, 16, 0.34);
+    --gg-stage-vignette: rgba(4, 10, 8, 0.62);
+
+    --gg-dialogue-bg: rgba(18, 32, 27, 0.90);
+    --gg-dialogue-border: rgba(106, 168, 138, 0.42);
+    --gg-dialogue-text: #DEEAE3;
+    --gg-dialogue-narration: #9EB8AB;
+    --gg-name-bg: #4F8F6E;
+    --gg-name-text: #F2FAF6;
+    --gg-cursor: #86C9A3;
+
+    --gg-option-bg: rgba(24, 42, 35, 0.90);
+    --gg-option-border: rgba(106, 168, 138, 0.42);
+    --gg-option-text: #DEEAE3;
+    --gg-option-hover: rgba(79, 143, 110, 0.32);
+    --gg-option-visited: rgba(134, 201, 163, 0.5);
+    --gg-option-custom: #D8B36A;
+
+    --gg-primary: #6AA88A;
+    --gg-primary-soft: rgba(106, 168, 138, 0.18);
+    --gg-primary-strong: #86C9A3;
+    --gg-on-primary: #0B1310;
+    --gg-secondary: #C9A227;
+    --gg-secondary-soft: rgba(201, 162, 39, 0.18);
+    --gg-highlight: #D8B36A;
+
+    --gg-panel-bg: rgba(15, 27, 22, 0.96);
+    --gg-panel-header: rgba(22, 38, 32, 0.96);
+    --gg-panel-border: rgba(106, 168, 138, 0.30);
+    --gg-card-bg: rgba(24, 42, 35, 0.85);
+    --gg-card-border: rgba(106, 168, 138, 0.24);
+    --gg-card-hover: rgba(34, 58, 48, 0.9);
+
+    --gg-text: #DEEAE3;
+    --gg-text-secondary: #9EB8AB;
+    --gg-text-tertiary: #67836F;
+    --gg-text-inverse: #0B1310;
+
+    --gg-menu-bg: rgba(18, 32, 27, 0.78);
+    --gg-menu-border: rgba(106, 168, 138, 0.4);
+    --gg-menu-icon: #86C9A3;
+    --gg-menu-active-bg: #6AA88A;
+    --gg-menu-active-icon: #0B1310;
+
+    --gg-tree-bg: #0D1815;
+    --gg-tree-grid: rgba(106, 168, 138, 0.10);
+    --gg-tree-edge: rgba(106, 168, 138, 0.42);
+    --gg-tree-edge-path: #86C9A3;
+    --gg-tree-node: rgba(24, 42, 35, 0.95);
+    --gg-tree-node-text: #DEEAE3;
+    --gg-tree-node-path: rgba(79, 143, 110, 0.42);
+    --gg-tree-node-current: #D8B36A;
+    --gg-tree-node-k: #C9A227;
+    --gg-tree-node-ghost: rgba(106, 168, 138, 0.18);
+
+    --gg-k-bg: rgba(201, 162, 39, 0.14);
+    --gg-k-border: rgba(201, 162, 39, 0.5);
+    --gg-k-accent: #D8B36A;
+    --gg-tag-bg: rgba(106, 168, 138, 0.18);
+    --gg-tag-text: #9FD3B6;
+    --gg-tag-border: rgba(106, 168, 138, 0.38);
+
+    --gg-affection-track: rgba(222, 234, 227, 0.12);
+    --gg-affection-low: #6F8479;
+    --gg-affection-mid: #6AA88A;
+    --gg-affection-high: #D88A6A;
+
+    --gg-input-bg: rgba(255, 255, 255, 0.06);
+    --gg-input-border: rgba(106, 168, 138, 0.38);
+    --gg-input-focus: rgba(134, 201, 163, 0.4);
+    --gg-input-text: #DEEAE3;
+    --gg-placeholder: #67836F;
+
+    --gg-success: #6AA88A;
+    --gg-warning: #D8B36A;
+    --gg-danger: #D97A6A;
+    --gg-info: #86C9A3;
+    --gg-progress: #86C9A3;
+    --gg-progress-track: rgba(222, 234, 227, 0.12);
+
+    --gg-divider: rgba(222, 234, 227, 0.12);
+    --gg-overlay: rgba(4, 10, 8, 0.6);
+    --gg-shadow: rgba(0, 0, 0, 0.55);
+    --gg-glass-bg: rgba(18, 32, 27, 0.72);
+    --gg-glass-border: rgba(106, 168, 138, 0.28);
+    --gg-scrollbar: rgba(106, 168, 138, 0.4);
+
+    --gg-home-indicator: rgba(222, 234, 227, 0.4);
+}

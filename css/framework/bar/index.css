@@ -1,0 +1,1049 @@
+/**
+ * ================================================================
+ * 小听 Framework · 栏预设 CSS 入口
+ * ---------------------------------------------------------------
+ * 统一导入所有预设 CSS
+ * Phase 1: 基础设施
+ *
+ * 使用方式:
+ *   1. 自动加载:通过 bar-preset-loader.js 按需导入
+ *   2. 手动导入:在 index.html 中引入此文件
+ * ================================================================
+ */
+
+/* 基础变量和混合宏（可选） */
+/**
+ * ================================================================
+ * 小听 Framework · 栏预设 CSS 变量
+ * ---------------------------------------------------------------
+ * 统一管理栏的 CSS 变量
+ * Phase 1: 基础设施
+ * ================================================================
+ */
+
+/* ================================================================
+   顶部栏变量
+   ================================================================ */
+
+:root {
+    /* 顶部栏间距 */
+    --topbar-button-gap: 8px;
+    --topbar-padding-x: 18px;
+    --topbar-padding-top: 54px;
+    --topbar-padding-bottom: 10px;
+
+    /* 顶部栏按钮尺寸 */
+    --topbar-button-size: 32px;
+    --topbar-icon-size: 16px;
+
+    /* 顶部栏颜色 */
+    --topbar-color: rgba(17, 24, 39, 0.92);
+    --topbar-bg: transparent;
+}
+
+/* ================================================================
+   底部栏变量
+   ================================================================ */
+
+:root {
+    /* 底部栏间距 */
+    --tabbar-button-gap: 12px;
+    --tabbar-height: 58px;
+
+    /* 底部栏对齐 */
+    --tabbar-justify: space-around;
+
+    /* 底部栏颜色 */
+    --tabbar-color: rgba(17, 24, 39, 0.48);
+    --tabbar-bg: rgba(255, 255, 255, 0.46);
+
+    /* 液球预设变量 */
+    --tabbar-liquid-color-1: #ff69b4;
+    --tabbar-liquid-color-2: #007aff;
+    --tabbar-liquid-color-3: #ff69b4;
+
+    /* 波浪预设变量 */
+    --tabbar-wave-color: rgba(251, 114, 153, 0.12);
+    --tabbar-wave-indicator: linear-gradient(135deg, #fb7299 0%, #ff9a9e 100%);
+
+    /* 指示器预设变量 */
+    --tabbar-indicator-width: 24px;
+    --tabbar-indicator-height: 3px;
+    --tabbar-indicator-color: #007aff;
+}
+
+/* ================================================================
+   App 级覆盖
+   ================================================================ */
+
+/* Music App */
+.app-shell[data-app-id="music"] {
+    --tabbar-height: 64px;
+}
+
+/* App Store */
+.app-shell[data-app-id="appstore"] {
+    --tabbar-height: 48px;
+}
+
+
+/* 预设样式 */
+/**
+ * ================================================================
+ * 小听 Framework · 液球动画预设 CSS
+ * ---------------------------------------------------------------
+ * App Store 风格底部 Tab Bar
+ * - 激活时白色鼓包从顶部冒出
+ * - 彩色液球带文字首字母浮起
+ * - 切换时弹性形变动画
+ *
+ * 迁移自: css/core/50-app-shell.css (App Store 专属区域)
+ * ================================================================
+ */
+
+/* ================================================================
+   基础容器样式
+   ================================================================ */
+
+/* App Store 专属：底栏贴底扁平化 */
+.app-shell:has(.appstore-app) .app-nav {
+    padding: 48px 0 14px;
+}
+
+/* ================================================================
+   Tab Bar 基础样式
+   ================================================================ */
+
+/* 液球预设容器 */
+.app-tab-bar[data-preset="liquid"] {
+    /* 预设默认值 */
+    --liquid-color-1: #ff69b4;
+    --liquid-color-2: #007aff;
+    --liquid-color-3: #ff69b4;
+}
+
+/* ================================================================
+   Tab Item 基础样式
+   ================================================================ */
+
+.app-tab-bar[data-preset="liquid"] .app-tab-item {
+    position: relative;
+    line-height: 1;
+    transition: background-color 0.45s ease;
+}
+
+/* ================================================================
+   激活态：item 上浮 + 小灰球放大成彩色液球
+   ================================================================ */
+
+/* framework 默认 active 样式在 liquid 范围内不应用（由 liquid 接管） */
+.app-tab-bar[data-preset="liquid"] .app-tab-item.active:not(.is-liquid-active):not(.is-liquid-leaving) {
+    color: rgba(17, 24, 39, 0);
+    transform: translateY(8px);
+}
+
+/* 液球激活态 */
+.app-tab-bar[data-preset="liquid"] .app-tab-item.is-liquid-active {
+    transform: translateY(-22px);
+    color: rgba(17, 24, 39, 0);
+}
+
+/* 文字下沉隐藏，blob 接管 */
+.app-tab-bar[data-preset="liquid"] .app-tab-item.is-liquid-active > div:last-child {
+    transform: translateY(8px);
+}
+
+/* ================================================================
+   鼓包动画：::before 伪元素
+   ================================================================ */
+
+/* 鼓包从隐藏到鼓起的弹性动画（早 0.12s 启动） */
+.app-tab-bar[data-preset="liquid"] .app-tab-item.is-liquid-active::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 40px;
+    height: 40px;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 255, 255, 0.95);
+    animation: liquid-shape-bump 0.6s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+    animation-delay: -0.12s;
+    z-index: 0;
+}
+
+@keyframes liquid-shape-bump {
+    0% {
+        transform: translate(-50%, -50%) scaleY(0.2) scaleX(0.3);
+        border-radius: 999px;
+    }
+    35% {
+        transform: translate(-50%, -30%) scaleY(0.55) scaleX(0.55);
+        border-radius: 60% 60% 60% 60% / 70% 70% 40% 40%;
+    }
+    70% {
+        transform: translate(-50%, -50%) scaleY(0.95) scaleX(0.95);
+        border-radius: 999px 999px 999px 999px / 999px 999px 60% 60%;
+    }
+    100% {
+        transform: translate(-50%, -50%) scaleY(1.0) scaleX(1.0);
+        border-radius: 999px;
+    }
+}
+
+/* ================================================================
+   液球动画：::after 伪元素（彩色球 + 文字）
+   ================================================================ */
+
+/* 小灰球 → 彩色液球的过渡 + 弹性形变 */
+.app-tab-bar[data-preset="liquid"] .app-tab-item.is-liquid-active::after {
+    content: attr(data-glyph);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0;
+    color: white;
+    font-weight: 600;
+    background: var(--appstore-liquid-color, #ff5a3c);
+    animation: liquid-blob-in 0.7s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+    animation-delay: 0.05s;
+    z-index: 1;
+}
+
+@keyframes liquid-blob-in {
+    0% {
+        width: 10px;
+        height: 10px;
+        font-size: 0;
+        border-radius: 50%;
+        background-color: #c8c8c8;
+    }
+    25% {
+        width: 28px;
+        height: 28px;
+        font-size: 0;
+        border-radius: 48% 52% 50% 50% / 58% 42% 52% 48%;
+        background-color: var(--appstore-liquid-color, #ff5a3c);
+    }
+    55% {
+        width: 42px;
+        height: 38px;
+        font-size: 13px;
+        border-radius: 55% 45% 52% 48% / 48% 55% 45% 55%;
+    }
+    75% {
+        width: 44px;
+        height: 46px;
+        font-size: 14px;
+        border-radius: 50% 50% 48% 52% / 52% 48% 55% 45%;
+    }
+    100% {
+        width: 44px;
+        height: 44px;
+        font-size: 15px;
+        border-radius: 50%;
+    }
+}
+
+/* ================================================================
+   离开动画
+   ================================================================ */
+
+/* 鼓包塌缩 */
+.app-tab-bar[data-preset="liquid"] .app-tab-item.is-liquid-leaving::before {
+    animation: liquid-shape-collapse 0.45s cubic-bezier(0.55, 0, 0.55, 1) forwards;
+    animation-delay: -0.12s;
+}
+
+@keyframes liquid-shape-collapse {
+    0% {
+        transform: translate(-50%, -50%) scaleY(1.0) scaleX(1.0);
+        border-radius: 999px;
+    }
+    100% {
+        transform: translate(-50%, -50%) scaleY(0.2) scaleX(0.3);
+        border-radius: 999px;
+    }
+}
+
+/* 液球缩回小灰球 */
+.app-tab-bar[data-preset="liquid"] .app-tab-item.is-liquid-leaving::after {
+    animation: liquid-blob-out 0.45s cubic-bezier(0.55, 0, 0.85, 0.35) forwards;
+    animation-delay: -0.12s;
+}
+
+@keyframes liquid-blob-out {
+    0% {
+        width: 44px;
+        height: 44px;
+        font-size: 15px;
+        border-radius: 50%;
+        background-color: var(--appstore-liquid-color, #ff5a3c);
+    }
+    40% {
+        width: 46px;
+        height: 42px;
+        font-size: 14px;
+        border-radius: 52% 48% 50% 50% / 55% 45% 50% 50%;
+    }
+    70% {
+        width: 22px;
+        height: 20px;
+        font-size: 0;
+        border-radius: 60% 40% 55% 45% / 50% 60% 40% 50%;
+        background-color: #c8c8c8;
+    }
+    100% {
+        width: 10px;
+        height: 10px;
+        font-size: 0;
+        border-radius: 50%;
+        background-color: #c8c8c8;
+    }
+}
+
+/* ================================================================
+   CSS 变量支持（供 JS 注入颜色）
+   ================================================================ */
+
+/* 通过 CSS 变量动态设置液球颜色 */
+.app-tab-bar[data-preset="liquid"] .app-tab-item[data-color="0"] {
+    --appstore-liquid-color: var(--liquid-color-1, #ff69b4);
+}
+
+.app-tab-bar[data-preset="liquid"] .app-tab-item[data-color="1"] {
+    --appstore-liquid-color: var(--liquid-color-2, #007aff);
+}
+
+.app-tab-bar[data-preset="liquid"] .app-tab-item[data-color="2"] {
+    --appstore-liquid-color: var(--liquid-color-3, #ff69b4);
+}
+
+/* 备用：nth-child 方式 */
+.app-tab-bar[data-preset="liquid"] .app-tab-item:nth-child(1) {
+    --appstore-liquid-color: var(--liquid-color-1, #ff69b4);
+}
+
+.app-tab-bar[data-preset="liquid"] .app-tab-item:nth-child(2) {
+    --appstore-liquid-color: var(--liquid-color-2, #007aff);
+}
+
+.app-tab-bar[data-preset="liquid"] .app-tab-item:nth-child(3) {
+    --appstore-liquid-color: var(--liquid-color-3, #ff69b4);
+}
+
+.app-tab-bar[data-preset="liquid"] .app-tab-item:nth-child(4) {
+    --appstore-liquid-color: var(--liquid-color-1, #ff69b4);
+}
+
+.app-tab-bar[data-preset="liquid"] .app-tab-item:nth-child(5) {
+    --appstore-liquid-color: var(--liquid-color-2, #007aff);
+}
+
+/**
+ * ================================================================
+ * 小听 Framework · 波浪动画预设 CSS
+ * ---------------------------------------------------------------
+ * 音乐 App 风格底部 Tab Bar
+ * - 背景波浪动画
+ * - 播放中音符飘落
+ * - 粉色指示器滑动
+ *
+ * 迁移自: css/apps/music/index.css (music-dynamic-tabbar 区域)
+ * ================================================================
+ */
+
+/* ================================================================
+   容器样式
+   ================================================================ */
+
+/* 波浪预设容器：浮动胶囊 */
+.app-tab-bar[data-preset="wave"] {
+    position: fixed;
+    bottom: 45px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 50px);
+    padding: 0 20px;
+    height: 64px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-around;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 28px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    overflow: hidden;
+    z-index: 5;
+}
+
+/* ================================================================
+   背景波浪
+   ================================================================ */
+
+.app-tab-bar[data-preset="wave"] .music-tabbar-bg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    border-radius: 28px;
+}
+
+.app-tab-bar[data-preset="wave"] .music-tabbar-wave {
+    position: absolute;
+    bottom: -50%;
+    left: -10%;
+    width: 120%;
+    height: 200%;
+    background: radial-gradient(ellipse at center, rgba(251, 114, 153, 0.12) 0%, transparent 70%);
+    animation: tabbarWave 8s ease-in-out infinite;
+    transform-origin: center bottom;
+}
+
+.app-tab-bar[data-preset="wave"] .music-tabbar-wave:nth-child(2) {
+    animation-delay: -2.6s;
+    animation-duration: 10s;
+    opacity: 0.7;
+}
+
+.app-tab-bar[data-preset="wave"] .music-tabbar-wave:nth-child(3) {
+    animation-delay: -5.2s;
+    animation-duration: 12s;
+    opacity: 0.5;
+}
+
+@keyframes tabbarWave {
+    0%, 100% {
+        transform: scale(1) translateY(0);
+    }
+    50% {
+        transform: scale(1.15, 0.85) translateY(-8px);
+    }
+}
+
+/* ================================================================
+   浮动音符
+   ================================================================ */
+
+.app-tab-bar[data-preset="wave"] .music-tabbar-notes {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.app-tab-bar[data-preset="wave"] .music-note {
+    position: absolute;
+    bottom: 6px;
+    font-size: 12px;
+    color: #fb7299;
+    opacity: 0;
+    animation: floatNote 3s ease-in-out infinite;
+}
+
+/* 播放中显示音符 */
+.app-tab-bar[data-preset="wave"].playing .music-note {
+    opacity: 0.6;
+}
+
+@keyframes floatNote {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 0;
+    }
+    20% {
+        opacity: 0.6;
+    }
+    80% {
+        opacity: 0.6;
+    }
+    100% {
+        transform: translateY(-44px) rotate(20deg);
+        opacity: 0;
+    }
+}
+
+/* ================================================================
+   Tab Indicator（粉色小药丸）
+   ================================================================ */
+
+.app-tab-bar[data-preset="wave"] .music-tab-indicator {
+    position: absolute;
+    bottom: 11px;
+    height: 38px;
+    width: 70px;
+    left: 0;
+    background: transparent;
+    border-radius: 19px;
+    z-index: 0;
+    pointer-events: none;
+    transition: left 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    will-change: left, width;
+}
+
+.app-tab-bar[data-preset="wave"] .music-tab-indicator-inner {
+    width: 100%;
+    height: 100%;
+    border-radius: 19px;
+    background: linear-gradient(135deg, #fb7299 0%, #ff9a9e 100%);
+    box-shadow: 0 4px 12px rgba(251, 114, 153, 0.35);
+    animation: indicatorPulse 2s ease-in-out infinite;
+}
+
+@keyframes indicatorPulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.02);
+        opacity: 0.9;
+    }
+}
+
+/* ================================================================
+   Tab Item
+   ================================================================ */
+
+.app-tab-bar[data-preset="wave"] .app-tab-item {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    padding-right: 5px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    padding-bottom: 8px;
+    color: #999;
+    font-size: 10px;
+    font-weight: 500;
+    transition: color 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    cursor: pointer;
+}
+
+.app-tab-bar[data-preset="wave"] .app-tab-item .tab-icon {
+    position: relative;
+    z-index: 3;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-tab-bar[data-preset="wave"] .app-tab-item .tab-icon svg {
+    width: 22px;
+    height: 22px;
+    fill: #999;
+    transition: fill 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.app-tab-bar[data-preset="wave"] .app-tab-item > span:not(.tab-icon) {
+    position: relative;
+    z-index: 3;
+}
+
+/* ================================================================
+   Active 状态
+   ================================================================ */
+
+.app-tab-bar[data-preset="wave"] .app-tab-item.active {
+    transform: translateY(-2px);
+    color: white;
+}
+
+.app-tab-bar[data-preset="wave"] .app-tab-item.active .tab-icon svg {
+    fill: white;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+    animation: iconBounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes iconBounce {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.2);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* ================================================================
+   Hover / Active 状态
+   ================================================================ */
+
+.app-tab-bar[data-preset="wave"] .app-tab-item:not(.active):hover .tab-icon svg {
+    fill: #fb7299;
+    transform: scale(1.1);
+}
+
+.app-tab-bar[data-preset="wave"] .app-tab-item:active {
+    transform: scale(0.96);
+}
+
+/* ================================================================
+   播放中状态
+   ================================================================ */
+
+.app-tab-bar[data-preset="wave"].playing .music-tabbar-wave {
+    animation-duration: 3s;
+}
+
+.app-tab-bar[data-preset="wave"].playing .app-tab-item.active .tab-icon svg {
+    animation: musicPulse 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes musicPulse {
+    0% {
+        transform: scale(1);
+    }
+    100% {
+        transform: scale(1.1);
+    }
+}
+
+/* ================================================================
+   音符动画延迟
+   ================================================================ */
+
+.app-tab-bar[data-preset="wave"] .music-note:nth-child(1) {
+    left: 10%;
+    animation-delay: 0s;
+}
+
+.app-tab-bar[data-preset="wave"] .music-note:nth-child(2) {
+    left: 30%;
+    animation-delay: 0.5s;
+}
+
+.app-tab-bar[data-preset="wave"] .music-note:nth-child(3) {
+    left: 50%;
+    animation-delay: 1s;
+}
+
+.app-tab-bar[data-preset="wave"] .music-note:nth-child(4) {
+    left: 70%;
+    animation-delay: 1.5s;
+}
+
+.app-tab-bar[data-preset="wave"] .music-note:nth-child(5) {
+    left: 90%;
+    animation-delay: 2s;
+}
+
+/**
+ * ================================================================
+ * 小听 Framework · 滑动指示器预设 CSS
+ * ---------------------------------------------------------------
+ * 聊天 App 风格底部 Tab Bar
+ * - 粉色小 pill 在 tab 下方滑动
+ * - 使用 CSS :has() 选择器实现
+ *
+ * 迁移自: css/apps/chat/index.css (chat-tab-indicator 区域)
+ * ================================================================
+ */
+
+/* ================================================================
+   容器样式
+   ================================================================ */
+
+/* 指示器预设容器 */
+.app-tab-bar[data-preset="indicator"] {
+    /* 预设默认值 */
+    --indicator-width: 24px;
+    --indicator-height: 3px;
+    --indicator-color: #007aff;
+    --indicator-radius: 1.5px;
+    --indicator-bottom: 4px;
+}
+
+/* ================================================================
+   Tab Indicator 基础样式
+   ================================================================ */
+
+/* 指示器容器 */
+.app-tab-bar[data-preset="indicator"] .chat-tab-indicator {
+    position: absolute;
+    bottom: var(--indicator-bottom, 4px);
+    height: var(--indicator-height, 3px);
+    border-radius: var(--indicator-radius, 1.5px);
+    background: var(--indicator-color, #007aff);
+    transition: left 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+    /* 初始宽度，由 JS 或 CSS :has() 控制 */
+    width: var(--indicator-width, 24px);
+}
+
+/* ================================================================
+   :has() 滑动指示器
+   ================================================================ */
+
+/* 说明:现代浏览器支持 :has() 选择器，可以通过 :has() 检测 active tab 来定位指示器 */
+
+/* 第 1 个 tab 激活 */
+.app-tab-bar[data-preset="indicator"]:has(.app-tab-item:nth-child(1).active) .chat-tab-indicator {
+    /* 计算位置: 50% - 半个容器宽度 - 调整值 */
+    left: calc(20% - 12px);
+}
+
+/* 第 2 个 tab 激活 */
+.app-tab-bar[data-preset="indicator"]:has(.app-tab-item:nth-child(2).active) .chat-tab-indicator {
+    left: calc(40% - 12px);
+}
+
+/* 第 3 个 tab 激活 */
+.app-tab-bar[data-preset="indicator"]:has(.app-tab-item:nth-child(3).active) .chat-tab-indicator {
+    left: calc(60% - 12px);
+}
+
+/* 第 4 个 tab 激活 */
+.app-tab-bar[data-preset="indicator"]:has(.app-tab-item:nth-child(4).active) .chat-tab-indicator {
+    left: calc(80% - 12px);
+}
+
+/* 第 5 个 tab 激活 */
+.app-tab-bar[data-preset="indicator"]:has(.app-tab-item:nth-child(5).active) .chat-tab-indicator {
+    left: calc(100% - 12px);
+}
+
+/* ================================================================
+   Tab Item 基础样式
+   ================================================================ */
+
+/* 取消默认的 active 样式，让指示器接管视觉反馈 */
+.app-tab-bar[data-preset="indicator"] .app-tab-item {
+    transition: color 0.2s ease;
+}
+
+.app-tab-bar[data-preset="indicator"] .app-tab-item.active {
+    color: var(--indicator-color, #007aff);
+}
+
+/* ================================================================
+   指示器宽度（根据容器宽度动态计算）
+   ================================================================ */
+
+/* 小屏幕适配 */
+@media (max-width: 380px) {
+    .app-tab-bar[data-preset="indicator"] .chat-tab-indicator {
+        --indicator-width: 20px;
+    }
+}
+
+/* ================================================================
+   备用方案：使用 nth-child 精确定位
+   （当 :has() 不可用时）
+   ================================================================ */
+
+/* 注意:下面的选择器是精确百分比定位，需要根据实际 tab 数量调整 */
+
+/*
+.app-tab-bar[data-preset="indicator"]:has(.app-tab-item:nth-child(2).active) .chat-tab-indicator {
+    left: calc(50% / 4 - var(--indicator-width, 24px) / 2 + (50% / 4) * 1);
+}
+
+.app-tab-bar[data-preset="indicator"]:has(.app-tab-item:nth-child(3).active) .chat-tab-indicator {
+    left: calc(50% / 4 - var(--indicator-width, 24px) / 2 + (50% / 4) * 2);
+}
+
+...以此类推
+*/
+
+/* ================================================================
+   JS 驱动的精确指示器定位
+   ================================================================ */
+
+/*
+ * 如果 CSS :has() 定位不够精确，可以由 JS 控制位置
+ * JS 应设置 .chat-tab-indicator 的 style.left 和 style.width
+ *
+ * 示例代码（由 framework 或 app 提供）:
+ *
+ * const indicator = tabBar.querySelector('.chat-tab-indicator');
+ * const activeTab = tabBar.querySelector('.app-tab-item.active');
+ * if (indicator && activeTab) {
+ *     const tabRect = activeTab.getBoundingClientRect();
+ *     const barRect = tabBar.getBoundingClientRect();
+ *     indicator.style.left = (tabRect.left - barRect.left + (tabRect.width - indicatorWidth) / 2) + 'px';
+ *     indicator.style.width = indicatorWidth + 'px';
+ * }
+ */
+
+/* ================================================================
+   兼容性提示
+   ================================================================ */
+
+/*
+ * CSS :has() 浏览器支持情况（截至 2024）:
+ * - Chrome 105+ ✓
+ * - Safari 15.4+ ✓
+ * - Firefox 121+ ✓
+ * - Edge 105+ ✓
+ *
+ * 如需兼容更老的浏览器，可以使用 JS 方案：
+ * 1. 监听 tab 切换事件
+ * 2. 计算 active tab 位置
+ * 3. 更新指示器位置
+ */
+
+/**
+ * ================================================================
+ * 小听 Framework · 极简风格预设 CSS
+ * ---------------------------------------------------------------
+ * 仅显示图标，无文字
+ * 透明背景，最小化视觉干扰
+ * ================================================================
+ */
+
+/* ================================================================
+   容器样式
+   ================================================================ */
+
+.app-tab-bar[data-preset="minimal"] {
+    height: 44px;
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    padding: 0;
+}
+
+.app-tab-bar[data-preset="minimal"] .app-nav {
+    padding: 0;
+}
+
+/* ================================================================
+   Tab Item 样式
+   ================================================================ */
+
+.app-tab-bar[data-preset="minimal"] .app-tab-item {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    gap: 0;
+    color: rgba(17, 24, 39, 0.5);
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.app-tab-bar[data-preset="minimal"] .app-tab-item .tab-icon {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-tab-bar[data-preset="minimal"] .app-tab-item .tab-icon svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+    transition: fill 0.2s ease, transform 0.2s ease;
+}
+
+/* ================================================================
+   Active 状态
+   ================================================================ */
+
+.app-tab-bar[data-preset="minimal"] .app-tab-item.active {
+    color: rgba(17, 24, 39, 0.9);
+    transform: scale(1.1);
+}
+
+.app-tab-bar[data-preset="minimal"] .app-tab-item.active .tab-icon svg {
+    transform: none;
+}
+
+/* ================================================================
+   Hover 状态
+   ================================================================ */
+
+.app-tab-bar[data-preset="minimal"] .app-tab-item:not(.active):hover {
+    color: rgba(17, 24, 39, 0.7);
+}
+
+/* ================================================================
+   隐藏文字标签
+   ================================================================ */
+
+.app-tab-bar[data-preset="minimal"] .app-tab-item > span:not(.tab-icon) {
+    display: none;
+}
+
+/* ================================================================
+   按钮间距
+   ================================================================ */
+
+.app-tab-bar[data-preset="minimal"] {
+    --tabbar-button-gap: 16px;
+    justify-content: space-around;
+}
+
+
+/*
+ * 如需按需加载，可使用 CSS 条件导入：
+ *
+ * @supports (selector(:has(.x))) {
+ *     /**
+ * ================================================================
+ * 小听 Framework · 滑动指示器预设 CSS
+ * ---------------------------------------------------------------
+ * 聊天 App 风格底部 Tab Bar
+ * - 粉色小 pill 在 tab 下方滑动
+ * - 使用 CSS :has() 选择器实现
+ *
+ * 迁移自: css/apps/chat/index.css (chat-tab-indicator 区域)
+ * ================================================================
+ */
+
+/* ================================================================
+   容器样式
+   ================================================================ */
+
+/* 指示器预设容器 */
+.app-tab-bar[data-preset="indicator"] {
+    /* 预设默认值 */
+    --indicator-width: 24px;
+    --indicator-height: 3px;
+    --indicator-color: #007aff;
+    --indicator-radius: 1.5px;
+    --indicator-bottom: 4px;
+}
+
+/* ================================================================
+   Tab Indicator 基础样式
+   ================================================================ */
+
+/* 指示器容器 */
+.app-tab-bar[data-preset="indicator"] .chat-tab-indicator {
+    position: absolute;
+    bottom: var(--indicator-bottom, 4px);
+    height: var(--indicator-height, 3px);
+    border-radius: var(--indicator-radius, 1.5px);
+    background: var(--indicator-color, #007aff);
+    transition: left 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+    /* 初始宽度，由 JS 或 CSS :has() 控制 */
+    width: var(--indicator-width, 24px);
+}
+
+/* ================================================================
+   :has() 滑动指示器
+   ================================================================ */
+
+/* 说明:现代浏览器支持 :has() 选择器，可以通过 :has() 检测 active tab 来定位指示器 */
+
+/* 第 1 个 tab 激活 */
+.app-tab-bar[data-preset="indicator"]:has(.app-tab-item:nth-child(1).active) .chat-tab-indicator {
+    /* 计算位置: 50% - 半个容器宽度 - 调整值 */
+    left: calc(20% - 12px);
+}
+
+/* 第 2 个 tab 激活 */
+.app-tab-bar[data-preset="indicator"]:has(.app-tab-item:nth-child(2).active) .chat-tab-indicator {
+    left: calc(40% - 12px);
+}
+
+/* 第 3 个 tab 激活 */
+.app-tab-bar[data-preset="indicator"]:has(.app-tab-item:nth-child(3).active) .chat-tab-indicator {
+    left: calc(60% - 12px);
+}
+
+/* 第 4 个 tab 激活 */
+.app-tab-bar[data-preset="indicator"]:has(.app-tab-item:nth-child(4).active) .chat-tab-indicator {
+    left: calc(80% - 12px);
+}
+
+/* 第 5 个 tab 激活 */
+.app-tab-bar[data-preset="indicator"]:has(.app-tab-item:nth-child(5).active) .chat-tab-indicator {
+    left: calc(100% - 12px);
+}
+
+/* ================================================================
+   Tab Item 基础样式
+   ================================================================ */
+
+/* 取消默认的 active 样式，让指示器接管视觉反馈 */
+.app-tab-bar[data-preset="indicator"] .app-tab-item {
+    transition: color 0.2s ease;
+}
+
+.app-tab-bar[data-preset="indicator"] .app-tab-item.active {
+    color: var(--indicator-color, #007aff);
+}
+
+/* ================================================================
+   指示器宽度（根据容器宽度动态计算）
+   ================================================================ */
+
+/* 小屏幕适配 */
+@media (max-width: 380px) {
+    .app-tab-bar[data-preset="indicator"] .chat-tab-indicator {
+        --indicator-width: 20px;
+    }
+}
+
+/* ================================================================
+   备用方案：使用 nth-child 精确定位
+   （当 :has() 不可用时）
+   ================================================================ */
+
+/* 注意:下面的选择器是精确百分比定位，需要根据实际 tab 数量调整 */
+
+/*
+.app-tab-bar[data-preset="indicator"]:has(.app-tab-item:nth-child(2).active) .chat-tab-indicator {
+    left: calc(50% / 4 - var(--indicator-width, 24px) / 2 + (50% / 4) * 1);
+}
+
+.app-tab-bar[data-preset="indicator"]:has(.app-tab-item:nth-child(3).active) .chat-tab-indicator {
+    left: calc(50% / 4 - var(--indicator-width, 24px) / 2 + (50% / 4) * 2);
+}
+
+...以此类推
+*/
+
+/* ================================================================
+   JS 驱动的精确指示器定位
+   ================================================================ */
+
+/*
+ * 如果 CSS :has() 定位不够精确，可以由 JS 控制位置
+ * JS 应设置 .chat-tab-indicator 的 style.left 和 style.width
+ *
+ * 示例代码（由 framework 或 app 提供）:
+ *
+ * const indicator = tabBar.querySelector('.chat-tab-indicator');
+ * const activeTab = tabBar.querySelector('.app-tab-item.active');
+ * if (indicator && activeTab) {
+ *     const tabRect = activeTab.getBoundingClientRect();
+ *     const barRect = tabBar.getBoundingClientRect();
+ *     indicator.style.left = (tabRect.left - barRect.left + (tabRect.width - indicatorWidth) / 2) + 'px';
+ *     indicator.style.width = indicatorWidth + 'px';
+ * }
+ */
+
+/* ================================================================
+   兼容性提示
+   ================================================================ */
+
+/*
+ * CSS :has() 浏览器支持情况（截至 2024）:
+ * - Chrome 105+ ✓
+ * - Safari 15.4+ ✓
+ * - Firefox 121+ ✓
+ * - Edge 105+ ✓
+ *
+ * 如需兼容更老的浏览器，可以使用 JS 方案：
+ * 1. 监听 tab 切换事件
+ * 2. 计算 active tab 位置
+ * 3. 更新指示器位置
+ */

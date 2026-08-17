@@ -71,6 +71,12 @@ export function buildAppearanceMethods() {
             const ui = this.app.state.ui.appearance;
             if (!field) return;
             if (field === 'batteryCapacity') {
+                // ★ 电量绑定给氧气（blog）期间，氧气是电量唯一写入方：
+                //   滑条 UI 本来就被隐藏了，这里再拦一道防「整组粘贴 / 旧引用」写进来。
+                if (ui.batteryBoundByOxygen === true) {
+                    notify(this.toolkit, 'info', '电量已交给氧气', '想手动调节先去氧气里解除绑定');
+                    return;
+                }
                 // 滑条传的是 0-100，需要转成 0-1 存储
                 const pctValue = Number(value) || 0;
                 ui.batteryCapacity = Math.max(0, Math.min(1, pctValue / 100));
@@ -104,7 +110,6 @@ export function buildAppearanceMethods() {
                 field === 'caseColor'
                 || field === 'batteryColor'
                 || field === 'statusBarTimeColor'
-                || field === 'statusBarSignalColor'
                 || field === 'statusBarFiveGColor'
             ) {
                 // 颜色字段：接受 hex / rgb / linear-gradient / 等任意 CSS 颜色 / 渐变

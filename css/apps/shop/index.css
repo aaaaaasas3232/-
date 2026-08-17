@@ -1,0 +1,2464 @@
+/* 四叶草 · 样式入口
+ *
+ * 分片的判据是「改一次动几个文件」：
+ *   _theme     颜色的唯一真相（两套内置主题）
+ *   _base      和框架容器的接线 + 根布局 + 顶栏 + 底栏
+ *   _ui        通用控件（按钮 / 输入 / 分区 / 价格 / 骨架 / 加载）
+ *   _sheet     弹层（自己的一套，不是 AcModal）
+ *   _onboard   首次配置
+ *   _feed      列表与卡片
+ *   _detail    详情
+ *   _cart      购物车与结账
+ *   _me        我的 + 那几个子页 + 配色
+ *   _theater   小剧场
+ *
+ * ★ 全部选择器都挂在 .app-shell[data-app-id="shop"] 下面。
+ *   全局裸 class 会污染所有 App —— 这是项目里的硬要求。
+ */
+
+/* 四叶草 · 主题 token
+ *
+ * ── 这个文件是颜色的唯一真相 ──────────────────────────────────────
+ *
+ * JS 里一个 hex 都没有。`theme.js` 只维护「有哪些 token、分别叫什么、归在哪一类」,
+ * 具体色值运行时从这里读（`readPresetColors` 造一个隐藏探针再 getComputedStyle）。
+ *
+ * 梦境编织那轮的教训：原型定义了一套变量、同时又散着 694 处硬编码 hex，
+ * 换主题时那 694 处纹丝不动。所以这里的约束是物理性的 ——
+ * 只要 JS 里没有 hex，就不可能出现「换了个寂寞」。
+ *
+ * ── 用户改色的两条路 ──────────────────────────────────────────────
+ *   1. 单个改：色板里点一格 → 写 inline style 到根节点
+ *   2. 整套覆盖：粘一段 `--sp-bg: #xxx;` → 解析后批量写
+ * 两条路都只是往根节点写 inline 变量，内置主题本身不会被改坏。
+ */
+
+/* ── 晨露（浅色，默认）─────────────────────────────────────────────
+   韩系清新的底子：不是纯白，是掺了一点点绿的米白。
+   主色取四叶草的叶绿，压到很低的饱和度；强调色用杏色，
+   两者的明度接近，所以并排放不会互相压过去。 */
+.app-shell[data-app-id="shop"],
+.app-shell[data-app-id="shop"] [data-sp-theme="dawn"] {
+    --sp-bg: #F7F8F5;
+    --sp-bg-soft: #FFFFFF;
+    --sp-surface: #FFFFFF;
+    --sp-surface-2: #F2F4EF;
+    --sp-elevated: #FFFFFF;
+
+    --sp-primary: #6E9C7C;
+    --sp-primary-soft: #E4EDE6;
+    --sp-primary-strong: #557C61;
+    --sp-on-primary: #FFFFFF;
+
+    --sp-accent: #D9A183;
+    --sp-accent-soft: #F6EAE2;
+    --sp-on-accent: #FFFFFF;
+
+    --sp-price: #C2705A;
+    --sp-coin: #B98C4A;
+    --sp-income: #4E8C63;
+    --sp-expense: #C2705A;
+
+    --sp-text: #2E332F;
+    --sp-text-2: #6B7570;
+    --sp-text-3: #A3ABA6;
+    --sp-text-inverse: #FFFFFF;
+
+    --sp-line: #E6E9E3;
+    --sp-line-soft: #F0F2ED;
+    --sp-line-strong: #D2D7CD;
+
+    --sp-card: #FFFFFF;
+    --sp-card-hover: #FAFBF8;
+    --sp-shadow: rgba(46, 51, 47, 0.06);
+
+    --sp-success: #4E8C63;
+    --sp-warning: #B98C4A;
+    --sp-danger: #C05B54;
+    --sp-info: #5F8299;
+
+    --sp-input-bg: #F4F6F1;
+    --sp-input-line: #E2E6DD;
+    --sp-input-focus: rgba(110, 156, 124, 0.28);
+
+    --sp-tag-bg: #EFF2EC;
+    --sp-tag-text: #6B7570;
+    --sp-tag-line: #E2E6DD;
+
+    --sp-nav-bg: rgba(255, 255, 255, 0.92);
+    --sp-nav-line: #E9ECE5;
+    --sp-nav-icon: #A3ABA6;
+    --sp-nav-active: #4C6E57;
+
+    --sp-overlay: rgba(46, 51, 47, 0.32);
+    --sp-scrim: rgba(255, 255, 255, 0.7);
+
+    --sp-skeleton: #ECEFE9;
+    --sp-skeleton-shine: rgba(255, 255, 255, 0.85);
+}
+
+/* ── 夜樱（深色）───────────────────────────────────────────────────
+   不是把浅色反过来。深色下四叶草绿会发灰，所以主色往青偏一点、
+   明度提上去；强调色的杏色改成更暖的陶土色，否则在深底上会显脏。 */
+.app-shell[data-app-id="shop"] [data-sp-theme="dusk"],
+.app-shell[data-app-id="shop"][data-sp-theme="dusk"] {
+    --sp-bg: #1A1D1B;
+    --sp-bg-soft: #212523;
+    --sp-surface: #232725;
+    --sp-surface-2: #2B302D;
+    --sp-elevated: #2A2F2C;
+
+    --sp-primary: #8FBF9E;
+    --sp-primary-soft: #2C3931;
+    --sp-primary-strong: #A9D3B6;
+    --sp-on-primary: #17201A;
+
+    --sp-accent: #D9A183;
+    --sp-accent-soft: #3A302A;
+    --sp-on-accent: #241B15;
+
+    --sp-price: #E39D86;
+    --sp-coin: #D9B872;
+    --sp-income: #86C79A;
+    --sp-expense: #E39D86;
+
+    --sp-text: #E8EDE9;
+    --sp-text-2: #A6B0A9;
+    --sp-text-3: #737D77;
+    --sp-text-inverse: #1A1D1B;
+
+    --sp-line: #333936;
+    --sp-line-soft: #2A2F2C;
+    --sp-line-strong: #454C48;
+
+    --sp-card: #232725;
+    --sp-card-hover: #2A2F2C;
+    --sp-shadow: rgba(0, 0, 0, 0.38);
+
+    --sp-success: #86C79A;
+    --sp-warning: #D9B872;
+    --sp-danger: #DE8A83;
+    --sp-info: #8FB2C9;
+
+    --sp-input-bg: #2A2F2C;
+    --sp-input-line: #3B423E;
+    --sp-input-focus: rgba(143, 191, 158, 0.3);
+
+    --sp-tag-bg: #2C312E;
+    --sp-tag-text: #A6B0A9;
+    --sp-tag-line: #3B423E;
+
+    --sp-nav-bg: rgba(26, 29, 27, 0.92);
+    --sp-nav-line: #2F3532;
+    --sp-nav-icon: #737D77;
+    --sp-nav-active: #A9D3B6;
+
+    --sp-overlay: rgba(0, 0, 0, 0.55);
+    --sp-scrim: rgba(26, 29, 27, 0.72);
+
+    --sp-skeleton: #2B302D;
+    --sp-skeleton-shine: rgba(255, 255, 255, 0.06);
+}
+
+/* 四叶草 · 框架接线 + 根布局 */
+
+/* ============================================================
+   和框架容器的接线（四条必须一起改）
+   ------------------------------------------------------------
+   框架默认给了两层内边距（.app-content 14 + .app-screen-panel 14），
+   自绘内容再加 16，左右一共被吃掉 44px —— 374 宽的屏幕只剩 330。
+
+   更麻烦的是高度：框架的滚动容器是 .app-page，而 .app-screen-panel
+   只有 min-height:100%，**没有 height**。CSS 里百分比高度需要父级有
+   确定高度，min-height 不算 —— 所以 .sp-root 写 height:100% 会静默
+   退化成 auto，被内容整个撑长，自绘的底栏跟着掉到文档流最底下，
+   表现是「要把整页滑到最底才看得见 tab 栏」。
+
+   所以：清 padding、滚动收回 App 内部、给 panel 一个确定高度、
+   根节点绝对定位铺满。
+   ============================================================ */
+
+.app-shell[data-app-id="shop"] .app-content { padding: 0; }
+.app-shell[data-app-id="shop"] .app-page-stack { border-radius: 0; }
+.app-shell[data-app-id="shop"] .app-page { overflow: hidden; }
+.app-shell[data-app-id="shop"] .app-screen-panel {
+    position: relative;
+    height: 100%;
+    min-height: 100%;
+    padding: 0;
+}
+
+/* 滚动条一律不显示。这个 App 里能滚的地方有六七处，
+   只要有一处露出灰条就很脏 */
+.app-shell[data-app-id="shop"] * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.app-shell[data-app-id="shop"] *::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
+/* 内联 SVG 不带 width/height 时浏览器按 300×150 画，整张卡会被撑爆。
+   两层 :where() 把特异性压到 (0,0,1)，任何具名规则都能盖过它 ——
+   只用一层的话 svg:not([width]) 本身是 (0,2,1)，会反过来盖掉
+   .sp-xxx svg 这种 (0,1,1) 的规则 */
+:where(.app-shell[data-app-id="shop"]) svg:where(:not([width]):not([height])) {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+/* ============================================================
+   根布局
+   ============================================================ */
+
+.app-shell[data-app-id="shop"] .sp-root {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--sp-bg);
+    color: var(--sp-text);
+    font-size: 14px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+}
+
+.app-shell[data-app-id="shop"] .sp-root * { box-sizing: border-box; }
+
+/* 顶栏。状态栏是画在整个手机屏最上层的，不在 App 的文档流里，
+   自绘内容必须自己让出 54px，而且那一块得是实色 ——
+   内容从底下滚过去时透出来会和时间叠在一起 */
+.app-shell[data-app-id="shop"] .sp-top {
+    flex: 0 0 auto;
+    padding: 58px 18px 10px;
+    background: var(--sp-bg);
+    border-bottom: 1px solid var(--sp-line-soft);
+}
+
+.app-shell[data-app-id="shop"] .sp-top__main {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.app-shell[data-app-id="shop"] .sp-top__mark {
+    display: inline-flex;
+    color: var(--sp-primary);
+}
+
+.app-shell[data-app-id="shop"] .sp-top__title {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 620;
+    letter-spacing: 0.2px;
+    color: var(--sp-text);
+}
+
+.app-shell[data-app-id="shop"] .sp-top__sub {
+    margin: 1px 0 0;
+    font-size: 11px;
+    color: var(--sp-text-3);
+}
+
+/* 内容区：只有它滚 */
+.app-shell[data-app-id="shop"] .sp-body {
+    flex: 1 1 auto;
+    min-height: 0;          /* 少了会撑破 flex */
+    position: relative;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="shop"] .sp-page,
+.app-shell[data-app-id="shop"] .sp-panel__body,
+.app-shell[data-app-id="shop"] .sp-detail__body {
+    height: 100%;
+    overflow-y: auto;
+    /* overflow-y:auto 会把 overflow-x 一起算成 auto —— 桌面看不出来，
+       手机上整页能左右拖。容器层一次性关掉，别逐个追溢出源 */
+    overflow-x: hidden;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+    padding: 14px 16px 18px;
+}
+
+.app-shell[data-app-id="shop"] .sp-blocked {
+    height: 100%;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+}
+
+/* ============================================================
+   底栏
+   ============================================================ */
+
+.app-shell[data-app-id="shop"] .sp-tabbar {
+    flex: 0 0 auto;
+    display: flex;
+    background: var(--sp-nav-bg);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-top: 1px solid var(--sp-nav-line);
+    /* fullscreen 之后 .app-bottom 浮在最上层，底栏得自己让开那 40px。
+       var() 的兜底是 0，所以非全屏时写了也没副作用 */
+    padding-bottom: var(--app-safe-bottom, 0px);
+}
+
+.app-shell[data-app-id="shop"] .sp-tabbar__item {
+    flex: 1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 8px 0 7px;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    color: var(--sp-nav-icon);
+    transition: color 0.18s ease;
+}
+
+.app-shell[data-app-id="shop"] .sp-tabbar__item.is-on { color: var(--sp-nav-active); }
+
+.app-shell[data-app-id="shop"] .sp-tabbar__icon {
+    display: inline-flex;
+    transition: transform 0.22s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+.app-shell[data-app-id="shop"] .sp-tabbar__item.is-on .sp-tabbar__icon {
+    transform: translateY(-1px);
+}
+
+.app-shell[data-app-id="shop"] .sp-tabbar__label {
+    font-size: 10px;
+    letter-spacing: 0.3px;
+}
+
+.app-shell[data-app-id="shop"] .sp-tabbar__item.is-on .sp-tabbar__label { font-weight: 560; }
+
+.app-shell[data-app-id="shop"] .sp-tabbar__badge {
+    position: absolute;
+    top: 4px;
+    left: 50%;
+    margin-left: 6px;
+    min-width: 15px;
+    height: 15px;
+    padding: 0 4px;
+    border-radius: 8px;
+    background: var(--sp-accent);
+    color: var(--sp-on-accent);
+    font-size: 9px;
+    font-style: normal;
+    font-weight: 600;
+    line-height: 15px;
+    text-align: center;
+}
+
+.app-shell[data-app-id="shop"] .sp-tabbar__dot {
+    position: absolute;
+    top: 7px;
+    left: 50%;
+    margin-left: 8px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--sp-accent);
+}
+
+/* ============================================================
+   toast
+   ============================================================ */
+
+.app-shell[data-app-id="shop"] .sp-toast {
+    position: absolute;
+    left: 50%;
+    bottom: calc(78px + var(--app-safe-bottom, 0px));
+    transform: translateX(-50%);
+    max-width: 78%;
+    padding: 9px 16px;
+    border-radius: 18px;
+    background: var(--sp-text);
+    color: var(--sp-text-inverse);
+    font-size: 12.5px;
+    z-index: 60;
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="shop"] .sp-toast-enter-active,
+.app-shell[data-app-id="shop"] .sp-toast-leave-active {
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.app-shell[data-app-id="shop"] .sp-toast-enter-from,
+.app-shell[data-app-id="shop"] .sp-toast-leave-to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(6px);
+}
+
+/* 四叶草 · 通用控件 */
+
+/* ── 按钮 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 15px;
+    height: 38px;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    background: transparent;
+    color: var(--sp-text);
+    font-size: 13.5px;
+    font-weight: 520;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.16s ease, border-color 0.16s ease, opacity 0.16s ease, transform 0.12s ease;
+}
+
+.app-shell[data-app-id="shop"] .sp-btn:active:not(:disabled) { transform: scale(0.975); }
+.app-shell[data-app-id="shop"] .sp-btn:disabled { opacity: 0.42; cursor: not-allowed; }
+.app-shell[data-app-id="shop"] .sp-btn.is-block { flex: 1; }
+
+.app-shell[data-app-id="shop"] .sp-btn--primary {
+    background: var(--sp-primary);
+    color: var(--sp-on-primary);
+}
+.app-shell[data-app-id="shop"] .sp-btn--primary:active:not(:disabled) { background: var(--sp-primary-strong); }
+
+.app-shell[data-app-id="shop"] .sp-btn--soft {
+    background: var(--sp-primary-soft);
+    color: var(--sp-primary-strong);
+}
+
+.app-shell[data-app-id="shop"] .sp-btn--line {
+    border-color: var(--sp-line-strong);
+    color: var(--sp-text-2);
+}
+
+.app-shell[data-app-id="shop"] .sp-btn--ghost { color: var(--sp-text-2); padding: 0 10px; }
+.app-shell[data-app-id="shop"] .sp-btn--ghost:active:not(:disabled) { background: var(--sp-surface-2); }
+
+.app-shell[data-app-id="shop"] .sp-btn--danger {
+    background: var(--sp-danger);
+    color: var(--sp-text-inverse);
+}
+
+.app-shell[data-app-id="shop"] .sp-btn--sm { height: 30px; padding: 0 11px; font-size: 12px; border-radius: 9px; }
+.app-shell[data-app-id="shop"] .sp-btn--lg { height: 46px; font-size: 15px; border-radius: 13px; }
+
+.app-shell[data-app-id="shop"] .sp-btn__spin {
+    width: 13px;
+    height: 13px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spSpin 0.7s linear infinite;
+}
+
+@keyframes spSpin { to { transform: rotate(360deg); } }
+
+.app-shell[data-app-id="shop"] .sp-iconbtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--sp-text-2);
+    cursor: pointer;
+}
+.app-shell[data-app-id="shop"] .sp-iconbtn:active { background: var(--sp-surface-2); }
+
+.app-shell[data-app-id="shop"] .sp-linkbtn {
+    border: 0;
+    background: none;
+    padding: 0 4px;
+    color: var(--sp-primary-strong);
+    font: inherit;
+    font-size: 12.5px;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* ── chip ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+.app-shell[data-app-id="shop"] .sp-chip {
+    padding: 5px 12px;
+    border: 1px solid var(--sp-line);
+    border-radius: 15px;
+    background: var(--sp-surface);
+    color: var(--sp-text-2);
+    font-size: 12.5px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.app-shell[data-app-id="shop"] .sp-chip.is-active {
+    background: var(--sp-primary-soft);
+    border-color: var(--sp-primary);
+    color: var(--sp-primary-strong);
+    font-weight: 560;
+}
+
+.app-shell[data-app-id="shop"] .sp-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border: 1px solid var(--sp-tag-line);
+    border-radius: 6px;
+    background: var(--sp-tag-bg);
+    color: var(--sp-tag-text);
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+/* ── 表单 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-field { margin-bottom: 14px; }
+
+.app-shell[data-app-id="shop"] .sp-field__head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.app-shell[data-app-id="shop"] .sp-field__label {
+    font-size: 12.5px;
+    font-weight: 560;
+    color: var(--sp-text-2);
+}
+
+.app-shell[data-app-id="shop"] .sp-field__hint {
+    margin: 5px 0 0;
+    font-size: 11.5px;
+    color: var(--sp-text-3);
+}
+
+.app-shell[data-app-id="shop"] .sp-input,
+.app-shell[data-app-id="shop"] .sp-textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--sp-input-line);
+    border-radius: 10px;
+    background: var(--sp-input-bg);
+    color: var(--sp-text);
+    font-size: 13.5px;
+    font-family: inherit;
+    line-height: 1.55;
+    outline: none;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.app-shell[data-app-id="shop"] .sp-input:focus,
+.app-shell[data-app-id="shop"] .sp-textarea:focus {
+    border-color: var(--sp-primary);
+    box-shadow: 0 0 0 3px var(--sp-input-focus);
+}
+
+.app-shell[data-app-id="shop"] .sp-input::placeholder,
+.app-shell[data-app-id="shop"] .sp-textarea::placeholder { color: var(--sp-text-3); }
+
+.app-shell[data-app-id="shop"] .sp-textarea { resize: none; }
+
+.app-shell[data-app-id="shop"] .sp-switch {
+    width: 42px;
+    height: 25px;
+    padding: 2px;
+    border: 0;
+    border-radius: 13px;
+    background: var(--sp-line-strong);
+    cursor: pointer;
+    transition: background 0.18s ease;
+}
+.app-shell[data-app-id="shop"] .sp-switch.is-on { background: var(--sp-primary); }
+
+.app-shell[data-app-id="shop"] .sp-switch__dot {
+    display: block;
+    width: 21px;
+    height: 21px;
+    border-radius: 50%;
+    background: var(--sp-surface);
+    transition: transform 0.18s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+.app-shell[data-app-id="shop"] .sp-switch.is-on .sp-switch__dot { transform: translateX(17px); }
+
+/* ── 分区 / 键值 ──────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-section { margin-bottom: 20px; }
+
+.app-shell[data-app-id="shop"] .sp-section__head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 9px;
+}
+
+.app-shell[data-app-id="shop"] .sp-section__title {
+    margin: 0;
+    font-size: 13.5px;
+    font-weight: 620;
+    color: var(--sp-text);
+}
+
+.app-shell[data-app-id="shop"] .sp-section__sub {
+    font-size: 11.5px;
+    color: var(--sp-text-3);
+}
+
+.app-shell[data-app-id="shop"] .sp-kv {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--sp-line-soft);
+    font-size: 13px;
+}
+.app-shell[data-app-id="shop"] .sp-kv:last-child { border-bottom: 0; }
+.app-shell[data-app-id="shop"] .sp-kv__k { color: var(--sp-text-3); flex: 0 0 auto; }
+.app-shell[data-app-id="shop"] .sp-kv__v { color: var(--sp-text); text-align: right; min-width: 0; }
+.app-shell[data-app-id="shop"] .sp-kv.is-strong .sp-kv__v { font-weight: 600; }
+
+/* ── 价格 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-price {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 3px;
+    color: var(--sp-price);
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="shop"] .sp-price__prefix { font-size: 11px; color: var(--sp-text-3); }
+.app-shell[data-app-id="shop"] .sp-price__num { font-size: 16px; font-weight: 640; }
+.app-shell[data-app-id="shop"] .sp-price__unit { font-size: 11px; opacity: 0.82; }
+.app-shell[data-app-id="shop"] .sp-price__was { font-size: 11px; color: var(--sp-text-3); margin-left: 3px; }
+
+.app-shell[data-app-id="shop"] .sp-price--sm .sp-price__num { font-size: 13.5px; }
+.app-shell[data-app-id="shop"] .sp-price--lg .sp-price__num { font-size: 24px; font-weight: 660; }
+.app-shell[data-app-id="shop"] .sp-price--lg .sp-price__unit { font-size: 12.5px; }
+
+/* ── 空态 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    padding: 44px 24px;
+    text-align: center;
+}
+
+.app-shell[data-app-id="shop"] .sp-empty__mark {
+    display: inline-flex;
+    color: var(--sp-text-3);
+    opacity: 0.7;
+    margin-bottom: 3px;
+}
+
+.app-shell[data-app-id="shop"] .sp-empty__title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 560;
+    color: var(--sp-text-2);
+}
+
+.app-shell[data-app-id="shop"] .sp-empty__desc {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--sp-text-3);
+    max-width: 250px;
+    line-height: 1.65;
+}
+
+.app-shell[data-app-id="shop"] .sp-empty__slot:not(:empty) { margin-top: 10px; }
+
+/* ── 骨架 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-skeleton { display: grid; gap: 11px; }
+
+.app-shell[data-app-id="shop"] .sp-skeleton__item {
+    border-radius: 13px;
+    background: linear-gradient(
+        100deg,
+        var(--sp-skeleton) 32%,
+        var(--sp-skeleton-shine) 50%,
+        var(--sp-skeleton) 68%
+    );
+    background-size: 240% 100%;
+    animation: spShine 1.5s ease-in-out infinite;
+}
+
+.app-shell[data-app-id="shop"] .sp-skeleton--card .sp-skeleton__item { height: 104px; }
+.app-shell[data-app-id="shop"] .sp-skeleton--line .sp-skeleton__item { height: 15px; border-radius: 7px; }
+
+@keyframes spShine {
+    from { background-position: 160% 0; }
+    to { background-position: -60% 0; }
+}
+
+/* ── 加载动画 ─────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.app-shell[data-app-id="shop"] .sp-loading__clover {
+    position: relative;
+    width: 58px;
+    height: 58px;
+    display: grid;
+    place-items: center;
+}
+
+/* 四瓣依次亮起，一圈 1.6 秒。用户能数圈 ——
+   「等了多久」变成可感知的，比匀速转圈耐等得多 */
+.app-shell[data-app-id="shop"] .sp-loading__leaf {
+    position: absolute;
+    width: 17px;
+    height: 17px;
+    border-radius: 60% 0 60% 60%;
+    background: var(--sp-primary);
+    opacity: 0.2;
+    animation: spLeaf 1.6s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.4s);
+}
+
+.app-shell[data-app-id="shop"] .sp-loading__leaf:nth-child(1) { top: 4px; left: 12px; transform: rotate(-45deg); }
+.app-shell[data-app-id="shop"] .sp-loading__leaf:nth-child(2) { top: 12px; right: 4px; transform: rotate(45deg); }
+.app-shell[data-app-id="shop"] .sp-loading__leaf:nth-child(3) { bottom: 4px; right: 12px; transform: rotate(135deg); }
+.app-shell[data-app-id="shop"] .sp-loading__leaf:nth-child(4) { bottom: 12px; left: 4px; transform: rotate(-135deg); }
+
+@keyframes spLeaf {
+    0%, 70%, 100% { opacity: 0.18; }
+    22% { opacity: 1; }
+}
+
+.app-shell[data-app-id="shop"] .sp-loading__mark {
+    position: relative;
+    display: inline-flex;
+    width: 26px;
+    height: 26px;
+    color: var(--sp-primary-strong);
+    opacity: 0.55;
+}
+.app-shell[data-app-id="shop"] .sp-loading__mark svg { width: 26px; height: 26px; }
+
+.app-shell[data-app-id="shop"] .sp-loading__text {
+    margin: 0;
+    font-size: 13px;
+    color: var(--sp-text-2);
+    animation: spFadeSwap 2.4s ease-in-out infinite;
+}
+
+@keyframes spFadeSwap {
+    0%, 8% { opacity: 0; transform: translateY(3px); }
+    18%, 88% { opacity: 1; transform: none; }
+    100% { opacity: 0; transform: translateY(-3px); }
+}
+
+.app-shell[data-app-id="shop"] .sp-loading__slow {
+    margin: 0;
+    font-size: 11.5px;
+    color: var(--sp-text-3);
+}
+
+.app-shell[data-app-id="shop"] .sp-loading--sm .sp-loading__clover { width: 40px; height: 40px; transform: scale(0.7); }
+.app-shell[data-app-id="shop"] .sp-loading--lg .sp-loading__clover { transform: scale(1.15); margin-bottom: 6px; }
+
+.app-shell[data-app-id="shop"] .sp-loading-screen {
+    flex: 1;
+    min-height: 260px;
+    display: grid;
+    place-items: center;
+    padding: 40px 20px;
+}
+
+/* 四叶草 · 弹层
+ *
+ * 不复用 AcModal：那套是动森风 squircle + 右上角凹陷的叉，
+ * 和这里的调子不搭。这是自己的一套：从底部升起、只有上面两个角是圆的、
+ * 顶上一条小握把、点遮罩关闭、**没有叉**。
+ *
+ * ★ max-height 用 100% 不用 80vh。
+ *   vh 是**浏览器视口**高度，而这是个手机模拟器 —— 弹层活在 .app-shell 里。
+ *   桌面上 80vh 往往比手机屏还高，弹层会顶出屏幕、标题跑到状态栏后面。
+ */
+
+.app-shell[data-app-id="shop"] .sp-sheet-mask {
+    position: absolute;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: flex-end;
+    background: var(--sp-overlay);
+    animation: spMaskIn 0.2s ease;
+}
+
+@keyframes spMaskIn { from { opacity: 0; } to { opacity: 1; } }
+
+.app-shell[data-app-id="shop"] .sp-sheet {
+    width: 100%;
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+    border-radius: 20px 20px 0 0;
+    background: var(--sp-elevated);
+    box-shadow: 0 -8px 32px var(--sp-shadow);
+    animation: spSheetIn 0.26s cubic-bezier(0.32, 0.72, 0, 1);
+    padding-bottom: var(--app-safe-bottom, 0px);
+}
+
+@keyframes spSheetIn {
+    from { transform: translateY(14%); opacity: 0.6; }
+    to { transform: none; opacity: 1; }
+}
+
+.app-shell[data-app-id="shop"] .sp-sheet--sm { max-height: 46%; }
+.app-shell[data-app-id="shop"] .sp-sheet--md { max-height: 68%; }
+.app-shell[data-app-id="shop"] .sp-sheet--lg { max-height: 88%; }
+.app-shell[data-app-id="shop"] .sp-sheet--full { max-height: 100%; height: 100%; }
+
+.app-shell[data-app-id="shop"] .sp-sheet__grip {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 4px;
+    margin: 8px auto 2px;
+    border-radius: 2px;
+    background: var(--sp-line-strong);
+}
+
+.app-shell[data-app-id="shop"] .sp-sheet__head {
+    flex: 0 0 auto;          /* 标题永远可见 */
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 18px 8px;
+}
+
+.app-shell[data-app-id="shop"] .sp-sheet__title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 620;
+    color: var(--sp-text);
+}
+
+.app-shell[data-app-id="shop"] .sp-sheet__desc {
+    margin: 3px 0 0;
+    font-size: 12px;
+    color: var(--sp-text-3);
+    line-height: 1.6;
+}
+
+.app-shell[data-app-id="shop"] .sp-sheet__body {
+    flex: 1 1 auto;
+    min-height: 0;           /* 少了 overflow-y 不生效 */
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 6px 18px 12px;
+}
+
+.app-shell[data-app-id="shop"] .sp-sheet__foot {
+    flex: 0 0 auto;          /* 按钮永远可见 */
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 18px 16px;
+    border-top: 1px solid var(--sp-line-soft);
+    background: var(--sp-elevated);
+}
+
+/* ── 弹层里的几块共用件 ───────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-modes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 9px;
+    margin-bottom: 16px;
+}
+
+.app-shell[data-app-id="shop"] .sp-modes__btn {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 11px 12px;
+    border: 1px solid var(--sp-line);
+    border-radius: 12px;
+    background: var(--sp-surface);
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s ease;
+}
+
+.app-shell[data-app-id="shop"] .sp-modes__btn.is-on {
+    border-color: var(--sp-primary);
+    background: var(--sp-primary-soft);
+}
+
+.app-shell[data-app-id="shop"] .sp-modes__btn b { font-size: 13.5px; color: var(--sp-text); font-weight: 600; }
+.app-shell[data-app-id="shop"] .sp-modes__btn span { font-size: 11.5px; color: var(--sp-text-3); }
+
+.app-shell[data-app-id="shop"] .sp-ai-picks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+.app-shell[data-app-id="shop"] .sp-ai-pick {
+    padding: 7px 14px;
+    border: 1px solid var(--sp-line);
+    border-radius: 16px;
+    background: var(--sp-surface);
+    color: var(--sp-text-2);
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.app-shell[data-app-id="shop"] .sp-ai-pick.is-on {
+    border-color: var(--sp-primary);
+    background: var(--sp-primary);
+    color: var(--sp-on-primary);
+    font-weight: 560;
+}
+
+.app-shell[data-app-id="shop"] .sp-subject {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 10px 13px;
+    margin-bottom: 14px;
+    border-radius: 11px;
+    background: var(--sp-surface-2);
+}
+
+.app-shell[data-app-id="shop"] .sp-subject__k { font-size: 11.5px; color: var(--sp-text-3); flex: 0 0 auto; }
+.app-shell[data-app-id="shop"] .sp-subject__v { font-size: 13px; color: var(--sp-text); font-weight: 560; }
+
+/* 四叶草 · 首次配置
+ *
+ * 借新设备激活那套语言：一屏一件事、大字、大量留白、底部一个继续键。
+ * 目的是让用户意识到「这是开始，不是又一个设置页」——
+ * 因为这一步真的决定了整个 App 里所有内容长什么样。
+ */
+
+.app-shell[data-app-id="shop"] .sp-ob {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: var(--sp-bg);
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__stage {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    touch-action: pan-y;
+    padding: 20px 26px 12px;
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__hero {
+    display: grid;
+    place-items: center;
+    padding: 22px 0 20px;
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__mark {
+    display: inline-flex;
+    color: var(--sp-primary);
+    animation: spCloverIn 0.7s cubic-bezier(0.34, 1.3, 0.64, 1) both;
+}
+
+@keyframes spCloverIn {
+    from { transform: scale(0.6) rotate(-24deg); opacity: 0; }
+    to { transform: none; opacity: 1; }
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__title {
+    margin: 0 0 7px;
+    font-size: 25px;
+    font-weight: 640;
+    letter-spacing: -0.2px;
+    line-height: 1.3;
+    color: var(--sp-text);
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__desc {
+    margin: 0 0 22px;
+    font-size: 13.5px;
+    line-height: 1.7;
+    color: var(--sp-text-2);
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__panel { display: grid; gap: 9px; }
+
+/* ── 第 0 屏：世界观 + 货币，只确认不可关 ─────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-ob__pill {
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+    padding: 12px 15px;
+    border-radius: 13px;
+    background: var(--sp-surface);
+    border: 1px solid var(--sp-line);
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__pill-k { font-size: 12px; color: var(--sp-text-3); flex: 0 0 auto; }
+.app-shell[data-app-id="shop"] .sp-ob__pill-v { font-size: 15px; font-weight: 600; color: var(--sp-text); }
+.app-shell[data-app-id="shop"] .sp-ob__pill-v--coin { color: var(--sp-coin); }
+.app-shell[data-app-id="shop"] .sp-ob__pill-note { font-size: 11px; color: var(--sp-text-3); margin-left: auto; }
+
+.app-shell[data-app-id="shop"] .sp-ob__summary {
+    padding: 14px 15px;
+    border-radius: 13px;
+    background: var(--sp-surface-2);
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__summary-text {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.75;
+    color: var(--sp-text-2);
+    white-space: pre-wrap;
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__summary-empty {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--sp-text-3);
+}
+
+/* ── 第 1/2 屏：可选卡 ────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-ob__none {
+    padding: 18px 16px;
+    border-radius: 13px;
+    background: var(--sp-surface-2);
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--sp-text-3);
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__card {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    width: 100%;
+    padding: 13px 15px;
+    border: 1px solid var(--sp-line);
+    border-radius: 13px;
+    background: var(--sp-surface);
+    text-align: left;
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__card.is-on {
+    border-color: var(--sp-primary);
+    background: var(--sp-primary-soft);
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__card-tick {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    border: 1.6px solid var(--sp-line-strong);
+    border-radius: 6px;
+    position: relative;
+    transition: all 0.16s ease;
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__card.is-on .sp-ob__card-tick {
+    border-color: var(--sp-primary);
+    background: var(--sp-primary);
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__card.is-on .sp-ob__card-tick::after {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 1.5px;
+    width: 4px;
+    height: 8px;
+    border: solid var(--sp-on-primary);
+    border-width: 0 1.8px 1.8px 0;
+    transform: rotate(42deg);
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__card-main {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__card-title {
+    font-size: 13.5px;
+    font-weight: 560;
+    color: var(--sp-text);
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__card-path {
+    font-size: 10.5px;
+    color: var(--sp-primary-strong);
+    opacity: 0.85;
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__card-sub {
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--sp-text-3);
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__taste { margin-top: 8px; }
+
+.app-shell[data-app-id="shop"] .sp-ob__taste-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 12.5px;
+    font-weight: 560;
+    color: var(--sp-text-2);
+}
+
+/* ── 底部 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-ob__foot {
+    flex: 0 0 auto;
+    padding: 12px 26px 18px;
+    padding-bottom: calc(18px + var(--app-safe-bottom, 0px));
+    border-top: 1px solid var(--sp-line-soft);
+    background: var(--sp-bg);
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__dots {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--sp-line-strong);
+    transition: all 0.22s ease;
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__dot.is-on { width: 18px; background: var(--sp-primary); }
+
+.app-shell[data-app-id="shop"] .sp-ob__actions { display: flex; align-items: center; gap: 9px; }
+
+/* ── 生成中 ───────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-ob--busy {
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    padding: 30px;
+    text-align: center;
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__busy-title {
+    margin: 16px 0 0;
+    font-size: 15px;
+    font-weight: 580;
+    color: var(--sp-text);
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__busy-desc {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--sp-text-3);
+}
+
+/* 四叶草 · 列表与卡片
+ *
+ * ── 为什么没有图 ──────────────────────────────────────────────────
+ * 商品图是 AI 生成不出来的。灰色占位符会让整个列表看着像坏了，
+ * 随机图片又会和世界观对不上。所以这里用排版承担识别度：
+ * 名字大、卖点一行、标签小字、价格右下。一屏能看五六件，
+ * 信息密度比带图的列表高得多。
+ */
+
+.app-shell[data-app-id="shop"] .sp-feed { display: block; }
+
+.app-shell[data-app-id="shop"] .sp-feed__filters { margin-bottom: 12px; }
+
+.app-shell[data-app-id="shop"] .sp-serve {
+    display: inline-flex;
+    padding: 3px;
+    margin-bottom: 10px;
+    border-radius: 11px;
+    background: var(--sp-surface-2);
+}
+
+.app-shell[data-app-id="shop"] .sp-serve__btn {
+    padding: 6px 18px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--sp-text-3);
+    font-size: 12.5px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.16s ease;
+}
+
+.app-shell[data-app-id="shop"] .sp-serve__btn.is-on {
+    background: var(--sp-surface);
+    color: var(--sp-text);
+    font-weight: 580;
+    box-shadow: 0 1px 3px var(--sp-shadow);
+}
+
+/* 「换一批」是有代价的操作，所以说明一直挂在旁边，
+   不是等用户按完发现东西没了才解释。
+   ★ 说明另起一行而不是和按钮并排：并排时它只剩半屏宽，
+     会折成两行还被挤扁，反而没人看。 */
+.app-shell[data-app-id="shop"] .sp-feed__bar {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+    margin-bottom: 14px;
+    border-radius: 12px;
+    background: var(--sp-surface-2);
+}
+
+.app-shell[data-app-id="shop"] .sp-feed__note {
+    margin: 0;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--sp-text-3);
+}
+.app-shell[data-app-id="shop"] .sp-feed__note b { color: var(--sp-text-2); font-weight: 560; }
+
+.app-shell[data-app-id="shop"] .sp-feed__bar-actions {
+    display: flex;
+    gap: 6px;
+}
+.app-shell[data-app-id="shop"] .sp-feed__bar-actions .sp-btn { flex: 1; }
+
+.app-shell[data-app-id="shop"] .sp-feed__group { margin-bottom: 20px; }
+
+.app-shell[data-app-id="shop"] .sp-feed__group-title {
+    margin: 0 0 9px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    color: var(--sp-text-3);
+}
+
+.app-shell[data-app-id="shop"] .sp-grid { display: grid; gap: 10px; }
+
+.app-shell[data-app-id="shop"] .sp-feed__error {
+    margin: 10px 0 0;
+    padding: 10px 13px;
+    border-radius: 10px;
+    background: var(--sp-surface-2);
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--sp-danger);
+}
+
+/* ── 卡片 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding: 14px 15px;
+    border: 1px solid var(--sp-line);
+    border-radius: 14px;
+    background: var(--sp-card);
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+}
+
+.app-shell[data-app-id="shop"] .sp-card:active {
+    background: var(--sp-card-hover);
+    transform: scale(0.993);
+}
+
+.app-shell[data-app-id="shop"] .sp-card__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="shop"] .sp-card__title-wrap { min-width: 0; }
+
+.app-shell[data-app-id="shop"] .sp-card__title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--sp-text);
+}
+
+.app-shell[data-app-id="shop"] .sp-card__brand {
+    margin: 2px 0 0;
+    font-size: 11.5px;
+    color: var(--sp-text-3);
+}
+
+.app-shell[data-app-id="shop"] .sp-card__blurb {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--sp-text-2);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="shop"] .sp-card__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.app-shell[data-app-id="shop"] .sp-card__meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11.5px;
+    color: var(--sp-text-3);
+}
+
+.app-shell[data-app-id="shop"] .sp-rate {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    color: var(--sp-coin);
+    font-weight: 560;
+}
+.app-shell[data-app-id="shop"] .sp-rate svg { width: 13px; height: 13px; fill: currentColor; }
+
+.app-shell[data-app-id="shop"] .sp-card__sign { color: var(--sp-text-3); }
+
+.app-shell[data-app-id="shop"] .sp-card__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 1px;
+}
+
+.app-shell[data-app-id="shop"] .sp-card__serve { font-size: 11.5px; color: var(--sp-text-3); }
+
+.app-shell[data-app-id="shop"] .sp-card__cart {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--sp-line-strong);
+    border-radius: 9px;
+    background: var(--sp-surface);
+    color: var(--sp-text-2);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.app-shell[data-app-id="shop"] .sp-card__cart:active {
+    background: var(--sp-primary);
+    border-color: var(--sp-primary);
+    color: var(--sp-on-primary);
+}
+
+.app-shell[data-app-id="shop"] .sp-card__mine {
+    position: absolute;
+    top: -1px;
+    right: 44px;
+    padding: 1px 7px 2px;
+    border-radius: 0 0 6px 6px;
+    background: var(--sp-accent-soft);
+    color: var(--sp-accent);
+    font-size: 10px;
+}
+
+.app-shell[data-app-id="shop"] .sp-fav {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--sp-text-3);
+    cursor: pointer;
+    transition: color 0.16s ease, transform 0.16s ease;
+}
+
+.app-shell[data-app-id="shop"] .sp-fav.is-on { color: var(--sp-accent); }
+.app-shell[data-app-id="shop"] .sp-fav.is-on svg { fill: currentColor; }
+.app-shell[data-app-id="shop"] .sp-fav:active { transform: scale(0.88); }
+
+/* 四叶草 · 详情页 */
+
+.app-shell[data-app-id="shop"] .sp-detail,
+.app-shell[data-app-id="shop"] .sp-panel,
+.app-shell[data-app-id="shop"] .sp-theater {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--sp-bg);
+    animation: spPageIn 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes spPageIn {
+    from { transform: translateX(14px); opacity: 0; }
+    to { transform: none; opacity: 1; }
+}
+
+.app-shell[data-app-id="shop"] .sp-detail__bar,
+.app-shell[data-app-id="shop"] .sp-panel__bar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--sp-line-soft);
+    background: var(--sp-bg);
+}
+
+.app-shell[data-app-id="shop"] .sp-detail__bar-title,
+.app-shell[data-app-id="shop"] .sp-panel__title {
+    flex: 1;
+    min-width: 0;
+    font-size: 14px;
+    font-weight: 580;
+    color: var(--sp-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="shop"] .sp-detail__bar-right,
+.app-shell[data-app-id="shop"] .sp-panel__bar-right {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 4px;
+}
+
+.app-shell[data-app-id="shop"] .sp-detail__body,
+.app-shell[data-app-id="shop"] .sp-panel__body {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.app-shell[data-app-id="shop"] .sp-detail__hero {
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--sp-line-soft);
+}
+
+.app-shell[data-app-id="shop"] .sp-detail__name {
+    margin: 0 0 4px;
+    font-size: 21px;
+    font-weight: 640;
+    line-height: 1.35;
+    color: var(--sp-text);
+}
+
+.app-shell[data-app-id="shop"] .sp-detail__sub {
+    margin: 0 0 8px;
+    font-size: 12px;
+    color: var(--sp-text-3);
+}
+
+.app-shell[data-app-id="shop"] .sp-detail__blurb {
+    margin: 0 0 12px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--sp-text-2);
+}
+
+.app-shell[data-app-id="shop"] .sp-detail__price { margin-bottom: 10px; }
+
+.app-shell[data-app-id="shop"] .sp-detail__para {
+    margin: 0 0 10px;
+    font-size: 13px;
+    line-height: 1.82;
+    color: var(--sp-text-2);
+}
+.app-shell[data-app-id="shop"] .sp-detail__para:last-child { margin-bottom: 0; }
+
+.app-shell[data-app-id="shop"] .sp-detail__pending {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 32px 20px;
+    border-radius: 13px;
+    background: var(--sp-surface-2);
+    text-align: center;
+}
+.app-shell[data-app-id="shop"] .sp-detail__pending p { margin: 0; font-size: 13px; color: var(--sp-text-3); }
+
+.app-shell[data-app-id="shop"] .sp-detail__tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding-top: 12px;
+    margin-top: 4px;
+    border-top: 1px solid var(--sp-line-soft);
+}
+
+.app-shell[data-app-id="shop"] .sp-detail__foot {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 11px 16px;
+    /* 底栏已经用 --app-safe-bottom 让过一次指示条了，
+       但详情页盖在 tab 栏之上，所以这里要自己让 */
+    padding-bottom: calc(14px + var(--app-safe-bottom, 0px));
+    border-top: 1px solid var(--sp-line);
+    background: var(--sp-elevated);
+}
+
+/* ── 菜单 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-menu { display: grid; gap: 2px; }
+
+.app-shell[data-app-id="shop"] .sp-menu__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--sp-line-soft);
+}
+.app-shell[data-app-id="shop"] .sp-menu__row:last-child { border-bottom: 0; }
+
+.app-shell[data-app-id="shop"] .sp-menu__main { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+
+.app-shell[data-app-id="shop"] .sp-menu__name {
+    font-size: 13.5px;
+    font-weight: 540;
+    color: var(--sp-text);
+}
+
+.app-shell[data-app-id="shop"] .sp-menu__sign {
+    display: inline-block;
+    margin-left: 5px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: var(--sp-accent-soft);
+    color: var(--sp-accent);
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.app-shell[data-app-id="shop"] .sp-menu__desc { font-size: 11.5px; color: var(--sp-text-3); }
+
+.app-shell[data-app-id="shop"] .sp-menu__right {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ── 评价 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-reviews { display: grid; gap: 12px; }
+
+.app-shell[data-app-id="shop"] .sp-review {
+    padding: 11px 13px;
+    border-radius: 11px;
+    background: var(--sp-surface-2);
+}
+
+.app-shell[data-app-id="shop"] .sp-review__head {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 5px;
+}
+
+.app-shell[data-app-id="shop"] .sp-review__user { font-size: 12.5px; font-weight: 560; color: var(--sp-text-2); }
+
+.app-shell[data-app-id="shop"] .sp-review__stars { display: inline-flex; gap: 1px; color: var(--sp-coin); }
+.app-shell[data-app-id="shop"] .sp-review__stars svg { width: 12px; height: 12px; fill: currentColor; }
+
+.app-shell[data-app-id="shop"] .sp-review__when { margin-left: auto; font-size: 11px; color: var(--sp-text-3); }
+
+.app-shell[data-app-id="shop"] .sp-review__text {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--sp-text-2);
+}
+
+/* 四叶草 · 购物车与结账
+ *
+ * 结账区那三个数（现在有 − 这单花 = 付完剩）是这一页的重点。
+ * 用户明确要求「整个资产货币链的流动要清晰透明」，
+ * 所以它们并排摆着、等宽、带运算符，像一道算式而不是三行清单。
+ */
+
+.app-shell[data-app-id="shop"] .sp-cart__list {
+    display: grid;
+    gap: 2px;
+    margin-bottom: 20px;
+}
+
+.app-shell[data-app-id="shop"] .sp-cart__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--sp-line-soft);
+}
+.app-shell[data-app-id="shop"] .sp-cart__row:last-child { border-bottom: 0; }
+
+.app-shell[data-app-id="shop"] .sp-cart__main { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+
+.app-shell[data-app-id="shop"] .sp-cart__name {
+    font-size: 13.5px;
+    font-weight: 550;
+    color: var(--sp-text);
+}
+
+.app-shell[data-app-id="shop"] .sp-cart__sub { font-size: 11.5px; color: var(--sp-text-3); }
+
+.app-shell[data-app-id="shop"] .sp-cart__right {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+}
+
+.app-shell[data-app-id="shop"] .sp-stepper {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--sp-line);
+    border-radius: 9px;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="shop"] .sp-stepper button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border: 0;
+    background: var(--sp-surface);
+    color: var(--sp-text-2);
+    cursor: pointer;
+}
+.app-shell[data-app-id="shop"] .sp-stepper button:active { background: var(--sp-surface-2); }
+
+.app-shell[data-app-id="shop"] .sp-stepper span {
+    min-width: 28px;
+    text-align: center;
+    font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+    color: var(--sp-text);
+}
+
+/* ── 结算 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-settle {
+    padding: 15px 16px;
+    margin-bottom: 16px;
+    border: 1px solid var(--sp-line);
+    border-radius: 14px;
+    background: var(--sp-surface);
+}
+
+.app-shell[data-app-id="shop"] .sp-settle--mini { padding: 12px 13px; margin: 4px 0 12px; }
+
+.app-shell[data-app-id="shop"] .sp-settle__title {
+    margin: 0 0 12px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    color: var(--sp-text-3);
+}
+
+.app-shell[data-app-id="shop"] .sp-settle__grid {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+}
+
+.app-shell[data-app-id="shop"] .sp-settle__cell {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="shop"] .sp-settle__k { font-size: 10.5px; color: var(--sp-text-3); }
+
+.app-shell[data-app-id="shop"] .sp-settle__v {
+    font-size: 17px;
+    font-weight: 640;
+    font-variant-numeric: tabular-nums;
+    color: var(--sp-text);
+}
+
+.app-shell[data-app-id="shop"] .sp-settle__v--out { color: var(--sp-expense); }
+.app-shell[data-app-id="shop"] .sp-settle__v--bad { color: var(--sp-danger); }
+
+.app-shell[data-app-id="shop"] .sp-settle__op {
+    flex: 0 0 auto;
+    font-size: 14px;
+    color: var(--sp-text-3);
+    padding-top: 12px;
+}
+
+.app-shell[data-app-id="shop"] .sp-settle__unit {
+    margin: 10px 0 0;
+    text-align: center;
+    font-size: 10.5px;
+    color: var(--sp-text-3);
+}
+
+.app-shell[data-app-id="shop"] .sp-settle__warn {
+    margin: 10px 0 0;
+    padding: 8px 11px;
+    border-radius: 9px;
+    background: var(--sp-accent-soft);
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--sp-danger);
+}
+
+.app-shell[data-app-id="shop"] .sp-settle__note {
+    margin: 9px 0 0;
+    font-size: 11.5px;
+    line-height: 1.6;
+    color: var(--sp-text-3);
+    text-align: center;
+}
+
+.app-shell[data-app-id="shop"] .sp-cart__actions {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+/* 四叶草 · 我的 + 子页 + 配色 */
+
+/* ── 钱包 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-wallet {
+    padding: 18px 18px 15px;
+    margin-bottom: 18px;
+    border: 1px solid var(--sp-line);
+    border-radius: 16px;
+    background: var(--sp-surface);
+}
+
+.app-shell[data-app-id="shop"] .sp-wallet__head { margin-bottom: 12px; }
+
+.app-shell[data-app-id="shop"] .sp-wallet__who {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 620;
+    color: var(--sp-text);
+}
+
+.app-shell[data-app-id="shop"] .sp-wallet__world {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin: 3px 0 0;
+    font-size: 11.5px;
+    color: var(--sp-text-3);
+}
+
+.app-shell[data-app-id="shop"] .sp-wallet__clover { display: inline-flex; color: var(--sp-primary); }
+.app-shell[data-app-id="shop"] .sp-wallet__clover svg { width: 14px; height: 14px; }
+
+.app-shell[data-app-id="shop"] .sp-wallet__amount {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.app-shell[data-app-id="shop"] .sp-wallet__num {
+    font-size: 34px;
+    font-weight: 660;
+    letter-spacing: -0.6px;
+    font-variant-numeric: tabular-nums;
+    color: var(--sp-coin);
+}
+
+.app-shell[data-app-id="shop"] .sp-wallet__unit { font-size: 13px; color: var(--sp-text-3); }
+
+.app-shell[data-app-id="shop"] .sp-wallet__note {
+    margin: 7px 0 0;
+    font-size: 11.5px;
+    line-height: 1.6;
+    color: var(--sp-text-3);
+}
+
+.app-shell[data-app-id="shop"] .sp-wallet__stats {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+    padding-top: 13px;
+    border-top: 1px solid var(--sp-line-soft);
+}
+
+.app-shell[data-app-id="shop"] .sp-wallet__stat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="shop"] .sp-wallet__stat-v {
+    font-size: 15px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--sp-text);
+}
+
+.app-shell[data-app-id="shop"] .sp-wallet__stat-k { font-size: 10.5px; color: var(--sp-text-3); }
+
+/* ── 入口列表 ─────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-entries {
+    border: 1px solid var(--sp-line);
+    border-radius: 14px;
+    background: var(--sp-surface);
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="shop"] .sp-entry {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 13px 15px;
+    border: 0;
+    border-bottom: 1px solid var(--sp-line-soft);
+    background: transparent;
+    text-align: left;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+.app-shell[data-app-id="shop"] .sp-entry:last-child { border-bottom: 0; }
+.app-shell[data-app-id="shop"] .sp-entry:active { background: var(--sp-surface-2); }
+
+.app-shell[data-app-id="shop"] .sp-entry__icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: var(--sp-primary-soft);
+    color: var(--sp-primary-strong);
+}
+
+.app-shell[data-app-id="shop"] .sp-entry__main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.app-shell[data-app-id="shop"] .sp-entry__label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13.5px;
+    font-weight: 540;
+    color: var(--sp-text);
+}
+
+.app-shell[data-app-id="shop"] .sp-entry__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--sp-accent);
+}
+
+.app-shell[data-app-id="shop"] .sp-entry__hint { font-size: 11.5px; color: var(--sp-text-3); }
+
+.app-shell[data-app-id="shop"] .sp-entry__go {
+    flex: 0 0 auto;
+    display: inline-flex;
+    color: var(--sp-text-3);
+    opacity: 0.6;
+}
+.app-shell[data-app-id="shop"] .sp-entry__go svg { width: 16px; height: 16px; }
+
+/* ── 子页通用 ─────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-panel__desc {
+    margin: 0 0 16px;
+    padding: 11px 13px;
+    border-radius: 11px;
+    background: var(--sp-surface-2);
+    font-size: 12px;
+    line-height: 1.75;
+    color: var(--sp-text-2);
+}
+
+.app-shell[data-app-id="shop"] .sp-panel__note {
+    margin: 7px 0 0;
+    font-size: 11.5px;
+    line-height: 1.65;
+    color: var(--sp-text-3);
+}
+.app-shell[data-app-id="shop"] .sp-panel__note--warn { color: var(--sp-danger); }
+.app-shell[data-app-id="shop"] .sp-panel__note--faint { opacity: 0.7; margin-top: 20px; text-align: center; }
+
+/* ── 心愿单 ───────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-wish-add {
+    display: grid;
+    gap: 8px;
+    padding: 13px;
+    margin-bottom: 20px;
+    border: 1px solid var(--sp-line);
+    border-radius: 13px;
+    background: var(--sp-surface);
+}
+
+.app-shell[data-app-id="shop"] .sp-wish-add__row { display: flex; gap: 8px; }
+.app-shell[data-app-id="shop"] .sp-wish-add__row .sp-input { flex: 1; }
+
+.app-shell[data-app-id="shop"] .sp-wish {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--sp-line-soft);
+}
+.app-shell[data-app-id="shop"] .sp-wish:last-child { border-bottom: 0; }
+.app-shell[data-app-id="shop"] .sp-wish.is-done { opacity: 0.62; }
+.app-shell[data-app-id="shop"] .sp-wish.is-done .sp-wish__title { text-decoration: line-through; }
+
+.app-shell[data-app-id="shop"] .sp-wish__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.app-shell[data-app-id="shop"] .sp-wish__title { font-size: 13.5px; font-weight: 540; color: var(--sp-text); }
+.app-shell[data-app-id="shop"] .sp-wish__note { font-size: 11.5px; color: var(--sp-text-3); }
+
+.app-shell[data-app-id="shop"] .sp-wish__x {
+    flex: 0 0 auto;
+    border: 0;
+    background: none;
+    padding: 4px 6px;
+    color: var(--sp-text-3);
+    font-size: 11.5px;
+    font-family: inherit;
+    cursor: pointer;
+}
+.app-shell[data-app-id="shop"] .sp-wish__x:active { color: var(--sp-danger); }
+
+/* ── 礼物 / 订单 ──────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-gift,
+.app-shell[data-app-id="shop"] .sp-order {
+    padding: 13px 14px;
+    margin-bottom: 10px;
+    border: 1px solid var(--sp-line);
+    border-radius: 13px;
+    background: var(--sp-surface);
+}
+
+.app-shell[data-app-id="shop"] .sp-gift.is-new { border-color: var(--sp-accent); background: var(--sp-accent-soft); }
+
+.app-shell[data-app-id="shop"] .sp-gift__head,
+.app-shell[data-app-id="shop"] .sp-order__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 4px;
+}
+
+.app-shell[data-app-id="shop"] .sp-gift__name,
+.app-shell[data-app-id="shop"] .sp-order__names {
+    font-size: 13.5px;
+    font-weight: 560;
+    color: var(--sp-text);
+    min-width: 0;
+}
+
+.app-shell[data-app-id="shop"] .sp-gift__from,
+.app-shell[data-app-id="shop"] .sp-order__meta {
+    margin: 0;
+    font-size: 11.5px;
+    color: var(--sp-text-3);
+}
+
+.app-shell[data-app-id="shop"] .sp-gift__msg {
+    margin: 7px 0 0;
+    padding: 8px 11px;
+    border-radius: 9px;
+    background: var(--sp-surface-2);
+    font-size: 12.5px;
+    line-height: 1.65;
+    color: var(--sp-text-2);
+}
+
+.app-shell[data-app-id="shop"] .sp-gift__actions,
+.app-shell[data-app-id="shop"] .sp-order__actions { margin-top: 9px; }
+
+/* ── 流水 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-flow__sum {
+    display: flex;
+    gap: 8px;
+    padding: 14px;
+    margin-bottom: 16px;
+    border: 1px solid var(--sp-line);
+    border-radius: 13px;
+    background: var(--sp-surface);
+}
+
+.app-shell[data-app-id="shop"] .sp-flow__sum-cell { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+
+.app-shell[data-app-id="shop"] .sp-flow__sum-v {
+    font-size: 15.5px;
+    font-weight: 620;
+    font-variant-numeric: tabular-nums;
+    color: var(--sp-text);
+}
+.app-shell[data-app-id="shop"] .sp-flow__sum-v--in { color: var(--sp-income); }
+.app-shell[data-app-id="shop"] .sp-flow__sum-v--out { color: var(--sp-expense); }
+.app-shell[data-app-id="shop"] .sp-flow__sum-k { font-size: 10.5px; color: var(--sp-text-3); }
+
+.app-shell[data-app-id="shop"] .sp-flowrow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--sp-line-soft);
+}
+.app-shell[data-app-id="shop"] .sp-flowrow:last-child { border-bottom: 0; }
+
+.app-shell[data-app-id="shop"] .sp-flowrow__main { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+
+.app-shell[data-app-id="shop"] .sp-flowrow__note {
+    font-size: 12.5px;
+    color: var(--sp-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="shop"] .sp-flowrow__badge {
+    display: inline-block;
+    margin-right: 5px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: var(--sp-primary-soft);
+    color: var(--sp-primary-strong);
+    font-size: 9.5px;
+    font-style: normal;
+}
+
+.app-shell[data-app-id="shop"] .sp-flowrow__when { font-size: 10.5px; color: var(--sp-text-3); }
+
+.app-shell[data-app-id="shop"] .sp-flowrow__amt {
+    flex: 0 0 auto;
+    font-size: 13.5px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+.app-shell[data-app-id="shop"] .sp-flowrow__amt.is-in { color: var(--sp-income); }
+.app-shell[data-app-id="shop"] .sp-flowrow__amt.is-out { color: var(--sp-expense); }
+
+/* ── 小剧场列表行 ─────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-theater-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 13px 14px;
+    margin-bottom: 10px;
+    border: 1px solid var(--sp-line);
+    border-radius: 13px;
+    background: var(--sp-surface);
+    cursor: pointer;
+}
+.app-shell[data-app-id="shop"] .sp-theater-row:active { background: var(--sp-card-hover); }
+
+.app-shell[data-app-id="shop"] .sp-theater-row__main { flex: 1; min-width: 0; }
+
+.app-shell[data-app-id="shop"] .sp-theater-row__title {
+    margin: 0 0 3px;
+    font-size: 14px;
+    font-weight: 580;
+    color: var(--sp-text);
+}
+
+.app-shell[data-app-id="shop"] .sp-theater-row__cast {
+    margin: 0 0 5px;
+    font-size: 11px;
+    color: var(--sp-text-3);
+}
+
+.app-shell[data-app-id="shop"] .sp-theater-row__brief {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--sp-text-2);
+}
+
+/* ── 配色面板 ─────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-theme-picks { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.app-shell[data-app-id="shop"] .sp-theme-pick {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 11px;
+    border: 1.5px solid var(--sp-line);
+    border-radius: 13px;
+    background: var(--sp-bg);
+    text-align: left;
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color 0.16s ease;
+}
+.app-shell[data-app-id="shop"] .sp-theme-pick.is-on { border-color: var(--sp-primary); }
+
+/* 迷你预览：用主题自己的变量画一台小设备 ——
+   所以切换预设时这一格立刻是那套颜色，不用另存一份缩略图 */
+.app-shell[data-app-id="shop"] .sp-theme-pick__mini {
+    position: relative;
+    display: block;
+    height: 56px;
+    border-radius: 9px;
+    background: var(--sp-bg);
+    border: 1px solid var(--sp-line);
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="shop"] .sp-theme-pick__bar {
+    position: absolute;
+    top: 7px; left: 8px;
+    width: 40%;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--sp-text);
+    opacity: 0.75;
+}
+
+.app-shell[data-app-id="shop"] .sp-theme-pick__card {
+    position: absolute;
+    left: 8px; right: 8px; bottom: 8px;
+    height: 26px;
+    border-radius: 7px;
+    background: var(--sp-surface);
+    border: 1px solid var(--sp-line);
+}
+
+.app-shell[data-app-id="shop"] .sp-theme-pick__dot {
+    position: absolute;
+    right: 12px; bottom: 13px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--sp-primary);
+}
+
+.app-shell[data-app-id="shop"] .sp-theme-pick__name { font-size: 13px; font-weight: 580; color: var(--sp-text); }
+.app-shell[data-app-id="shop"] .sp-theme-pick__desc { font-size: 10.5px; color: var(--sp-text-3); }
+
+.app-shell[data-app-id="shop"] .sp-swatch-group {
+    border: 1px solid var(--sp-line);
+    border-radius: 11px;
+    margin-bottom: 8px;
+    overflow: hidden;
+    background: var(--sp-surface);
+}
+
+.app-shell[data-app-id="shop"] .sp-swatch-group__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 10px 13px;
+    border: 0;
+    background: transparent;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 560;
+    color: var(--sp-text);
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="shop"] .sp-swatch-group__count { font-size: 11px; color: var(--sp-text-3); }
+
+.app-shell[data-app-id="shop"] .sp-swatch-group__body {
+    padding: 4px 13px 11px;
+    border-top: 1px solid var(--sp-line-soft);
+}
+
+.app-shell[data-app-id="shop"] .sp-swatch {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--sp-line-soft);
+}
+.app-shell[data-app-id="shop"] .sp-swatch:last-child { border-bottom: 0; }
+
+.app-shell[data-app-id="shop"] .sp-swatch__chip {
+    position: relative;
+    flex: 0 0 auto;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    border: 1px solid var(--sp-line-strong);
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="shop"] .sp-swatch__picker {
+    position: absolute;
+    inset: -4px;
+    width: calc(100% + 8px);
+    height: calc(100% + 8px);
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    opacity: 0;
+}
+
+.app-shell[data-app-id="shop"] .sp-swatch__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+
+.app-shell[data-app-id="shop"] .sp-swatch__label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    color: var(--sp-text);
+}
+
+.app-shell[data-app-id="shop"] .sp-swatch__changed {
+    padding: 0 5px;
+    border-radius: 4px;
+    background: var(--sp-primary-soft);
+    color: var(--sp-primary-strong);
+    font-size: 9.5px;
+    font-style: normal;
+}
+
+.app-shell[data-app-id="shop"] .sp-swatch__value {
+    width: 100%;
+    padding: 3px 7px;
+    border: 1px solid var(--sp-input-line);
+    border-radius: 6px;
+    background: var(--sp-input-bg);
+    color: var(--sp-text-2);
+    font-size: 11px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    outline: none;
+}
+
+.app-shell[data-app-id="shop"] .sp-swatch__token {
+    font-size: 9.5px;
+    color: var(--sp-text-3);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.app-shell[data-app-id="shop"] .sp-swatch__reset {
+    flex: 0 0 auto;
+    border: 0;
+    background: none;
+    padding: 4px 5px;
+    color: var(--sp-text-3);
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="shop"] .sp-batch__actions {
+    display: flex;
+    gap: 8px;
+    margin: 9px 0;
+}
+
+/* 四叶草 · 小剧场
+ *
+ * 台词的排版刻意像剧本而不像聊天：说话人在左边一列、台词在右边。
+ * 聊天气泡那种形态会让人期待「能回复」，而这是已经演完的一段 ——
+ * 用户在这里的动作是**改**，不是**说**。
+ */
+
+.app-shell[data-app-id="shop"] .sp-theater__title {
+    width: 100%;
+    padding: 4px 0 6px;
+    border: 0;
+    border-bottom: 1px dashed transparent;
+    background: transparent;
+    color: var(--sp-text);
+    font-size: 20px;
+    font-weight: 640;
+    font-family: inherit;
+    outline: none;
+}
+.app-shell[data-app-id="shop"] .sp-theater__title:focus { border-bottom-color: var(--sp-line-strong); }
+
+.app-shell[data-app-id="shop"] .sp-theater__meta {
+    margin: 0 0 18px;
+    font-size: 11.5px;
+    color: var(--sp-text-3);
+}
+
+.app-shell[data-app-id="shop"] .sp-scene { margin-bottom: 22px; }
+
+.app-shell[data-app-id="shop"] .sp-scene__head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 7px;
+}
+
+.app-shell[data-app-id="shop"] .sp-scene__no {
+    padding: 1px 7px;
+    border-radius: 5px;
+    background: var(--sp-primary-soft);
+    color: var(--sp-primary-strong);
+    font-size: 10.5px;
+    font-weight: 600;
+}
+
+.app-shell[data-app-id="shop"] .sp-scene__place { font-size: 12px; color: var(--sp-text-3); }
+
+.app-shell[data-app-id="shop"] .sp-scene__narration {
+    width: 100%;
+    padding: 9px 12px;
+    margin-bottom: 10px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: var(--sp-surface-2);
+    color: var(--sp-text-2);
+    font-size: 12.5px;
+    font-family: inherit;
+    font-style: italic;
+    line-height: 1.75;
+    resize: none;
+    outline: none;
+}
+.app-shell[data-app-id="shop"] .sp-scene__narration:focus { border-color: var(--sp-primary); background: var(--sp-surface); }
+
+.app-shell[data-app-id="shop"] .sp-lines { display: grid; gap: 9px; }
+
+.app-shell[data-app-id="shop"] .sp-line {
+    display: grid;
+    grid-template-columns: 58px 1fr auto;
+    align-items: start;
+    gap: 9px;
+}
+
+.app-shell[data-app-id="shop"] .sp-line__who {
+    padding-top: 2px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--sp-primary-strong);
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="shop"] .sp-line__text {
+    margin: 0;
+    padding: 2px 4px;
+    border-radius: 7px;
+    font-size: 13.5px;
+    line-height: 1.75;
+    color: var(--sp-text);
+    cursor: text;
+    transition: background 0.15s ease;
+}
+.app-shell[data-app-id="shop"] .sp-line__text:active { background: var(--sp-surface-2); }
+
+.app-shell[data-app-id="shop"] .sp-line__edit {
+    width: 100%;
+    padding: 5px 8px;
+    border: 1px solid var(--sp-primary);
+    border-radius: 8px;
+    background: var(--sp-surface);
+    color: var(--sp-text);
+    font-size: 13.5px;
+    font-family: inherit;
+    line-height: 1.7;
+    resize: none;
+    outline: none;
+}
+
+.app-shell[data-app-id="shop"] .sp-line__x {
+    border: 0;
+    background: none;
+    padding: 2px 4px;
+    color: var(--sp-text-3);
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+    opacity: 0.5;
+}
+.app-shell[data-app-id="shop"] .sp-line__x:active { opacity: 1; color: var(--sp-danger); }
+
+.app-shell[data-app-id="shop"] .sp-theater__closing {
+    margin: 0 0 22px;
+    padding: 12px 14px;
+    border-left: 2px solid var(--sp-accent);
+    border-radius: 0 10px 10px 0;
+    background: var(--sp-accent-soft);
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--sp-text-2);
+}
+
+.app-shell[data-app-id="shop"] .sp-theater__summary {
+    margin: 0;
+    padding: 11px 13px;
+    border-radius: 10px;
+    background: var(--sp-surface-2);
+    font-size: 12.5px;
+    line-height: 1.75;
+    color: var(--sp-text-2);
+}
+

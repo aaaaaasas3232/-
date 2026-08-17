@@ -1,0 +1,4929 @@
+/* ============================================
+ * 首页基础样式
+ * ============================================ */
+
+/* 首页整体容器：背景透明，由 app.background 渐变统一控制 */
+.app-shell[data-app-id="music"] .music-app-container {
+    background: transparent;
+    min-height: 100%;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
+    /* 悬浮 tabbar 高 60、离底 45，内容要让出这一段，
+       否则列表最后几行永远压在栏底下、划不上来 */
+    padding-bottom: 122px;
+}
+
+/*
+ * 音乐 App 的页面**不允许横向滚动**。
+ *
+ * framework 的 `.app-page` 只写了 `overflow-y: auto`。按 CSS 规范，
+ * overflow 的两个方向只要有一个不是 visible，另一个 visible 就会被
+ * 计算成 auto —— 也就是说 `.app-page` 其实是**可以横向滚动的**。
+ * 于是页面里任何一个元素超出去哪怕几像素（负 margin 的 header、
+ * 没写 min-width:0 的 flex 子项、绝对定位的小红点…），
+ * 在触屏上就变成「整页能左右拖」。桌面上因为没有横向滚动条，
+ * 这个问题完全看不出来，只有手机上能摸到。
+ *
+ * 与其一个个去追是哪个元素溢出的（改一版就会冒出下一个），
+ * 不如在容器这一层把横向直接关掉：
+ *   overflow-x: hidden  —— 溢出内容裁掉，不产生滚动
+ *   touch-action: pan-y —— 告诉浏览器这一层只接受纵向手势，
+ *                          横向拖拽从一开始就不会被识别
+ * 这里用 pan-y 是对的：我们要的就是「把纵向交给浏览器、横向不要」。
+ * （AGENTS2 §13.5.2 说的「别用 pan-y」针对的是自绘纵向手势控件，
+ *   跟这里的场景相反。）
+ */
+.app-shell[data-app-id="music"] .app-page {
+    overflow-x: hidden;
+    touch-action: pan-y;
+}
+
+.app-shell[data-app-id="music"] .music-app-container::-webkit-scrollbar {
+    display: none;
+}
+
+/* 状态栏间距 / 底部指示器：背景透明，由 app.background 统一控制 */
+.app-shell[data-app-id="music"] .app-status-bar-gap {
+    background: transparent;
+}
+
+.app-shell[data-app-id="music"] .app-bottom-indicator-wrap {
+    background: transparent;
+}
+
+.app-shell[data-app-id="music"] .home-indicator {
+    background-color: rgba(0, 0, 0, 0.3);
+}
+
+/* ============================================
+ * 全屏背景 + 统一的二级页顶栏
+ * --------------------------------------------
+ * 之前：framework 会在每个二级页顶上画一条 `.app-detail-header`
+ * （白底毛玻璃 + 「‹ 返回」+ 标题）。播放器页自己也有一条顶栏，
+ * 于是同一屏两个返回按钮；而且那条白底压在粉色渐变背景上，
+ * 像贴了块补丁，各二级页风格也各不相同。
+ *
+ * 现在：framework 那条全局藏掉，所有二级页统一用 .music-detail-topbar
+ * （透明底，返回 + 标题 + 右侧按钮），背景一路透到 app-background-layer，
+ * 主页面和子页面看起来是同一张底。
+ * ============================================ */
+.app-shell[data-app-id="music"] .app-detail-header {
+    display: none;
+}
+
+.app-shell[data-app-id="music"] .app-detail-page,
+.app-shell[data-app-id="music"] .app-detail-surface,
+.app-shell[data-app-id="music"] .app-detail-body,
+.app-shell[data-app-id="music"] .app-detail-panel,
+.app-shell[data-app-id="music"] .app-page,
+.app-shell[data-app-id="music"] .app-content {
+    background: transparent;
+}
+
+.app-shell[data-app-id="music"] .app-detail-body {
+    padding: 0;
+}
+
+.app-shell[data-app-id="music"] .app-detail-panel {
+    padding: 0;
+}
+
+/* 二级页整体：顶部给状态栏让位，底部给指示条 + 悬浮 tabbar 让位 */
+.app-shell[data-app-id="music"] .music-detail-page {
+    min-height: 100%;
+    padding-bottom: calc(var(--app-safe-bottom, 40px) + 16px);
+    box-sizing: border-box;
+}
+
+.app-shell[data-app-id="music"] .music-detail-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 46px 14px 10px;
+    background: transparent;
+}
+
+.app-shell[data-app-id="music"] .music-detail-topbar-back,
+.app-shell[data-app-id="music"] .music-detail-topbar-btn {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.7);
+    color: #444;
+    cursor: pointer;
+    padding: 0;
+    transition: transform 0.15s, background 0.15s;
+}
+
+.app-shell[data-app-id="music"] .music-detail-topbar-back:active,
+.app-shell[data-app-id="music"] .music-detail-topbar-btn:active {
+    transform: scale(0.9);
+    background: rgba(255, 255, 255, 0.95);
+}
+
+.app-shell[data-app-id="music"] .music-detail-topbar-back svg,
+.app-shell[data-app-id="music"] .music-detail-topbar-btn svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+}
+
+.app-shell[data-app-id="music"] .music-detail-topbar-title {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a1a1a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="music"] .music-detail-topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    /* 和左边返回按钮等宽，标题才真的居中 */
+    min-width: 34px;
+    justify-content: flex-end;
+}
+
+/* ============================================
+ * 首页 Header
+ * ============================================ */
+.app-shell[data-app-id="music"] .music-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 26px 30px 12px;
+    margin: 15px -30px;
+}
+
+.app-shell[data-app-id="music"] .music-header-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1a1a1a;
+    letter-spacing: -0.5px;
+}
+
+.app-shell[data-app-id="music"] .music-header-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="music"] .music-header-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #fb7299 0%, #ff9a9e 100%);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: white;
+    transition: transform 0.15s;
+}
+
+.app-shell[data-app-id="music"] .music-header-btn:active {
+    transform: scale(0.92);
+}
+
+.app-shell[data-app-id="music"] .music-header-btn svg {
+    width: 22px;
+    height: 22px;
+    fill: white;
+}
+
+/* ============================================
+ * 首页搜索栏
+ * ============================================ */
+.app-shell[data-app-id="music"] .music-search-bar {
+    margin: 0 20px 24px;
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 12px;
+    padding: 10px 14px;
+    gap: 10px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.app-shell[data-app-id="music"] .music-search-bar svg {
+    width: 20px;
+    height: 20px;
+    fill: #888;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="music"] .music-search-bar input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 14px;
+    color: #1a1a1a;
+    font-family: inherit;
+}
+
+.app-shell[data-app-id="music"] .music-search-bar input::placeholder {
+    color: #aaa;
+}
+
+/* ============================================
+ * 歌单卡片
+ * ============================================ */
+
+/* 创建歌单按钮样式 */
+.app-shell[data-app-id="music"] .music-playlist-cover-add {
+    background: rgba(0, 0, 0, 0.04);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="music"] .music-playlist-cover-add svg {
+    width: 32px;
+    height: 32px;
+    fill: #888;
+}
+
+/* 歌单封面渐变背景样式 */
+.app-shell[data-app-id="music"] .music-playlist-cover-gradient {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="music"] .music-playlist-cover-gradient svg {
+    width: 48px;
+    height: 48px;
+    fill: rgba(255, 255, 255, 0.85);
+}
+
+/* 渐变色变体 */
+.app-shell[data-app-id="music"] .music-playlist-cover-gradient--pink {
+    background: linear-gradient(135deg, #fb7299, rgba(251, 114, 153, 0.4));
+}
+
+.app-shell[data-app-id="music"] .music-playlist-cover-gradient--purple {
+    background: linear-gradient(135deg, #667eea, rgba(102, 126, 234, 0.4));
+}
+
+.app-shell[data-app-id="music"] .music-playlist-cover-gradient--blue {
+    background: linear-gradient(135deg, #667eea, rgba(102, 126, 234, 0.4));
+}
+
+/* ============================================
+ * 歌曲项
+ * ============================================ */
+.app-shell[data-app-id="music"] .music-song-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 14px;
+    background: white;
+    border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.app-shell[data-app-id="music"] .music-song-item:last-child {
+    border-bottom: none;
+}
+
+.app-shell[data-app-id="music"] .music-song-item:active {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+/* 歌曲封面占位符 */
+.app-shell[data-app-id="music"] .music-song-cover-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+/* 歌曲封面占位符 */
+.app-shell[data-app-id="music"] .music-song-cover-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.app-shell[data-app-id="music"] .music-song-cover-placeholder svg {
+    width: 28px;
+    height: 28px;
+    fill: white;
+}
+
+/* 渐变色占位符变体 */
+.app-shell[data-app-id="music"] .music-song-cover-placeholder--pink {
+    background: linear-gradient(135deg, #ff99cc, rgba(255, 153, 204, 0.6));
+}
+
+.app-shell[data-app-id="music"] .music-song-cover-placeholder--purple {
+    background: linear-gradient(135deg, #6c5ce7, rgba(108, 92, 231, 0.6));
+}
+
+.app-shell[data-app-id="music"] .music-song-cover-placeholder--blue {
+    background: linear-gradient(135deg, #74b9ff, rgba(116, 185, 255, 0.6));
+}
+
+/* 歌曲信息 */
+.app-shell[data-app-id="music"] .music-song-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="music"] .music-song-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a1a1a;
+    line-height: 1.3;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="music"] .music-song-artist {
+    font-size: 12px;
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 歌曲操作按钮 */
+.app-shell[data-app-id="music"] .music-song-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="music"] .music-song-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #ccc;
+    transition: transform 0.15s, color 0.15s;
+    padding: 0;
+}
+
+.app-shell[data-app-id="music"] .music-song-btn:active {
+    transform: scale(0.85);
+}
+
+.app-shell[data-app-id="music"] .music-song-btn svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+}
+
+.app-shell[data-app-id="music"] .music-song-btn.liked,
+.app-shell[data-app-id="music"] .music-song-btn.is-liked,
+.app-shell[data-app-id="music"] .music-like-btn.is-liked {
+    color: #fb7299;
+}
+
+/* 统一收藏按钮：icon 变体走 .music-song-btn 那套尺寸，
+   labeled 变体（播放器页）走 .music-player-action 的竖排布局 */
+.app-shell[data-app-id="music"] .music-like-btn {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-family: inherit;
+    padding: 0;
+}
+
+.app-shell[data-app-id="music"] .music-like-btn--labeled {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+/* 播放按钮：.music-play-toggle 是统一组件（track-controls.js），
+   .music-song-play-btn 是老类名，留着让还没迁完的地方不至于掉样式 */
+.app-shell[data-app-id="music"] .music-play-toggle--list,
+.app-shell[data-app-id="music"] .music-song-play-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(251, 114, 153, 0.1);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #fb7299;
+    transition: transform 0.15s, background 0.15s;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="music"] .music-play-toggle--list:active,
+.app-shell[data-app-id="music"] .music-song-play-btn:active {
+    transform: scale(0.85);
+    background: rgba(251, 114, 153, 0.2);
+}
+
+.app-shell[data-app-id="music"] .music-play-toggle svg,
+.app-shell[data-app-id="music"] .music-song-play-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+/* 正在响的那一行：按钮实心，一眼能看出音乐从哪来 */
+.app-shell[data-app-id="music"] .music-play-toggle--list.is-playing {
+    background: #fb7299;
+    color: #fff;
+}
+
+.app-shell[data-app-id="music"] .music-song-item.is-current .music-song-name {
+    color: #fb7299;
+    font-weight: 600;
+}
+
+/* ============================================
+ * 音符动画
+ * ============================================ */
+.app-shell[data-app-id="music"] .music-note {
+    position: absolute;
+    bottom: 6px;
+    font-size: 12px;
+    color: #fb7299;
+    line-height: 0;
+}
+
+.app-shell[data-app-id="music"] .music-note svg {
+    width: 12px;
+    height: 12px;
+    fill: currentColor;
+    display: block;
+}
+
+.app-shell[data-app-id="music"] .music-note--1 { left: 10%; animation-delay: 0s; }
+.app-shell[data-app-id="music"] .music-note--2 { left: 30%; animation-delay: 0.5s; }
+.app-shell[data-app-id="music"] .music-note--3 { left: 50%; animation-delay: 1s; }
+.app-shell[data-app-id="music"] .music-note--4 { left: 70%; animation-delay: 1.5s; }
+.app-shell[data-app-id="music"] .music-note--5 { left: 90%; animation-delay: 2s; }
+
+/* ============================================
+ * 我的页面样式
+ * ============================================ */
+
+/* 用户信息头部 */
+.app-shell[data-app-id="music"] .music-user-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 20px 16px;
+    margin: 0 16px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.app-shell[data-app-id="music"] .music-user-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(251, 114, 153, 0.12), rgba(255, 154, 158, 0.12));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
+}
+
+.app-shell[data-app-id="music"] .music-user-avatar svg {
+    width: 36px;
+    height: 36px;
+    fill: #fb7299;
+}
+
+.app-shell[data-app-id="music"] .music-user-name {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 4px;
+}
+
+.app-shell[data-app-id="music"] .music-user-bio {
+    font-size: 13px;
+    color: #888;
+}
+
+/* 用户统计 */
+.app-shell[data-app-id="music"] .music-user-stats {
+    display: flex;
+    justify-content: space-around;
+    padding: 16px 20px;
+    margin: 16px;
+    background: white;
+    border-radius: 14px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.app-shell[data-app-id="music"] .music-user-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="music"] .music-user-stat:active {
+    opacity: 0.7;
+}
+
+.app-shell[data-app-id="music"] .music-user-stat-num {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 2px;
+}
+
+.app-shell[data-app-id="music"] .music-user-stat-label {
+    font-size: 12px;
+    color: #888;
+}
+
+/* 菜单列表 */
+.app-shell[data-app-id="music"] .music-menu-list {
+    margin: 16px;
+}
+
+.app-shell[data-app-id="music"] .music-menu-item {
+    display: flex;
+    align-items: center;
+    padding: 14px 16px;
+    background: white;
+    border-radius: 12px;
+    margin-bottom: 8px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+    cursor: pointer;
+    border: none;
+    width: 100%;
+    text-align: left;
+    transition: transform 0.1s;
+}
+
+.app-shell[data-app-id="music"] .music-menu-item:active {
+    transform: scale(0.98);
+}
+
+.app-shell[data-app-id="music"] .music-menu-item:last-child {
+    margin-bottom: 0;
+}
+
+.app-shell[data-app-id="music"] .music-menu-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 14px;
+}
+
+.app-shell[data-app-id="music"] .music-menu-icon svg {
+    width: 20px;
+    height: 20px;
+    fill: white;
+}
+
+.app-shell[data-app-id="music"] .music-menu-icon--pink {
+    background: linear-gradient(135deg, #fb7299, #ff9a9e);
+}
+
+.app-shell[data-app-id="music"] .music-menu-icon--blue {
+    background: linear-gradient(135deg, #00c6fb, #005bea);
+}
+
+.app-shell[data-app-id="music"] .music-menu-icon--purple {
+    background: linear-gradient(135deg, #a29bfe, #9388ee);
+}
+
+.app-shell[data-app-id="music"] .music-menu-text {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.app-shell[data-app-id="music"] .music-menu-arrow {
+    font-size: 20px;
+    color: #ccc;
+}
+
+/* ============================================
+ * 发现页面样式
+ * ============================================ */
+
+/* 发现页网格布局 */
+.app-shell[data-app-id="music"] .music-discover-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    padding: 0 4px;
+}
+
+/* 发现页卡片 */
+.app-shell[data-app-id="music"] .music-discover-card {
+    background: white;
+    border-radius: 14px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.app-shell[data-app-id="music"] .music-discover-card:active {
+    transform: scale(0.97);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* 发现页卡片图标 */
+.app-shell[data-app-id="music"] .music-discover-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="music"] .music-discover-icon svg {
+    width: 22px;
+    height: 22px;
+    fill: white;
+}
+
+/* 图标颜色变体 */
+.app-shell[data-app-id="music"] .music-discover-icon--red {
+    background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
+}
+
+.app-shell[data-app-id="music"] .music-discover-icon--teal {
+    background: linear-gradient(135deg, #4ecdc4, #44bfb6);
+}
+
+.app-shell[data-app-id="music"] .music-discover-icon--purple {
+    background: linear-gradient(135deg, #a29bfe, #9388ee);
+}
+
+.app-shell[data-app-id="music"] .music-discover-icon--pink {
+    background: linear-gradient(135deg, #fd79a8, #f06292);
+}
+
+/* 发现页卡片文字 */
+.app-shell[data-app-id="music"] .music-discover-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.app-shell[data-app-id="music"] .music-discover-desc {
+    font-size: 12px;
+    color: #888;
+    line-height: 1.4;
+}
+
+/* ============================================
+ * 一起听页面样式
+ * ============================================ */
+
+/* ---- 进行中状态卡（1:1 还原原型 listen-together-active-card）---- */
+.app-shell[data-app-id="music"] .listen-together-active-card {
+    background: linear-gradient(135deg, #ffffff 0%, #fefefe 50%, #fafafa 100%);
+    border-radius: 24px;
+    padding: 18px;
+    margin: 0 0 20px;
+    color: #fb7299;
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.08),
+        0 2px 8px rgba(0, 0, 0, 0.04),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(251, 114, 153, 0.15);
+    backdrop-filter: blur(10px);
+}
+
+.app-shell[data-app-id="music"] .listen-together-active-card::before {
+    content: '';
+    position: absolute;
+    top: -80%;
+    right: -40%;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(251, 114, 153, 0.06) 0%, rgba(251, 114, 153, 0.02) 40%, transparent 70%);
+    pointer-events: none;
+    animation: musicLtFloatGlow 6s ease-in-out infinite;
+}
+
+.app-shell[data-app-id="music"] .listen-together-active-card::after {
+    content: '';
+    position: absolute;
+    bottom: -60%;
+    left: -30%;
+    width: 180px;
+    height: 180px;
+    background: radial-gradient(circle, rgba(251, 114, 153, 0.08) 0%, transparent 60%);
+    pointer-events: none;
+    animation: musicLtFloatGlow 8s ease-in-out infinite reverse;
+}
+
+@keyframes musicLtFloatGlow {
+    0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.8; }
+    50% { transform: translate(10px, 10px) scale(1.1); opacity: 1; }
+}
+
+.app-shell[data-app-id="music"] .listen-together-active-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    position: relative;
+    z-index: 1;
+}
+
+.app-shell[data-app-id="music"] .listen-together-active-indicator {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(251, 114, 153, 0.08);
+    padding: 6px 14px 6px 10px;
+    border-radius: 20px;
+    border: 1px solid rgba(251, 114, 153, 0.12);
+}
+
+.app-shell[data-app-id="music"] .listen-together-pulse {
+    width: 10px;
+    height: 10px;
+    background: linear-gradient(135deg, #ffb6c1 0%, #ff69b4 50%, #ff1493 100%);
+    border-radius: 50%;
+    box-shadow:
+        0 0 0 0 rgba(255, 105, 180, 0.6),
+        0 0 8px rgba(255, 105, 180, 0.5),
+        inset 0 -1px 2px rgba(255, 20, 147, 0.3);
+    animation: musicLtPulse 2s ease-out infinite;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+@keyframes musicLtPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(255, 105, 180, 0.6), 0 0 8px rgba(255, 105, 180, 0.5), inset 0 -1px 2px rgba(255, 20, 147, 0.3);
+        transform: scale(1);
+    }
+    50% { transform: scale(1.1); }
+    70% {
+        box-shadow: 0 0 0 10px rgba(255, 105, 180, 0), 0 0 12px rgba(255, 105, 180, 0.3), inset 0 -1px 2px rgba(255, 20, 147, 0.3);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 105, 180, 0), 0 0 8px rgba(255, 105, 180, 0.5), inset 0 -1px 2px rgba(255, 20, 147, 0.3);
+        transform: scale(1);
+    }
+}
+
+.app-shell[data-app-id="music"] .listen-together-status-text {
+    font-weight: 600;
+    font-size: 13px;
+    color: #fb7299;
+}
+
+.app-shell[data-app-id="music"] .listen-together-timer-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(251, 114, 153, 0.08);
+    padding: 6px 12px;
+    border-radius: 16px;
+    border: 1px solid rgba(251, 114, 153, 0.12);
+}
+
+.app-shell[data-app-id="music"] .listen-together-timer-icon {
+    width: 12px;
+    height: 12px;
+    opacity: 0.7;
+}
+
+.app-shell[data-app-id="music"] .listen-together-timer-icon svg {
+    width: 100%;
+    height: 100%;
+    fill: #fb7299;
+}
+
+.app-shell[data-app-id="music"] .listen-together-timer {
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'SF Mono', 'Monaco', monospace;
+    letter-spacing: 0.5px;
+    color: #fb7299;
+}
+
+.app-shell[data-app-id="music"] .listen-together-partner-info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    position: relative;
+    z-index: 1;
+    color: #666;
+}
+
+.app-shell[data-app-id="music"] .listen-together-partner-label {
+    opacity: 0.8;
+    font-weight: 500;
+}
+
+.app-shell[data-app-id="music"] .listen-together-partner-name {
+    font-size: 15px;
+    font-weight: 700;
+    padding: 5px 16px;
+    background: linear-gradient(135deg, #fb7299 0%, #ff85a2 100%);
+    color: white;
+    border-radius: 14px;
+    box-shadow: 0 3px 12px rgba(251, 114, 153, 0.3);
+    letter-spacing: 0.5px;
+}
+
+.app-shell[data-app-id="music"] .listen-together-now-playing {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px;
+    background: linear-gradient(135deg, rgba(251, 114, 153, 0.06) 0%, rgba(251, 114, 153, 0.03) 100%);
+    border-radius: 18px;
+    margin-bottom: 14px;
+    border: 1px solid rgba(251, 114, 153, 0.1);
+    position: relative;
+    z-index: 1;
+}
+
+.app-shell[data-app-id="music"] .listen-together-song-cover {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    overflow: hidden;
+    flex-shrink: 0;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    border: 2px solid rgba(255, 255, 255, 0.8);
+}
+
+.app-shell[data-app-id="music"] .listen-together-song-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.app-shell[data-app-id="music"] .listen-together-song-cover-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #fb7299, #ff9a9e);
+}
+
+.app-shell[data-app-id="music"] .listen-together-song-cover-placeholder svg {
+    width: 22px;
+    height: 22px;
+    fill: white;
+}
+
+.app-shell[data-app-id="music"] .listen-together-song-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="music"] .listen-together-song-title {
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+    color: #333;
+}
+
+.app-shell[data-app-id="music"] .listen-together-song-artist {
+    font-size: 11px;
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="music"] .listen-together-song-plays {
+    font-size: 10px;
+    color: #fb7299;
+    margin-top: 3px;
+}
+
+.app-shell[data-app-id="music"] .listen-together-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+    position: relative;
+    z-index: 1;
+}
+
+.app-shell[data-app-id="music"] .listen-together-action-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px;
+    background: linear-gradient(135deg, #fb7299 0%, #ff85a2 100%);
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 3px 12px rgba(251, 114, 153, 0.25);
+}
+
+.app-shell[data-app-id="music"] .listen-together-action-btn:active {
+    transform: scale(0.96);
+    box-shadow: 0 2px 8px rgba(251, 114, 153, 0.3);
+}
+
+.app-shell[data-app-id="music"] .listen-together-action-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.app-shell[data-app-id="music"] .listen-together-action-icon svg {
+    width: 100%;
+    height: 100%;
+    fill: white;
+}
+
+.app-shell[data-app-id="music"] .listen-together-end-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.06);
+    border: none;
+    border-radius: 12px;
+    color: #666;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    z-index: 1;
+}
+
+.app-shell[data-app-id="music"] .listen-together-end-btn:active {
+    transform: scale(0.98);
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.app-shell[data-app-id="music"] .listen-together-end-icon {
+    width: 14px;
+    height: 14px;
+}
+
+.app-shell[data-app-id="music"] .listen-together-end-icon svg {
+    width: 100%;
+    height: 100%;
+    fill: #999;
+}
+
+/* ---- 空闲卡里的"当前播放" ---- */
+.app-shell[data-app-id="music"] .listen-together-idle-song {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    margin-top: 16px;
+    background: white;
+    border-radius: 12px;
+    width: 100%;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.app-shell[data-app-id="music"] .listen-together-idle-song-cover {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="music"] .listen-together-idle-song-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.app-shell[data-app-id="music"] .listen-together-idle-song-cover svg {
+    width: 18px;
+    height: 18px;
+    fill: white;
+}
+
+.app-shell[data-app-id="music"] .listen-together-idle-song-info {
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+}
+
+.app-shell[data-app-id="music"] .listen-together-idle-song-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="music"] .listen-together-idle-song-artist {
+    font-size: 11px;
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ---- 好友列表：在线点 + 波形 ---- */
+.app-shell[data-app-id="music"] .listen-together-friend-online {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 12px;
+    height: 12px;
+    background: #4ade80;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 2px 6px rgba(74, 222, 128, 0.4);
+    z-index: 1;
+}
+
+.app-shell[data-app-id="music"] .listen-together-wave-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    height: 24px;
+}
+
+.app-shell[data-app-id="music"] .listen-together-wave-indicator span {
+    width: 4px;
+    height: 12px;
+    background: linear-gradient(180deg, #fb7299, #ff9a9e);
+    border-radius: 2px;
+    animation: musicLtWave 1s ease-in-out infinite;
+}
+
+.app-shell[data-app-id="music"] .listen-together-wave-indicator span:nth-child(1) { animation-delay: 0s; }
+.app-shell[data-app-id="music"] .listen-together-wave-indicator span:nth-child(2) { animation-delay: 0.15s; }
+.app-shell[data-app-id="music"] .listen-together-wave-indicator span:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes musicLtWave {
+    0%, 100% { height: 8px; opacity: 0.5; }
+    50% { height: 20px; opacity: 1; }
+}
+
+/* ---- 无好友空态 ---- */
+.app-shell[data-app-id="music"] .listen-together-empty {
+    text-align: center;
+    padding: 50px 20px;
+    background: white;
+    border-radius: 24px;
+    box-shadow: 0 4px 20px rgba(251, 114, 153, 0.08);
+}
+
+.app-shell[data-app-id="music"] .listen-together-empty-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 20px;
+    color: #ddd;
+}
+
+.app-shell[data-app-id="music"] .listen-together-empty-icon svg {
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
+}
+
+.app-shell[data-app-id="music"] .listen-together-empty-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.app-shell[data-app-id="music"] .listen-together-empty-desc {
+    font-size: 14px;
+    color: #999;
+}
+
+/* 空状态卡片 */
+.app-shell[data-app-id="music"] .listen-together-idle-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+    margin: 16px 0;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.app-shell[data-app-id="music"] .listen-together-idle-icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(251, 114, 153, 0.15), rgba(255, 154, 158, 0.15));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+}
+
+.app-shell[data-app-id="music"] .listen-together-idle-icon svg {
+    width: 36px;
+    height: 36px;
+    fill: #fb7299;
+}
+
+.app-shell[data-app-id="music"] .listen-together-idle-content {
+    text-align: center;
+}
+
+.app-shell[data-app-id="music"] .listen-together-idle-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 6px;
+}
+
+.app-shell[data-app-id="music"] .listen-together-idle-desc {
+    font-size: 13px;
+    color: #888;
+    line-height: 1.5;
+}
+
+/* 选择好友区域 */
+.app-shell[data-app-id="music"] .listen-together-content {
+    margin-bottom: 24px;
+}
+
+.app-shell[data-app-id="music"] .listen-together-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 4px 12px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.app-shell[data-app-id="music"] .listen-together-section-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: rgba(251, 114, 153, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="music"] .listen-together-section-icon svg {
+    width: 16px;
+    height: 16px;
+    fill: #fb7299;
+}
+
+/* 好友列表 */
+.app-shell[data-app-id="music"] .listen-together-friends-list {
+    background: white;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.app-shell[data-app-id="music"] .listen-together-friend-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 14px;
+    cursor: pointer;
+    border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);
+    transition: background 0.15s;
+}
+
+.app-shell[data-app-id="music"] .listen-together-friend-item:last-child {
+    border-bottom: none;
+}
+
+.app-shell[data-app-id="music"] .listen-together-friend-item:active {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.app-shell[data-app-id="music"] .listen-together-friend-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    overflow: hidden;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="music"] .listen-together-friend-avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #fb7299, #ff9a9e);
+    color: white;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.app-shell[data-app-id="music"] .listen-together-friend-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="music"] .listen-together-friend-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 2px;
+}
+
+.app-shell[data-app-id="music"] .listen-together-friend-status {
+    font-size: 12px;
+    color: #888;
+}
+
+.app-shell[data-app-id="music"] .listen-together-friend-action {
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+
+.app-shell[data-app-id="music"] .listen-together-invite-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(251, 114, 153, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="music"] .listen-together-invite-icon svg {
+    width: 18px;
+    height: 18px;
+    fill: #fb7299;
+}
+
+/* 历史记录区域 */
+.app-shell[data-app-id="music"] .listen-together-history-section {
+    margin-bottom: 100px;
+}
+
+.app-shell[data-app-id="music"] .listen-together-history-list {
+    background: white;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.app-shell[data-app-id="music"] .listen-together-history-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: #888;
+    font-size: 13px;
+}
+
+.app-shell[data-app-id="music"] .listen-together-history-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 14px;
+    border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);
+}
+
+.app-shell[data-app-id="music"] .listen-together-history-item:last-child {
+    border-bottom: none;
+}
+
+.app-shell[data-app-id="music"] .listen-together-history-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(116, 185, 255, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="music"] .listen-together-history-icon svg {
+    width: 20px;
+    height: 20px;
+    fill: #74b9ff;
+}
+
+/* flex 子项默认 min-width:auto，长文本撑不下时不会收缩、只会把行撑宽。
+   下面这一条是「一起听记录」那一行横向溢出的直接来源
+   （对照 .music-lt-history-info，那边一直是写了的，这边漏了）。 */
+.app-shell[data-app-id="music"] .listen-together-history-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="music"] .listen-together-history-ai {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="music"] .listen-together-history-time {
+    font-size: 12px;
+    color: #888;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ============================================
+ * 模块 1:基础容器 + 占位卡 + 通用按钮
+ * ============================================ */
+
+.app-shell[data-app-id="music"] .music-app {
+    min-height: 100%;
+    padding: 0 20px 100px;
+    box-sizing: border-box;
+}
+
+/* 通用滚动条 */
+.app-shell[data-app-id="music"] .music-app::-webkit-scrollbar {
+    display: none;
+}
+
+/* Section header */
+.app-shell[data-app-id="music"] .music-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0 16px;
+}
+
+.app-shell[data-app-id="music"] .music-section-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a1a1a;
+    letter-spacing: -0.5px;
+}
+
+/* 占位卡 */
+.app-shell[data-app-id="music"] .music-placeholder-card {
+    margin-top: 60px;
+    padding: 50px 20px;
+    text-align: center;
+    background: rgba(251, 114, 153, 0.06);
+    border-radius: 16px;
+}
+
+.app-shell[data-app-id="music"] .music-placeholder-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 18px;
+    border-radius: 50%;
+    background: rgba(251, 114, 153, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fb7299;
+}
+
+.app-shell[data-app-id="music"] .music-placeholder-icon svg {
+    width: 32px;
+    height: 32px;
+    fill: #fb7299;
+}
+
+.app-shell[data-app-id="music"] .music-placeholder-text {
+    font-size: 17px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 6px;
+}
+
+.app-shell[data-app-id="music"] .music-placeholder-sub {
+    font-size: 13px;
+    color: #888;
+    line-height: 1.5;
+}
+
+/* 通用按钮 */
+.app-shell[data-app-id="music"] .music-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #fb7299 0%, #ff9a9e 100%);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.15s;
+}
+
+.app-shell[data-app-id="music"] .music-btn:active {
+    transform: scale(0.96);
+}
+
+.app-shell[data-app-id="music"] .music-btn svg {
+    width: 16px;
+    height: 16px;
+    fill: white;
+}
+
+.app-shell[data-app-id="music"] .music-btn--secondary {
+    background: rgba(0, 0, 0, 0.05);
+    color: #666;
+}
+
+.app-shell[data-app-id="music"] .music-btn--secondary svg {
+    fill: #666;
+}
+
+/* 模块 2:我的 Tab(统计卡 + 菜单) */
+.app-shell[data-app-id="music"] .music-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.app-shell[data-app-id="music"] .music-stat-card {
+    background: white;
+    border-radius: 14px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+    transition: transform 0.15s;
+}
+
+.app-shell[data-app-id="music"] .music-stat-card:active {
+    transform: scale(0.98);
+}
+
+.app-shell[data-app-id="music"] .music-stat-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+}
+
+.app-shell[data-app-id="music"] .music-stat-icon svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+}
+
+.app-shell[data-app-id="music"] .music-stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1a1a1a;
+    line-height: 1.2;
+    margin-bottom: 2px;
+}
+
+.app-shell[data-app-id="music"] .music-stat-label {
+    font-size: 12px;
+    color: #888;
+    font-weight: 500;
+}
+
+/* 模块 2:菜单列表 */
+.app-shell[data-app-id="music"] .music-menu-list {
+    background: white;
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.app-shell[data-app-id="music"] .music-menu-item {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 14px 16px;
+    background: transparent;
+    border: none;
+    border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    transition: background 0.15s;
+}
+
+.app-shell[data-app-id="music"] .music-menu-item:last-child {
+    border-bottom: none;
+}
+
+.app-shell[data-app-id="music"] .music-menu-item:active {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.app-shell[data-app-id="music"] .music-menu-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: rgba(251, 114, 153, 0.1);
+    color: #fb7299;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="music"] .music-menu-icon svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+.app-shell[data-app-id="music"] .music-menu-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="music"] .music-menu-label {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 2px;
+}
+
+.app-shell[data-app-id="music"] .music-menu-sub {
+    font-size: 12px;
+    color: #888;
+}
+
+.app-shell[data-app-id="music"] .music-menu-chevron {
+    color: #c0c0c0;
+    font-size: 22px;
+    margin-left: 8px;
+    font-weight: 300;
+}
+
+/* ============================================
+ * 模块 3:首页 Tab(步骤 3)
+ * - Hero / 搜索栏 / 歌单横滑 / 歌曲列表 / mini 播放器
+ * ============================================ */
+
+/* 顶部 Hero */
+.app-shell[data-app-id="music"] .music-home-hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 4px 20px;
+}
+
+.app-shell[data-app-id="music"] .music-home-greeting-label {
+    font-size: 12px;
+    color: #888;
+    font-weight: 500;
+    margin-bottom: 4px;
+    letter-spacing: 0.5px;
+}
+
+.app-shell[data-app-id="music"] .music-home-greeting-title {
+    font-size: 26px;
+    font-weight: 700;
+    color: #1a1a1a;
+    letter-spacing: -0.5px;
+}
+
+.app-shell[data-app-id="music"] .music-home-create {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #fb7299 0%, #ff9a9e 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    cursor: pointer;
+    transition: transform 0.15s;
+    box-shadow: 0 2px 8px rgba(251, 114, 153, 0.3);
+}
+
+.app-shell[data-app-id="music"] .music-home-create:active {
+    transform: scale(0.94);
+}
+
+.app-shell[data-app-id="music"] .music-home-create svg {
+    width: 22px;
+    height: 22px;
+    fill: white;
+}
+
+/* 搜索栏 */
+.app-shell[data-app-id="music"] .music-search-bar {
+    display: flex;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 12px;
+    padding: 10px 14px;
+    margin-bottom: 24px;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="music"] .music-search-icon {
+    color: #888;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="music"] .music-search-icon svg {
+    width: 16px;
+    height: 16px;
+    fill: #888;
+}
+
+.app-shell[data-app-id="music"] .music-search-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 14px;
+    color: #1a1a1a;
+    font-family: inherit;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="music"] .music-search-input::placeholder {
+    color: #aaa;
+}
+
+.app-shell[data-app-id="music"] .music-search-btn {
+    border: none;
+    background: rgba(251, 114, 153, 0.12);
+    color: #fb7299;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.15s;
+}
+
+.app-shell[data-app-id="music"] .music-search-btn:active {
+    background: rgba(251, 114, 153, 0.24);
+}
+
+.app-shell[data-app-id="music"] .music-search-btn svg {
+    width: 14px;
+    height: 14px;
+    fill: #fb7299;
+}
+
+/* Section(通用) */
+.app-shell[data-app-id="music"] .music-section {
+    margin-bottom: 28px;
+}
+
+.app-shell[data-app-id="music"] .music-section .music-section-header {
+    padding: 0 0 12px;
+}
+
+.app-shell[data-app-id="music"] .music-section-subtitle {
+    font-size: 12px;
+    color: #888;
+    font-weight: 500;
+}
+
+.app-shell[data-app-id="music"] .music-section-action {
+    font-size: 13px;
+    color: #fb7299;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 4px 8px;
+    margin: -4px -8px;
+    border-radius: 6px;
+    transition: background 0.15s;
+}
+
+.app-shell[data-app-id="music"] .music-section-action:active {
+    background: rgba(251, 114, 153, 0.1);
+}
+
+/* 查看全部按钮 */
+.app-shell[data-app-id="music"] .music-section-more {
+    font-size: 13px;
+    color: #888;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 4px 8px;
+    margin: -4px -8px;
+    border-radius: 6px;
+    transition: background 0.15s, color 0.15s;
+}
+
+.app-shell[data-app-id="music"] .music-section-more:active {
+    background: rgba(0, 0, 0, 0.05);
+    color: #666;
+}
+
+/* 歌单横滑 */
+.app-shell[data-app-id="music"] .music-playlist-scroll {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding: 4px 0 8px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    margin: 0 -20px;
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+.app-shell[data-app-id="music"] .music-playlist-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.app-shell[data-app-id="music"] .music-playlist-card {
+    flex-shrink: 0;
+    width: 130px;
+    cursor: pointer;
+    transition: transform 0.15s;
+}
+
+.app-shell[data-app-id="music"] .music-playlist-card:active {
+    transform: scale(0.96);
+}
+
+/* 创建歌单卡片 */
+.app-shell[data-app-id="music"] .music-playlist-card--create .music-playlist-card-cover {
+    background: rgba(0, 0, 0, 0.04);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="music"] .music-playlist-card--create .music-playlist-cover-add {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(251, 114, 153, 0.12);
+    border-radius: 50%;
+}
+
+.app-shell[data-app-id="music"] .music-playlist-card--create .music-playlist-cover-add svg {
+    width: 28px;
+    height: 28px;
+    fill: #fb7299;
+}
+
+.app-shell[data-app-id="music"] .music-playlist-card--create .music-playlist-card-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: #888;
+}
+
+.app-shell[data-app-id="music"] .music-playlist-card-cover {
+    width: 130px;
+    height: 130px;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    margin-bottom: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.app-shell[data-app-id="music"] .music-playlist-card-cover-img,
+.app-shell[data-app-id="music"] .music-playlist-card-cover-fallback {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="music"] .music-playlist-card-cover-fallback svg {
+    width: 48px;
+    height: 48px;
+    fill: rgba(255, 255, 255, 0.85);
+}
+
+.app-shell[data-app-id="music"] .music-playlist-card-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1a1a1a;
+    line-height: 1.3;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="music"] .music-playlist-card-count {
+    font-size: 11px;
+    color: #888;
+}
+
+/* 歌曲列表(行式) */
+.app-shell[data-app-id="music"] .music-song-list {
+    background: white;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.app-shell[data-app-id="music"] .music-song-row {
+    display: flex;
+    align-items: center;
+    padding: 10px 14px;
+    cursor: pointer;
+    border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);
+    transition: background 0.15s;
+}
+
+.app-shell[data-app-id="music"] .music-song-row:last-child {
+    border-bottom: none;
+}
+
+.app-shell[data-app-id="music"] .music-song-row:active {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.app-shell[data-app-id="music"] .music-song-row.is-playing {
+    background: rgba(251, 114, 153, 0.06);
+}
+
+.app-shell[data-app-id="music"] .music-song-cover {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-right: 12px;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.app-shell[data-app-id="music"] .music-song-cover-img,
+.app-shell[data-app-id="music"] .music-song-cover-fallback {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 18px;
+    font-weight: 600;
+    background: linear-gradient(135deg, #fb7299, #ff9a9e);
+}
+
+.app-shell[data-app-id="music"] .music-song-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="music"] .music-song-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1a1a;
+    line-height: 1.3;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="music"] .music-song-row.is-playing .music-song-title {
+    color: #fb7299;
+}
+
+.app-shell[data-app-id="music"] .music-song-artist {
+    font-size: 12px;
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="music"] .music-song-like {
+    border: none;
+    background: transparent;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #ccc;
+    flex-shrink: 0;
+    transition: transform 0.15s;
+    padding: 0;
+    margin-right: 4px;
+    border-radius: 50%;
+}
+
+.app-shell[data-app-id="music"] .music-song-like:active {
+    transform: scale(0.85);
+}
+
+.app-shell[data-app-id="music"] .music-song-like svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+.app-shell[data-app-id="music"] .music-song-like.is-liked {
+    color: #fb7299;
+}
+
+.app-shell[data-app-id="music"] .music-song-play-icon {
+    width: 28px;
+    height: 28px;
+    color: #fb7299;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="music"] .music-song-play-icon svg {
+    width: 22px;
+    height: 22px;
+    fill: currentColor;
+}
+
+/* 空状态 */
+.app-shell[data-app-id="music"] .music-empty-state {
+    padding: 40px 20px;
+    text-align: center;
+    color: #888;
+    font-size: 13px;
+}
+
+/* ============================================
+ * 模块 4:全屏播放器(步骤 4)
+ * - 顶栏(返回 / 标题 / 歌词编辑)
+ * - 大封面(主题色背景 + 图片)
+ * - 歌词列表(可滚动)
+ * - 进度条 + 播放控制
+ * ============================================ */
+
+.app-shell[data-app-id="music"] .music-player-full {
+    position: relative;
+    min-height: 100%;
+    padding: 0 0 32px;
+    /* 背景交给 app-background-layer，播放器只叠一层歌曲主题色（.music-player-bg）。
+       以前这里自己糊了一层白到粉的渐变，跟主页面的底不是同一张，翻进播放器会闪一下色差。 */
+    background: transparent;
+    --music-theme-color: #fb7299;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-shell[data-app-id="music"] .music-player-bg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    display: block;
+}
+
+.app-shell[data-app-id="music"] .music-player-full > * {
+    position: relative;
+    z-index: 1;
+}
+
+/* 顶栏 */
+.app-shell[data-app-id="music"] .music-player-topbar {
+    display: flex;
+    align-items: center;
+    /* 46px 顶部内边距 = 给状态栏让位，和 .music-detail-topbar 对齐；
+       之前是 16px，返回按钮会压在时间和信号图标上 */
+    padding: 46px 12px 8px;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="music"] .music-player-back {
+    border: none;
+    background: transparent;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #1a1a1a;
+    cursor: pointer;
+    padding: 0;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="music"] .music-player-back:active {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.app-shell[data-app-id="music"] .music-player-titles {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+}
+
+.app-shell[data-app-id="music"] .music-player-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1a1a1a;
+    line-height: 1.3;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="music"] .music-player-subtitle {
+    font-size: 12px;
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="music"] .music-player-lyrics-btn {
+    border: none;
+    background: transparent;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #888;
+    cursor: pointer;
+    padding: 0;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="music"] .music-player-lyrics-btn:active {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.app-shell[data-app-id="music"] .music-player-lyrics-btn svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+}
+
+/* 大封面 */
+/* 封面收小一点:info / 进度 / 控制 / 操作栏 / 歌词 现在全在它下面排一列,
+   再用 280px 会把歌词栏挤没 */
+.app-shell[data-app-id="music"] .music-player-cover-wrap {
+    padding: 12px 32px 10px;
+    display: flex;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="music"] .music-player-cover {
+    width: min(190px, 46vw);
+    height: min(190px, 46vw);
+    border-radius: 18px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+}
+
+.app-shell[data-app-id="music"] .music-player-cover-img,
+.app-shell[data-app-id="music"] .music-player-cover-fallback {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 96px;
+    font-weight: 700;
+    background: var(--music-theme-color, #fb7299);
+}
+
+.app-shell[data-app-id="music"] .music-player-cover-shine {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, transparent 40%);
+    pointer-events: none;
+}
+
+/* 歌词区 */
+.app-shell[data-app-id="music"] .music-player-lyrics-wrap {
+    height: 130px;
+    overflow: hidden;
+    margin: 12px 24px 16px;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="music"] .music-player-lyrics {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 0;
+    transition: transform 0.4s ease;
+}
+
+/* 歌词区域是一张独立卡片，不是裸在页面上的一段文字（对齐原型 music-lyrics-container）。
+   dom-sync 的 updateLyrics 已经支持这个选择器，靠 scrollIntoView 把当前行滚到中间。 */
+.app-shell[data-app-id="music"] .music-player-full .music-lyrics-container {
+    margin: 25px 20px 0;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 20px;
+    max-height: 140px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.05);
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.app-shell[data-app-id="music"] .music-player-full .music-lyrics-container::-webkit-scrollbar {
+    display: none;
+}
+
+/* 歌词行:左边保留时间戳(要看得出哪句是什么时候的) */
+.app-shell[data-app-id="music"] .music-player-full .music-lyrics-container .music-lyric-line {
+    justify-content: flex-start;
+    padding: 3px 6px;
+}
+
+.app-shell[data-app-id="music"] .music-player-full .music-lyrics-container .music-lyric-time {
+    display: block;
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="music"] .music-player-full .music-lyrics-container .music-lyric-text {
+    text-align: left;
+    white-space: normal;
+}
+
+.app-shell[data-app-id="music"] .music-lyric-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #aaa;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 8px;
+    transition: color 0.2s, transform 0.2s, opacity 0.2s;
+    opacity: 0.6;
+    max-width: 100%;
+}
+
+.app-shell[data-app-id="music"] .music-lyric-line:active {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.app-shell[data-app-id="music"] .music-lyric-line.past {
+    color: #999;
+    opacity: 0.85;
+}
+
+.app-shell[data-app-id="music"] .music-lyric-line.active {
+    color: var(--music-theme-color, #fb7299);
+    font-size: 15px;
+    font-weight: 600;
+    transform: scale(1.02);
+    opacity: 1;
+}
+
+.app-shell[data-app-id="music"] .music-lyric-time {
+    font-size: 10px;
+    color: inherit;
+    opacity: 0.6;
+    flex-shrink: 0;
+    width: 36px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="music"] .music-lyric-text {
+    flex: 1;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="music"] .music-lyrics-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: #888;
+    font-size: 13px;
+}
+
+/* ---- 歌曲信息（封面下方，对齐原型 music-player-info） ---- */
+.app-shell[data-app-id="music"] .music-player-info {
+    text-align: center;
+    padding: 4px 24px 14px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="music"] .music-player-info .music-player-title {
+    font-size: 19px;
+    font-weight: 700;
+    color: #1a1a1a;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="music"] .music-player-artist {
+    font-size: 13px;
+    color: #999;
+    margin-top: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 进度条：进度条一行 + 时间一行（对齐原型） */
+.app-shell[data-app-id="music"] .music-player-progress {
+    display: flex;
+    flex-direction: column;
+    padding: 0 24px 6px;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="music"] .music-player-progress-bar {
+    height: 24px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    position: relative;
+}
+
+.app-shell[data-app-id="music"] .music-player-progress-bar::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 3px;
+    background: rgba(0, 0, 0, 0.08);
+    border-radius: 2px;
+}
+
+.app-shell[data-app-id="music"] .music-player-time {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #999;
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="music"] .music-player-progress-time {
+    font-size: 11px;
+    color: #888;
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+    width: 36px;
+    text-align: center;
+}
+
+.app-shell[data-app-id="music"] .music-player-progress-track {
+    flex: 1;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    position: relative;
+}
+
+.app-shell[data-app-id="music"] .music-player-progress-track::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 3px;
+    background: rgba(0, 0, 0, 0.08);
+    border-radius: 2px;
+}
+
+.app-shell[data-app-id="music"] .music-player-progress-fill {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 3px;
+    border-radius: 2px;
+    transition: width 0.2s linear;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.app-shell[data-app-id="music"] .music-player-progress-thumb {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    transition: left 0.2s linear;
+    pointer-events: none;
+    z-index: 2;
+}
+
+/* 控制按钮：只放 上一首 / 播放 / 下一首 三个，居中
+   （模式、喜欢、收藏、分享 挪到下面的 music-player-actions 操作栏，对齐原型） */
+.app-shell[data-app-id="music"] .music-player-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+    padding: 0 32px;
+    margin-bottom: 14px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="music"] .music-player-controls button {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+    color: #555;
+    transition: transform 0.15s, color 0.15s;
+    font-family: inherit;
+}
+
+.app-shell[data-app-id="music"] .music-player-controls button:active {
+    transform: scale(0.9);
+}
+
+.app-shell[data-app-id="music"] .music-player-controls svg {
+    fill: currentColor;
+}
+
+.app-shell[data-app-id="music"] .music-player-mode {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    color: #888;
+}
+
+.app-shell[data-app-id="music"] .music-player-mode svg {
+    width: 22px;
+    height: 22px;
+}
+
+.app-shell[data-app-id="music"] .music-player-mode-label {
+    font-size: 9px;
+    font-weight: 500;
+    color: inherit;
+}
+
+.app-shell[data-app-id="music"] .music-player-prev,
+.app-shell[data-app-id="music"] .music-player-next {
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="music"] .music-player-prev svg,
+.app-shell[data-app-id="music"] .music-player-next svg {
+    width: 36px;
+    height: 36px;
+}
+
+.app-shell[data-app-id="music"] .music-player-play {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white !important;
+    box-shadow: 0 6px 20px rgba(251, 114, 153, 0.4);
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="music"] .music-player-play svg {
+    width: 36px;
+    height: 36px;
+    fill: white !important;
+}
+
+.app-shell[data-app-id="music"] .music-player-like {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="music"] .music-player-like svg {
+    width: 26px;
+    height: 26px;
+}
+
+.app-shell[data-app-id="music"] .music-player-like.is-liked {
+    color: #fb7299 !important;
+}
+
+/* ---- 操作栏：播放模式 / 喜欢 / 收藏 / 分享（对齐原型 music-player-actions）---- */
+.app-shell[data-app-id="music"] .music-player-actions {
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-start;
+    padding: 0 16px 10px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="music"] .music-player-action {
+    flex: 1;
+    border: none;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 4px;
+    color: #888;
+    font-size: 11px;
+    line-height: 1.2;
+    cursor: pointer;
+    font-family: inherit;
+    transition: color 0.15s, transform 0.15s;
+}
+
+.app-shell[data-app-id="music"] .music-player-action:active {
+    transform: scale(0.94);
+    color: #fb7299;
+}
+
+.app-shell[data-app-id="music"] .music-player-action svg {
+    width: 22px;
+    height: 22px;
+    fill: currentColor;
+}
+
+.app-shell[data-app-id="music"] .music-player-action.is-liked {
+    color: #fb7299;
+}
+
+/* ---- 顶栏：返回 + 「正在播放」+ 灵动岛/歌词编辑 ---- */
+.app-shell[data-app-id="music"] .music-player-topbar-label {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 500;
+    color: #999;
+    letter-spacing: 1px;
+}
+
+.app-shell[data-app-id="music"] .music-player-topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+/* 底部操作 */
+.app-shell[data-app-id="music"] .music-player-bottom-actions {
+    display: flex;
+    justify-content: space-around;
+    padding: 8px 24px 0;
+    border-top: 0.5px solid rgba(0, 0, 0, 0.06);
+    margin-top: 8px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="music"] .music-player-bottom-btn {
+    border: none;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 12px 8px;
+    color: #666;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: color 0.15s;
+}
+
+.app-shell[data-app-id="music"] .music-player-bottom-btn:active {
+    color: #fb7299;
+}
+
+.app-shell[data-app-id="music"] .music-player-bottom-btn svg {
+    width: 22px;
+    height: 22px;
+    fill: currentColor;
+}
+
+/* 空播放器 */
+.app-shell[data-app-id="music"] .music-player-empty .music-player-topbar {
+    border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);
+}
+
+/* ============================================
+ * 模块 5:桌面 widget + 灵动岛(步骤 5)
+ * - music-widget:当前播放桌面小组件
+ * - dynamic-island:music-app 自定义覆盖(粉色主题)
+ * ============================================ */
+
+.music-widget {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    height: 100%;
+    padding: 8px 12px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 245, 248, 0.95) 100%);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.music-widget--empty .music-widget__cover {
+    background: rgba(0, 0, 0, 0.05) !important;
+    color: #888;
+}
+
+.music-widget--empty .music-widget__cover--empty svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+}
+
+.music-widget__cover {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.music-widget--m .music-widget__cover--big {
+    width: 80px;
+    height: 80px;
+    border-radius: 12px;
+    font-size: 32px;
+}
+
+.music-widget__info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+}
+
+.music-widget__title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1a1a1a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+}
+
+.music-widget__artist {
+    font-size: 11px;
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.music-widget__hint {
+    font-size: 10px;
+    color: #fb7299;
+    margin-top: 2px;
+    font-weight: 500;
+}
+
+/* L 尺寸 */
+.music-widget--l {
+    flex-direction: column;
+    padding: 0;
+    background: white;
+}
+
+.music-widget--l .music-widget__hero {
+    width: 100%;
+    flex: 1;
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 48px;
+    font-weight: 700;
+}
+
+.music-widget--l .music-widget__info {
+    padding: 10px 14px;
+}
+
+.music-widget--l .music-widget__title {
+    font-size: 16px;
+}
+
+.music-widget--l .music-widget__artist {
+    font-size: 12px;
+}
+
+.music-widget--l .music-widget__hint {
+    font-size: 11px;
+}
+
+/* 灵动岛 music 模板主题色覆盖(framework 内置 .island-template-music *) */
+.dynamic-island .island-template-music {
+    color: #fff;
+}
+
+/* 岛体统一纯黑。以前这里用灰阶渐变，在浅色 App 背景上会透出一圈灰边，
+ * 看起来像岛是半透明的。三档都锁死 #000，和物理挖孔一致。 */
+.app-shell[data-app-id="music"] ~ .dynamic-island.has-template,
+html .dynamic-island.has-template.large,
+html .dynamic-island.has-template.medium,
+html .dynamic-island.has-template.mini {
+    background: #000 !important;
+    background-color: #000 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+/* ============================================
+ * 模块 6:我的 Tab + 歌单详情 + 听歌回顾(步骤 6)
+ * ============================================ */
+
+/* 我的 Tab 头像 */
+.app-shell[data-app-id="music"] .music-me-profile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 0 20px;
+}
+
+.app-shell[data-app-id="music"] .music-me-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(251, 114, 153, 0.3);
+}
+
+.app-shell[data-app-id="music"] .music-me-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.app-shell[data-app-id="music"] .music-me-name {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 4px;
+}
+
+.app-shell[data-app-id="music"] .music-me-subtitle {
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 16px;
+}
+
+.app-shell[data-app-id="music"] .music-me-footer {
+    text-align: center;
+    padding: 16px 0 32px;
+}
+
+.app-shell[data-app-id="music"] .music-me-version {
+    font-size: 11px;
+    color: #bbb;
+}
+
+/* 危险按钮 */
+.app-shell[data-app-id="music"] .music-btn--danger {
+    background: linear-gradient(135deg, #ff5252 0%, #ff7676 100%);
+    color: white;
+}
+
+/* 歌单详情 hero */
+.app-shell[data-app-id="music"] .music-playlist-detail-hero,
+.app-shell[data-app-id="music"] .music-liked-hero,
+.app-shell[data-app-id="music"] .music-recent-hero,
+.app-shell[data-app-id="music"] .music-lyrics-editor-header,
+.app-shell[data-app-id="music"] .music-search-results-header {
+    padding: 32px 20px 24px;
+    text-align: center;
+    color: white;
+}
+
+.app-shell[data-app-id="music"] .music-playlist-detail-hero {
+    margin-top: -20px;
+    margin-left: -20px;
+    margin-right: -20px;
+    margin-bottom: 16px;
+    border-radius: 0 0 24px 24px;
+}
+
+.app-shell[data-app-id="music"] .music-playlist-detail-hero-icon,
+.app-shell[data-app-id="music"] .music-liked-hero-icon,
+.app-shell[data-app-id="music"] .music-recent-hero-icon,
+.app-shell[data-app-id="music"] .music-lyrics-editor-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.25);
+    margin: 0 auto 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="music"] .music-playlist-detail-hero-icon svg,
+.app-shell[data-app-id="music"] .music-liked-hero-icon svg,
+.app-shell[data-app-id="music"] .music-recent-hero-icon svg,
+.app-shell[data-app-id="music"] .music-lyrics-editor-icon svg {
+    width: 32px;
+    height: 32px;
+    fill: white;
+}
+
+.app-shell[data-app-id="music"] .music-playlist-detail-hero-name,
+.app-shell[data-app-id="music"] .music-liked-hero-name,
+.app-shell[data-app-id="music"] .music-recent-hero-title,
+.app-shell[data-app-id="music"] .music-lyrics-editor-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.app-shell[data-app-id="music"] .music-playlist-detail-hero-count,
+.app-shell[data-app-id="music"] .music-liked-hero-count,
+.app-shell[data-app-id="music"] .music-lyrics-editor-sub {
+    font-size: 12px;
+    opacity: 0.9;
+}
+
+.app-shell[data-app-id="music"] .music-recent-hero {
+    color: #1a1a1a;
+}
+
+.app-shell[data-app-id="music"] .music-recent-hero-icon {
+    background: rgba(116, 185, 255, 0.15);
+}
+
+.app-shell[data-app-id="music"] .music-recent-hero-icon svg {
+    fill: #74b9ff;
+}
+
+.app-shell[data-app-id="music"] .music-recent-hero-stats {
+    font-size: 13px;
+    color: #888;
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+}
+
+/* 听歌回顾操作 */
+.app-shell[data-app-id="music"] .music-recent-actions,
+.app-shell[data-app-id="music"] .music-playlist-detail-actions {
+    display: flex;
+    gap: 12px;
+    padding: 0 0 16px;
+}
+
+.app-shell[data-app-id="music"] .music-recent-actions .music-btn,
+.app-shell[data-app-id="music"] .music-playlist-detail-actions .music-btn {
+    flex: 1;
+}
+
+/* 歌词编辑行 */
+.app-shell[data-app-id="music"] .music-lyrics-editor-list {
+    background: white;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.app-shell[data-app-id="music"] .music-lyrics-editor-row {
+    display: flex;
+    align-items: center;
+    padding: 10px 14px;
+    cursor: pointer;
+    border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);
+    transition: background 0.15s;
+}
+
+.app-shell[data-app-id="music"] .music-lyrics-editor-row:last-child {
+    border-bottom: none;
+}
+
+.app-shell[data-app-id="music"] .music-lyrics-editor-row:active {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.app-shell[data-app-id="music"] .music-lyrics-editor-row .music-song-cover {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="music"] .music-lyrics-editor-row .music-song-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="music"] .music-lyrics-editor-badge {
+    background: rgba(251, 114, 153, 0.12);
+    color: #fb7299;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+/* 搜索结果 */
+.app-shell[data-app-id="music"] .music-search-results-header {
+    color: #1a1a1a;
+    text-align: left;
+    padding: 8px 0 16px;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="music"] .music-search-results-label {
+    font-size: 13px;
+    color: #888;
+}
+
+.app-shell[data-app-id="music"] .music-search-results-query {
+    font-size: 18px;
+    font-weight: 600;
+    color: #fb7299;
+}
+
+.app-shell[data-app-id="music"] .music-search-results-playlists {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.app-shell[data-app-id="music"] .music-search-result-playlist {
+    width: calc(50% - 6px);
+    background: white;
+    border-radius: 12px;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+    transition: transform 0.15s;
+}
+
+.app-shell[data-app-id="music"] .music-search-result-playlist:active {
+    transform: scale(0.98);
+}
+
+.app-shell[data-app-id="music"] .music-search-result-playlist-cover {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="music"] .music-search-result-playlist-cover svg {
+    width: 22px;
+    height: 22px;
+    fill: white;
+}
+
+.app-shell[data-app-id="music"] .music-search-result-playlist-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1a1a1a;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ============================================
+ * 歌词编辑器 - 重新设计版
+ * 风格:磨砂玻璃、粉色系、精巧不冗余
+ * ============================================ */
+
+/* 根容器 - 左右占满 */
+.app-shell[data-app-id="music"] .lyric-editor-root {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background: linear-gradient(180deg, #fff5f7 0%, #fff 100%);
+}
+
+/* 顶栏 */
+.app-shell[data-app-id="music"] .lyric-editor-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 50px 16px 10px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(251, 114, 153, 0.12);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.app-shell[data-app-id="music"] .lyric-editor-topbar-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1a1a1a;
+    letter-spacing: 0.5px;
+}
+
+/* 按钮基础 */
+.app-shell[data-app-id="music"] .lyric-editor-btn {
+    border: none;
+    border-radius: 20px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.app-shell[data-app-id="music"] .lyric-editor-btn--back {
+    width: 36px;
+    height: 36px;
+    background: rgba(251, 114, 153, 0.1);
+    color: #fb7299;
+    padding: 0;
+}
+
+.app-shell[data-app-id="music"] .lyric-editor-btn--back:active {
+    transform: scale(0.95);
+    background: rgba(251, 114, 153, 0.2);
+}
+
+.app-shell[data-app-id="music"] .lyric-editor-btn--save {
+    padding: 8px 18px;
+    background: linear-gradient(135deg, #fb7299 0%, #ff9a9e 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(251, 114, 153, 0.35);
+}
+
+.app-shell[data-app-id="music"] .lyric-editor-btn--save:active {
+    transform: scale(0.97);
+    box-shadow: 0 2px 8px rgba(251, 114, 153, 0.25);
+}
+
+/* 内容区 */
+.app-shell[data-app-id="music"] .lyric-editor-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 0 16px 120px;
+}
+
+/* 歌曲卡片 */
+.app-shell[data-app-id="music"] .lyric-editor-song-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px;
+    margin-top: 12px;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 16px;
+    border: 1px solid rgba(251, 114, 153, 0.15);
+    box-shadow: 0 4px 20px rgba(251, 114, 153, 0.08);
+}
+
+.app-shell[data-app-id="music"] .lyric-editor-cover {
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, #fb7299 0%, #ff9a9e 100%);
+    box-shadow: 0 4px 12px rgba(251, 114, 153, 0.25);
+}
+
+.app-shell[data-app-id="music"] .lyric-editor-cover-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.app-shell[data-app-id="music"] .lyric-editor-cover-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.app-shell[data-app-id="music"] .lyric-editor-song-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="music"] .lyric-editor-song-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a1a1a;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="music"] .lyric-editor-song-artist {
+    font-size: 12px;
+    color: #999;
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 工具栏 */
+.app-shell[data-app-id="music"] .lyric-editor-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 0;
+    flex-wrap: wrap;
+}
+
+.app-shell[data-app-id="music"] .lyric-editor-tool {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 12px;
+    border: none;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(251, 114, 153, 0.15);
+    color: #666;
+    font-size: 12px;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.app-shell[data-app-id="music"] .lyric-editor-tool:active {
+    transform: scale(0.97);
+    background: rgba(251, 114, 153, 0.12);
+    color: #fb7299;
+}
+
+.app-shell[data-app-id="music"] .lyric-editor-tool svg {
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="music"] .lyric-editor-tool--danger:active {
+    background: rgba(255, 100, 100, 0.12);
+    color: #ff6464;
+}
+
+.app-shell[data-app-id="music"] .lyric-editor-tool--batch {
+    margin-left: auto;
+}
+
+.app-shell[data-app-id="music"] .lyric-editor-tool--batch.is-active {
+    background: rgba(251, 114, 153, 0.15);
+    color: #fb7299;
+}
+
+.app-shell[data-app-id="music"] .lyric-editor-tool--adjust {
+    padding: 7px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #fb7299;
+}
+
+/* 标签切换 */
+.app-shell[data-app-id="music"] .lyric-editor-tabs {
+    display: flex;
+    gap: 6px;
+    padding: 6px;
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 14px;
+    border: 1px solid rgba(251, 114, 153, 0.12);
+    margin-bottom: 12px;
+}
+
+.app-shell[data-app-id="music"] .lyric-editor-tab {
+    flex: 1;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: #999;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.app-shell[data-app-id="music"] .lyric-editor-tab.is-active {
+    background: linear-gradient(135deg, #fb7299 0%, #ff9a9e 100%);
+    color: white;
+    box-shadow: 0 4px 14px rgba(251, 114, 153, 0.4);
+}
+
+/* 内容面板 */
+.app-shell[data-app-id="music"] .lyric-editor-body {
+    flex: 1;
+}
+
+.app-shell[data-app-id="music"] .lyric-editor-panel {
+    display: none;
+}
+
+.app-shell[data-app-id="music"] .lyric-editor-panel.is-active {
+    display: block;
+}
+
+/* 歌词行 */
+.app-shell[data-app-id="music"] .lyric-row {
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    border: 1px solid rgba(251, 114, 153, 0.08);
+    box-shadow: 0 2px 12px rgba(251, 114, 153, 0.05);
+    transition: all 0.2s ease;
+}
+
+.app-shell[data-app-id="music"] .lyric-row:active {
+    transform: scale(0.99);
+    background: rgba(255, 255, 255, 0.9);
+}
+
+.app-shell[data-app-id="music"] .lyric-row-text {
+    font-size: 14px;
+    color: #1a1a1a;
+    line-height: 1.5;
+    margin-bottom: 8px;
+    word-break: break-word;
+}
+
+.app-shell[data-app-id="music"] .lyric-row-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="music"] .lyric-row-time {
+    font-size: 11px;
+    font-weight: 600;
+    color: #fb7299;
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="music"] .lyric-row-actions {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.app-shell[data-app-id="music"] .lyric-row-btn {
+    padding: 5px 9px;
+    border: none;
+    border-radius: 12px;
+    background: rgba(251, 114, 153, 0.08);
+    color: #888;
+    font-size: 11px;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.app-shell[data-app-id="music"] .lyric-row-btn:active {
+    background: rgba(251, 114, 153, 0.18);
+    color: #fb7299;
+    transform: scale(0.96);
+}
+
+.app-shell[data-app-id="music"] .lyric-row-btn--accent {
+    background: linear-gradient(135deg, rgba(251, 114, 153, 0.15) 0%, rgba(255, 154, 158, 0.15) 100%);
+    color: #fb7299;
+    font-weight: 600;
+}
+
+.app-shell[data-app-id="music"] .lyric-row-btn--accent:active {
+    background: linear-gradient(135deg, #fb7299 0%, #ff9a9e 100%);
+    color: white;
+}
+
+/* 文本编辑区 */
+.app-shell[data-app-id="music"] .lyric-textarea-wrap {
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 16px;
+    padding: 4px;
+    border: 1px solid rgba(251, 114, 153, 0.12);
+}
+
+.app-shell[data-app-id="music"] .lyric-textarea {
+    width: 100%;
+    min-height: 50vh;
+    border: none;
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 13px;
+    font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    line-height: 1.7;
+    color: #1a1a1a;
+    background: rgba(255, 255, 255, 0.5);
+    resize: vertical;
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+
+.app-shell[data-app-id="music"] .lyric-textarea:focus {
+    border-color: rgba(251, 114, 153, 0.4);
+    background: rgba(255, 255, 255, 0.8);
+}
+
+.app-shell[data-app-id="music"] .lyric-textarea::placeholder {
+    color: #bbb;
+}
+
+/* 空状态 */
+.app-shell[data-app-id="music"] .lyric-editor-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: #bbb;
+    font-size: 14px;
+}
+
+.app-shell[data-app-id="music"] .lyric-editor-root--center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+}
+
+/* 文件输入隐藏 */
+.app-shell[data-app-id="music"] .lyric-editor-file-input {
+    display: none;
+}
+
+/* 批量微调工具栏 */
+.app-shell[data-app-id="music"] .lyric-editor-batch-row {
+    display: flex;
+    gap: 6px;
+    padding: 10px 0;
+    flex-wrap: wrap;
+}
+
+.app-shell[data-app-id="music"] .lyric-editor-batch-row--hidden {
+    display: none;
+}
+
+.app-shell[data-app-id="music"] .lyric-editor-batch-btn {
+    flex: 1;
+    min-width: 50px;
+    padding: 8px 10px;
+    border: none;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(251, 114, 153, 0.2);
+    color: #666;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.app-shell[data-app-id="music"] .lyric-editor-batch-btn:active {
+    transform: scale(0.97);
+    background: rgba(251, 114, 153, 0.15);
+    color: #fb7299;
+}
+
+/* ============================================
+ * 模块 8:一起听(步骤 8)
+ * - active session 状态卡
+ * - AI 邀请列表
+ * - 一起听历史
+ * ============================================ */
+
+.app-shell[data-app-id="music"] .music-lt-active {
+    margin: 20px 0 24px;
+    padding: 24px 20px;
+    background: linear-gradient(135deg, #fb7299 0%, #ff9a9e 100%);
+    border-radius: 18px;
+    color: white;
+    text-align: center;
+    box-shadow: 0 8px 24px rgba(251, 114, 153, 0.3);
+}
+
+.app-shell[data-app-id="music"] .music-lt-active-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.25);
+    margin: 0 auto 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: music-lt-pulse 2s ease-in-out infinite;
+}
+
+@keyframes music-lt-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+}
+
+.app-shell[data-app-id="music"] .music-lt-active-icon svg {
+    width: 32px;
+    height: 32px;
+    fill: white;
+}
+
+.app-shell[data-app-id="music"] .music-lt-active-title {
+    font-size: 14px;
+    font-weight: 500;
+    opacity: 0.9;
+    margin-bottom: 4px;
+}
+
+.app-shell[data-app-id="music"] .music-lt-active-ai {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.app-shell[data-app-id="music"] .music-lt-active-duration {
+    font-size: 36px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 16px;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.app-shell[data-app-id="music"] .music-lt-active-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="music"] .music-lt-active-actions .music-btn {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    backdrop-filter: blur(8px);
+}
+
+.app-shell[data-app-id="music"] .music-lt-active-actions .music-btn--secondary {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+}
+
+.app-shell[data-app-id="music"] .music-lt-active-actions .music-btn--danger {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.app-shell[data-app-id="music"] .music-lt-active-actions .music-btn svg {
+    fill: white;
+}
+
+/* 邀请区 */
+.app-shell[data-app-id="music"] .music-lt-invite {
+    margin: 20px 0 24px;
+    padding: 24px 20px;
+    background: white;
+    border-radius: 18px;
+    text-align: center;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.app-shell[data-app-id="music"] .music-lt-invite-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(251, 114, 153, 0.15) 0%, rgba(255, 154, 158, 0.15) 100%);
+    margin: 0 auto 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="music"] .music-lt-invite-icon svg {
+    width: 32px;
+    height: 32px;
+    fill: #fb7299;
+}
+
+.app-shell[data-app-id="music"] .music-lt-invite-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 4px;
+}
+
+.app-shell[data-app-id="music"] .music-lt-invite-sub {
+    font-size: 13px;
+    color: #888;
+    margin-bottom: 16px;
+}
+
+.app-shell[data-app-id="music"] .music-lt-ai-list {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.app-shell[data-app-id="music"] .music-lt-ai-loading,
+.app-shell[data-app-id="music"] .music-lt-ai-empty {
+    grid-column: 1 / -1;
+    padding: 20px;
+    color: #888;
+    font-size: 13px;
+}
+
+.app-shell[data-app-id="music"] .music-lt-ai-card {
+    border: none;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 4px;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: background 0.15s, transform 0.15s;
+    font-family: inherit;
+}
+
+.app-shell[data-app-id="music"] .music-lt-ai-card:active {
+    background: rgba(251, 114, 153, 0.08);
+    transform: scale(0.96);
+}
+
+.app-shell[data-app-id="music"] .music-lt-ai-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 22px;
+    font-weight: 700;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="music"] .music-lt-ai-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.app-shell[data-app-id="music"] .music-lt-ai-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: #1a1a1a;
+    text-align: center;
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 历史 */
+.app-shell[data-app-id="music"] .music-lt-history {
+    margin-bottom: 32px;
+}
+
+.app-shell[data-app-id="music"] .music-lt-history-list {
+    background: white;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.app-shell[data-app-id="music"] .music-lt-history-row {
+    display: flex;
+    align-items: center;
+    padding: 12px 14px;
+    border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);
+}
+
+.app-shell[data-app-id="music"] .music-lt-history-row:last-child {
+    border-bottom: none;
+}
+
+.app-shell[data-app-id="music"] .music-lt-history-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(116, 185, 255, 0.12);
+    color: #74b9ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="music"] .music-lt-history-icon svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+}
+
+.app-shell[data-app-id="music"] .music-lt-history-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="music"] .music-lt-history-ai {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1a1a;
+    line-height: 1.3;
+    margin-bottom: 2px;
+}
+
+.app-shell[data-app-id="music"] .music-lt-history-time {
+    font-size: 11px;
+    color: #888;
+}
+
+/* ============================================
+ * 模块 9:模态 + Tab bar + Mini now playing(步骤 9)
+ * ============================================ */
+
+/* ---- 模态基础 ---- */
+.music-modal-overlay {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: music-modal-fade 0.2s ease;
+}
+
+/* 点击遮罩关闭 */
+.music-modal-overlay[data-modal-overlay] {
+    cursor: pointer;
+}
+
+.music-modal-overlay[data-modal-overlay] > .music-modal {
+    cursor: default;
+}
+
+@keyframes music-modal-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.music-modal {
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    width: calc(100% - 48px);
+    max-width: 360px;
+    border-radius: 20px;
+    box-shadow:
+        0 8px 32px rgba(251, 114, 153, 0.15),
+        0 2px 8px rgba(0, 0, 0, 0.06),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    border: 0.5px solid rgba(251, 114, 153, 0.12);
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: music-modal-pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes music-modal-pop {
+    from { transform: scale(0.92) translateY(10px); opacity: 0; }
+    to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.music-modal-header {
+    padding: 16px 18px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 0.5px solid rgba(251, 114, 153, 0.1);
+}
+
+.music-modal-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #2d2d2d;
+    letter-spacing: 0.02em;
+}
+
+.music-modal-close {
+    background: rgba(251, 114, 153, 0.08);
+    border: none;
+    color: #888;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+    transition: all 0.15s;
+    flex-shrink: 0;
+}
+
+.music-modal-close:hover {
+    background: rgba(251, 114, 153, 0.15);
+    color: #fb7299;
+}
+
+.music-modal-close:active {
+    transform: scale(0.92);
+}
+
+.music-modal-body {
+    padding: 16px 18px;
+    overflow-y: auto;
+    flex: 1;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.music-modal-body::-webkit-scrollbar {
+    display: none;
+}
+
+.music-modal-footer {
+    padding: 12px 18px 14px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    border-top: 0.5px solid rgba(251, 114, 153, 0.1);
+}
+
+.music-modal-footer-right {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+}
+
+/* ---- 模态内的菜单列表 ---- */
+.music-modal .music-menu-list {
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.music-modal .music-menu-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 14px;
+    background: transparent;
+    border-radius: 0;
+    margin-bottom: 0;
+    box-shadow: none;
+    border-bottom: 0.5px solid rgba(251, 114, 153, 0.08);
+}
+
+.music-modal .music-menu-item:last-child {
+    border-bottom: none;
+}
+
+.music-modal .music-menu-item:active {
+    background: rgba(251, 114, 153, 0.06);
+}
+
+.music-modal .music-menu-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+}
+
+.music-modal .music-menu-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.music-modal .music-menu-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: #2d2d2d;
+}
+
+/* ---- 表单 ---- */
+.music-form-group {
+    margin-bottom: 14px;
+}
+
+.music-form-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: #666;
+    margin-bottom: 6px;
+    letter-spacing: 0.01em;
+}
+
+.music-form-required {
+    color: #fb7299;
+    margin-left: 2px;
+}
+
+.music-input,
+.music-textarea {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid rgba(251, 114, 153, 0.2);
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: inherit;
+    box-sizing: border-box;
+    background: rgba(255, 255, 255, 0.9);
+    transition: all 0.15s;
+}
+
+.music-input:focus,
+.music-textarea:focus {
+    outline: none;
+    border-color: #fb7299;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(251, 114, 153, 0.1);
+}
+
+.music-textarea {
+    resize: vertical;
+    min-height: 56px;
+    font-family: monospace;
+    line-height: 1.5;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.music-textarea::-webkit-scrollbar {
+    display: none;
+}
+
+.music-form-error {
+    color: #fb7299;
+    font-size: 12px;
+    padding: 6px 0 0;
+}
+
+/* ---- 颜色选择器 ---- */
+.music-color-palette {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.music-color-swatch {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    padding: 0;
+    transition: transform 0.15s, border-color 0.15s;
+    font-family: inherit;
+}
+
+.music-color-swatch.is-active {
+    border-color: white;
+    transform: scale(1.1);
+    box-shadow: 0 0 0 2px #fb7299, 0 2px 8px rgba(0,0,0,0.15);
+}
+
+/* ---- 按钮(用于 modal footer) ---- */
+.music-btn {
+    border: none;
+    border-radius: 10px;
+    padding: 9px 18px;
+    font-size: 14px;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    letter-spacing: 0.01em;
+}
+
+.music-btn:active {
+    transform: scale(0.96);
+}
+
+.music-btn--primary {
+    background: linear-gradient(135deg, #fb7299 0%, #ff8fab 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(251, 114, 153, 0.35);
+}
+
+.music-btn--primary:hover {
+    box-shadow: 0 4px 12px rgba(251, 114, 153, 0.45);
+}
+
+.music-btn--ghost {
+    background: rgba(251, 114, 153, 0.06);
+    color: #666;
+}
+
+.music-btn--ghost:hover {
+    background: rgba(251, 114, 153, 0.12);
+    color: #333;
+}
+
+.music-btn--danger {
+    background: rgba(231, 76, 60, 0.08);
+    color: #e74c3c;
+    margin-right: auto;
+}
+
+.music-btn--danger:hover {
+    background: rgba(231, 76, 60, 0.15);
+}
+
+.music-btn--secondary {
+    background: rgba(0, 0, 0, 0.04);
+    color: #555;
+}
+
+/* ---- 分享 AI 模态 ---- */
+.music-share-target {
+    background: rgba(251, 114, 153, 0.06);
+    border: 0.5px solid rgba(251, 114, 153, 0.12);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+}
+
+.music-share-target-label {
+    font-size: 11px;
+    color: #999;
+    margin-bottom: 3px;
+}
+
+.music-share-target-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #2d2d2d;
+}
+
+.music-share-ai-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.music-share-ai-card {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 0.5px solid rgba(251, 114, 153, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 6px;
+    cursor: pointer;
+    border-radius: 12px;
+    transition: all 0.15s;
+    font-family: inherit;
+}
+
+.music-share-ai-card:active {
+    background: rgba(251, 114, 153, 0.12);
+    transform: scale(0.96);
+}
+
+.music-share-ai-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 18px;
+    font-weight: 700;
+    box-shadow: 0 2px 8px rgba(251, 114, 153, 0.25);
+}
+
+.music-share-ai-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: #444;
+    text-align: center;
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ---- 发现页(步骤 9 完整版) ---- */
+.app-shell[data-app-id="music"] .music-discover-hero {
+    margin: 0 0 20px;
+    padding: 32px 20px 28px;
+    background: linear-gradient(135deg, #fb7299 0%, #ff9a9e 100%);
+    color: white;
+    border-radius: 0 0 24px 24px;
+    text-align: center;
+    box-shadow: 0 6px 20px rgba(251, 114, 153, 0.25);
+}
+
+.app-shell[data-app-id="music"] .music-discover-hero-title {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.app-shell[data-app-id="music"] .music-discover-hero-sub {
+    font-size: 13px;
+    opacity: 0.9;
+}
+
+.app-shell[data-app-id="music"] .music-discover-actions {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    padding: 0 16px;
+}
+
+.app-shell[data-app-id="music"] .music-discover-action-card {
+    background: white;
+    border: none;
+    border-radius: 14px;
+    padding: 18px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+    transition: transform 0.15s, box-shadow 0.15s;
+    font-family: inherit;
+}
+
+.app-shell[data-app-id="music"] .music-discover-action-card:active {
+    transform: scale(0.97);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.app-shell[data-app-id="music"] .music-discover-action-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 22px;
+    font-weight: 700;
+}
+
+.app-shell[data-app-id="music"] .music-discover-action-icon--pink {
+    background: linear-gradient(135deg, #fb7299 0%, #ff9a9e 100%);
+}
+
+.app-shell[data-app-id="music"] .music-discover-action-icon--blue {
+    background: linear-gradient(135deg, #74b9ff 0%, #a3d2ff 100%);
+}
+
+.app-shell[data-app-id="music"] .music-discover-action-icon--purple {
+    background: linear-gradient(135deg, #a29bfe 0%, #d4ccff 100%);
+}
+
+.app-shell[data-app-id="music"] .music-discover-action-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #1a1a1a;
+}
+
+.app-shell[data-app-id="music"] .music-discover-songs {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    padding: 0 16px;
+}
+
+.app-shell[data-app-id="music"] .music-discover-song-card {
+    background: white;
+    border: none;
+    border-radius: 12px;
+    padding: 10px;
+    text-align: left;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+    transition: transform 0.15s;
+    font-family: inherit;
+}
+
+.app-shell[data-app-id="music"] .music-discover-song-card:active {
+    transform: scale(0.97);
+}
+
+.app-shell[data-app-id="music"] .music-discover-song-cover {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 10px;
+    background-color: #f0f0f0;
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #aaa;
+    font-size: 28px;
+    margin-bottom: 8px;
+}
+
+.app-shell[data-app-id="music"] .music-discover-song-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1a1a1a;
+    line-height: 1.3;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="music"] .music-discover-song-artist {
+    font-size: 11px;
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* music app 全出血布局：覆盖 framework .app-screen-panel 的左右 padding，
+   由 music 各区块自己管内边距（.music-header / .music-section / .music-search-bar
+   等均已有 padding: 0 20px~30px） */
+.app-shell[data-app-id="music"] .app-screen-panel {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+/* ---- Tab bar ---- */
+.app-shell[data-app-id="music"] .music-app-shell {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    width: 100%;
+    box-sizing: border-box;
+    position: relative; /* 让内部的 position:absolute 模态框正确定位 */
+}
+
+
+.app-shell[data-app-id="music"] .music-app-shell-content {
+    flex: 1;
+    width: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    /* 留出 fixed tab bar(高 60 + bottom 22 = 82)+ 一点间距 = 100px */
+    padding-bottom: 100px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.app-shell[data-app-id="music"] .music-app-shell-content::-webkit-scrollbar {
+    display: none;
+}
+
+.app-shell[data-app-id="music"] .music-tab-bar {
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(10px);
+    display: flex;
+    padding: 6px 0 calc(8px + env(safe-area-inset-bottom));
+    border-top: 0.5px solid rgba(0, 0, 0, 0.06);
+    z-index: 100;
+    margin-top: auto;
+}
+
+.app-shell[data-app-id="music"] .music-tab-item {
+    flex: 1;
+    background: transparent;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 4px;
+    cursor: pointer;
+    color: #999;
+    transition: color 0.2s;
+    position: relative;
+    font-family: inherit;
+}
+
+.app-shell[data-app-id="music"] .music-tab-item.is-active {
+    color: #fb7299;
+}
+
+.app-shell[data-app-id="music"] .music-tab-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+}
+
+.app-shell[data-app-id="music"] .music-tab-item.is-active .music-tab-icon {
+    transform: translateY(-2px);
+}
+
+.app-shell[data-app-id="music"] .music-tab-label {
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 1;
+}
+
+.app-shell[data-app-id="music"] .music-tab-playing-dot {
+    position: absolute;
+    top: 4px;
+    right: 25%;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #fb7299;
+    animation: music-tab-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes music-tab-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.3); }
+}
+
+.app-shell[data-app-id="music"] .music-tab-indicator {
+    position: absolute;
+    bottom: 4px;
+    width: 24px;
+    height: 3px;
+    border-radius: 2px;
+    background: #fb7299;
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* ============================================================
+ * 模块 10:music 自绘动态底部 tab bar(替代 framework .app-nav)
+ *   HTML 由 js/apps/music-app/components/tab-bar-effects.js 产出
+ *   样式从 QAQ/参考/music-app.js 移植,与截图视觉一致
+ * ============================================================ */
+
+/* 容器:浮动胶囊(固定在屏幕底部,不随内容滚动消失) */
+.app-shell[data-app-id="music"] .music-dynamic-tabbar {
+    position: fixed;
+    bottom: 45px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 50px);
+    max-width: 380px;
+    height: 60px;
+    display: flex;
+    align-items: stretch;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.75) 0%, rgba(255, 245, 248, 0.8) 100%);
+    backdrop-filter: blur(25px) saturate(180%);
+    -webkit-backdrop-filter: blur(25px) saturate(180%);
+    border-radius: 28px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow:
+        0 8px 32px rgba(251, 114, 153, 0.15),
+        0 4px 16px rgba(0, 0, 0, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    overflow: hidden;
+    z-index: 5;
+}
+
+/* 背景波浪 */
+.app-shell[data-app-id="music"] .music-dynamic-tabbar .music-tabbar-bg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    border-radius: 28px;
+}
+.app-shell[data-app-id="music"] .music-dynamic-tabbar .music-tabbar-wave {
+    position: absolute;
+    bottom: -50%;
+    left: -10%;
+    width: 120%;
+    height: 200%;
+    background: radial-gradient(ellipse at center, rgba(251, 114, 153, 0.12) 0%, transparent 70%);
+    animation: tabbarWave 8s ease-in-out infinite;
+    transform-origin: center bottom;
+}
+.app-shell[data-app-id="music"] .music-dynamic-tabbar .music-tabbar-wave:nth-child(2) {
+    animation-delay: -2.6s;
+    animation-duration: 10s;
+    opacity: 0.7;
+}
+.app-shell[data-app-id="music"] .music-dynamic-tabbar .music-tabbar-wave:nth-child(3) {
+    animation-delay: -5.2s;
+    animation-duration: 12s;
+    opacity: 0.5;
+}
+@keyframes tabbarWave {
+    0%, 100% { transform: scale(1) translateY(0); }
+    50%      { transform: scale(1.15, 0.85) translateY(-8px); }
+}
+
+/* 浮动音符 */
+.app-shell[data-app-id="music"] .music-dynamic-tabbar .music-tabbar-notes {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+.app-shell[data-app-id="music"] .music-dynamic-tabbar .music-note {
+    position: absolute;
+    bottom: 6px;
+    font-size: 12px;
+    color: #fb7299;
+    opacity: 0;
+    animation: floatNote 3s ease-in-out infinite;
+}
+.app-shell[data-app-id="music"] .music-dynamic-tabbar.playing .music-note {
+    opacity: 0.6;
+}
+@keyframes floatNote {
+    0%   { transform: translateY(0) rotate(0deg);   opacity: 0; }
+    20%  { opacity: 0.6; }
+    80%  { opacity: 0.6; }
+    100% { transform: translateY(-44px) rotate(20deg); opacity: 0; }
+}
+
+/* indicator(粉色 pill,位置/宽度由 JS 根据 tab 实测位置算出) */
+.app-shell[data-app-id="music"] .music-dynamic-tabbar .music-tab-indicator {
+    position: absolute;
+    bottom: 11px;
+    height: 38px;
+    width: 70px;            /* JS 会立即覆盖;写 70 作为 fallback,防止首帧看不见 */
+    left: 0;                /* JS 会立即覆盖 */
+    border-radius: 19px;
+    background: transparent;/* 默认透明,让 inner 的粉色 pill 显出来;防止 fallback 时没背景 */
+    opacity: 1;             /* 覆盖上方 .music-tab-indicator{opacity:0} 残留 */
+    z-index: 0;             /* 关键:0 让 pill 沉底,icon/文字 z-index:1 在它上面显示 */
+    pointer-events: none;
+    transition: left 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    will-change: left, width;
+}
+.app-shell[data-app-id="music"] .music-dynamic-tabbar .music-tab-indicator-inner {
+    width: 100%;
+    height: 100%;
+    border-radius: 19px;
+    background: linear-gradient(135deg, #fb7299 0%, #ff9a9e 100%);
+    box-shadow: 0 4px 12px rgba(251, 114, 153, 0.35);
+    animation: indicatorPulse 2s ease-in-out infinite;
+}
+@keyframes indicatorPulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.02); opacity: 0.9; }
+}
+
+/* 单个 tab */
+.app-shell[data-app-id="music"] .music-dynamic-tabbar .app-tab-item {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    padding-right:5px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    color: #999;
+    font-size: 11px;
+    line-height: 1;
+    cursor: pointer;
+    background: transparent;
+    border: 0;
+    font-family: inherit;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: color 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+
+
+.app-shell[data-app-id="music"] .music-dynamic-tabbar .app-tab-item .tab-icon {
+    position: relative;
+    z-index: 3;
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.app-shell[data-app-id="music"] .music-dynamic-tabbar .app-tab-item > span:not(.tab-icon) {
+    position: relative;
+    z-index: 3;
+}
+.app-shell[data-app-id="music"] .music-dynamic-tabbar .app-tab-item .tab-icon svg {
+    width: 22px;
+    height: 22px;
+    fill: #999;
+    transition: fill 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* active */
+.app-shell[data-app-id="music"] .music-dynamic-tabbar .app-tab-item.active {
+    transform: translateY(-2px);
+    color: white;
+}
+.app-shell[data-app-id="music"] .music-dynamic-tabbar .app-tab-item.active .tab-icon svg {
+    fill: white;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+    animation: iconBounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes iconBounce {
+    0%   { transform: scale(0.8); }
+    50%  { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+/* hover/点按 */
+.app-shell[data-app-id="music"] .music-dynamic-tabbar .app-tab-item:not(.active):hover .tab-icon svg {
+    fill: #fb7299;
+    transform: scale(1.1);
+}
+.app-shell[data-app-id="music"] .music-dynamic-tabbar .app-tab-item:active {
+    transform: scale(0.96);
+}
+
+/* 播放中:wave 加速 + active icon 律动 + 音符浮现 */
+.app-shell[data-app-id="music"] .music-dynamic-tabbar.playing .music-tabbar-wave {
+    animation-duration: 3s;
+}
+.app-shell[data-app-id="music"] .music-dynamic-tabbar.playing .app-tab-item.active .tab-icon svg {
+    animation: musicPulse 0.5s ease-in-out infinite alternate;
+}
+@keyframes musicPulse {
+    0%   { transform: scale(1); }
+    100% { transform: scale(1.1); }
+}
+
+/* 点击波纹 */
+.app-shell[data-app-id="music"] .music-tab-ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.4);
+    transform: scale(0);
+    animation: tabRipple 0.6s ease-out forwards;
+    pointer-events: none;
+    z-index: 3;
+}
+@keyframes tabRipple {
+    to { transform: scale(4); opacity: 0; }
+}
+
+/* 音符浮动动画 */
+@keyframes floatNote {
+    0%   { transform: translateY(0) rotate(0deg);   opacity: 0; }
+    20%  { opacity: 0.6; }
+    80%  { opacity: 0.6; }
+    100% { transform: translateY(-44px) rotate(20deg); opacity: 0; }
+}
+
+.app-shell[data-app-id="music"] .music-dynamic-tabbar .music-note {
+    animation: floatNote 3s ease-in-out infinite;
+}
+
+/* ============================================
+ * 发现 Tab 详情页：排行榜 / 私人电台 / 精选歌单
+ * ============================================ */
+
+.app-shell[data-app-id="music"] .music-rank-header {
+    padding: 18px 20px 10px;
+}
+
+.app-shell[data-app-id="music"] .music-rank-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1a1a1a;
+}
+
+.app-shell[data-app-id="music"] .music-rank-sub {
+    font-size: 13px;
+    color: #888;
+    margin-top: 5px;
+}
+
+.app-shell[data-app-id="music"] .music-rank-list {
+    padding-bottom: 24px;
+}
+
+.app-shell[data-app-id="music"] .music-rank-index {
+    width: 30px;
+    flex-shrink: 0;
+    text-align: center;
+    font-size: 15px;
+    margin-right: 10px;
+}
+
+.app-shell[data-app-id="music"] .music-rank-index.is-top {
+    font-weight: 700;
+    font-size: 18px;
+}
+
+.app-shell[data-app-id="music"] .music-rank-count {
+    flex-shrink: 0;
+    font-size: 11px;
+    color: #fb7299;
+    background: rgba(251, 114, 153, 0.1);
+    padding: 4px 9px;
+    border-radius: 10px;
+    margin-left: 8px;
+}
+
+.app-shell[data-app-id="music"] .music-radio-refresh-wrap {
+    padding: 0 20px 14px;
+}
+
+.app-shell[data-app-id="music"] .music-radio-refresh {
+    width: 100%;
+    padding: 13px;
+    background: linear-gradient(135deg, #4ecdc4, #44bfb6);
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 4px 15px rgba(78, 205, 196, 0.3);
+}
+
+.app-shell[data-app-id="music"] .music-radio-refresh:active {
+    transform: scale(0.98);
+}
+
+.app-shell[data-app-id="music"] .music-radio-refresh svg {
+    width: 18px;
+    height: 18px;
+    fill: white;
+}
+
+.app-shell[data-app-id="music"] .music-featured-list {
+    padding: 0 20px 24px;
+}
+
+.app-shell[data-app-id="music"] .music-featured-item {
+    display: flex;
+    align-items: center;
+    padding: 14px;
+    background: white;
+    border-radius: 16px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+
+.app-shell[data-app-id="music"] .music-featured-item:active {
+    transform: scale(0.99);
+}
+
+.app-shell[data-app-id="music"] .music-featured-cover {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-right: 14px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="music"] .music-featured-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.app-shell[data-app-id="music"] .music-featured-cover svg {
+    width: 26px;
+    height: 26px;
+    fill: white;
+}
+
+.app-shell[data-app-id="music"] .music-featured-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="music"] .music-featured-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.app-shell[data-app-id="music"] .music-featured-count {
+    font-size: 13px;
+    color: #888;
+    margin-top: 4px;
+}
+
+.app-shell[data-app-id="music"] .music-featured-arrow {
+    color: #ddd;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+/* ============================================
+ * 补齐：歌单选择弹窗 / 曲库勾选 / 歌词「此句后」/ 听歌回顾统计卡
+ * ============================================ */
+
+/* ---- 添加到歌单：勾选列表 ---- */
+.app-shell[data-app-id="music"] .music-playlist-picker {
+    max-height: 44vh;
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.app-shell[data-app-id="music"] .music-playlist-picker::-webkit-scrollbar {
+    display: none;
+}
+
+.app-shell[data-app-id="music"] .music-playlist-picker .playlist-select-item {
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="music"] .music-playlist-picker-check {
+    color: #fb7299;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+}
+
+.app-shell[data-app-id="music"] .music-playlist-picker-check svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+.app-shell[data-app-id="music"] .playlist-select-item.is-checked .music-menu-text {
+    color: #fb7299;
+    font-weight: 600;
+}
+
+/* ---- 从曲库勾选歌曲 ---- */
+.app-shell[data-app-id="music"] .music-song-picker {
+    max-height: 46vh;
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    border: 0.5px solid rgba(251, 114, 153, 0.12);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.6);
+}
+
+.app-shell[data-app-id="music"] .music-song-picker::-webkit-scrollbar {
+    display: none;
+}
+
+.app-shell[data-app-id="music"] .music-song-picker-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 14px;
+    border-bottom: 0.5px solid rgba(251, 114, 153, 0.08);
+    cursor: pointer;
+    transition: background 0.1s;
+}
+
+.app-shell[data-app-id="music"] .music-song-picker-row:hover {
+    background: rgba(251, 114, 153, 0.04);
+}
+
+.app-shell[data-app-id="music"] .music-song-picker-row:last-child {
+    border-bottom: none;
+}
+
+.app-shell[data-app-id="music"] .music-song-picker-row input {
+    width: 18px;
+    height: 18px;
+    accent-color: #fb7299;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="music"] .music-song-picker-info {
+    min-width: 0;
+    flex: 1;
+}
+
+.app-shell[data-app-id="music"] .music-song-picker-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #2d2d2d;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="music"] .music-song-picker-artist {
+    font-size: 11px;
+    color: #999;
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ---- 歌词「此句后」 ---- */
+.app-shell[data-app-id="music"] .music-lyric-edit-btn--from-here {
+    flex-shrink: 0;
+    align-self: center;
+    margin-left: 8px;
+    padding: 5px 8px;
+    border: 1px solid #e5e5e5;
+    border-radius: 6px;
+    background: #fff;
+    color: #666;
+    font-size: 10px;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="music"] .music-lyric-edit-btn--from-here:active {
+    background: #fdf0f4;
+    border-color: #fb7299;
+    color: #fb7299;
+}
+
+.app-shell[data-app-id="music"] .music-shift-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 14px;
+}
+
+/* ---- 听歌回顾：双统计卡 ---- */
+.app-shell[data-app-id="music"] .music-recent-hero-sub {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.85);
+    margin-top: 5px;
+}
+
+.app-shell[data-app-id="music"] .music-recent-stat-cards {
+    display: flex;
+    gap: 12px;
+    padding: 16px 20px 4px;
+}
+
+.app-shell[data-app-id="music"] .music-recent-stat-card {
+    flex: 1;
+    padding: 18px 14px;
+    border-radius: 16px;
+    color: white;
+    text-align: center;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.app-shell[data-app-id="music"] .music-recent-stat-card--pink {
+    background: linear-gradient(135deg, #fd79a8, #f06292);
+}
+
+.app-shell[data-app-id="music"] .music-recent-stat-card--purple {
+    background: linear-gradient(135deg, #a29bfe, #9388ee);
+}
+
+.app-shell[data-app-id="music"] .music-recent-stat-num {
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.app-shell[data-app-id="music"] .music-recent-stat-label {
+    font-size: 12px;
+    opacity: 0.9;
+    margin-top: 5px;
+}
+
+.app-shell[data-app-id="music"] .music-recent-play-count {
+    flex-shrink: 0;
+    font-size: 11px;
+    color: #fb7299;
+    background: rgba(251, 114, 153, 0.1);
+    padding: 3px 8px;
+    border-radius: 9px;
+    margin-right: 8px;
+}
+
+.app-shell[data-app-id="music"] .music-song-row .music-song-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: inherit;
+}
+
+/* ---- 歌单详情：真实封面 + 主/次按钮同排 ---- */
+.app-shell[data-app-id="music"] .music-playlist-detail-hero-img {
+    width: 96px;
+    height: 96px;
+    border-radius: 16px;
+    object-fit: cover;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+}
+
+.app-shell[data-app-id="music"] .music-playlist-detail-actions + .music-playlist-detail-actions {
+    margin-top: -6px;
+}
+
+/* ---- 首页搜索图标可点 ---- */
+.app-shell[data-app-id="music"] .music-search-icon {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+}
+/* ---- 歌词编辑列表页：LRC 格式提示 ---- */
+.app-shell[data-app-id="music"] .music-lyrics-editor-tip {
+    margin: 0 20px 16px;
+    padding: 12px 14px;
+    background: rgba(251, 114, 153, 0.07);
+    border: 1px solid rgba(251, 114, 153, 0.15);
+    border-radius: 12px;
+}
+
+.app-shell[data-app-id="music"] .music-lyrics-editor-tip-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #fb7299;
+    margin-bottom: 4px;
+}
+
+.app-shell[data-app-id="music"] .music-lyrics-editor-tip-body {
+    font-size: 12px;
+    color: #888;
+    line-height: 1.6;
+}
+
+.app-shell[data-app-id="music"] .music-lyrics-editor-tip-body code {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-size: 11px;
+    color: #555;
+}

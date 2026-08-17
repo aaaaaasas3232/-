@@ -18,7 +18,6 @@
  */
 
 import {
-    CHAT_MODAL_COMPONENTS,
     LocationCardModal,
     LocationPickerModal,
     DescImageModal,
@@ -44,13 +43,28 @@ import {
     SystemPromptEditModal, // ★ v0.57 系统 prompt 编辑弹窗
     AppPromptPreviewModal, // ★ v0.61.8 App Prompt 预览编辑器
     ContextLengthModal, // ★ v0.61.8.11 上下文长度设置弹窗
-    RollingCapacityModal, // ★ v0.63 滚动摘要容量设置弹窗
+    KChainModal, // ★ v0.88 K 链记忆设置弹窗
+    ContextModeEditorModal, // ★ v0.72 当前模式提示词编辑弹窗
     ApiCallModal, // ★ v0.62.1 API 调用设置弹窗
+    AddLevelModal, // ★ v0.74 添加层级弹窗(AcModal)
+    RemoveLevelConfirmModal, // ★ v0.75 删除层级确认弹窗(AcModal)
+    UpdateLevelCycleConfirmModal, // ★ v0.75 修改周期确认弹窗(AcModal)
+    ChoiceModal, // ★ 通用选项弹窗
+    MomentsReadModal, // ★ v0.79 可读取朋友圈设置弹窗(AcModal)
+    AiMomentsDetailModal, // ★ v0.79 AI 朋友圈概要详情弹窗(AcModal)
+    MomentDeleteConfirmModal, // ★ v0.85 朋友圈删除确认弹窗(AcModal)
+    ClearChatConfirmModal, // ★ v0.85 清空聊天记录确认弹窗(AcModal)
+    ExitGroupConfirmModal, // ★ v0.85 退出群聊确认弹窗(AcModal)
+    UnfavoriteConfirmModal, // ★ v0.85 取消收藏确认弹窗(AcModal)
+    GroupMemberPickerModal, // ★ v0.81 群成员选择器
 } from './chat-modal-components.js';
 
 import { DescImageDetailModal } from './desc-image-modal.js';
 import { SummaryRangeModal } from './summary-range-modal.js'; // ★ v0.61.3 概要范围选择弹窗
 import { SummaryEditModal } from './summary-edit-modal.js';   // ★ v0.61.3 概要编辑/确认弹窗
+import { MomentShareModal } from './moment-share-modal.js'; // ★ 朋友圈分享弹窗
+import { PREVIEW_TYPES } from './app-prompt-card.js';
+import { DEFAULT_AI_AVATAR_BG } from '../aiMeta.js';
 
 /**
  * 颜色预设
@@ -76,11 +90,11 @@ export const DESC_IMAGE_PRESETS = {
  * 发送图片弹窗颜色预设
  */
 export const SEND_IMAGE_COLORS = [
-    { name: '淡粉', cardColor: '#FFE4EC', textColor: '#D4728A' },
-    { name: '淡蓝', cardColor: '#E8F2FF', textColor: '#4A6FA5' },
-    { name: '淡绿', cardColor: '#E8F8F0', textColor: '#4CAF50' },
-    { name: '淡紫', cardColor: '#F3E8FF', textColor: '#8B5CF6' },
-    { name: '淡黄', cardColor: '#FFF8E1', textColor: '#FF9800' },
+    { name: '淡粉', cardColor: '#FFE4EC', textColor: '#D4728A', shadowColor: 'rgba(212, 114, 138, 0.45)' },
+    { name: '淡蓝', cardColor: '#E8F2FF', textColor: '#4A6FA5', shadowColor: 'rgba(74, 111, 165, 0.4)' },
+    { name: '淡绿', cardColor: '#E8F8F0', textColor: '#4CAF50', shadowColor: 'rgba(76, 175, 80, 0.4)' },
+    { name: '淡紫', cardColor: '#F3E8FF', textColor: '#8B5CF6', shadowColor: 'rgba(139, 92, 246, 0.45)' },
+    { name: '淡黄', cardColor: '#FFF8E1', textColor: '#FF9800', shadowColor: 'rgba(255, 152, 0, 0.4)' },
 ];
 
 /**
@@ -219,9 +233,20 @@ class ChatModalManager {
      * @param {Function} options.onConfirm - 确认发送回调，参数为 { message, amount, style }
      * @param {Function} options.onCancel - 取消回调
      */
-    openRedpacketSend({ onConfirm, onCancel }) {
+    openRedpacketSend({ onConfirm, onCancel } = {}) {
+        // ★ v0.67.x 读当前用户余额,让 modal 显示 + 余额不足时禁用按钮
+        let currentBalance = 0;
+        try {
+            const sdk = window.settingsSdk;
+            if (sdk?.assetFlow?.getBalance) {
+                const defaultUser = sdk.defaultUserCard?.getDefault?.() || sdk.users?.getActive?.();
+                const uid = defaultUser?.id || 'default';
+                currentBalance = sdk.assetFlow.getBalance('user', uid) || 0;
+            }
+        } catch (_) { currentBalance = 0; }
         this._dispatch(RedpacketSendModal, {
             title: '发红包',
+            currentBalance,
         }, {
             onConfirm: onConfirm || ((result) => {
                 window.__phoneIsland?.notify?.('success', '红包已发送', `¥${result.amount} - ${result.message}`);
@@ -236,9 +261,20 @@ class ChatModalManager {
      * @param {Function} options.onConfirm - 确认发送回调，参数为 { amount, note }
      * @param {Function} options.onCancel - 取消回调
      */
-    openTransferSend({ onConfirm, onCancel }) {
+    openTransferSend({ onConfirm, onCancel } = {}) {
+        // ★ v0.67.x 读当前用户余额
+        let currentBalance = 0;
+        try {
+            const sdk = window.settingsSdk;
+            if (sdk?.assetFlow?.getBalance) {
+                const defaultUser = sdk.defaultUserCard?.getDefault?.() || sdk.users?.getActive?.();
+                const uid = defaultUser?.id || 'default';
+                currentBalance = sdk.assetFlow.getBalance('user', uid) || 0;
+            }
+        } catch (_) { currentBalance = 0; }
         this._dispatch(TransferSendModal, {
             title: '转账',
+            currentBalance,
         }, {
             onConfirm: onConfirm || ((result) => {
                 window.__phoneIsland?.notify?.('success', '转账已发送', `¥${result.amount} - ${result.note}`);
@@ -309,7 +345,7 @@ class ChatModalManager {
     openAiRemark({ name, avatarBg, remark, mode, onSave, onClose }) {
         this._dispatch(AiRemarkModal, {
             name: name || '',
-            avatarBg: avatarBg || '#A8C8EC',
+            avatarBg: avatarBg || DEFAULT_AI_AVATAR_BG,
             remark: remark || '',
             mode: mode || 'calendar',
         }, {
@@ -558,10 +594,13 @@ class ChatModalManager {
      * @param {Function} options.onSave
      * @param {Function} options.onClose
      */
-    openEditReplyPrompt({ initial, isCreate, onSave, onClose } = {}) {
+    openEditReplyPrompt({ initial, isCreate, originContent, onSave, onClose } = {}) {
         this._dispatch(EditReplyPromptModal, {
             initial: initial || { title: '', content: '', source: 'custom', active: true },
             isCreate: !!isCreate,
+            // 从 Prompt 库拉取来的条目，把库里的原文一起带上，
+            // 弹窗里就能给一个「复原原文」按钮（自己新建的没有原文，按钮不显示）
+            originContent: String(originContent || ''),
         }, {
             onSave: (next) => {
                 try {
@@ -588,7 +627,7 @@ class ChatModalManager {
      *   - onSave({ note, position })  保存回调
      *   - onClose()                   关闭回调
      */
-    openSystemPromptEdit({ kind, aiPersonId, title, baseContent, replyNote, position, onSave, onClose } = {}) {
+    openSystemPromptEdit({ kind, aiPersonId, title, baseContent, replyNote, position, defaultNote, onSave, onClose } = {}) {
         this._dispatch(SystemPromptEditModal, {
             kind: kind === 'ai' ? 'ai' : 'user',
             aiPersonId: String(aiPersonId || ''),
@@ -596,6 +635,8 @@ class ChatModalManager {
             baseContent: String(baseContent || ''),
             replyNote: String(replyNote || ''),
             position: position === 'before' ? 'before' : 'after',
+            // 系统预设原文，用于「复原预设」按钮。调用方算好传进来。
+            defaultNote: String(defaultNote || ''),
         }, {
             onSave: (next) => {
                 try {
@@ -643,13 +684,15 @@ class ChatModalManager {
      * @param {string} options.title         卡片标题 (e.g. "X 和 Y 的聊天记录")
      * @param {Array}  options.messages      完整消息数组
      * @param {string} options.sourceLabel   来源副标 (e.g. "来自与 小美 的对话")
+     * @param {string} options.contactName    ★ v0.85 新增:联系人/AI 名字(用于显示发送者真实名字)
      * @param {Function} options.onClose     关闭回调
      */
-    openChatRecordDetail({ title, messages, sourceLabel, onClose } = {}) {
+    openChatRecordDetail({ title, messages, sourceLabel, contactName, onClose } = {}) {
         this._dispatch(ChatRecordDetailModal, {
             title: title || '聊天记录',
             messages: Array.isArray(messages) ? messages : [],
             sourceLabel: sourceLabel || '',
+            contactName: contactName || '', // ★ v0.85 新增:透传给 ChatRecordDetailModal
         }, {
             onClose: () => {
                 try { onClose?.(); } catch (err) { console.error('[chat-modal] chat-record-detail onClose failed', err); }
@@ -762,8 +805,8 @@ class ChatModalManager {
      * @param {Function} [options.onClose]
      */
     openAppPromptPreview({ appId, promptId, previewType, previewData, originalPreviewData, label, onSave, onClose } = {}) {
-        const safeType = ['text', 'music-card', 'red-packet-card', 'location-card'].includes(previewType)
-            ? previewType : 'text';
+        // 类型清单在 app-prompt-card.js 里（PREVIEW_TYPES），加新卡片只改那一处
+        const safeType = PREVIEW_TYPES.includes(previewType) ? previewType : 'text';
         const safeData = previewData && typeof previewData === 'object' ? previewData : {};
         const safeOriginal = originalPreviewData && typeof originalPreviewData === 'object'
             ? originalPreviewData : null;
@@ -854,49 +897,298 @@ class ChatModalManager {
     }
 
     /**
-     * ★ v0.63 打开「滚动摘要容量」设置弹窗
-     *   - 用户自定义 kMergeSize + maxChainLength,保存后写入 aiPerson.socialProfiles.chat.rollingConfig
-     *   - 调用方负责 onSave 时调用 sdk.rollingSummaries.setRollingConfig(aiPersonId, { kMergeSize, maxChainLength })
+     * ★ v0.88 打开「K 链记忆」设置弹窗
      *
      * @param {Object} options
      * @param {string} options.aiPersonId
-     * @param {string} options.contactName
-     * @param {number} options.currentMergeSize
-     * @param {number} options.currentChainLength
-     * @param {string} [options.mode]
-     * @param {Function} [options.onSave]  ({kMergeSize, maxChainLength}) => Promise<void>
+     * @param {string} [options.contactName]
+     * @param {'calendar'|'story'} [options.mode]
+     * @param {Function} [options.onSave]   ({enabled, windowSize, content}) => Promise<void>
+     * @param {Function} [options.onClear]  () => Promise<void>
      * @param {Function} [options.onClose]
      */
-    openRollingCapacity({ aiPersonId, contactName, currentMergeSize, currentChainLength, mode = 'calendar', onSave, onClose } = {}) {
-        const safeMergeSize = Number(currentMergeSize) || 5;
-        const safeChainLength = Number(currentChainLength) || 10;
-        this._dispatch(RollingCapacityModal, {
+    openKChain({ aiPersonId, contactName, mode = 'calendar', pending = 0, onSave, onClear, onClose } = {}) {
+        const safeMode = mode === 'story' ? 'story' : 'calendar';
+        const sdk = window.settingsSdk;
+        const config = sdk?.kChain?.getConfig?.(aiPersonId) || { enabled: false, windowSize: 5 };
+        const slot = sdk?.kChain?.getSlot?.(aiPersonId, safeMode)
+            || { current: { index: 0, content: '', rounds: 0 }, history: [] };
+
+        this._dispatch(KChainModal, {
             aiPersonId: String(aiPersonId || ''),
             contactName: String(contactName || ''),
-            currentMergeSize: safeMergeSize,
-            currentChainLength: safeChainLength,
-            mode: mode === 'story' ? 'story' : 'calendar',
+            mode: safeMode,
+            config,
+            slot,
+            // 进度由调用方现算后传进来 —— 数回合要用 chat-app 的回合口径,弹窗层拿不到
+            pending: Number(pending) || 0,
         }, {
             onSave: async (payload) => {
-                try {
-                    if (typeof onSave === 'function') {
-                        await onSave(payload);
-                    } else {
-                        const sdk = window.settingsSdk;
-                        if (sdk?.rollingSummaries?.setRollingConfig && aiPersonId) {
-                            await sdk.rollingSummaries.setRollingConfig(aiPersonId, {
-                                kMergeSize: Number(payload?.kMergeSize) || 5,
-                                maxChainLength: Number(payload?.maxChainLength) || 10,
-                            });
-                        }
-                    }
-                } catch (err) {
-                    console.warn('[chat-modal] openRollingCapacity onSave failed', err);
+                try { await onSave?.(payload); } catch (err) {
+                    console.warn('[chat-modal] openKChain onSave failed', err);
+                }
+            },
+            onClear: async () => {
+                try { await onClear?.(); } catch (err) {
+                    console.warn('[chat-modal] openKChain onClear failed', err);
                 }
             },
             onClose: () => {
                 try { onClose?.(); } catch (err) {
-                    console.error('[chat-modal] openRollingCapacity onClose failed', err);
+                    console.error('[chat-modal] openKChain onClose failed', err);
+                }
+            },
+        });
+    }
+
+    /**
+     * ★ v0.72 当前模式提示词编辑弹窗
+     *   - 4 个 tab:聊天 / 语音 / 视频 / 游戏
+     *   - 底部:恢复默认 / 取消 / 保存
+     *   - 4 段 prompt 文本通过 contextMode.setModePromptOverrides 持久化
+     *   - 「恢复默认」内部直接响应(textarea 立即显示默认文本,需点保存才生效)
+     *
+     * @param {Object} options
+     * @param {string} options.aiPersonId   当前 AI 人设 ID
+     * @param {Function} options.onSave     保存回调({ chat, voice, video, game })—— 默认会调 contextMode.setModePromptOverrides
+     * @param {Function} options.onClose    关闭回调
+     */
+    openContextModeEditor({ aiPersonId, onSave, onClose } = {}) {
+        // 动态 import contextMode(避免循环依赖,且 modal 可能未挂载 contextMode)
+        import('../services/context-mode.js').then((mod) => {
+            const contextMode = mod.default;
+            const tabs = contextMode.listModes();
+            const snapshot = contextMode.getModePromptsSnapshot();
+            // 4 段默认文本(用于「恢复默认」按钮立即恢复 textarea)
+            const defaults = {};
+            tabs.forEach((t) => { defaults[t.key] = contextMode.getDefaultModePrompt(t.key); });
+            this._dispatch(ContextModeEditorModal, {
+                aiPersonId: String(aiPersonId || ''),
+                tabs,
+                snapshot,
+                defaults,
+            }, {
+                onSave: (map) => {
+                    try {
+                        if (typeof onSave === 'function') {
+                            onSave(map);
+                        } else {
+                            contextMode.setModePromptOverrides(map);
+                        }
+                    } catch (err) {
+                        console.error('[chat-modal] openContextModeEditor onSave failed', err);
+                    }
+                },
+                onClose: () => {
+                    try { onClose?.(); } catch (err) {
+                        console.error('[chat-modal] openContextModeEditor onClose failed', err);
+                    }
+                },
+            });
+        }).catch((err) => {
+            console.error('[chat-modal] openContextModeEditor import contextMode failed', err);
+        });
+    }
+
+    /**
+     * ★ v0.79 可读取朋友圈设置弹窗
+     *   - 入口:聊天设置 → 「可读取朋友圈」行(data-app-action 触发)
+     *   - payload: { contactId, mode }
+     *   - 保存:onSave({ self, user, social }) → 业务方写回 contact.momentsReadConfig
+     *   - 兜底:若当前 AI 人设还没有 momentsReadConfig,弹窗用默认 3/3/3
+     *
+     * @param {Object} options
+     * @param {string} options.contactId      AI 人设 ID(或 contactId)
+     * @param {string} options.contactName    显示名(AI 或用户)
+     * @param {Object} options.currentValue   { self, user, social }
+     * @param {Function} options.onSave       (next) => void
+     * @param {Function} options.onClose
+     */
+    openMomentsReadModal({ contactId, contactName, currentValue, onSave, onClose } = {}) {
+        this._dispatch(MomentsReadModal, {
+            aiPersonId: String(contactId || ''),
+            contactName: String(contactName || ''),
+            currentValue: currentValue || { self: 3, user: 3, social: 3 },
+        }, {
+            save: (next) => {
+                try {
+                    if (typeof onSave === 'function') onSave(next);
+                } catch (err) {
+                    console.error('[chat-modal] openMomentsReadModal onSave failed', err);
+                }
+            },
+            close: () => {
+                try { onClose?.(); } catch (err) {
+                    console.error('[chat-modal] openMomentsReadModal onClose failed', err);
+                }
+            },
+        });
+    }
+
+    /**
+     * ★ v0.81 打开群成员选择器(群主 / 管理员选择)
+     *   - title: 顶部标题(如「选择群主」「添加管理员」)
+     *   - subtitle: 副标题(可选,灰色说明文字)
+     *   - candidates: 候选成员数组
+     *       [{ id, label, avatar, avatarBg, initial, isCurrentUser, disabled, disabledReason, tag }]
+     *   - confirmLabel: 确认按钮文案,默认「确认」
+     *   - onPick(member): 选中回调,参数是 candidates 里的原对象
+     *   - onClose(): 关闭回调
+     *
+     * @param {Object} options
+     */
+    openGroupMemberPicker({ title, subtitle, candidates = [], confirmLabel, onPick, onClose } = {}) {
+        this._dispatch(GroupMemberPickerModal, {
+            title: title || '选择成员',
+            subtitle: subtitle || '',
+            confirmLabel: confirmLabel || '确认',
+            candidates: Array.isArray(candidates) ? candidates.slice() : [],
+        }, {
+            // ★ v0.81 回调键名必须跟 framework index.html 的 @事件路由一一对应
+            //   - @confirm → emitChatComponentEvent('onConfirm', ...)
+            //   - @close   → emitChatComponentEvent('onClose', ...)
+            onConfirm: (member) => {
+                try {
+                    if (typeof onPick === 'function') onPick(member);
+                } catch (err) {
+                    console.error('[chat-modal] openGroupMemberPicker onConfirm failed', err);
+                }
+            },
+            onClose: () => {
+                try { onClose?.(); } catch (err) {
+                    console.error('[chat-modal] openGroupMemberPicker onClose failed', err);
+                }
+            },
+        });
+    }
+
+    /**
+     * ★ v0.79 AI 朋友圈概要详情弹窗
+     *   - 入口:聊天设置 → 「朋友圈管理」行
+     *   - payload: { contactId, mode }
+     *   - 自动拉 sdk.moments.list(contactId) 作为初始数据
+     *   - 任意数据变化(add / delete / saveSummary / regenerate) → onChange 回调
+     *     让调用方 invalidate renderer cache + syncNow,保证 chat-settings 行的计数立刻更新
+     *
+     * @param {Object} options
+     * @param {string} options.contactId
+     * @param {string} options.contactName
+     * @param {Array}  options.initialMoments  可选,默认从 sdk.moments.list 读
+     * @param {Function} options.onChange
+     * @param {Function} options.onClose
+     */
+    openAiMomentsDetailModal({ contactId, contactName, initialMoments, onChange, onClose } = {}) {
+        let list = Array.isArray(initialMoments) ? initialMoments : [];
+        try {
+            const sdk = window.settingsSdk;
+            if (!Array.isArray(initialMoments) && sdk?.moments?.list) {
+                list = sdk.moments.list(contactId) || [];
+            }
+        } catch (_) { /* fallback to empty */ }
+        this._dispatch(AiMomentsDetailModal, {
+            aiPersonId: String(contactId || ''),
+            contactName: String(contactName || ''),
+            initialMoments: list,
+        }, {
+            change: (payload) => {
+                try {
+                    if (typeof onChange === 'function') onChange(payload);
+                } catch (err) {
+                    console.error('[chat-modal] openAiMomentsDetailModal onChange failed', err);
+                }
+            },
+            close: () => {
+                try { onClose?.(); } catch (err) {
+                    console.error('[chat-modal] openAiMomentsDetailModal onClose failed', err);
+                }
+            },
+        });
+    }
+
+    /**
+     * ★ 朋友圈分享弹窗
+     * @param {Object} options
+     * @param {Object} options.shareData - 分享数据 { momentId, authorName, content, aiImages }
+     * @param {Function} options.onSelect - 选择联系人后的回调(参数: contact)
+     */
+    openMomentShare({ shareData } = {}) {
+        this._dispatch(MomentShareModal, {
+            shareData: shareData || {},
+        });
+    }
+
+    /**
+     * ★ v0.85 打开朋友圈删除确认弹窗
+     * @param {Object} options
+     * @param {string} options.momentId - 要删除的动态 ID
+     * @param {string} options.momentContent - 动态内容预览
+     * @param {Function} options.onConfirm - 确认删除回调
+     */
+    openMomentDeleteConfirm({ momentId, momentContent, onConfirm } = {}) {
+        this._dispatch(MomentDeleteConfirmModal, {
+            momentId: momentId || '',
+            momentContent: momentContent || '',
+        }, {
+            confirm: (payload) => {
+                try { onConfirm?.(payload); } catch (err) {
+                    console.error('[chat-modal] openMomentDeleteConfirm confirm failed', err);
+                }
+            },
+        });
+    }
+
+    /**
+     * ★ v0.85 打开清空聊天记录确认弹窗
+     * @param {Object} options
+     * @param {string} options.targetName - 目标名称(AI名字或群名)
+     * @param {string} options.targetType - 'private' 或 'group'
+     * @param {Function} options.onConfirm - 确认清空回调
+     */
+    openClearChatConfirm({ targetName, targetType = 'private', onConfirm } = {}) {
+        this._dispatch(ClearChatConfirmModal, {
+            targetName: targetName || '',
+            targetType: targetType,
+        }, {
+            confirm: () => {
+                try { onConfirm?.(); } catch (err) {
+                    console.error('[chat-modal] openClearChatConfirm confirm failed', err);
+                }
+            },
+        });
+    }
+
+    /**
+     * ★ v0.85 打开退出群聊确认弹窗
+     * @param {Object} options
+     * @param {string} options.groupName - 群聊名称
+     * @param {Function} options.onConfirm - 确认退出回调
+     */
+    openExitGroupConfirm({ groupName, onConfirm } = {}) {
+        this._dispatch(ExitGroupConfirmModal, {
+            groupName: groupName || '',
+        }, {
+            confirm: () => {
+                try { onConfirm?.(); } catch (err) {
+                    console.error('[chat-modal] openExitGroupConfirm confirm failed', err);
+                }
+            },
+        });
+    }
+
+    /**
+     * ★ v0.85 打开取消收藏确认弹窗
+     * @param {Object} options
+     * @param {string} options.messagePreview - 消息预览文本
+     * @param {Function} options.onConfirm - 确认取消收藏回调
+     */
+    openUnfavoriteConfirm({ messagePreview, subtitle, onConfirm } = {}) {
+        this._dispatch(UnfavoriteConfirmModal, {
+            messagePreview: messagePreview || '',
+            subtitle: subtitle || '确定要取消收藏这条消息吗？',
+        }, {
+            confirm: () => {
+                try { onConfirm?.(); } catch (err) {
+                    console.error('[chat-modal] openUnfavoriteConfirm confirm failed', err);
                 }
             },
         });
@@ -994,17 +1286,18 @@ class ChatModalManager {
      * ★ v0.67 打开通话结束概要弹窗
      */
     openCallSummary({ callType, duration, summary, senderName, wasConnected, onViewDetail, onClose } = {}) {
+        // ★ v0.68 修复:把 onViewDetail / onClose 走 props 直接传给 Vue 组件,
+        //   避免 framework 的 callback key/modal emit 名字不匹配导致回调失效
         this._dispatch(CallSummaryModal, {
             callType: String(callType || 'voice'),
             duration: Number(duration) || 0,
             summary: String(summary || ''),
             senderName: String(senderName || '对方'),
             wasConnected: wasConnected !== false,
+            onViewDetail: typeof onViewDetail === 'function' ? onViewDetail : null,
         }, {
-            viewDetail: () => {
-                try { onViewDetail?.(); } catch (err) { console.error('[chat-modal] call-summary viewDetail failed', err); }
-            },
-            close: () => {
+            // framework index.html: @close → emitChatComponentEvent('onClose')
+            onClose: () => {
                 try { onClose?.(); } catch (err) { console.error('[chat-modal] call-summary close failed', err); }
             },
         });
@@ -1034,6 +1327,107 @@ class ChatModalManager {
             },
             close: () => {
                 try { onClose?.(); } catch (err) { console.error('[chat-modal] incoming-call close failed', err); }
+            },
+        });
+    }
+
+    /**
+     * ★ v0.74 打开「添加层级」弹窗(从层级管理页入口触发)
+     *   - 迁移到 AcModal,不再用 document.createElement + body.appendChild 野生 DOM
+     *   - options.levels: 现有层级列表(渲染「在 X 之后」选项)
+     *   - options.onConfirm({ name, cycle, position }): 用户点「添加」时回调
+     *   - options.onClose: 弹窗关闭
+     *
+     * @param {Object} options
+     * @param {Array} options.levels
+     * @param {Function} options.onConfirm
+     * @param {Function} options.onClose
+     */
+    openAddLevel({ levels = [], onConfirm, onClose } = {}) {
+        this._dispatch(AddLevelModal, {
+            levels: Array.isArray(levels) ? levels : [],
+        }, {
+            onConfirm: (payload) => {
+                try {
+                    if (typeof onConfirm === 'function') onConfirm(payload);
+                } catch (err) {
+                    console.error('[chat-modal] add-level confirm failed', err);
+                }
+            },
+            onClose: () => {
+                try { onClose?.(); } catch (err) {
+                    console.error('[chat-modal] add-level close failed', err);
+                }
+            },
+        });
+    }
+
+    /**
+     * ★ v0.75 打开删除层级确认弹窗(AcModal)
+     *   替代原 window.__phoneConfirm.request 的野生确认弹窗
+     *   @param {Object} options
+     *   @param {string} options.levelName - 层级名称
+     *   @param {Function} options.onConfirm - 确认回调
+     *   @param {Function} options.onClose - 关闭回调
+     */
+    openRemoveLevelConfirm({ levelName = '', onConfirm, onClose } = {}) {
+        this._dispatch(RemoveLevelConfirmModal, {
+            levelName: String(levelName || ''),
+        }, {
+            onConfirm: () => {
+                try { if (typeof onConfirm === 'function') onConfirm(); } catch (err) { console.error('[chat-modal] remove-level-confirm confirm failed', err); }
+            },
+            onClose: () => {
+                try { onClose?.(); } catch (err) { console.error('[chat-modal] remove-level-confirm close failed', err); }
+            },
+        });
+    }
+
+    /**
+     * ★ v0.75 打开修改周期确认弹窗(AcModal)
+     *   替代原 window.__phoneConfirm.request 的野生确认弹窗
+     *   @param {Object} options
+     *   @param {string} options.levelName - 层级名称
+     *   @param {number} options.oldCycle - 原周期(天)
+     *   @param {number} options.newCycle - 新周期(天)
+     *   @param {Function} options.onConfirm - 确认回调
+     *   @param {Function} options.onClose - 关闭回调
+     */
+    openUpdateLevelCycleConfirm({ levelName = '', oldCycle = 0, newCycle = 0, onConfirm, onClose } = {}) {
+        this._dispatch(UpdateLevelCycleConfirmModal, {
+            levelName: String(levelName || ''),
+            oldCycle: Math.max(1, Math.floor(Number(oldCycle) || 0)),
+            newCycle: Math.max(1, Math.floor(Number(newCycle) || 0)),
+        }, {
+            onConfirm: () => {
+                try { if (typeof onConfirm === 'function') onConfirm(); } catch (err) { console.error('[chat-modal] update-level-cycle-confirm confirm failed', err); }
+            },
+            onClose: () => {
+                try { onClose?.(); } catch (err) { console.error('[chat-modal] update-level-cycle-confirm close failed', err); }
+            },
+        });
+    }
+
+    /**
+     * ★ v0.75 群聊 API 设置弹窗 — 显示所有成员，点击编辑
+     * @param {Object} options
+     * @param {string} options.title 弹窗标题
+     * @param {string} options.subtitle 副标题
+     * @param {Array<{id:string,label:string,savedLabel:string,isUser:boolean}>} options.items 成员列表
+     * @param {Function} options.onSelect 选中某成员回调(id)
+     * @param {Function} options.onClose 弹窗关闭回调
+     */
+    openGroupApiCallList({ title = '', subtitle = '', items = [], onSelect, onClose } = {}) {
+        this._dispatch(ChoiceModal, {
+            title: String(title || '群聊 API 设置'),
+            subtitle: String(subtitle || '点击成员行设置其 API'),
+            items: Array.isArray(items) ? items : [],
+        }, {
+            select: (id) => {
+                try { if (typeof onSelect === 'function') onSelect(id); } catch (err) { console.error('[chat-modal] openGroupApiCallList onSelect failed', err); }
+            },
+            close: () => {
+                try { onClose?.(); } catch (err) { console.error('[chat-modal] openGroupApiCallList onClose failed', err); }
             },
         });
     }

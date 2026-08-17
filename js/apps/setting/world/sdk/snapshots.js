@@ -9,7 +9,7 @@
  */
 
 import { SDK_STORES } from './defaults.js';
-import { createPersister, loadFromDb, now } from './helpers.js';
+import { createPersister, now } from './helpers.js';
 
 // ============================================
 // 纯函数：加权随机 + 日期

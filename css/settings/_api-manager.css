@@ -97,10 +97,6 @@
     color: #0A84FF;
 }
 
-.api-mgr-token-badge__icon {
-    font-size: 14px;
-}
-
 .api-mgr-token-badge__value {
     font-weight: 700;
 }
@@ -209,6 +205,169 @@
     padding: 6px 12px;
     font-size: 12px;
     border-radius: 8px;
+}
+
+/* 「诊断 API-401」这种按钮：只在上一次测试失败时出现，
+   琥珀色而不是红色 —— 它不是危险操作，是「这里有东西要看」。 */
+.api-mgr-btn--warn {
+    background: rgba(255, 149, 0, 0.14);
+    color: #b26a00;
+    font-weight: 600;
+}
+
+.api-mgr-btn--warn:hover {
+    background: rgba(255, 149, 0, 0.24);
+}
+
+/* ============================================
+ * 科普 / 诊断 / 修复（2026-08-13）
+ * --------------------------------------------
+ * 视觉往人设页（.phome-card）靠：白底大圆角卡片、
+ * 14px 标题 + 12px 灰副标、内容区 12px 行距 1.7。
+ * ============================================ */
+
+.api-mgr-faq {
+    margin-bottom: 14px;
+    border-radius: 16px;
+    background: #FFFFFF;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+}
+
+.api-mgr-faq__toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 13px 16px;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: #3C3C43;
+    cursor: pointer;
+}
+
+.api-mgr-faq__chevron {
+    color: #A1A1AA;
+    font-size: 12px;
+}
+
+.api-mgr-faq__list {
+    padding: 0 16px 12px;
+}
+
+.api-mgr-faq__item {
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.api-mgr-faq__q {
+    padding: 11px 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #007AFF;
+    cursor: pointer;
+    list-style: none;
+}
+
+.api-mgr-faq__q::-webkit-details-marker { display: none; }
+
+.api-mgr-faq__a {
+    padding: 0 0 12px;
+    font-size: 12.5px;
+    line-height: 1.75;
+    color: #6B6B70;
+}
+
+/* ---- 修复窗口（贴在密钥卡片下方，不是弹窗）----
+   做成内嵌面板而不是弹窗，是因为用户要一边看着当前配置一边贴新的；
+   弹窗会把下面的 Base URL / 模型全挡住。 */
+.api-mgr-repair {
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 12px;
+    background: #F6F8FB;
+    border: 1px solid rgba(0, 122, 255, 0.14);
+}
+
+.api-mgr-repair__title {
+    margin-bottom: 4px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #007AFF;
+}
+
+.api-mgr-repair__hint {
+    margin-bottom: 8px;
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: #8A8A8E;
+}
+
+.api-mgr-repair__input {
+    width: 100%;
+    padding: 9px 11px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    background: #FFFFFF;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11.5px;
+    line-height: 1.6;
+    color: #2C2C2E;
+    resize: vertical;
+}
+
+.api-mgr-repair__result {
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-radius: 9px;
+    font-size: 11.5px;
+    line-height: 1.6;
+}
+
+.api-mgr-repair__result.is-ok {
+    background: rgba(52, 199, 89, 0.12);
+    color: #1f7a3d;
+}
+
+.api-mgr-repair__result.is-bad {
+    background: rgba(255, 149, 0, 0.14);
+    color: #b26a00;
+}
+
+.api-mgr-repair__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+/* ---- 诊断报告弹窗 ---- */
+.api-mgr-modal--diag {
+    max-width: 340px;
+}
+
+.api-mgr-diag__hint {
+    margin-bottom: 10px;
+    font-size: 12px;
+    line-height: 1.7;
+    color: #8A8A8E;
+}
+
+.api-mgr-diag__report {
+    margin: 0;
+    padding: 11px;
+    max-height: 46vh;
+    overflow: auto;
+    border-radius: 10px;
+    background: #F4F4F6;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    line-height: 1.65;
+    color: #2C2C2E;
+    white-space: pre-wrap;
+    word-break: break-all;
 }
 
 .api-mgr-btn--text {
@@ -414,7 +573,13 @@
 
 .api-mgr-key-card__actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
+}
+
+.api-mgr-key-card__diagnostic-action {
+    flex: 0 0 100%;
+    display: flex;
 }
 
 /* ============================================

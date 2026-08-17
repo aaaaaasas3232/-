@@ -1,0 +1,1865 @@
+/**
+ * 氧气（博客 App）· 样式（单文件，本文件即全部真相）
+ *
+ * ── 颜色规矩 ──────────────────────────────────────────────────────
+ *   本文件开头的 token 段是**颜色的唯一真相**。
+ *   其余所有规则只允许 var(--ox-*)；JS 里一个 hex 都没有
+ *   （唯一例外是桌面图标、appConfig 首帧兜底、关机彩蛋 —— 它们在 app-shell 外/前，
+ *     以及黑匣子页：全 App 唯一的固定黑底，故意不吃主题）。
+ *
+ * ── 风格约束 ──────────────────────────────────────────────────────
+ *   白色为主、黑色为配（推特 / Threads / ins 的密度与留白）；
+ *   禁 emoji；禁渐变；层次靠 1px 细线和很小的明度差。
+ *   动效「高级 Q 弹」：统一 motion token（--ox-dur-* / --ox-spring），
+ *   prefers-reduced-motion 时全部退化为淡入淡出。
+ *
+ * ── 主题怎么切 ────────────────────────────────────────────────────
+ *   `.app-shell[data-app-id="blog"]` 挂 `data-ox-theme="air|carbon"`。
+ *   每套主题写两个选择器：shell 自身 + shell 内任意后代 ——
+ *   后者是给 theme.js 的探针 div 和配色页迷你预览用的，删了预览会全坏。
+ */
+
+/* ============================================================
+   token · 空气（浅色，默认）
+   ============================================================ */
+.app-shell[data-app-id="blog"],
+.app-shell[data-app-id="blog"][data-ox-theme="air"],
+.app-shell[data-app-id="blog"] [data-ox-theme="air"] {
+    --ox-bg: #FFFFFF;
+    --ox-surface: #FFFFFF;
+    --ox-surface-2: #F7F7F5;
+    --ox-elevated: #FFFFFF;
+
+    --ox-text: #111111;
+    --ox-text-2: #6B6B6B;
+    --ox-text-3: #A6A6A6;
+    --ox-text-inverse: #FFFFFF;
+
+    --ox-ink: #111111;
+    --ox-ink-press: #333333;
+    --ox-on-ink: #FFFFFF;
+
+    --ox-line: #EAEAEA;
+    --ox-line-soft: #F2F2F0;
+    --ox-line-strong: #D8D8D4;
+
+    --ox-tag-bg: #FFFFFF;
+    --ox-tag-text: #333333;
+    --ox-tag-line: #D8D8D4;
+    --ox-tag-on-bg: #111111;
+    --ox-tag-on-text: #FFFFFF;
+
+    /* 头像色板：压灰的纸感色，黑白气质里的一点点区分度 */
+    --ox-ava-0: #E8E4DC;
+    --ox-ava-1: #DFE4E4;
+    --ox-ava-2: #E6DEE4;
+    --ox-ava-3: #DDE2D8;
+    --ox-ava-4: #E7E0D2;
+    --ox-ava-5: #D9DEE7;
+    --ox-ava-6: #E4D9D6;
+    --ox-ava-7: #D8DCD2;
+    --ox-ava-text: #444444;
+
+    --ox-danger: #C24941;
+    --ox-success: #3E7A5B;
+    --ox-warn: #A87F35;
+
+    --ox-input-bg: #F7F7F5;
+    --ox-input-line: #E3E3DF;
+    --ox-input-focus: rgba(17, 17, 17, 0.35);
+
+    --ox-room-bg: #FDFDFC;
+    --ox-room-wall: #F1F0EC;
+    --ox-room-note: #FFFDF6;
+    --ox-room-note-text: #3A3A36;
+    --ox-room-tagnote: #F0F3EE;
+
+    --ox-nav-bg: #FFFFFF;
+    --ox-nav-line: #EDEDEA;
+    --ox-nav-icon: #A6A6A6;
+    --ox-nav-active: #111111;
+    --ox-overlay: rgba(17, 17, 17, 0.42);
+    --ox-skeleton: #F1F1EF;
+}
+
+/* ============================================================
+   token · 碳（深色）
+   ============================================================ */
+.app-shell[data-app-id="blog"][data-ox-theme="carbon"],
+.app-shell[data-app-id="blog"] [data-ox-theme="carbon"] {
+    --ox-bg: #141414;
+    --ox-surface: #141414;
+    --ox-surface-2: #1E1E1E;
+    --ox-elevated: #222222;
+
+    --ox-text: #EDEDEA;
+    --ox-text-2: #9E9E9A;
+    --ox-text-3: #6A6A66;
+    --ox-text-inverse: #141414;
+
+    --ox-ink: #EDEDEA;
+    --ox-ink-press: #C9C9C4;
+    --ox-on-ink: #141414;
+
+    --ox-line: #2A2A2A;
+    --ox-line-soft: #222222;
+    --ox-line-strong: #3C3C3C;
+
+    --ox-tag-bg: #141414;
+    --ox-tag-text: #C9C9C4;
+    --ox-tag-line: #3C3C3C;
+    --ox-tag-on-bg: #EDEDEA;
+    --ox-tag-on-text: #141414;
+
+    --ox-ava-0: #3B3833;
+    --ox-ava-1: #33383A;
+    --ox-ava-2: #3A3339;
+    --ox-ava-3: #343930;
+    --ox-ava-4: #3B372C;
+    --ox-ava-5: #2F343E;
+    --ox-ava-6: #3B322F;
+    --ox-ava-7: #32362C;
+    --ox-ava-text: #D5D5D0;
+
+    --ox-danger: #D26A62;
+    --ox-success: #6BA88A;
+    --ox-warn: #C9A057;
+
+    --ox-input-bg: #1E1E1E;
+    --ox-input-line: #333333;
+    --ox-input-focus: rgba(237, 237, 234, 0.4);
+
+    --ox-room-bg: #1B1B1A;
+    --ox-room-wall: #242422;
+    --ox-room-note: #24231F;
+    --ox-room-note-text: #DDDCD4;
+    --ox-room-tagnote: #21251F;
+
+    --ox-nav-bg: #141414;
+    --ox-nav-line: #242424;
+    --ox-nav-icon: #6A6A66;
+    --ox-nav-active: #EDEDEA;
+    --ox-overlay: rgba(0, 0, 0, 0.6);
+    --ox-skeleton: #222222;
+}
+
+/* ============================================================
+   motion token（Q 弹的唯一出处）
+   ============================================================ */
+.app-shell[data-app-id="blog"] {
+    --ox-dur-fast: 180ms;
+    --ox-dur: 260ms;
+    --ox-dur-slow: 420ms;
+    --ox-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ox-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .app-shell[data-app-id="blog"] {
+        --ox-dur-fast: 1ms;
+        --ox-dur: 1ms;
+        --ox-dur-slow: 1ms;
+        --ox-spring: linear;
+        --ox-ease: linear;
+    }
+    .app-shell[data-app-id="blog"] * {
+        animation-duration: 1ms !important;
+        animation-iteration-count: 1 !important;
+    }
+}
+
+/* ============================================================
+   框架容器覆写 —— 让 vue 根组件真正铺满手机壳（AGENTS2 §18）
+   ------------------------------------------------------------
+   1. .app-screen-panel 只有 min-height（height:auto），根组件的
+      height:100% 会退化成 auto → 整页一起滚、底栏被内容顶出屏幕。
+      修法：panel 给死高度 + 清 padding，滚动权交给 .ox-body。
+   2. framework 默认 .app-content { padding: 0 14px }，左右各留 14px；
+      平时空隙颜色 = app.background 看不出来，弹窗遮罩一出来两侧就有
+      没变暗的亮边。顺带清掉 .app-page-stack 顶部圆角，遮罩上角不缺块。
+   ============================================================ */
+.app-shell[data-app-id="blog"] .app-content {
+    padding: 0;
+}
+
+.app-shell[data-app-id="blog"] .app-page-stack {
+    border-radius: 0;
+}
+
+.app-shell[data-app-id="blog"] .app-page {
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="blog"] .app-screen-panel {
+    height: 100%;
+    min-height: 0;
+    padding: 0;
+}
+
+/* ============================================================
+   根布局
+   ============================================================ */
+.app-shell[data-app-id="blog"] .ox-root {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--ox-bg);
+    color: var(--ox-text);
+    font-size: 14px;
+}
+
+.app-shell[data-app-id="blog"] .ox-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    /* 状态栏和灵动岛浮在整个手机屏最上层，自绘顶栏要让满 54px */
+    padding: 54px 16px 8px;
+    flex: 0 0 auto;
+}
+.app-shell[data-app-id="blog"] .ox-top__mark { color: var(--ox-text); display: inline-flex; }
+.app-shell[data-app-id="blog"] .ox-top__text { display: flex; align-items: baseline; gap: 8px; }
+.app-shell[data-app-id="blog"] .ox-top__title { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: 0.02em; }
+.app-shell[data-app-id="blog"] .ox-top__sub { margin: 0; font-size: 11px; color: var(--ox-text-3); }
+
+.app-shell[data-app-id="blog"] .ox-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+}
+.app-shell[data-app-id="blog"] .ox-body::-webkit-scrollbar { display: none; }
+
+.app-shell[data-app-id="blog"] .ox-page {
+    padding: 4px 16px 88px;
+    position: relative;
+    min-height: 100%;
+    box-sizing: border-box;
+    animation: ox-pagein var(--ox-dur) var(--ox-ease);
+}
+@keyframes ox-pagein {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+}
+
+/* 底栏 */
+.app-shell[data-app-id="blog"] .ox-tabbar {
+    flex: 0 0 auto;
+    display: flex;
+    background: var(--ox-nav-bg);
+    border-top: 1px solid var(--ox-nav-line);
+    /* fullscreen App：home 指示条浮在 shell 最底 40px（--app-safe-bottom），
+       底栏自己让出这一段，否则指示条横线会压在 tab 文字上 */
+    padding: 4px 6px max(8px, calc(var(--app-safe-bottom, 12px) - 10px));
+}
+.app-shell[data-app-id="blog"] .ox-tabbar__item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 5px 0 3px;
+    background: none;
+    border: none;
+    color: var(--ox-nav-icon);
+    font-size: 10px;
+    cursor: pointer;
+    transition: transform var(--ox-dur-fast) var(--ox-spring), color var(--ox-dur-fast) var(--ox-ease);
+}
+.app-shell[data-app-id="blog"] .ox-tabbar__item:active { transform: scale(0.88); }
+.app-shell[data-app-id="blog"] .ox-tabbar__item.is-on { color: var(--ox-nav-active); }
+.app-shell[data-app-id="blog"] .ox-tabbar__icon { display: inline-flex; }
+.app-shell[data-app-id="blog"] .ox-tabbar__label { letter-spacing: 0.06em; }
+
+/* 覆盖页顶栏（状态栏浮在最上层，sticky 到顶时要让满 52px） */
+.app-shell[data-app-id="blog"] .ox-subtop {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: -4px -16px 0;
+    padding: 52px 16px 8px;
+    background: var(--ox-bg);
+    border-bottom: 1px solid var(--ox-line-soft);
+}
+.app-shell[data-app-id="blog"] .ox-subtop__back {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+    border: 1px solid var(--ox-line);
+    background: var(--ox-surface);
+    color: var(--ox-text);
+    cursor: pointer;
+    transition: transform var(--ox-dur-fast) var(--ox-spring);
+}
+.app-shell[data-app-id="blog"] .ox-subtop__back:active { transform: scale(0.86); }
+.app-shell[data-app-id="blog"] .ox-subtop__title { font-size: 15px; font-weight: 700; }
+.app-shell[data-app-id="blog"] .ox-subtop__spacer { flex: 1; }
+.app-shell[data-app-id="blog"] .ox-subtop__act {
+    background: none;
+    border: 1px solid var(--ox-line);
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 12px;
+    color: var(--ox-text-2);
+    cursor: pointer;
+}
+
+/* ============================================================
+   通用小件
+   ============================================================ */
+.app-shell[data-app-id="blog"] .ox-icon { display: inline-flex; vertical-align: -3px; }
+
+.app-shell[data-app-id="blog"] .ox-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border-radius: 999px;
+    border: 1px solid var(--ox-line-strong);
+    background: var(--ox-surface);
+    color: var(--ox-text);
+    font-size: 13px;
+    padding: 7px 14px;
+    cursor: pointer;
+    transition: transform var(--ox-dur-fast) var(--ox-spring), background var(--ox-dur-fast) var(--ox-ease), opacity var(--ox-dur-fast) var(--ox-ease);
+    user-select: none;
+}
+.app-shell[data-app-id="blog"] .ox-btn:active { transform: scale(0.92); }
+.app-shell[data-app-id="blog"] .ox-btn:disabled { opacity: 0.42; cursor: default; transform: none; }
+.app-shell[data-app-id="blog"] .ox-btn--ink { background: var(--ox-ink); border-color: var(--ox-ink); color: var(--ox-on-ink); }
+.app-shell[data-app-id="blog"] .ox-btn--ink:active { background: var(--ox-ink-press); }
+.app-shell[data-app-id="blog"] .ox-btn--soft { background: var(--ox-surface-2); border-color: var(--ox-surface-2); }
+.app-shell[data-app-id="blog"] .ox-btn--ghost { border-color: transparent; background: none; color: var(--ox-text-2); }
+.app-shell[data-app-id="blog"] .ox-btn--danger { border-color: var(--ox-danger); color: var(--ox-danger); background: var(--ox-surface); }
+.app-shell[data-app-id="blog"] .ox-btn--sm { font-size: 12px; padding: 5px 11px; }
+.app-shell[data-app-id="blog"] .ox-btn--lg { font-size: 15px; padding: 11px 18px; }
+.app-shell[data-app-id="blog"] .ox-btn.is-block { width: 100%; }
+.app-shell[data-app-id="blog"] .ox-btn__spin {
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    animation: ox-spin 0.8s linear infinite;
+}
+@keyframes ox-spin { to { transform: rotate(360deg); } }
+
+.app-shell[data-app-id="blog"] .ox-section { margin: 18px 0 0; }
+.app-shell[data-app-id="blog"] .ox-section__head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+.app-shell[data-app-id="blog"] .ox-section__title { margin: 0; font-size: 14px; font-weight: 700; }
+.app-shell[data-app-id="blog"] .ox-section__sub { font-size: 11px; color: var(--ox-text-3); }
+.app-shell[data-app-id="blog"] .ox-section__spacer { flex: 1; }
+
+.app-shell[data-app-id="blog"] .ox-empty { text-align: center; padding: 44px 20px 24px; }
+.app-shell[data-app-id="blog"] .ox-empty__mark {
+    display: inline-flex;
+    width: 52px;
+    height: 52px;
+    border-radius: 999px;
+    border: 1px solid var(--ox-line);
+    align-items: center;
+    justify-content: center;
+    color: var(--ox-text-3);
+    margin-bottom: 12px;
+}
+.app-shell[data-app-id="blog"] .ox-empty__title { margin: 0 0 6px; font-size: 15px; font-weight: 700; }
+.app-shell[data-app-id="blog"] .ox-empty__desc { margin: 0 auto 14px; font-size: 12px; color: var(--ox-text-2); max-width: 240px; line-height: 1.7; }
+.app-shell[data-app-id="blog"] .ox-empty__slot { display: flex; justify-content: center; gap: 8px; }
+
+.app-shell[data-app-id="blog"] .ox-loading { text-align: center; padding: 40px 0 26px; color: var(--ox-text-2); }
+.app-shell[data-app-id="blog"] .ox-loading__breath {
+    display: inline-flex;
+    color: var(--ox-text);
+    animation: ox-breath 2.4s var(--ox-ease) infinite;
+}
+@keyframes ox-breath {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.18); opacity: 1; }
+}
+.app-shell[data-app-id="blog"] .ox-loading__text { margin: 10px 0 0; font-size: 12px; animation: ox-pagein var(--ox-dur) var(--ox-ease); }
+.app-shell[data-app-id="blog"] .ox-loading__slow { margin: 6px 0 0; font-size: 11px; color: var(--ox-text-3); }
+
+.app-shell[data-app-id="blog"] .ox-skeleton { display: flex; flex-direction: column; gap: 12px; padding: 14px 0; }
+.app-shell[data-app-id="blog"] .ox-skeleton__item {
+    height: 74px;
+    border-radius: 14px;
+    background: var(--ox-skeleton);
+    animation: ox-skel 1.4s var(--ox-ease) infinite;
+}
+@keyframes ox-skel { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+
+.app-shell[data-app-id="blog"] .ox-field { margin: 10px 0; }
+.app-shell[data-app-id="blog"] .ox-field__label { font-size: 12px; color: var(--ox-text-2); }
+.app-shell[data-app-id="blog"] .ox-field__head { margin-bottom: 6px; }
+.app-shell[data-app-id="blog"] .ox-field__hint { margin: 6px 0 0; font-size: 11px; color: var(--ox-text-3); }
+
+.app-shell[data-app-id="blog"] .ox-input,
+.app-shell[data-app-id="blog"] .ox-textarea {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--ox-input-bg);
+    border: 1px solid var(--ox-input-line);
+    border-radius: 12px;
+    color: var(--ox-text);
+    font-size: 13px;
+    padding: 9px 12px;
+    outline: none;
+    font-family: inherit;
+    transition: border-color var(--ox-dur-fast) var(--ox-ease);
+}
+.app-shell[data-app-id="blog"] .ox-input:focus,
+.app-shell[data-app-id="blog"] .ox-textarea:focus { border-color: var(--ox-input-focus); }
+.app-shell[data-app-id="blog"] .ox-textarea { resize: vertical; line-height: 1.7; }
+
+.app-shell[data-app-id="blog"] .ox-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    overflow: hidden;
+    flex: 0 0 auto;
+    color: var(--ox-ava-text);
+}
+.app-shell[data-app-id="blog"] .ox-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.app-shell[data-app-id="blog"] .ox-avatar__initial { font-style: normal; font-size: 0.55em; font-weight: 700; }
+.app-shell[data-app-id="blog"] .ox-avatar { font-size: 24px; }
+.app-shell[data-app-id="blog"] .ox-avatar--p0 { background: var(--ox-ava-0); }
+.app-shell[data-app-id="blog"] .ox-avatar--p1 { background: var(--ox-ava-1); }
+.app-shell[data-app-id="blog"] .ox-avatar--p2 { background: var(--ox-ava-2); }
+.app-shell[data-app-id="blog"] .ox-avatar--p3 { background: var(--ox-ava-3); }
+.app-shell[data-app-id="blog"] .ox-avatar--p4 { background: var(--ox-ava-4); }
+.app-shell[data-app-id="blog"] .ox-avatar--p5 { background: var(--ox-ava-5); }
+.app-shell[data-app-id="blog"] .ox-avatar--p6 { background: var(--ox-ava-6); }
+.app-shell[data-app-id="blog"] .ox-avatar--p7 { background: var(--ox-ava-7); }
+
+.app-shell[data-app-id="blog"] .ox-tag {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--ox-tag-line);
+    background: var(--ox-tag-bg);
+    color: var(--ox-tag-text);
+    border-radius: 999px;
+    font-size: 11px;
+    padding: 2px 9px;
+    line-height: 1.6;
+    font-style: normal;
+}
+.app-shell[data-app-id="blog"] .ox-tag--big { font-size: 13px; padding: 4px 12px; font-weight: 600; }
+
+.app-shell[data-app-id="blog"] .ox-cap {
+    display: inline-flex;
+    min-width: 18px;
+    justify-content: center;
+    border-radius: 999px;
+    background: var(--ox-surface-2);
+    color: var(--ox-text-2);
+    font-size: 10px;
+    padding: 1px 6px;
+}
+
+.app-shell[data-app-id="blog"] .ox-muted { font-size: 11px; color: var(--ox-text-3); line-height: 1.8; margin: 8px 0; }
+
+.app-shell[data-app-id="blog"] .ox-errorbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid var(--ox-line-strong);
+    border-left: 3px solid var(--ox-danger);
+    border-radius: 10px;
+    background: var(--ox-surface);
+    color: var(--ox-text-2);
+    font-size: 12px;
+    padding: 8px 12px;
+    margin: 8px 0;
+    animation: ox-pop var(--ox-dur) var(--ox-spring);
+}
+.app-shell[data-app-id="blog"] .ox-errorbar__x {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: var(--ox-text);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+@keyframes ox-pop {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* 悬浮发帖钮 */
+.app-shell[data-app-id="blog"] .ox-fab {
+    position: fixed;
+    right: 18px;
+    bottom: calc(var(--app-safe-bottom, 12px) + 58px);
+    z-index: 8;
+    width: 50px;
+    height: 50px;
+    border-radius: 999px;
+    border: none;
+    background: var(--ox-ink);
+    color: var(--ox-on-ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+    transition: transform var(--ox-dur) var(--ox-spring);
+}
+.app-shell[data-app-id="blog"] .ox-fab:active { transform: scale(0.82) rotate(-8deg); }
+
+/* segmented */
+.app-shell[data-app-id="blog"] .ox-seg {
+    display: inline-flex;
+    border: 1px solid var(--ox-line);
+    border-radius: 999px;
+    padding: 2px;
+    background: var(--ox-surface);
+    gap: 2px;
+}
+.app-shell[data-app-id="blog"] .ox-seg--fill { display: flex; margin-bottom: 8px; }
+.app-shell[data-app-id="blog"] .ox-seg--fill .ox-seg__item { flex: 1; justify-content: center; }
+.app-shell[data-app-id="blog"] .ox-seg__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: none;
+    background: none;
+    color: var(--ox-text-2);
+    font-size: 12px;
+    border-radius: 999px;
+    padding: 5px 12px;
+    cursor: pointer;
+    transition: all var(--ox-dur-fast) var(--ox-spring);
+}
+.app-shell[data-app-id="blog"] .ox-seg__item.is-on { background: var(--ox-ink); color: var(--ox-on-ink); }
+
+/* 开关 */
+.app-shell[data-app-id="blog"] .ox-switch {
+    position: relative;
+    width: 44px;
+    height: 26px;
+    border-radius: 999px;
+    border: 1px solid var(--ox-line-strong);
+    background: var(--ox-surface-2);
+    cursor: pointer;
+    flex: 0 0 auto;
+    transition: background var(--ox-dur) var(--ox-ease), border-color var(--ox-dur) var(--ox-ease);
+}
+.app-shell[data-app-id="blog"] .ox-switch i {
+    position: absolute;
+    left: 2px;
+    top: 2px;
+    width: 20px;
+    height: 20px;
+    border-radius: 999px;
+    background: var(--ox-surface);
+    border: 1px solid var(--ox-line-strong);
+    transition: transform var(--ox-dur) var(--ox-spring);
+}
+.app-shell[data-app-id="blog"] .ox-switch.is-on { background: var(--ox-ink); border-color: var(--ox-ink); }
+.app-shell[data-app-id="blog"] .ox-switch.is-on i { transform: translateX(18px); border-color: var(--ox-ink); }
+
+.app-shell[data-app-id="blog"] .ox-switchrow { display: flex; align-items: center; gap: 14px; padding: 10px 0; }
+.app-shell[data-app-id="blog"] .ox-switchrow--tight { padding: 6px 0; }
+.app-shell[data-app-id="blog"] .ox-switchrow__main { flex: 1; min-width: 0; }
+.app-shell[data-app-id="blog"] .ox-switchrow__title { margin: 0 0 3px; font-size: 13px; font-weight: 600; }
+.app-shell[data-app-id="blog"] .ox-switchrow__desc { margin: 0; font-size: 11px; color: var(--ox-text-3); line-height: 1.7; }
+
+/* 折叠块（提示词页 / 配色页共用） */
+.app-shell[data-app-id="blog"] .ox-foldhead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    border: 1px solid var(--ox-line);
+    border-radius: 12px;
+    background: var(--ox-surface);
+    color: var(--ox-text);
+    font-size: 13px;
+    padding: 10px 14px;
+    margin: 6px 0;
+    cursor: pointer;
+}
+.app-shell[data-app-id="blog"] .ox-foldbody { padding: 4px 2px 10px; animation: ox-pagein var(--ox-dur) var(--ox-ease); }
+.app-shell[data-app-id="blog"] .ox-pre {
+    white-space: pre-wrap;
+    background: var(--ox-surface-2);
+    border-radius: 12px;
+    padding: 12px;
+    font-size: 11px;
+    line-height: 1.8;
+    color: var(--ox-text-2);
+    margin: 0 0 8px;
+    font-family: inherit;
+}
+
+/* toast */
+.app-shell[data-app-id="blog"] .ox-toast {
+    position: absolute;
+    left: 50%;
+    bottom: calc(var(--app-safe-bottom, 12px) + 66px);
+    transform: translateX(-50%);
+    background: var(--ox-ink);
+    color: var(--ox-on-ink);
+    font-size: 12px;
+    border-radius: 999px;
+    padding: 8px 16px;
+    z-index: 30;
+    white-space: nowrap;
+    max-width: 86%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.app-shell[data-app-id="blog"] .ox-toast-enter-active { transition: all var(--ox-dur) var(--ox-spring); }
+.app-shell[data-app-id="blog"] .ox-toast-leave-active { transition: all var(--ox-dur-fast) var(--ox-ease); }
+.app-shell[data-app-id="blog"] .ox-toast-enter-from,
+.app-shell[data-app-id="blog"] .ox-toast-leave-to { opacity: 0; transform: translateX(-50%) translateY(10px) scale(0.9); }
+
+/* ============================================================
+   引导页
+   ============================================================ */
+.app-shell[data-app-id="blog"] .ox-ob__hero { text-align: center; padding: 26px 0 6px; }
+.app-shell[data-app-id="blog"] .ox-ob__mark {
+    display: inline-flex;
+    width: 64px;
+    height: 64px;
+    border-radius: 22px;
+    border: 1px solid var(--ox-line);
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+    animation: ox-breath 3.2s var(--ox-ease) infinite;
+}
+.app-shell[data-app-id="blog"] .ox-ob__title { margin: 0; font-size: 22px; letter-spacing: 0.3em; text-indent: 0.3em; }
+.app-shell[data-app-id="blog"] .ox-ob__line { margin: 8px 0 2px; font-size: 12px; color: var(--ox-text-2); }
+.app-shell[data-app-id="blog"] .ox-ob__sub { margin: 0; font-size: 11px; color: var(--ox-text-3); }
+.app-shell[data-app-id="blog"] .ox-ob__chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.app-shell[data-app-id="blog"] .ox-ob__chips--tight { margin: 8px 0 0; }
+.app-shell[data-app-id="blog"] .ox-chip {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    border: 1px solid var(--ox-line-strong);
+    border-radius: 12px;
+    background: var(--ox-surface);
+    color: var(--ox-text);
+    font-size: 12px;
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: all var(--ox-dur-fast) var(--ox-spring);
+}
+.app-shell[data-app-id="blog"] .ox-chip:active { transform: scale(0.93); }
+.app-shell[data-app-id="blog"] .ox-chip.is-on { background: var(--ox-ink); border-color: var(--ox-ink); color: var(--ox-on-ink); }
+.app-shell[data-app-id="blog"] .ox-chip__desc { font-style: normal; font-size: 10px; opacity: 0.65; }
+.app-shell[data-app-id="blog"] .ox-ob__foot { margin: 22px 0 10px; text-align: center; }
+
+/* ============================================================
+   广场（标签优先）
+   ============================================================ */
+.app-shell[data-app-id="blog"] .ox-lowhint {
+    margin: 4px 0 0;
+    font-size: 11px;
+    color: var(--ox-text-3);
+    letter-spacing: 0.14em;
+    animation: ox-breath 4s var(--ox-ease) infinite;
+}
+.app-shell[data-app-id="blog"] .ox-feed-list { display: flex; flex-direction: column; }
+.app-shell[data-app-id="blog"] .ox-stub {
+    padding: 13px 0 12px;
+    border-bottom: 1px solid var(--ox-line-soft);
+    animation: ox-pagein var(--ox-dur) var(--ox-ease);
+}
+.app-shell[data-app-id="blog"] .ox-stub__author {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--ox-text);
+    cursor: pointer;
+    width: 100%;
+}
+.app-shell[data-app-id="blog"] .ox-stub__name { font-size: 13px; font-weight: 600; }
+.app-shell[data-app-id="blog"] .ox-stub__time { margin-left: auto; font-size: 11px; color: var(--ox-text-3); }
+.app-shell[data-app-id="blog"] .ox-stub__body {
+    display: block;
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 0;
+    margin-top: 9px;
+    text-align: left;
+    cursor: pointer;
+}
+.app-shell[data-app-id="blog"] .ox-stub__tags { display: flex; flex-wrap: wrap; gap: 7px; }
+.app-shell[data-app-id="blog"] .ox-stub__body:active .ox-tag--big { transform: scale(0.95); }
+.app-shell[data-app-id="blog"] .ox-tag--big { transition: transform var(--ox-dur-fast) var(--ox-spring); }
+.app-shell[data-app-id="blog"] .ox-stub__meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--ox-text-3);
+}
+.app-shell[data-app-id="blog"] .ox-stub__meta i { font-style: normal; }
+.app-shell[data-app-id="blog"] .ox-stub__type {
+    border: 1px solid var(--ox-line);
+    border-radius: 6px;
+    padding: 0 5px;
+    font-size: 10px;
+}
+.app-shell[data-app-id="blog"] .ox-stub__unread { color: var(--ox-text-2); margin-left: auto; letter-spacing: 0.06em; }
+.app-shell[data-app-id="blog"] .ox-stub__read { margin-left: auto; }
+.app-shell[data-app-id="blog"] .ox-stub.is-opened .ox-tag--big { opacity: 0.6; }
+
+.app-shell[data-app-id="blog"] .ox-feed-mine { padding: 8px 0 2px; border-bottom: 1px solid var(--ox-line-soft); }
+.app-shell[data-app-id="blog"] .ox-feed-mine__label { margin: 0 0 6px; font-size: 11px; color: var(--ox-text-3); }
+.app-shell[data-app-id="blog"] .ox-feed-mine__item {
+    display: inline-flex;
+    gap: 6px;
+    background: none;
+    border: none;
+    padding: 2px 8px 2px 0;
+    cursor: pointer;
+}
+.app-shell[data-app-id="blog"] .ox-feed-foot { text-align: center; padding: 18px 0 6px; }
+
+/* ============================================================
+   帖子页
+   ============================================================ */
+.app-shell[data-app-id="blog"] .ox-post__head { padding: 4px 0 0; }
+.app-shell[data-app-id="blog"] .ox-post__author {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--ox-text);
+    cursor: pointer;
+}
+.app-shell[data-app-id="blog"] .ox-post__authorname { font-size: 14px; font-weight: 700; }
+.app-shell[data-app-id="blog"] .ox-post__ownerbadge {
+    font-size: 10px;
+    border: 1px solid var(--ox-line-strong);
+    border-radius: 6px;
+    padding: 0 5px;
+    color: var(--ox-text-2);
+}
+.app-shell[data-app-id="blog"] .ox-post__tags { display: flex; flex-wrap: wrap; gap: 7px; margin: 12px 0 2px; }
+.app-shell[data-app-id="blog"] .ox-post__content {
+    margin: 14px auto 0;
+    font-size: 14px;
+    line-height: 1.95;
+    animation: ox-pagein var(--ox-dur-slow) var(--ox-ease);
+}
+.app-shell[data-app-id="blog"] .ox-post__content p { margin: 0 0 1em; }
+.app-shell[data-app-id="blog"] .ox-post__content.is-murmur { color: var(--ox-text-2); font-size: 15px; }
+.app-shell[data-app-id="blog"] .ox-post__stats { font-size: 11px; color: var(--ox-text-3); margin: 6px 0 10px; }
+.app-shell[data-app-id="blog"] .ox-post__actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.app-shell[data-app-id="blog"] .ox-post__noreply { margin: 22px 0; font-size: 12px; color: var(--ox-text-3); text-align: center; letter-spacing: 0.06em; }
+
+/* 隐藏彩蛋的落款：只在详情页出现，广场那张卡不给任何暗示 */
+.app-shell[data-app-id="blog"] .ox-eggmark {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 16px 0 2px;
+    padding-top: 12px;
+    border-top: 1px solid var(--ox-line-soft);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--ox-text-3);
+    animation: ox-pagein var(--ox-dur-slow) var(--ox-ease);
+}
+.app-shell[data-app-id="blog"] .ox-eggmark__dot {
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    border: 1px solid var(--ox-line-strong);
+    background: var(--ox-surface);
+    animation: ox-eggbreath 4.2s var(--ox-ease) infinite;
+}
+@keyframes ox-eggbreath {
+    0%, 100% { opacity: 0.35; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.25); }
+}
+.app-shell[data-app-id="blog"] .ox-eggmark__mood {
+    margin-left: auto;
+    font-style: normal;
+    letter-spacing: 0.04em;
+    color: var(--ox-text-2);
+    border: 1px solid var(--ox-line);
+    border-radius: 999px;
+    padding: 1px 9px;
+}
+
+.app-shell[data-app-id="blog"] .ox-readingbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    border: 1px solid var(--ox-line);
+    border-radius: 12px;
+    padding: 8px 10px;
+    font-size: 11px;
+    color: var(--ox-text-2);
+    animation: ox-pop var(--ox-dur) var(--ox-spring);
+}
+.app-shell[data-app-id="blog"] .ox-readingbar i { font-style: normal; min-width: 26px; text-align: center; }
+.app-shell[data-app-id="blog"] .ox-readingbar__label { margin-left: 4px; color: var(--ox-text-3); }
+.app-shell[data-app-id="blog"] .ox-readingbar__btn {
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    border: 1px solid var(--ox-line-strong);
+    background: var(--ox-surface);
+    color: var(--ox-text);
+    cursor: pointer;
+    line-height: 1;
+}
+
+/* 评论：折叠是仪式 */
+.app-shell[data-app-id="blog"] .ox-comments { margin-top: 18px; border-top: 1px solid var(--ox-line-soft); padding-top: 10px; }
+.app-shell[data-app-id="blog"] .ox-comments__head { display: flex; align-items: center; gap: 8px; }
+.app-shell[data-app-id="blog"] .ox-comments__title { font-size: 13px; font-weight: 700; }
+.app-shell[data-app-id="blog"] .ox-comments__hint { margin-left: auto; font-size: 10px; color: var(--ox-text-3); }
+.app-shell[data-app-id="blog"] .ox-comments__first { padding: 12px 0; }
+.app-shell[data-app-id="blog"] .ox-comments__list { display: flex; flex-direction: column; }
+.app-shell[data-app-id="blog"] .ox-comment { border-bottom: 1px solid var(--ox-line-soft); }
+.app-shell[data-app-id="blog"] .ox-comment__row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 10px 0;
+    cursor: pointer;
+}
+.app-shell[data-app-id="blog"] .ox-comment__who {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--ox-text);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.app-shell[data-app-id="blog"] .ox-comment__fold {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--ox-text-3);
+}
+.app-shell[data-app-id="blog"] .ox-comment__fold .ox-icon { transition: transform var(--ox-dur) var(--ox-spring); }
+.app-shell[data-app-id="blog"] .ox-comment.is-open .ox-comment__fold .ox-icon { transform: rotate(180deg); }
+.app-shell[data-app-id="blog"] .ox-comment__foldline {
+    display: inline-block;
+    width: 64px;
+    height: 1px;
+    background: var(--ox-line-strong);
+}
+.app-shell[data-app-id="blog"] .ox-comment__body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height var(--ox-dur-slow) var(--ox-spring), opacity var(--ox-dur) var(--ox-ease);
+    opacity: 0;
+}
+.app-shell[data-app-id="blog"] .ox-comment.is-open .ox-comment__body { max-height: 220px; opacity: 1; }
+.app-shell[data-app-id="blog"] .ox-comment__body p { margin: 0 0 6px 31px; font-size: 13px; line-height: 1.8; }
+.app-shell[data-app-id="blog"] .ox-comment__likes { display: block; margin: 0 0 10px 31px; font-size: 10px; color: var(--ox-text-3); }
+.app-shell[data-app-id="blog"] .ox-comments__more { text-align: center; padding: 10px 0; }
+
+/* ============================================================
+   发现页
+   ============================================================ */
+.app-shell[data-app-id="blog"] .ox-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--ox-input-line);
+    background: var(--ox-input-bg);
+    border-radius: 999px;
+    padding: 8px 14px;
+    color: var(--ox-text-3);
+    margin: 6px 0 4px;
+}
+.app-shell[data-app-id="blog"] .ox-search__input {
+    flex: 1;
+    border: none;
+    background: none;
+    outline: none;
+    color: var(--ox-text);
+    font-size: 13px;
+}
+.app-shell[data-app-id="blog"] .ox-search__x { background: none; border: none; color: var(--ox-text-3); font-size: 14px; cursor: pointer; }
+
+.app-shell[data-app-id="blog"] .ox-hotlist { display: flex; flex-direction: column; }
+.app-shell[data-app-id="blog"] .ox-hotrow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--ox-line-soft);
+    padding: 11px 2px;
+    cursor: pointer;
+    color: var(--ox-text);
+    transition: transform var(--ox-dur-fast) var(--ox-spring);
+}
+.app-shell[data-app-id="blog"] .ox-hotrow:active { transform: scale(0.98); }
+.app-shell[data-app-id="blog"] .ox-hotrow__rank {
+    width: 20px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ox-text-3);
+}
+.app-shell[data-app-id="blog"] .ox-hotrow.is-top .ox-hotrow__rank { color: var(--ox-text); }
+.app-shell[data-app-id="blog"] .ox-hotrow__term { font-size: 13px; font-weight: 600; }
+.app-shell[data-app-id="blog"] .ox-hotrow__cat {
+    font-size: 10px;
+    color: var(--ox-text-3);
+    border: 1px solid var(--ox-line);
+    border-radius: 6px;
+    padding: 0 5px;
+}
+.app-shell[data-app-id="blog"] .ox-hotrow__me {
+    font-size: 10px;
+    background: var(--ox-ink);
+    color: var(--ox-on-ink);
+    border-radius: 6px;
+    padding: 1px 6px;
+}
+.app-shell[data-app-id="blog"] .ox-hotrow__heat { margin-left: auto; font-size: 11px; color: var(--ox-text-3); }
+.app-shell[data-app-id="blog"] .ox-termpage__from { margin: 2px 0 0; font-size: 11px; color: var(--ox-text-3); }
+
+.app-shell[data-app-id="blog"] .ox-searchhit {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+    width: 100%;
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--ox-line-soft);
+    padding: 10px 0;
+    cursor: pointer;
+    color: var(--ox-text);
+    text-align: left;
+}
+.app-shell[data-app-id="blog"] .ox-searchhit__tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.app-shell[data-app-id="blog"] .ox-searchhit__brief { font-size: 12px; color: var(--ox-text-2); }
+.app-shell[data-app-id="blog"] .ox-searchhit__day { font-size: 10px; color: var(--ox-text-3); }
+
+/* ============================================================
+   随笔
+   ============================================================ */
+.app-shell[data-app-id="blog"] .ox-essays__top { display: flex; align-items: center; gap: 10px; margin: 6px 0 4px; }
+.app-shell[data-app-id="blog"] .ox-essays__note { font-size: 10px; color: var(--ox-text-3); }
+
+.app-shell[data-app-id="blog"] .ox-cal { border: 1px solid var(--ox-line); border-radius: 16px; padding: 12px; margin-top: 10px; }
+.app-shell[data-app-id="blog"] .ox-cal__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.app-shell[data-app-id="blog"] .ox-cal__month { font-size: 13px; font-weight: 700; }
+.app-shell[data-app-id="blog"] .ox-cal__nav {
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    border: 1px solid var(--ox-line);
+    background: var(--ox-surface);
+    color: var(--ox-text-2);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.app-shell[data-app-id="blog"] .ox-cal__nav--next { transform: rotate(180deg); }
+.app-shell[data-app-id="blog"] .ox-cal__week {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    font-size: 10px;
+    color: var(--ox-text-3);
+    text-align: center;
+    margin-bottom: 4px;
+}
+.app-shell[data-app-id="blog"] .ox-cal__grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.app-shell[data-app-id="blog"] .ox-cal__cell {
+    position: relative;
+    aspect-ratio: 1;
+    border: none;
+    background: none;
+    border-radius: 10px;
+    color: var(--ox-text);
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    transition: transform var(--ox-dur-fast) var(--ox-spring), background var(--ox-dur-fast) var(--ox-ease);
+}
+.app-shell[data-app-id="blog"] .ox-cal__cell:active { transform: scale(0.86); }
+.app-shell[data-app-id="blog"] .ox-cal__cell.is-empty { cursor: default; }
+.app-shell[data-app-id="blog"] .ox-cal__cell.is-today .ox-cal__num { text-decoration: underline; text-underline-offset: 3px; }
+.app-shell[data-app-id="blog"] .ox-cal__cell.is-selected { background: var(--ox-ink); color: var(--ox-on-ink); }
+.app-shell[data-app-id="blog"] .ox-cal__dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 999px;
+    background: currentColor;
+}
+
+.app-shell[data-app-id="blog"] .ox-essay {
+    border: 1px solid var(--ox-line);
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    background: var(--ox-surface);
+    animation: ox-pop var(--ox-dur) var(--ox-spring);
+}
+.app-shell[data-app-id="blog"] .ox-essay__text { margin: 0 0 8px; font-size: 13px; line-height: 1.9; white-space: pre-wrap; }
+.app-shell[data-app-id="blog"] .ox-essay__meta { display: flex; align-items: center; gap: 8px; }
+.app-shell[data-app-id="blog"] .ox-essay__time { font-size: 10px; color: var(--ox-text-3); }
+.app-shell[data-app-id="blog"] .ox-essay__spacer { flex: 1; }
+.app-shell[data-app-id="blog"] .ox-essay__act {
+    background: none;
+    border: none;
+    color: var(--ox-text-3);
+    cursor: pointer;
+    padding: 4px;
+    display: inline-flex;
+    transition: color var(--ox-dur-fast) var(--ox-ease), transform var(--ox-dur-fast) var(--ox-spring);
+}
+.app-shell[data-app-id="blog"] .ox-essay__act:active { transform: scale(0.8); color: var(--ox-text); }
+
+.app-shell[data-app-id="blog"] .ox-story { margin-top: 12px; }
+.app-shell[data-app-id="blog"] .ox-story__item { display: flex; gap: 12px; }
+.app-shell[data-app-id="blog"] .ox-story__rail { position: relative; width: 12px; flex: 0 0 auto; }
+.app-shell[data-app-id="blog"] .ox-story__rail::before {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--ox-line);
+}
+.app-shell[data-app-id="blog"] .ox-story__dot {
+    position: absolute;
+    left: 2px;
+    top: 18px;
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: var(--ox-ink);
+}
+.app-shell[data-app-id="blog"] .ox-story__card { flex: 1; padding-bottom: 14px; }
+.app-shell[data-app-id="blog"] .ox-story__card .ox-essay__text {
+    border: 1px solid var(--ox-line);
+    border-radius: 14px;
+    padding: 12px 14px;
+    background: var(--ox-surface);
+}
+
+/* ============================================================
+   房间（白匣子）
+   ============================================================ */
+.app-shell[data-app-id="blog"] .ox-room__intro {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    color: var(--ox-text-3);
+    margin: 4px 0 8px;
+}
+.app-shell[data-app-id="blog"] .ox-room__drawerbtn {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid var(--ox-line);
+    border-radius: 999px;
+    background: var(--ox-surface);
+    color: var(--ox-text-2);
+    font-size: 10px;
+    padding: 3px 9px;
+    cursor: pointer;
+}
+.app-shell[data-app-id="blog"] .ox-room__stage {
+    position: relative;
+    height: 330px;
+    border: 1px solid var(--ox-line);
+    border-radius: 18px;
+    background: var(--ox-room-bg);
+    overflow: hidden;
+    touch-action: none;
+}
+.app-shell[data-app-id="blog"] .ox-room__floor {
+    position: absolute;
+    left: -6%;
+    right: -6%;
+    bottom: 0;
+    height: 26%;
+    background: var(--ox-room-wall);
+    transform: perspective(300px) rotateX(38deg);
+    transform-origin: bottom center;
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="blog"] .ox-note {
+    position: absolute;
+    max-width: 130px;
+    background: var(--ox-room-note);
+    color: var(--ox-room-note-text);
+    border: 1px solid var(--ox-line);
+    border-radius: 4px;
+    padding: 7px 9px;
+    font-size: 11px;
+    line-height: 1.6;
+    cursor: grab;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    transition: left var(--ox-dur-slow) var(--ox-spring), top var(--ox-dur-slow) var(--ox-spring);
+    animation: ox-notein var(--ox-dur-slow) var(--ox-spring);
+    user-select: none;
+    z-index: 2;
+}
+@keyframes ox-notein {
+    from { opacity: 0; transform: translateY(-16px) rotate(3deg) scale(0.9); }
+    to { opacity: 1; }
+}
+.app-shell[data-app-id="blog"] .ox-note:active { cursor: grabbing; transition: none; z-index: 4; }
+.app-shell[data-app-id="blog"] .ox-note--tag {
+    background: var(--ox-room-tagnote);
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-weight: 600;
+}
+.app-shell[data-app-id="blog"] .ox-note--xiaoting {
+    background: var(--ox-surface);
+    border-style: dashed;
+    font-size: 10px;
+    color: var(--ox-text-3);
+}
+.app-shell[data-app-id="blog"] .ox-note.is-selected { border-color: var(--ox-ink); }
+.app-shell[data-app-id="blog"] .ox-note__group {
+    display: block;
+    font-style: normal;
+    font-size: 9px;
+    color: var(--ox-text-3);
+    margin-bottom: 2px;
+    letter-spacing: 0.08em;
+}
+.app-shell[data-app-id="blog"] .ox-note__text { word-break: break-all; }
+.app-shell[data-app-id="blog"] .ox-note__x {
+    position: absolute;
+    right: -8px;
+    top: -8px;
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    border: 1px solid var(--ox-line-strong);
+    background: var(--ox-surface);
+    color: var(--ox-text-2);
+    font-size: 11px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="blog"] .ox-geo {
+    position: absolute;
+    cursor: grab;
+    z-index: 3;
+    transition: left var(--ox-dur-slow) var(--ox-spring), top var(--ox-dur-slow) var(--ox-spring), transform var(--ox-dur) var(--ox-spring);
+    animation: ox-geoin 640ms var(--ox-spring);
+    user-select: none;
+}
+@keyframes ox-geoin {
+    from { opacity: 0; transform: translateY(-30px) scale(0.4); }
+    60% { transform: translateY(4px) scale(1.08); }
+    to { opacity: 1; transform: none; }
+}
+.app-shell[data-app-id="blog"] .ox-geo:active { cursor: grabbing; transition: none; transform: scale(1.1); }
+
+.app-shell[data-app-id="blog"] .ox-ball {
+    position: absolute;
+    right: 6%;
+    bottom: 8%;
+    background: none;
+    border: none;
+    cursor: pointer;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    animation: ox-ballin 900ms var(--ox-spring);
+}
+@keyframes ox-ballin {
+    from { opacity: 0; transform: translateY(20px) scale(0.5); }
+    to { opacity: 1; transform: none; }
+}
+.app-shell[data-app-id="blog"] .ox-ball__body {
+    display: inline-flex;
+    animation: ox-ballbreath 3.6s var(--ox-ease) infinite;
+}
+@keyframes ox-ballbreath {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.07); }
+}
+.app-shell[data-app-id="blog"] .ox-ball__name { font-size: 10px; color: var(--ox-text-3); letter-spacing: 0.08em; }
+.app-shell[data-app-id="blog"] .ox-ball:active .ox-ball__body { animation: none; transform: scale(0.88); }
+
+.app-shell[data-app-id="blog"] .ox-room__organizing {
+    position: absolute;
+    left: 50%;
+    bottom: 10px;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    color: var(--ox-text-3);
+    background: var(--ox-surface);
+    border: 1px solid var(--ox-line);
+    border-radius: 999px;
+    padding: 5px 12px;
+    z-index: 6;
+    white-space: nowrap;
+}
+.app-shell[data-app-id="blog"] .ox-room__orgring {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    border: 1.5px solid var(--ox-text-3);
+    border-top-color: transparent;
+    animation: ox-spin 1.1s linear infinite;
+}
+
+.app-shell[data-app-id="blog"] .ox-room__dock { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+.app-shell[data-app-id="blog"] .ox-room__input {
+    flex: 1;
+    box-sizing: border-box;
+    background: var(--ox-input-bg);
+    border: 1px solid var(--ox-input-line);
+    border-radius: 999px;
+    color: var(--ox-text);
+    font-size: 13px;
+    padding: 9px 14px;
+    outline: none;
+}
+.app-shell[data-app-id="blog"] .ox-room__input:focus { border-color: var(--ox-input-focus); }
+.app-shell[data-app-id="blog"] .ox-room__mic {
+    width: 38px;
+    height: 38px;
+    border-radius: 999px;
+    border: 1px solid var(--ox-line-strong);
+    background: var(--ox-surface);
+    color: var(--ox-text-2);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    transition: all var(--ox-dur-fast) var(--ox-spring);
+}
+.app-shell[data-app-id="blog"] .ox-room__mic.is-on {
+    background: var(--ox-ink);
+    border-color: var(--ox-ink);
+    color: var(--ox-on-ink);
+    animation: ox-breath 1.4s var(--ox-ease) infinite;
+}
+.app-shell[data-app-id="blog"] .ox-room__dockrow { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.app-shell[data-app-id="blog"] .ox-room__spacer { flex: 1; }
+
+/* 她的对话浮层 */
+.app-shell[data-app-id="blog"] .ox-balltalk {
+    position: absolute;
+    inset: 0;
+    background: var(--ox-overlay);
+    z-index: 20;
+    display: flex;
+    align-items: flex-end;
+    animation: ox-fadein var(--ox-dur-fast) var(--ox-ease);
+}
+@keyframes ox-fadein { from { opacity: 0; } to { opacity: 1; } }
+.app-shell[data-app-id="blog"] .ox-balltalk__panel {
+    width: 100%;
+    max-height: 72%;
+    background: var(--ox-elevated);
+    border-radius: 20px 20px 0 0;
+    padding: 14px 16px 16px;
+    display: flex;
+    flex-direction: column;
+    animation: ox-sheetup var(--ox-dur-slow) var(--ox-spring);
+}
+@keyframes ox-sheetup {
+    from { transform: translateY(60%); }
+    to { transform: none; }
+}
+.app-shell[data-app-id="blog"] .ox-balltalk__head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.app-shell[data-app-id="blog"] .ox-balltalk__who { display: inline-flex; color: var(--ox-text-3); }
+.app-shell[data-app-id="blog"] .ox-balltalk__name { font-size: 13px; font-weight: 700; }
+.app-shell[data-app-id="blog"] .ox-balltalk__mini {
+    border: 1px solid var(--ox-line);
+    border-radius: 999px;
+    background: none;
+    color: var(--ox-text-2);
+    font-size: 10px;
+    padding: 2px 8px;
+    cursor: pointer;
+}
+.app-shell[data-app-id="blog"] .ox-balltalk__x { background: none; border: none; color: var(--ox-text-3); font-size: 16px; cursor: pointer; }
+.app-shell[data-app-id="blog"] .ox-balltalk__list { flex: 1; min-height: 120px; overflow-y: auto; padding: 4px 2px; }
+.app-shell[data-app-id="blog"] .ox-balltalk__empty { font-size: 11px; color: var(--ox-text-3); text-align: center; padding: 22px 0; }
+.app-shell[data-app-id="blog"] .ox-balltalk__line {
+    margin: 5px 0;
+    font-size: 13px;
+    line-height: 1.7;
+    max-width: 86%;
+    animation: ox-pop var(--ox-dur) var(--ox-spring);
+}
+.app-shell[data-app-id="blog"] .ox-balltalk__line.is-user { margin-left: auto; text-align: right; color: var(--ox-text); }
+.app-shell[data-app-id="blog"] .ox-balltalk__line.is-peer { color: var(--ox-text-2); }
+.app-shell[data-app-id="blog"] .ox-balltalk__line.is-thinking { animation: ox-breath 1.6s var(--ox-ease) infinite; }
+.app-shell[data-app-id="blog"] .ox-balltalk__memtitle { font-size: 11px; color: var(--ox-text-3); margin: 8px 0 4px; }
+.app-shell[data-app-id="blog"] .ox-balltalk__mem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--ox-text-2);
+    border: 1px dashed var(--ox-line-strong);
+    border-radius: 10px;
+    padding: 6px 10px;
+    margin: 4px 0;
+}
+.app-shell[data-app-id="blog"] .ox-balltalk__mem button {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: var(--ox-text-3);
+    font-size: 10px;
+    cursor: pointer;
+}
+.app-shell[data-app-id="blog"] .ox-balltalk__inputrow { display: flex; gap: 8px; margin-top: 8px; }
+
+/* ============================================================
+   我的
+   ============================================================ */
+.app-shell[data-app-id="blog"] .ox-mecard { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
+.app-shell[data-app-id="blog"] .ox-mecard__main { flex: 1; min-width: 0; }
+.app-shell[data-app-id="blog"] .ox-mecard__name { margin: 0; font-size: 16px; font-weight: 700; }
+.app-shell[data-app-id="blog"] .ox-mecard__sub { margin: 3px 0 0; font-size: 11px; color: var(--ox-text-3); }
+.app-shell[data-app-id="blog"] .ox-mecard__oxy {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border: 1px solid var(--ox-line-strong);
+    border-radius: 999px;
+    background: var(--ox-surface);
+    color: var(--ox-text);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 5px 12px;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="blog"] .ox-melist { border: 1px solid var(--ox-line); border-radius: 16px; overflow: hidden; margin: 8px 0; }
+.app-shell[data-app-id="blog"] .ox-melist--posts { margin-top: 10px; }
+.app-shell[data-app-id="blog"] .ox-merow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    background: var(--ox-surface);
+    border: none;
+    border-bottom: 1px solid var(--ox-line-soft);
+    padding: 12px 14px;
+    color: var(--ox-text);
+    font-size: 13px;
+    cursor: pointer;
+    transition: background var(--ox-dur-fast) var(--ox-ease);
+}
+.app-shell[data-app-id="blog"] .ox-merow:last-child { border-bottom: none; }
+.app-shell[data-app-id="blog"] .ox-merow:active { background: var(--ox-surface-2); }
+.app-shell[data-app-id="blog"] .ox-merow__val { margin-left: auto; font-style: normal; font-size: 11px; color: var(--ox-text-3); }
+.app-shell[data-app-id="blog"] .ox-merow > .ox-icon:last-child { color: var(--ox-text-3); }
+
+.app-shell[data-app-id="blog"] .ox-mepost {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+    width: 100%;
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--ox-line-soft);
+    padding: 10px 2px;
+    cursor: pointer;
+    text-align: left;
+}
+.app-shell[data-app-id="blog"] .ox-mepost__tags { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.app-shell[data-app-id="blog"] .ox-mepost__owner { font-style: normal; font-size: 11px; color: var(--ox-text-2); font-weight: 600; }
+.app-shell[data-app-id="blog"] .ox-mepost__meta { font-size: 10px; color: var(--ox-text-3); }
+
+.app-shell[data-app-id="blog"] .ox-ailist { display: flex; flex-direction: column; gap: 6px; }
+.app-shell[data-app-id="blog"] .ox-airow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid var(--ox-line);
+    border-radius: 12px;
+    background: var(--ox-surface);
+    padding: 8px 12px;
+}
+.app-shell[data-app-id="blog"] .ox-airow--pick { cursor: pointer; width: 100%; }
+.app-shell[data-app-id="blog"] .ox-airow--pick.is-on { border-color: var(--ox-ink); }
+.app-shell[data-app-id="blog"] .ox-airow__name { font-size: 13px; font-weight: 600; }
+
+/* 氧气设置页 */
+.app-shell[data-app-id="blog"] .ox-oxyhero { text-align: center; padding: 22px 0 8px; }
+.app-shell[data-app-id="blog"] .ox-oxyhero__ring {
+    display: inline-flex;
+    width: 58px;
+    height: 58px;
+    border-radius: 999px;
+    border: 1px solid var(--ox-line-strong);
+    align-items: center;
+    justify-content: center;
+    animation: ox-breath 3.2s var(--ox-ease) infinite;
+}
+.app-shell[data-app-id="blog"] .ox-oxyhero.is-low .ox-oxyhero__ring { border-color: var(--ox-danger); color: var(--ox-danger); animation-duration: 1.6s; }
+.app-shell[data-app-id="blog"] .ox-oxyhero.is-off .ox-oxyhero__ring { animation: none; color: var(--ox-text-3); }
+.app-shell[data-app-id="blog"] .ox-oxyhero__value { margin: 10px 0 0; font-size: 34px; font-weight: 800; letter-spacing: 0.04em; }
+.app-shell[data-app-id="blog"] .ox-oxyhero__label { margin: 2px 0 0; font-size: 11px; color: var(--ox-text-3); letter-spacing: 0.1em; }
+
+.app-shell[data-app-id="blog"] .ox-ledgerrow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    border-bottom: 1px solid var(--ox-line-soft);
+    padding: 8px 0;
+}
+.app-shell[data-app-id="blog"] .ox-ledgerrow__time { font-size: 10px; color: var(--ox-text-3); width: 74px; flex: 0 0 auto; }
+.app-shell[data-app-id="blog"] .ox-ledgerrow__reason { flex: 1; color: var(--ox-text-2); }
+.app-shell[data-app-id="blog"] .ox-ledgerrow__delta { font-weight: 700; }
+.app-shell[data-app-id="blog"] .ox-ledgerrow__delta.is-plus { color: var(--ox-success); }
+.app-shell[data-app-id="blog"] .ox-ledgerrow__delta.is-minus { color: var(--ox-danger); }
+.app-shell[data-app-id="blog"] .ox-ledgerrow__after { font-size: 10px; color: var(--ox-text-3); width: 26px; text-align: right; }
+
+/* 私信 */
+.app-shell[data-app-id="blog"] .ox-dmlist { display: flex; flex-direction: column; }
+.app-shell[data-app-id="blog"] .ox-dm {
+    display: flex;
+    gap: 10px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--ox-line-soft);
+    animation: ox-pagein var(--ox-dur) var(--ox-ease);
+}
+.app-shell[data-app-id="blog"] .ox-dm__main { flex: 1; min-width: 0; }
+.app-shell[data-app-id="blog"] .ox-dm__head { margin: 0 0 4px; display: flex; align-items: center; gap: 6px; }
+.app-shell[data-app-id="blog"] .ox-dm__name { font-size: 13px; font-weight: 700; }
+.app-shell[data-app-id="blog"] .ox-dm__kind,
+.app-shell[data-app-id="blog"] .ox-dm__tone {
+    font-style: normal;
+    font-size: 10px;
+    color: var(--ox-text-3);
+    border: 1px solid var(--ox-line);
+    border-radius: 6px;
+    padding: 0 5px;
+}
+.app-shell[data-app-id="blog"] .ox-dm__text { margin: 0; font-size: 12px; color: var(--ox-text-2); line-height: 1.7; }
+
+/* ============================================================
+   作者页 / 闲聊
+   ============================================================ */
+.app-shell[data-app-id="blog"] .ox-authorhead { display: flex; align-items: center; gap: 12px; padding: 8px 0 0; }
+.app-shell[data-app-id="blog"] .ox-authorhead__name { margin: 0; font-size: 16px; font-weight: 700; }
+.app-shell[data-app-id="blog"] .ox-authorhead__follow { margin: 3px 0 0; font-size: 11px; color: var(--ox-text-3); }
+.app-shell[data-app-id="blog"] .ox-authorbio { margin: 10px 0; font-size: 13px; color: var(--ox-text-2); line-height: 1.8; }
+
+.app-shell[data-app-id="blog"] .ox-chat__note { margin: 0 0 6px; font-size: 10px; color: var(--ox-text-3); }
+.app-shell[data-app-id="blog"] .ox-chat__list {
+    min-height: 200px;
+    max-height: 46vh;
+    overflow-y: auto;
+    padding: 6px 0;
+    display: flex;
+    flex-direction: column;
+}
+.app-shell[data-app-id="blog"] .ox-chat__empty { text-align: center; padding: 30px 0; }
+.app-shell[data-app-id="blog"] .ox-chat__msg { display: flex; margin: 4px 0; }
+.app-shell[data-app-id="blog"] .ox-chat__msg.is-user { justify-content: flex-end; }
+.app-shell[data-app-id="blog"] .ox-chat__bubble {
+    max-width: 76%;
+    border-radius: 16px;
+    padding: 8px 13px;
+    font-size: 13px;
+    line-height: 1.7;
+    border: 1px solid var(--ox-line);
+    background: var(--ox-surface);
+    animation: ox-pop var(--ox-dur) var(--ox-spring);
+}
+.app-shell[data-app-id="blog"] .ox-chat__msg.is-user .ox-chat__bubble {
+    background: var(--ox-ink);
+    border-color: var(--ox-ink);
+    color: var(--ox-on-ink);
+}
+.app-shell[data-app-id="blog"] .ox-chat__bubble.is-thinking { animation: ox-breath 1.6s var(--ox-ease) infinite; }
+.app-shell[data-app-id="blog"] .ox-chat__friendhint {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11px;
+    color: var(--ox-text-2);
+    border: 1px dashed var(--ox-line-strong);
+    border-radius: 12px;
+    padding: 8px 12px;
+    margin: 8px 0;
+}
+.app-shell[data-app-id="blog"] .ox-chat__inputrow { display: flex; gap: 8px; margin-top: 8px; }
+
+/* ============================================================
+   黑匣子（固定黑底，不吃主题 —— 全 App 唯一的黑）
+   ============================================================ */
+/* 状态栏浮在最上层：黑匣子这块「黑盒子」从 48px 以下开始，像放在桌上的记录仪 */
+.app-shell[data-app-id="blog"] .ox-bbpage { padding: 48px 10px 20px; }
+.app-shell[data-app-id="blog"] .ox-bb {
+    background: #0C0C0C;
+    color: #E6E6E2;
+    min-height: 100%;
+    border-radius: 18px;
+    padding: 14px 16px 20px;
+    margin: 0;
+    box-sizing: border-box;
+}
+.app-shell[data-app-id="blog"] .ox-bb__top { display: flex; align-items: center; gap: 10px; }
+.app-shell[data-app-id="blog"] .ox-bb__back {
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+    border: 1px solid #2C2C2C;
+    background: #141414;
+    color: #E6E6E2;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.app-shell[data-app-id="blog"] .ox-bb__title { font-size: 15px; font-weight: 700; letter-spacing: 0.2em; }
+.app-shell[data-app-id="blog"] .ox-bb__badge {
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    border: 1px solid #3A3A3A;
+    border-radius: 5px;
+    padding: 1px 6px;
+    color: #9A9A96;
+}
+.app-shell[data-app-id="blog"] .ox-bb__export {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: 1px solid #2C2C2C;
+    border-radius: 999px;
+    color: #9A9A96;
+    font-size: 11px;
+    padding: 4px 10px;
+    cursor: pointer;
+}
+.app-shell[data-app-id="blog"] .ox-bb__intro { margin: 14px 0; font-size: 11px; line-height: 2; color: #8C8C88; }
+.app-shell[data-app-id="blog"] .ox-bb__off {
+    border: 1px dashed #333333;
+    border-radius: 12px;
+    padding: 12px;
+    font-size: 12px;
+    color: #9A9A96;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+.app-shell[data-app-id="blog"] .ox-bb__off p { margin: 0; }
+.app-shell[data-app-id="blog"] .ox-bb__off button {
+    background: #E6E6E2;
+    color: #0C0C0C;
+    border: none;
+    border-radius: 999px;
+    font-size: 11px;
+    padding: 5px 12px;
+    cursor: pointer;
+    flex: 0 0 auto;
+}
+.app-shell[data-app-id="blog"] .ox-bb__empty { text-align: center; padding: 40px 0; color: #6E6E6A; font-size: 12px; line-height: 2.2; }
+.app-shell[data-app-id="blog"] .ox-bb__empty p { margin: 0; }
+.app-shell[data-app-id="blog"] .ox-bb__list { display: flex; flex-direction: column; gap: 12px; }
+.app-shell[data-app-id="blog"] .ox-bb__entry {
+    border: 1px solid #242424;
+    border-radius: 12px;
+    background: #111111;
+    padding: 11px 13px;
+    animation: ox-pagein var(--ox-dur) var(--ox-ease);
+}
+.app-shell[data-app-id="blog"] .ox-bb__meta { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+.app-shell[data-app-id="blog"] .ox-bb__reel {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    border: 1.5px solid #5A5A56;
+    flex: 0 0 auto;
+}
+.app-shell[data-app-id="blog"] .ox-bb__source { font-size: 10px; color: #9A9A96; }
+.app-shell[data-app-id="blog"] .ox-bb__stamp { margin-left: auto; font-size: 9px; color: #5E5E5A; }
+.app-shell[data-app-id="blog"] .ox-bb__text { margin: 0; font-size: 13px; line-height: 1.9; color: #DEDEDA; }
+.app-shell[data-app-id="blog"] .ox-bb__acts { display: flex; gap: 12px; margin-top: 8px; }
+.app-shell[data-app-id="blog"] .ox-bb__act {
+    background: none;
+    border: none;
+    color: #7A7A76;
+    font-size: 11px;
+    cursor: pointer;
+    padding: 0;
+}
+.app-shell[data-app-id="blog"] .ox-bb__act.is-danger { color: #A05A54; }
+.app-shell[data-app-id="blog"] .ox-bb__editarea {
+    width: 100%;
+    box-sizing: border-box;
+    background: #191919;
+    border: 1px solid #333333;
+    border-radius: 8px;
+    color: #E6E6E2;
+    font-size: 12px;
+    padding: 8px 10px;
+    outline: none;
+    font-family: inherit;
+}
+
+/* ============================================================
+   提示词页 / 配色页
+   ============================================================ */
+.app-shell[data-app-id="blog"] .ox-ctx { border: 1px solid var(--ox-line); border-radius: 14px; padding: 8px 12px; }
+.app-shell[data-app-id="blog"] .ox-ctx__stat { margin: 4px 0 8px; font-size: 10px; color: var(--ox-text-3); }
+.app-shell[data-app-id="blog"] .ox-ctx__part {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 0;
+    border-top: 1px solid var(--ox-line-soft);
+}
+.app-shell[data-app-id="blog"] .ox-ctx__part.is-off { opacity: 0.4; }
+.app-shell[data-app-id="blog"] .ox-ctx__main { flex: 1; min-width: 0; }
+.app-shell[data-app-id="blog"] .ox-ctx__title { display: block; font-size: 12px; font-weight: 600; }
+.app-shell[data-app-id="blog"] .ox-ctx__meta { display: block; font-size: 10px; color: var(--ox-text-3); }
+.app-shell[data-app-id="blog"] .ox-ctx__lock {
+    font-size: 9px;
+    border: 1px solid var(--ox-line-strong);
+    border-radius: 5px;
+    padding: 1px 5px;
+    color: var(--ox-text-3);
+}
+.app-shell[data-app-id="blog"] .ox-foldwrap { margin: 0; }
+
+.app-shell[data-app-id="blog"] .ox-theme-picks { display: flex; gap: 10px; margin-bottom: 10px; }
+.app-shell[data-app-id="blog"] .ox-theme-pick {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid var(--ox-line);
+    border-radius: 14px;
+    background: var(--ox-surface);
+    padding: 10px;
+    cursor: pointer;
+    color: var(--ox-text);
+    transition: border-color var(--ox-dur-fast) var(--ox-ease), transform var(--ox-dur-fast) var(--ox-spring);
+}
+.app-shell[data-app-id="blog"] .ox-theme-pick:active { transform: scale(0.95); }
+.app-shell[data-app-id="blog"] .ox-theme-pick.is-on { border-color: var(--ox-ink); }
+.app-shell[data-app-id="blog"] .ox-theme-pick__mini {
+    width: 100%;
+    height: 52px;
+    border-radius: 10px;
+    background: var(--ox-bg);
+    border: 1px solid var(--ox-line);
+    position: relative;
+    overflow: hidden;
+    display: block;
+}
+.app-shell[data-app-id="blog"] .ox-theme-pick__bar {
+    position: absolute;
+    left: 8px;
+    top: 8px;
+    width: 40%;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--ox-text);
+    display: block;
+}
+.app-shell[data-app-id="blog"] .ox-theme-pick__card {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    top: 20px;
+    height: 16px;
+    border-radius: 6px;
+    background: var(--ox-surface-2);
+    border: 1px solid var(--ox-line);
+    display: block;
+}
+.app-shell[data-app-id="blog"] .ox-theme-pick__dot {
+    position: absolute;
+    right: 8px;
+    bottom: 6px;
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: var(--ox-ink);
+    display: block;
+}
+.app-shell[data-app-id="blog"] .ox-theme-pick__name { font-size: 12px; font-weight: 700; }
+.app-shell[data-app-id="blog"] .ox-theme-pick__desc { font-size: 10px; color: var(--ox-text-3); }
+
+.app-shell[data-app-id="blog"] .ox-theme-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.app-shell[data-app-id="blog"] .ox-theme-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid var(--ox-line);
+    border-radius: 999px;
+    padding: 3px 6px 3px 4px;
+    font-size: 11px;
+}
+.app-shell[data-app-id="blog"] .ox-theme-chip.is-active { border-color: var(--ox-ink); }
+.app-shell[data-app-id="blog"] .ox-theme-chip__main {
+    background: none;
+    border: none;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ox-text);
+    cursor: pointer;
+    padding: 2px 6px;
+}
+.app-shell[data-app-id="blog"] .ox-theme-chip__act,
+.app-shell[data-app-id="blog"] .ox-theme-chip__del {
+    background: none;
+    border: none;
+    color: var(--ox-text-3);
+    font-size: 10px;
+    cursor: pointer;
+    padding: 2px 4px;
+}
+.app-shell[data-app-id="blog"] .ox-theme-chip__act:disabled { opacity: 0.4; cursor: default; }
+
+.app-shell[data-app-id="blog"] .ox-swatch-group__count { font-size: 10px; color: var(--ox-text-3); }
+.app-shell[data-app-id="blog"] .ox-swatch-group__body { padding: 2px 0 8px; }
+.app-shell[data-app-id="blog"] .ox-swatch { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
+.app-shell[data-app-id="blog"] .ox-swatch__chip { position: relative; width: 26px; height: 26px; border-radius: 8px; overflow: hidden; border: 1px solid var(--ox-line-strong); flex: 0 0 auto; }
+.app-shell[data-app-id="blog"] .ox-swatch__fill { position: absolute; inset: 0; }
+.app-shell[data-app-id="blog"] .ox-swatch__picker { position: absolute; inset: -6px; opacity: 0; cursor: pointer; }
+.app-shell[data-app-id="blog"] .ox-swatch__main { flex: 1; min-width: 0; }
+.app-shell[data-app-id="blog"] .ox-swatch__label { display: block; font-size: 12px; }
+.app-shell[data-app-id="blog"] .ox-swatch__changed {
+    font-style: normal;
+    font-size: 9px;
+    color: var(--ox-text-3);
+    border: 1px solid var(--ox-line-strong);
+    border-radius: 4px;
+    padding: 0 3px;
+    margin-left: 5px;
+}
+.app-shell[data-app-id="blog"] .ox-swatch__token { display: block; font-size: 9px; color: var(--ox-text-3); cursor: pointer; }
+.app-shell[data-app-id="blog"] .ox-swatch__value {
+    width: 96px;
+    background: var(--ox-input-bg);
+    border: 1px solid var(--ox-input-line);
+    border-radius: 8px;
+    color: var(--ox-text);
+    font-size: 10px;
+    padding: 5px 7px;
+    outline: none;
+}
+.app-shell[data-app-id="blog"] .ox-swatch__reset { background: none; border: none; color: var(--ox-text-3); cursor: pointer; }
+
+/* ============================================================
+   弹窗
+   ============================================================ */
+.app-shell[data-app-id="blog"] .ox-modalmask {
+    position: absolute;
+    inset: 0;
+    background: var(--ox-overlay);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 40;
+    animation: ox-fadein var(--ox-dur-fast) var(--ox-ease);
+    padding: 20px;
+    box-sizing: border-box;
+}
+.app-shell[data-app-id="blog"] .ox-modal {
+    width: 100%;
+    max-width: 320px;
+    max-height: 84%;
+    overflow-y: auto;
+    background: var(--ox-elevated);
+    border-radius: 18px;
+    padding: 16px;
+    box-sizing: border-box;
+    animation: ox-pop var(--ox-dur-slow) var(--ox-spring);
+    scrollbar-width: none;
+}
+.app-shell[data-app-id="blog"] .ox-modal::-webkit-scrollbar { display: none; }
+.app-shell[data-app-id="blog"] .ox-modal__title { margin: 0 0 8px; font-size: 15px; font-weight: 700; }
+.app-shell[data-app-id="blog"] .ox-modal__message { margin: 0 0 12px; font-size: 12px; color: var(--ox-text-2); line-height: 1.8; }
+.app-shell[data-app-id="blog"] .ox-modal__acts { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+
+.app-shell[data-app-id="blog"] .ox-amber {
+    border: 1px solid var(--ox-line-strong);
+    border-radius: 14px;
+    background: var(--ox-surface-2);
+    padding: 18px 16px;
+    text-align: center;
+}
+.app-shell[data-app-id="blog"] .ox-amber__quote { margin: 0 0 8px; font-size: 14px; line-height: 1.9; font-weight: 600; }
+.app-shell[data-app-id="blog"] .ox-amber__date { margin: 0; font-size: 10px; color: var(--ox-text-3); letter-spacing: 0.08em; }
+
+.app-shell[data-app-id="blog"] .ox-drawerlist { max-height: 240px; overflow-y: auto; }
+.app-shell[data-app-id="blog"] .ox-drawerrow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    border-bottom: 1px solid var(--ox-line-soft);
+    padding: 8px 0;
+}
+.app-shell[data-app-id="blog"] .ox-drawerrow__shape {
+    font-size: 10px;
+    border: 1px solid var(--ox-line);
+    border-radius: 6px;
+    padding: 1px 6px;
+    color: var(--ox-text-2);
+    flex: 0 0 auto;
+}
+.app-shell[data-app-id="blog"] .ox-drawerrow__quote { flex: 1; color: var(--ox-text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 拦截页 */
+.app-shell[data-app-id="blog"] .ox-blockedwrap { padding: 30px 16px; }

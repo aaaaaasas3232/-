@@ -1,0 +1,543 @@
+/* 四叶草 · 我的 + 子页 + 配色 */
+
+/* ── 钱包 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-wallet {
+    padding: 18px 18px 15px;
+    margin-bottom: 18px;
+    border: 1px solid var(--sp-line);
+    border-radius: 16px;
+    background: var(--sp-surface);
+}
+
+.app-shell[data-app-id="shop"] .sp-wallet__head { margin-bottom: 12px; }
+
+.app-shell[data-app-id="shop"] .sp-wallet__who {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 620;
+    color: var(--sp-text);
+}
+
+.app-shell[data-app-id="shop"] .sp-wallet__world {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin: 3px 0 0;
+    font-size: 11.5px;
+    color: var(--sp-text-3);
+}
+
+.app-shell[data-app-id="shop"] .sp-wallet__clover { display: inline-flex; color: var(--sp-primary); }
+.app-shell[data-app-id="shop"] .sp-wallet__clover svg { width: 14px; height: 14px; }
+
+.app-shell[data-app-id="shop"] .sp-wallet__amount {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.app-shell[data-app-id="shop"] .sp-wallet__num {
+    font-size: 34px;
+    font-weight: 660;
+    letter-spacing: -0.6px;
+    font-variant-numeric: tabular-nums;
+    color: var(--sp-coin);
+}
+
+.app-shell[data-app-id="shop"] .sp-wallet__unit { font-size: 13px; color: var(--sp-text-3); }
+
+.app-shell[data-app-id="shop"] .sp-wallet__note {
+    margin: 7px 0 0;
+    font-size: 11.5px;
+    line-height: 1.6;
+    color: var(--sp-text-3);
+}
+
+.app-shell[data-app-id="shop"] .sp-wallet__stats {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+    padding-top: 13px;
+    border-top: 1px solid var(--sp-line-soft);
+}
+
+.app-shell[data-app-id="shop"] .sp-wallet__stat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="shop"] .sp-wallet__stat-v {
+    font-size: 15px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--sp-text);
+}
+
+.app-shell[data-app-id="shop"] .sp-wallet__stat-k { font-size: 10.5px; color: var(--sp-text-3); }
+
+/* ── 入口列表 ─────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-entries {
+    border: 1px solid var(--sp-line);
+    border-radius: 14px;
+    background: var(--sp-surface);
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="shop"] .sp-entry {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 13px 15px;
+    border: 0;
+    border-bottom: 1px solid var(--sp-line-soft);
+    background: transparent;
+    text-align: left;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+.app-shell[data-app-id="shop"] .sp-entry:last-child { border-bottom: 0; }
+.app-shell[data-app-id="shop"] .sp-entry:active { background: var(--sp-surface-2); }
+
+.app-shell[data-app-id="shop"] .sp-entry__icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: var(--sp-primary-soft);
+    color: var(--sp-primary-strong);
+}
+
+.app-shell[data-app-id="shop"] .sp-entry__main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.app-shell[data-app-id="shop"] .sp-entry__label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13.5px;
+    font-weight: 540;
+    color: var(--sp-text);
+}
+
+.app-shell[data-app-id="shop"] .sp-entry__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--sp-accent);
+}
+
+.app-shell[data-app-id="shop"] .sp-entry__hint { font-size: 11.5px; color: var(--sp-text-3); }
+
+.app-shell[data-app-id="shop"] .sp-entry__go {
+    flex: 0 0 auto;
+    display: inline-flex;
+    color: var(--sp-text-3);
+    opacity: 0.6;
+}
+.app-shell[data-app-id="shop"] .sp-entry__go svg { width: 16px; height: 16px; }
+
+/* ── 子页通用 ─────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-panel__desc {
+    margin: 0 0 16px;
+    padding: 11px 13px;
+    border-radius: 11px;
+    background: var(--sp-surface-2);
+    font-size: 12px;
+    line-height: 1.75;
+    color: var(--sp-text-2);
+}
+
+.app-shell[data-app-id="shop"] .sp-panel__note {
+    margin: 7px 0 0;
+    font-size: 11.5px;
+    line-height: 1.65;
+    color: var(--sp-text-3);
+}
+.app-shell[data-app-id="shop"] .sp-panel__note--warn { color: var(--sp-danger); }
+.app-shell[data-app-id="shop"] .sp-panel__note--faint { opacity: 0.7; margin-top: 20px; text-align: center; }
+
+/* ── 心愿单 ───────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-wish-add {
+    display: grid;
+    gap: 8px;
+    padding: 13px;
+    margin-bottom: 20px;
+    border: 1px solid var(--sp-line);
+    border-radius: 13px;
+    background: var(--sp-surface);
+}
+
+.app-shell[data-app-id="shop"] .sp-wish-add__row { display: flex; gap: 8px; }
+.app-shell[data-app-id="shop"] .sp-wish-add__row .sp-input { flex: 1; }
+
+.app-shell[data-app-id="shop"] .sp-wish {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--sp-line-soft);
+}
+.app-shell[data-app-id="shop"] .sp-wish:last-child { border-bottom: 0; }
+.app-shell[data-app-id="shop"] .sp-wish.is-done { opacity: 0.62; }
+.app-shell[data-app-id="shop"] .sp-wish.is-done .sp-wish__title { text-decoration: line-through; }
+
+.app-shell[data-app-id="shop"] .sp-wish__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.app-shell[data-app-id="shop"] .sp-wish__title { font-size: 13.5px; font-weight: 540; color: var(--sp-text); }
+.app-shell[data-app-id="shop"] .sp-wish__note { font-size: 11.5px; color: var(--sp-text-3); }
+
+.app-shell[data-app-id="shop"] .sp-wish__x {
+    flex: 0 0 auto;
+    border: 0;
+    background: none;
+    padding: 4px 6px;
+    color: var(--sp-text-3);
+    font-size: 11.5px;
+    font-family: inherit;
+    cursor: pointer;
+}
+.app-shell[data-app-id="shop"] .sp-wish__x:active { color: var(--sp-danger); }
+
+/* ── 礼物 / 订单 ──────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-gift,
+.app-shell[data-app-id="shop"] .sp-order {
+    padding: 13px 14px;
+    margin-bottom: 10px;
+    border: 1px solid var(--sp-line);
+    border-radius: 13px;
+    background: var(--sp-surface);
+}
+
+.app-shell[data-app-id="shop"] .sp-gift.is-new { border-color: var(--sp-accent); background: var(--sp-accent-soft); }
+
+.app-shell[data-app-id="shop"] .sp-gift__head,
+.app-shell[data-app-id="shop"] .sp-order__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 4px;
+}
+
+.app-shell[data-app-id="shop"] .sp-gift__name,
+.app-shell[data-app-id="shop"] .sp-order__names {
+    font-size: 13.5px;
+    font-weight: 560;
+    color: var(--sp-text);
+    min-width: 0;
+}
+
+.app-shell[data-app-id="shop"] .sp-gift__from,
+.app-shell[data-app-id="shop"] .sp-order__meta {
+    margin: 0;
+    font-size: 11.5px;
+    color: var(--sp-text-3);
+}
+
+.app-shell[data-app-id="shop"] .sp-gift__msg {
+    margin: 7px 0 0;
+    padding: 8px 11px;
+    border-radius: 9px;
+    background: var(--sp-surface-2);
+    font-size: 12.5px;
+    line-height: 1.65;
+    color: var(--sp-text-2);
+}
+
+.app-shell[data-app-id="shop"] .sp-gift__actions,
+.app-shell[data-app-id="shop"] .sp-order__actions { margin-top: 9px; }
+
+/* ── 流水 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-flow__sum {
+    display: flex;
+    gap: 8px;
+    padding: 14px;
+    margin-bottom: 16px;
+    border: 1px solid var(--sp-line);
+    border-radius: 13px;
+    background: var(--sp-surface);
+}
+
+.app-shell[data-app-id="shop"] .sp-flow__sum-cell { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+
+.app-shell[data-app-id="shop"] .sp-flow__sum-v {
+    font-size: 15.5px;
+    font-weight: 620;
+    font-variant-numeric: tabular-nums;
+    color: var(--sp-text);
+}
+.app-shell[data-app-id="shop"] .sp-flow__sum-v--in { color: var(--sp-income); }
+.app-shell[data-app-id="shop"] .sp-flow__sum-v--out { color: var(--sp-expense); }
+.app-shell[data-app-id="shop"] .sp-flow__sum-k { font-size: 10.5px; color: var(--sp-text-3); }
+
+.app-shell[data-app-id="shop"] .sp-flowrow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--sp-line-soft);
+}
+.app-shell[data-app-id="shop"] .sp-flowrow:last-child { border-bottom: 0; }
+
+.app-shell[data-app-id="shop"] .sp-flowrow__main { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+
+.app-shell[data-app-id="shop"] .sp-flowrow__note {
+    font-size: 12.5px;
+    color: var(--sp-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="shop"] .sp-flowrow__badge {
+    display: inline-block;
+    margin-right: 5px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: var(--sp-primary-soft);
+    color: var(--sp-primary-strong);
+    font-size: 9.5px;
+    font-style: normal;
+}
+
+.app-shell[data-app-id="shop"] .sp-flowrow__when { font-size: 10.5px; color: var(--sp-text-3); }
+
+.app-shell[data-app-id="shop"] .sp-flowrow__amt {
+    flex: 0 0 auto;
+    font-size: 13.5px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+.app-shell[data-app-id="shop"] .sp-flowrow__amt.is-in { color: var(--sp-income); }
+.app-shell[data-app-id="shop"] .sp-flowrow__amt.is-out { color: var(--sp-expense); }
+
+/* ── 小剧场列表行 ─────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-theater-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 13px 14px;
+    margin-bottom: 10px;
+    border: 1px solid var(--sp-line);
+    border-radius: 13px;
+    background: var(--sp-surface);
+    cursor: pointer;
+}
+.app-shell[data-app-id="shop"] .sp-theater-row:active { background: var(--sp-card-hover); }
+
+.app-shell[data-app-id="shop"] .sp-theater-row__main { flex: 1; min-width: 0; }
+
+.app-shell[data-app-id="shop"] .sp-theater-row__title {
+    margin: 0 0 3px;
+    font-size: 14px;
+    font-weight: 580;
+    color: var(--sp-text);
+}
+
+.app-shell[data-app-id="shop"] .sp-theater-row__cast {
+    margin: 0 0 5px;
+    font-size: 11px;
+    color: var(--sp-text-3);
+}
+
+.app-shell[data-app-id="shop"] .sp-theater-row__brief {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--sp-text-2);
+}
+
+/* ── 配色面板 ─────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-theme-picks { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.app-shell[data-app-id="shop"] .sp-theme-pick {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 11px;
+    border: 1.5px solid var(--sp-line);
+    border-radius: 13px;
+    background: var(--sp-bg);
+    text-align: left;
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color 0.16s ease;
+}
+.app-shell[data-app-id="shop"] .sp-theme-pick.is-on { border-color: var(--sp-primary); }
+
+/* 迷你预览：用主题自己的变量画一台小设备 ——
+   所以切换预设时这一格立刻是那套颜色，不用另存一份缩略图 */
+.app-shell[data-app-id="shop"] .sp-theme-pick__mini {
+    position: relative;
+    display: block;
+    height: 56px;
+    border-radius: 9px;
+    background: var(--sp-bg);
+    border: 1px solid var(--sp-line);
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="shop"] .sp-theme-pick__bar {
+    position: absolute;
+    top: 7px; left: 8px;
+    width: 40%;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--sp-text);
+    opacity: 0.75;
+}
+
+.app-shell[data-app-id="shop"] .sp-theme-pick__card {
+    position: absolute;
+    left: 8px; right: 8px; bottom: 8px;
+    height: 26px;
+    border-radius: 7px;
+    background: var(--sp-surface);
+    border: 1px solid var(--sp-line);
+}
+
+.app-shell[data-app-id="shop"] .sp-theme-pick__dot {
+    position: absolute;
+    right: 12px; bottom: 13px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--sp-primary);
+}
+
+.app-shell[data-app-id="shop"] .sp-theme-pick__name { font-size: 13px; font-weight: 580; color: var(--sp-text); }
+.app-shell[data-app-id="shop"] .sp-theme-pick__desc { font-size: 10.5px; color: var(--sp-text-3); }
+
+.app-shell[data-app-id="shop"] .sp-swatch-group {
+    border: 1px solid var(--sp-line);
+    border-radius: 11px;
+    margin-bottom: 8px;
+    overflow: hidden;
+    background: var(--sp-surface);
+}
+
+.app-shell[data-app-id="shop"] .sp-swatch-group__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 10px 13px;
+    border: 0;
+    background: transparent;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 560;
+    color: var(--sp-text);
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="shop"] .sp-swatch-group__count { font-size: 11px; color: var(--sp-text-3); }
+
+.app-shell[data-app-id="shop"] .sp-swatch-group__body {
+    padding: 4px 13px 11px;
+    border-top: 1px solid var(--sp-line-soft);
+}
+
+.app-shell[data-app-id="shop"] .sp-swatch {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--sp-line-soft);
+}
+.app-shell[data-app-id="shop"] .sp-swatch:last-child { border-bottom: 0; }
+
+.app-shell[data-app-id="shop"] .sp-swatch__chip {
+    position: relative;
+    flex: 0 0 auto;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    border: 1px solid var(--sp-line-strong);
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="shop"] .sp-swatch__picker {
+    position: absolute;
+    inset: -4px;
+    width: calc(100% + 8px);
+    height: calc(100% + 8px);
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    opacity: 0;
+}
+
+.app-shell[data-app-id="shop"] .sp-swatch__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+
+.app-shell[data-app-id="shop"] .sp-swatch__label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    color: var(--sp-text);
+}
+
+.app-shell[data-app-id="shop"] .sp-swatch__changed {
+    padding: 0 5px;
+    border-radius: 4px;
+    background: var(--sp-primary-soft);
+    color: var(--sp-primary-strong);
+    font-size: 9.5px;
+    font-style: normal;
+}
+
+.app-shell[data-app-id="shop"] .sp-swatch__value {
+    width: 100%;
+    padding: 3px 7px;
+    border: 1px solid var(--sp-input-line);
+    border-radius: 6px;
+    background: var(--sp-input-bg);
+    color: var(--sp-text-2);
+    font-size: 11px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    outline: none;
+}
+
+.app-shell[data-app-id="shop"] .sp-swatch__token {
+    font-size: 9.5px;
+    color: var(--sp-text-3);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.app-shell[data-app-id="shop"] .sp-swatch__reset {
+    flex: 0 0 auto;
+    border: 0;
+    background: none;
+    padding: 4px 5px;
+    color: var(--sp-text-3);
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="shop"] .sp-batch__actions {
+    display: flex;
+    gap: 8px;
+    margin: 9px 0;
+}

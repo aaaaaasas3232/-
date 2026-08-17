@@ -21,7 +21,6 @@ import {
     WORLD_GROUP_FORM_SCHEMA,
     TIMELINE_FORM_SCHEMA,
     CHRONICLE_EVENT_FORM_SCHEMA,
-    ANCHOR_FORM_SCHEMA,
     LOCATION_FORM_SCHEMA,
     PLACE_FORM_SCHEMA,
     WORLD_FORM_SCHEMA,
@@ -91,6 +90,43 @@ const syncZoomDom = (zoom, panX = 0, panY = 0) => {
 /** 从 DOM 取 input / textarea 值（trim，缺失返回 fallback）。 */
 const fieldValue = (sel, fallback = '') =>
     document.querySelector(sel)?.value?.trim() ?? fallback;
+
+/**
+ * 直接从 DOM 读锚点表单。
+ *
+ * ★ 为什么不走 readForm(ANCHOR_FORM_SCHEMA)：那份 schema 只声明了
+ *   label / description / start 三段，**没有 end 和 boundAiIds**。
+ *   段锚点的「止」和绑定 AI 因此永远存不进去（用户报的段锚点 bug）。
+ *   表单本身是手写的，这里按 data-anchor-field 逐个取，缺哪个就不覆盖哪个。
+ */
+const readAnchorFormDom = () => {
+    const q = (key) => document.querySelector(`[data-anchor-field="${key}"]`);
+    const num = (key) => {
+        const el = q(key);
+        if (!el) return undefined;
+        const n = Number(el.value);
+        return Number.isFinite(n) ? n : 0;
+    };
+    const text = (key) => {
+        const el = q(key);
+        return el ? String(el.value || '').trim() : undefined;
+    };
+    const multi = (key) => {
+        const el = q(key);
+        if (!el) return undefined;
+        return Array.from(el.selectedOptions || []).map((o) => o.value).filter(Boolean);
+    };
+    return {
+        label: text('label'),
+        description: text('description'),
+        startYear: num('startYear'),
+        startMonth: num('startMonth'),
+        startDay: num('startDay'),
+        endYear: num('endYear'),
+        endMonth: num('endMonth'),
+        boundAiIds: multi('boundAiIds'),
+    };
+};
 
 /** app.state.world 路由状态保证存在。 */
 const getRoute = (app) => app.state.world || (app.state.world = {});
@@ -618,15 +654,44 @@ export function buildWorldMethods() {
         /* ============================================
          * 世界观（具体世界）
          * ============================================ */
+        worldStartCreate() {
+            const route = getRoute(this.app);
+            route.pickingPreset = true;
+            refresh();
+        },
+
+        worldCancelCreate() {
+            delete getRoute(this.app).pickingPreset;
+            refresh();
+        },
+
+        async worldCreateBlank() {
+            delete getRoute(this.app).pickingPreset;
+            return this.worldCreate();
+        },
+
         async worldCreate() {
             const sdk = window.settingsSdk;
             if (!sdk) return null;
             try {
                 const route = getRoute(this.app);
                 const groupId = route.currentGroupId ?? null;
-                const world = await sdk.worlds.create({ groupRef: groupId });
-                notify(this.toolkit, 'success', '已创建世界观', world.name || world.id);
-                route.editingId = world.id;       // 自动进入编辑态
+                const world = await sdk.worlds.create({
+                    groupRef: groupId,
+                    currencies: [{
+                        id: 'curr-base',
+                        name: '金币',
+                        symbol: 'G',
+                        unit: '',
+                        note: '基准货币',
+                        exchangeToBase: 1,
+                        isBase: true,
+                        order: 0,
+                    }],
+                });
+                notify(this.toolkit, 'success', '已创建空白世界', world.name || world.id);
+                route.editingId = world.id;
+                delete route.pickingPreset;
                 refresh();
                 return world;
             } catch (err) {
@@ -743,8 +808,9 @@ export function buildWorldMethods() {
                 const route = getRoute(this.app);
                 const groupId = route.currentGroupId ?? null;
                 const world = await sdk.worlds.create({ ...presetWorld, groupRef: groupId });
+                delete route.pickingPreset;
                 notify(this.toolkit, 'success', '已导入预设', world.name || world.id);
-                refresh();
+                await this.worldEnter({ id: world.id });
                 return world;
             } catch (err) {
                 notify(this.toolkit, 'error', '导入失败', err?.message);
@@ -818,9 +884,11 @@ export function buildWorldMethods() {
                 notify(this.toolkit, 'error', '错误', 'SDK 未初始化');
                 return null;
             }
-            const world = sdk.worlds.getActive();
+            // ★ 用「当前打开的世界」而不是全局 active 世界 ——
+            //   两者不一致时地点会写进别的世界，当前地图上永远看不到（v0.91 修）
+            const world = getCurrentWorld(this.app, sdk);
             if (!world) {
-                notify(this.toolkit, 'warning', '提示', '请先选择一个世界观');
+                notify(this.toolkit, 'warning', '提示', '请先进入一个世界观');
                 return null;
             }
             const place = await sdk.places.create({
@@ -957,7 +1025,7 @@ export function buildWorldMethods() {
             refresh();
         },
 
-        /** 设置地点地图的中心地点（用于显示背景图） */
+        /** 设置地点地图的中心地点（用于高亮地图 pin） */
         worldSetMapCenterPlace(payload = {}) {
             const route = getRoute(this.app);
             route.mapCenterPlaceId = payload.placeId || null;
@@ -1027,9 +1095,9 @@ export function buildWorldMethods() {
                 return;
             }
 
-            const world = sdk.worlds.getActive();
+            const world = getCurrentWorld(this.app, sdk);
             if (!world) {
-                notify(this.toolkit, 'warning', '提示', '请先选择一个世界观');
+                notify(this.toolkit, 'warning', '提示', '请先进入一个世界观');
                 return;
             }
 
@@ -1046,24 +1114,9 @@ export function buildWorldMethods() {
                     notify(this.toolkit, 'warning', '提示', '请先选择一个地点');
                 }
             } else {
-                // 地点地图模式：更新当前中心地点的背景图
-                const centerPlaceId = route.mapCenterPlaceId;
-                const places = sdk.places.list({ worldRef: world.id });
-                
-                if (centerPlaceId) {
-                    // 有中心地点，更新中心地点的背景图
-                    await sdk.places.update(centerPlaceId, { mapImageUrl: dataUrl });
-                    notify(this.toolkit, 'success', '已上传地点地图背景', '已保存到中心地点');
-                } else if (places.length > 0) {
-                    // 没有中心地点，设置第一个地点为中心地点并保存背景图
-                    const firstPlace = places[0];
-                    await sdk.places.update(firstPlace.id, { mapImageUrl: dataUrl });
-                    // 自动设置为中心地点
-                    route.mapCenterPlaceId = firstPlace.id;
-                    notify(this.toolkit, 'success', '已上传地点地图背景', '已设置为地图中心');
-                } else {
-                    notify(this.toolkit, 'warning', '提示', '请先创建一个地点');
-                }
+                // 地点地图属于整个世界观，与任一地点的场所地图相互独立。
+                await sdk.worlds.update(world.id, { mapImageUrl: dataUrl });
+                notify(this.toolkit, 'success', '已上传地点地图背景', '已保存为世界级地图');
                 refresh();
             }
         },
@@ -1074,16 +1127,25 @@ export function buildWorldMethods() {
         async worldCreateLocation() {
             const sdk = window.settingsSdk;
             if (!sdk) return null;
-            const world = sdk.worlds.getActive();
+            const world = getCurrentWorld(this.app, sdk);
+            if (!world) {
+                notify(this.toolkit, 'warning', '提示', '请先进入一个世界观');
+                return null;
+            }
             const route = getRoute(this.app);
             // 如果在场所地图模式下且已选地点，自动关联
             const placeRef = route.mapMode === 'location' ? route.mapSelectedPlaceId : null;
+            if (route.mapMode === 'location' && !placeRef) {
+                notify(this.toolkit, 'warning', '提示', '请先在上方选择一个地点');
+                return null;
+            }
             const loc = await sdk.locations.create({
-                worldRef: world?.id || '',
+                worldRef: world.id,
                 name: '新场所',
                 placeRef,
             });
             notify(this.toolkit, 'success', '已创建场所', loc.name);
+            route.editingLocationId = loc.id;
             refresh();
             return loc;
         },
@@ -1120,7 +1182,7 @@ export function buildWorldMethods() {
 
         async worldSetCenterLocation(payload = {}) {
             const sdk = window.settingsSdk;
-            const world = sdk?.worlds.getActive();
+            const world = sdk ? getCurrentWorld(this.app, sdk) : null;
             if (!sdk || !world || !payload.id) return null;
             await sdk.locations.setCenterLocation(world.id, payload.id);
             const route = getRoute(this.app);
@@ -1220,6 +1282,38 @@ export function buildWorldMethods() {
             syncZoomDom(zoom, route.mapPanX, route.mapPanY);
         },
 
+        /**
+         * 地标拖动落盘（由 events.js 的地标拖拽在松手时派发）。
+         * 坐标范围 -100 ~ 100，换算在 events.js 里做完了。
+         */
+        async worldSetPlacePosition(payload = {}) {
+            const sdk = window.settingsSdk;
+            if (!sdk || !payload.id) return null;
+            const x = Number(payload.x);
+            const y = Number(payload.y);
+            if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+            await sdk.places.update(payload.id, { mapOffsetX: x, mapOffsetY: y });
+            refresh();
+            return { x, y };
+        },
+
+        async worldSetLocationPosition(payload = {}) {
+            const sdk = window.settingsSdk;
+            if (!sdk || !payload.id) return null;
+            const x = Number(payload.x);
+            const y = Number(payload.y);
+            if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+            const loc = sdk.locations.get?.(payload.id);
+            if (loc?.isCenter) {
+                notify(this.toolkit, 'info', '主场所是原点', '想挪它请先把别的场所设为主场所');
+                refresh();
+                return null;
+            }
+            await sdk.locations.update(payload.id, { position: { x, y } });
+            refresh();
+            return { x, y };
+        },
+
         /* ============================================
          * ★ v0.17 时间锚点（anchor）
          *   - 段锚点 (range)：一段时间范围，如「11月-2月春季赛」
@@ -1228,22 +1322,75 @@ export function buildWorldMethods() {
          * ============================================ */
 
         /**
-         * 统一入口：根据 type 调用对应创建方法。
-         * v0.17 新增，修复按钮点击无反应的问题。
+         * 「+ 新建段/点锚点」= 展开填写表单，不直接落一条空锚点。
+         *
+         * ★ 这里之前直接调 worldCreateRangeAnchor()，于是列表里立刻多出一条
+         *   「新段锚点」；而渲染层准备好的填写表单（renderAddForm）依赖
+         *   route.creatingAnchorType，从来没人设置过 —— 表单永远不出现，
+         *   它的「保存」按钮指向的 worldCreateAnchor 也压根不存在。
          */
         worldStartAnchorCreate(payload = {}) {
             const type = payload?.type;
-            if (type === 'range') {
-                return this.worldCreateRangeAnchor();
-            } else if (type === 'point') {
-                return this.worldCreatePointAnchor();
+            if (type !== 'range' && type !== 'point') {
+                notify(this.toolkit, 'warning', '参数错误', '未指定锚点类型');
+                return null;
             }
-            notify(this.toolkit, 'warning', '参数错误', '未指定锚点类型');
+            const route = getRoute(this.app);
+            route.sub = 'timelines';
+            route.chronicleView = 'anchor';
+            route.creatingAnchorType = type;
+            delete route.editingAnchorId;   // 新建时不要同时开着编辑态
+            refresh();
+            return type;
+        },
+
+        worldCancelAnchorCreate() {
+            delete getRoute(this.app).creatingAnchorType;
+            refresh();
+        },
+
+        /** 读新建表单 → 真正落一条锚点（段/点共用一套字段） */
+        async worldCreateAnchor(payload = {}) {
+            const sdk = window.settingsSdk;
+            const world = sdk ? getCurrentWorld(this.app, sdk) : null;
+            if (!sdk || !world) {
+                notify(this.toolkit, 'warning', '提示', '请先进入一个世界观');
+                return null;
+            }
+            const route = getRoute(this.app);
+            const type = payload.type === 'point' ? 'point' : 'range';
+            const f = readAnchorFormDom();
+            const label = String(f.label || '').trim();
+            if (!label) {
+                notify(this.toolkit, 'warning', '标签不能为空', '给这个锚点起个名字');
+                return null;
+            }
+            const draft = {
+                type,
+                title: label,
+                label,
+                description: f.description || '',
+                enabled: true,
+                start: {
+                    year: f.startYear ?? 0,
+                    month: f.startMonth ?? 0,
+                    day: type === 'point' ? (f.startDay ?? 0) : 0,
+                },
+                boundAiIds: Array.isArray(f.boundAiIds) ? f.boundAiIds : [],
+            };
+            if (type === 'range') {
+                draft.end = { year: f.endYear ?? 0, month: f.endMonth ?? 0, day: 0 };
+            }
+            const anchor = await sdk.anchors.create(world.id, draft);
+            notify(this.toolkit, 'success', type === 'range' ? '已创建段锚点' : '已创建点锚点', label);
+            delete route.creatingAnchorType;
+            refresh();
+            return anchor;
         },
 
         async worldCreateRangeAnchor() {
             const sdk = window.settingsSdk;
-            const world = sdk?.worlds.getActive();
+            const world = sdk ? getCurrentWorld(this.app, sdk) : null;
             if (!sdk || !world) return null;
             const anchor = await sdk.anchors.create(world.id, {
                 type: 'range',
@@ -1252,7 +1399,9 @@ export function buildWorldMethods() {
             });
             notify(this.toolkit, 'success', '已创建段锚点', anchor.title);
             const route = getRoute(this.app);
-            route.sub = 'anchors';
+            // 锚点住在「时间」tab 的「时间锚点」视图里，没有独立 tab
+            route.sub = 'timelines';
+            route.chronicleView = 'anchor';
             route.editingAnchorId = anchor.id;
             refresh();
             return anchor;
@@ -1260,7 +1409,7 @@ export function buildWorldMethods() {
 
         async worldCreatePointAnchor() {
             const sdk = window.settingsSdk;
-            const world = sdk?.worlds.getActive();
+            const world = sdk ? getCurrentWorld(this.app, sdk) : null;
             if (!sdk || !world) return null;
             const anchor = await sdk.anchors.create(world.id, {
                 type: 'point',
@@ -1269,7 +1418,8 @@ export function buildWorldMethods() {
             });
             notify(this.toolkit, 'success', '已创建点锚点', anchor.title);
             const route = getRoute(this.app);
-            route.sub = 'anchors';
+            route.sub = 'timelines';
+            route.chronicleView = 'anchor';
             route.editingAnchorId = anchor.id;
             refresh();
             return anchor;
@@ -1287,31 +1437,45 @@ export function buildWorldMethods() {
 
         async worldSaveAnchor(payload = {}) {
             const sdk = window.settingsSdk;
-            const world = sdk?.worlds.getActive();
+            const world = sdk ? getCurrentWorld(this.app, sdk) : null;
             if (!sdk || !world || !payload.anchorId) return null;
-            const f = readForm(ANCHOR_FORM_SCHEMA, {});
-            // 将 startYear/startMonth/startDay 转换为 start 对象
-            const start = {
-                year: f.startYear ?? 0,
-                month: f.startMonth ?? 0,
-                day: f.startDay ?? 0,
+            const prev = (sdk.anchors.getAnchors?.(world.id) || []).find((a) => a.id === payload.anchorId) || {};
+            const f = readAnchorFormDom();
+            const label = String(f.label || prev.label || '').trim();
+            if (!label) {
+                notify(this.toolkit, 'warning', '标签不能为空', '给这个锚点起个名字');
+                return null;
+            }
+            const isPoint = (prev.type || 'range') === 'point';
+            const patch = {
+                title: label,
+                label,
+                description: f.description ?? prev.description ?? '',
+                start: {
+                    year: f.startYear ?? prev.start?.year ?? 0,
+                    month: f.startMonth ?? prev.start?.month ?? 0,
+                    day: isPoint ? (f.startDay ?? prev.start?.day ?? 0) : 0,
+                },
             };
-            // 清理临时字段
-            const { startYear, startMonth, startDay, ...rest } = f;
-            await sdk.anchors.updateAnchor(world.id, payload.anchorId, {
-                ...rest,
-                start,
-                label: f.label || f.title || '',
-            });
-            notify(this.toolkit, 'success', '已保存锚点', f.label || f.title);
+            if (!isPoint) {
+                // 表单里没渲染「止」时保留原值，别把已填的结束时间清成 0
+                patch.end = {
+                    year: f.endYear ?? prev.end?.year ?? 0,
+                    month: f.endMonth ?? prev.end?.month ?? 0,
+                    day: 0,
+                };
+            }
+            if (Array.isArray(f.boundAiIds)) patch.boundAiIds = f.boundAiIds;
+            await sdk.anchors.updateAnchor(world.id, payload.anchorId, patch);
+            notify(this.toolkit, 'success', '已保存锚点', label);
             delete getRoute(this.app).editingAnchorId;
             refresh();
-            return f;
+            return patch;
         },
 
         async worldDeleteAnchor(payload = {}) {
             const sdk = window.settingsSdk;
-            const world = sdk?.worlds.getActive();
+            const world = sdk ? getCurrentWorld(this.app, sdk) : null;
             if (!sdk || !world || !payload.anchorId) return false;
             if (!confirm('确定删除这个锚点？AI 绑定也会一起移除。')) return false;
             await sdk.anchors.remove(world.id, payload.anchorId);
@@ -1322,7 +1486,7 @@ export function buildWorldMethods() {
 
         async worldToggleAnchor(payload = {}) {
             const sdk = window.settingsSdk;
-            const world = sdk?.worlds.getActive();
+            const world = sdk ? getCurrentWorld(this.app, sdk) : null;
             if (!sdk || !world || !payload.anchorId) return null;
             const a = await sdk.anchors.toggle(world.id, payload.anchorId);
             refresh();
@@ -1331,7 +1495,7 @@ export function buildWorldMethods() {
 
         async worldBindAnchorToAi(payload = {}) {
             const sdk = window.settingsSdk;
-            const world = sdk?.worlds.getActive();
+            const world = sdk ? getCurrentWorld(this.app, sdk) : null;
             if (!sdk || !world || !payload.anchorId || !payload.aiId) return null;
             const a = await sdk.anchors.bindAi(world.id, payload.anchorId, payload.aiId);
             notify(this.toolkit, 'success', '已绑定 AI', '');
@@ -1341,7 +1505,7 @@ export function buildWorldMethods() {
 
         async worldUnbindAnchorFromAi(payload = {}) {
             const sdk = window.settingsSdk;
-            const world = sdk?.worlds.getActive();
+            const world = sdk ? getCurrentWorld(this.app, sdk) : null;
             if (!sdk || !world || !payload.anchorId || !payload.aiId) return null;
             const a = await sdk.anchors.unbindAi(world.id, payload.anchorId, payload.aiId);
             notify(this.toolkit, 'success', '已解除绑定', '');
@@ -1467,7 +1631,7 @@ export function buildWorldMethods() {
 
         async worldAddTimelineEvent(payload = {}) {
             const sdk = window.settingsSdk;
-            const world = sdk?.worlds.getActive();
+            const world = sdk ? getCurrentWorld(this.app, sdk) : null;
             if (!sdk || !world) return null;
             const type = payload.type || 'personal';
             const ownerKey = payload.ownerKey || 'user';
@@ -1494,7 +1658,7 @@ export function buildWorldMethods() {
 
         async worldSaveTimelineEvent(payload = {}) {
             const sdk = window.settingsSdk;
-            const world = sdk?.worlds.getActive();
+            const world = sdk ? getCurrentWorld(this.app, sdk) : null;
             if (!sdk || !world || !payload.eventId) return null;
 
             // 使用 readForm 读取 CHRONICLE_EVENT_FORM_SCHEMA 中的字段
@@ -1512,7 +1676,7 @@ export function buildWorldMethods() {
 
         async worldDeleteTimelineEvent(payload = {}) {
             const sdk = window.settingsSdk;
-            const world = sdk?.worlds.getActive();
+            const world = sdk ? getCurrentWorld(this.app, sdk) : null;
             if (!sdk || !world || !payload.eventId) return false;
             await sdk.timelines.deleteTimelineEvent(world.id, payload.eventId);
             refresh();
@@ -1611,9 +1775,9 @@ export function buildWorldMethods() {
         async worldQuickSaveCycleNames() {
             const sdk = window.settingsSdk;
             if (!sdk) return null;
-            const world = sdk.worlds.getActive();
+            const world = getCurrentWorld(this.app, sdk);
             if (!world) {
-                notify(this.toolkit, 'warning', '提示', '请先选择世界观');
+                notify(this.toolkit, 'warning', '提示', '请先进入一个世界观');
                 return null;
             }
             // v0.16：基周期删除；只剩 large / medium / small(现在是「日」)
@@ -1709,7 +1873,7 @@ export function buildWorldMethods() {
 
         async worldPublishDraft(payload = {}) {
             const sdk = window.settingsSdk;
-            const world = sdk?.worlds.getActive();
+            const world = sdk ? getCurrentWorld(this.app, sdk) : null;
             if (!sdk || !world || !payload.targetId) return null;
             const draft = await sdk.drafts.publish('world', payload.targetId, async (d) => {
                 await sdk.worlds.update(world.id, d.data);
@@ -1820,9 +1984,9 @@ export function buildWorldMethods() {
         worldTestChronologyConversion() {
             const sdk = window.settingsSdk;
             if (!sdk) return null;
-            const world = sdk.worlds.getActive();
+            const world = getCurrentWorld(this.app, sdk);
             if (!world) {
-                notify(this.toolkit, 'warning', '提示', '请先选择一个世界观');
+                notify(this.toolkit, 'warning', '提示', '请先进入一个世界观');
                 return null;
             }
             const chrono = sdk.chronology;
@@ -1858,9 +2022,9 @@ export function buildWorldMethods() {
         worldPreviewChronologySummary() {
             const sdk = window.settingsSdk;
             if (!sdk) return null;
-            const world = sdk.worlds.getActive();
+            const world = getCurrentWorld(this.app, sdk);
             if (!world) {
-                notify(this.toolkit, 'warning', '提示', '请先选择一个世界观');
+                notify(this.toolkit, 'warning', '提示', '请先进入一个世界观');
                 return null;
             }
 
@@ -1886,9 +2050,9 @@ export function buildWorldMethods() {
         worldConvertDateToChronology(payload = {}) {
             const sdk = window.settingsSdk;
             if (!sdk || !payload.dateStr) return null;
-            const world = sdk.worlds.getActive();
+            const world = getCurrentWorld(this.app, sdk);
             if (!world) {
-                notify(this.toolkit, 'warning', '提示', '请先选择一个世界观');
+                notify(this.toolkit, 'warning', '提示', '请先进入一个世界观');
                 return null;
             }
 

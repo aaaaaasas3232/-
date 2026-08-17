@@ -1,0 +1,442 @@
+/**
+ * relax-app / 解压主体样式
+ *
+ * ★ 加新主体的样式就写在这个文件里(或者新建 `_toy-气泡纸.css` 再在 index.css @import)。
+ *
+ * 约定:
+ *   - 主体统一从 `--rx-toy-tint` 取色。ToyHost 会把用户选的颜色写到容器上
+ *     (`host.el.style.setProperty('--rx-toy-tint', hex)`),主体不用自己管染色链路。
+ *   - 主体的类名加自己的前缀(jelly- / bw- / choco-),避免互相撞。
+ *   - 不要用 `position: fixed`,主体在盘子内圈里,fixed 会跑到屏幕外。
+ */
+
+/* ============================================================
+   捏捏果冻(js/apps/relax-app/toys/demo-jelly.js)
+   - 风格跟整体软糖语言一致,共用随机 blob 圆角
+   - ★ 没有板子、没有盘子:主体的 DOM 就是这一只果冻,底下直接是舞台背景。
+     原来外面套了个 .jelly-board 的奶白圆角板(跟巧克力一样的问题),已经删掉。
+   ============================================================ */
+.app-shell[data-app-id="relax"] .jelly-cell {
+    --jelly-tint: var(--rx-toy-tint, #ffc8dd);
+
+    position: relative;
+    padding: 0;
+    border: none;
+    cursor: pointer;
+    /* 每格的随机圆角 / 倾斜由 JS 内联给,做出「手工不规则」的感觉 */
+    border-radius: var(--jelly-round, 46% 54% 50% 50% / 52% 48% 52% 48%);
+    transform: rotate(var(--jelly-skew, 0deg));
+    background:
+        radial-gradient(70% 55% at 32% 26%, rgba(255, 255, 255, 0.75) 0%, transparent 62%),
+        linear-gradient(158deg,
+            color-mix(in srgb, var(--jelly-tint) 62%, white) 0%,
+            var(--jelly-tint) 52%,
+            color-mix(in srgb, var(--jelly-tint) 78%, #6b4550) 100%);
+    box-shadow:
+        inset 0 3px 6px rgba(255, 255, 255, 0.6),
+        inset 0 -4px 8px rgba(107, 69, 80, 0.22),
+        0 4px 8px rgba(107, 69, 80, 0.18);
+    transition: transform 0.3s var(--rx-ease-bounce),
+                box-shadow 0.3s ease,
+                opacity 0.3s ease,
+                filter 0.3s ease;
+}
+
+/* 高光点:让果冻看起来是「湿的」 */
+.app-shell[data-app-id="relax"] .jelly-shine {
+    position: absolute;
+    top: 16%;
+    left: 20%;
+    width: 26%;
+    height: 20%;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.72);
+    filter: blur(1px);
+    pointer-events: none;
+}
+
+/* 按下瞬间:压扁 + 阴影收紧 */
+.app-shell[data-app-id="relax"] .jelly-cell.is-squish {
+    animation: jellySquish 0.42s var(--rx-ease-bounce);
+}
+
+@keyframes jellySquish {
+    0%   { transform: rotate(var(--jelly-skew, 0deg)) scale(1, 1); }
+    28%  { transform: rotate(var(--jelly-skew, 0deg)) scale(1.14, 0.72); }
+    58%  { transform: rotate(var(--jelly-skew, 0deg)) scale(0.92, 1.1); }
+    80%  { transform: rotate(var(--jelly-skew, 0deg)) scale(1.04, 0.97); }
+    100% { transform: rotate(var(--jelly-skew, 0deg)) scale(1, 1); }
+}
+
+/* 已经捏过的格子:塌下去一点,颜色变淡 */
+.app-shell[data-app-id="relax"] .jelly-cell.is-popped {
+    opacity: 0.5;
+    filter: saturate(0.55);
+    box-shadow:
+        inset 0 4px 10px rgba(107, 69, 80, 0.3),
+        inset 0 -1px 2px rgba(255, 255, 255, 0.3);
+}
+
+.app-shell[data-app-id="relax"] .jelly-cell.is-popped .jelly-shine {
+    opacity: 0.3;
+}
+
+/*
+ * `color-mix()` 兜底:老 WebKit(iOS 15 及更早)不支持,
+ * 不加这段的话渐变整条失效 → 格子变透明。
+ */
+@supports not (background: color-mix(in srgb, red 50%, white)) {
+    .app-shell[data-app-id="relax"] .jelly-cell {
+        background:
+            radial-gradient(70% 55% at 32% 26%, rgba(255, 255, 255, 0.75) 0%, transparent 62%),
+            linear-gradient(158deg, rgba(255, 255, 255, 0.55) 0%, var(--jelly-tint) 52%, rgba(107, 69, 80, 0.25) 100%);
+    }
+}
+
+/* ============================================================
+   果冻单只版(js/apps/relax-app/toys/demo-jelly.js mount)
+   - 用户要求「果冻只有一个」→ 没有 grid,主体就是这一只
+   - fit:'stage' → 直接铺在舞台上,没有盘子托着
+
+   ★ 宽高必须相等。以前这里写的是 width/height: 86% 再配一条 aspect-ratio: 1,
+     但宽高两个方向都给了确定值时 aspect-ratio 会被浏览器忽略 ——
+     舞台是竖长方形(约 374×534),果冻就被拉成了竖着的鸡蛋。
+     现在边长由 JS 内联成 min(容器宽,高) 的正方形(见 demo-jelly.js applyUnit),
+     这里只负责居中,不要再往回加百分比宽高。
+   ============================================================ */
+.app-shell[data-app-id="relax"] .jelly-cell.jelly-cell--single {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    cursor: pointer;
+    touch-action: none;
+    /* 圆角从内联 random blob 来,但整体偏圆(用户能看清一整只) */
+    border-radius: 44% 56% 50% 50% / 52% 48% 52% 48%;
+}
+
+/* 按住中:持续凹陷 + 轻微脉动;比 .is-squish 更夸张一点,因为是整只果冻 */
+.app-shell[data-app-id="relax"] .jelly-cell.jelly-cell--single.is-pressed {
+    animation: jellySinglePress 0.6s var(--rx-ease-bounce) infinite;
+}
+
+@keyframes jellySinglePress {
+    0%   { transform: rotate(var(--jelly-skew, 0deg)) scale(1, 1); }
+    40%  { transform: rotate(var(--jelly-skew, 0deg)) scale(0.94, 0.86); }
+    70%  { transform: rotate(var(--jelly-skew, 0deg)) scale(1.02, 0.97); }
+    100% { transform: rotate(var(--jelly-skew, 0deg)) scale(0.97, 0.92); }
+}
+
+/* ============================================================
+   气泡板(js/apps/relax-app/toys/bubble-board.js)
+   - rows/cols 由 host 传,grid 按它排
+   - 风格跟 demo-jelly 同一套软糖语言,共用随机 blob 圆角
+   ============================================================ */
+/*
+ * 结构:
+ *   .bubble-board  = 纯布局容器(★ 不画任何东西)
+ *   .bubble-grid   = 气泡阵列
+ *   .bubble-cell   = 每一颗气泡
+ *
+ * ★ .bubble-board 以前是块「奶白底 + 圆角 + 投影」的板子,垫在气泡底下。
+ *   用户不要这层板 —— 现在它只负责定位和放 --bubble-tint,
+ *   背景/圆角/投影全部去掉,气泡直接坐在盘子(或舞台背景)上。
+ *   overflow 也从 hidden 改回 visible,否则按下去鼓起的那一下会被边缘裁掉。
+ */
+.app-shell[data-app-id="relax"] .bubble-board {
+    --bubble-tint: var(--rx-toy-tint, #cdeafd);
+
+    position: relative;
+    width: 92%;
+    height: 92%;
+    margin: auto;
+    background: none;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+    box-sizing: border-box;
+}
+
+.app-shell[data-app-id="relax"] .bubble-grid {
+    position: absolute;
+    inset: 8%;
+    display: grid;
+    grid-template-columns: repeat(var(--bubble-cols, 4), 1fr);
+    grid-template-rows: repeat(var(--bubble-rows, 4), 1fr);
+    gap: 4%;
+    width: auto;
+    height: auto;
+}
+
+.app-shell[data-app-id="relax"] .bubble-cell {
+    position: relative;
+    padding: 0;
+    border: none;
+    cursor: pointer;
+    border-radius: var(--bubble-round, 46% 54% 50% 50% / 52% 48% 52% 48%);
+    transform: rotate(var(--bubble-skew, 0deg));
+    background:
+        radial-gradient(70% 55% at 32% 26%, rgba(255, 255, 255, 0.78) 0%, transparent 62%),
+        linear-gradient(158deg,
+            color-mix(in srgb, var(--bubble-tint) 62%, white) 0%,
+            var(--bubble-tint) 52%,
+            color-mix(in srgb, var(--bubble-tint) 78%, #6b4550) 100%);
+    box-shadow:
+        inset 0 3px 6px rgba(255, 255, 255, 0.6),
+        inset 0 -4px 8px rgba(107, 69, 80, 0.22),
+        0 4px 8px rgba(107, 69, 80, 0.18);
+    transition: transform 0.3s var(--rx-ease-bounce),
+                box-shadow 0.3s ease,
+                opacity 0.3s ease,
+                filter 0.3s ease;
+}
+
+/* 高光点 */
+.app-shell[data-app-id="relax"] .bubble-shine {
+    position: absolute;
+    top: 16%;
+    left: 20%;
+    width: 26%;
+    height: 20%;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.72);
+    filter: blur(1px);
+    pointer-events: none;
+}
+
+/*
+ * 按爆的那一下:先鼓起再塌下去 —— 跟 QAQ/解压7 原版同一个节奏
+ * (原版是 squeeze 放大 1.12 → 50ms 后切 popped)。
+ * 关键点:100% 停在和 .is-popped 完全一样的 transform 上,
+ * 动画结束交接给静态样式时才不会跳一下。
+ */
+.app-shell[data-app-id="relax"] .bubble-cell.is-squish {
+    animation: bubblePop 0.26s var(--rx-ease-bounce);
+}
+
+@keyframes bubblePop {
+    0%   { transform: rotate(var(--bubble-skew, 0deg)) scale(1); }
+    35%  { transform: rotate(var(--bubble-skew, 0deg)) scale(1.12); }
+    100% { transform: rotate(var(--bubble-skew, 0deg)) scale(0.92) translateY(2px); }
+}
+
+/*
+ * 已经按爆:凹陷 + 发皱的死泡泡。
+ * ★ 以前只是 opacity 0.5 + 降饱和,压下去几乎看不出变化 ——
+ *   用户要的是解压7 那种「明显瘪掉」:缩小下沉、鼓包的外投影换成内凹阴影、
+ *   高光收掉,再叠一层褶皱纹理。
+ */
+.app-shell[data-app-id="relax"] .bubble-cell.is-popped {
+    transform: rotate(var(--bubble-skew, 0deg)) scale(0.92) translateY(2px);
+    cursor: default;
+    filter: saturate(0.45);
+    background:
+        radial-gradient(60% 50% at 28% 24%, rgba(255, 255, 255, 0.32) 0%, transparent 60%),
+        linear-gradient(158deg,
+            color-mix(in srgb, var(--bubble-tint) 42%, #dfe4ea) 0%,
+            color-mix(in srgb, var(--bubble-tint) 55%, #c3ccd6) 70%,
+            color-mix(in srgb, var(--bubble-tint) 62%, #97a3b0) 100%);
+    /* 外投影收掉 = 不再鼓;内阴影反过来打在上沿 = 凹进去 */
+    box-shadow:
+        inset 0 5px 10px rgba(60, 80, 100, 0.22),
+        inset 0 -2px 4px rgba(255, 255, 255, 0.28),
+        0 1px 3px rgba(60, 80, 100, 0.08);
+}
+
+/* 褶皱纹理:只有瘪掉之后才出现 */
+.app-shell[data-app-id="relax"] .bubble-cell.is-popped::after {
+    content: '';
+    position: absolute;
+    inset: 10%;
+    border-radius: inherit;
+    background:
+        radial-gradient(circle at 22% 32%, rgba(90, 115, 140, 0.14) 0%, transparent 52%),
+        radial-gradient(circle at 72% 62%, rgba(70, 95, 120, 0.1) 0%, transparent 44%),
+        repeating-linear-gradient(45deg,
+            transparent 0 4px,
+            rgba(80, 105, 130, 0.05) 4px 5px);
+    mix-blend-mode: multiply;
+    opacity: 0.75;
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="relax"] .bubble-cell.is-popped .bubble-shine {
+    opacity: 0;
+}
+
+/* color-mix 兜底 */
+@supports not (background: color-mix(in srgb, red 50%, white)) {
+    .app-shell[data-app-id="relax"] .bubble-cell {
+        background:
+            radial-gradient(70% 55% at 32% 26%, rgba(255, 255, 255, 0.78) 0%, transparent 62%),
+            linear-gradient(158deg, rgba(255, 255, 255, 0.55) 0%, var(--bubble-tint) 52%, rgba(107, 69, 80, 0.25) 100%);
+    }
+    .app-shell[data-app-id="relax"] .bubble-cell.is-popped {
+        background: linear-gradient(158deg, rgba(210, 218, 226, 0.9) 0%, rgba(160, 172, 184, 0.9) 100%);
+    }
+}
+
+/* ============================================================
+   自定义 HTML 捏捏板(js/apps/relax-app/toys/custom-html-board.js)
+   - rows/cols 由 host 透传
+   - 主题色注入到 --htmlbubble-tint,用户提供 CSS 用这变量
+   - cell 默认外观由内置 class(.htmlbubble-host) + 旋转/圆角 给出
+   - 用户自己的 CSS 通过 <style> 注入到 :scope{},作用域隔离
+   ============================================================ */
+.app-shell[data-app-id="relax"] .htmlbubble-root {
+    --htmlbubble-tint: var(--rx-toy-tint, #ffd6e0);
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.app-shell[data-app-id="relax"] .htmlbubble-board {
+    position: relative;
+    width: 92%;
+    height: 92%;
+    margin: auto;
+    border-radius: 30px 26px 28px 32px;
+    background:
+        linear-gradient(155deg,
+            rgba(255, 255, 255, 0.95) 0%,
+            color-mix(in srgb, var(--htmlbubble-tint) 12%, #fff5e8) 100%);
+    box-shadow:
+        inset 0 2px 4px rgba(255, 255, 255, 0.85),
+        inset 0 -4px 8px rgba(107, 85, 96, 0.08),
+        0 6px 16px rgba(107, 85, 96, 0.18),
+        0 2px 0 rgba(107, 85, 96, 0.08);
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.app-shell[data-app-id="relax"] .htmlbubble-grid {
+    position: absolute;
+    inset: 8%;
+    display: grid;
+    grid-template-columns: repeat(var(--htmlbubble-cols, 4), 1fr);
+    grid-template-rows: repeat(var(--htmlbubble-rows, 4), 1fr);
+    gap: 4%;
+    width: auto;
+    height: auto;
+}
+
+.app-shell[data-app-id="relax"] .htmlbubble-host {
+    position: relative;
+    padding: 0;
+    border: none;
+    cursor: pointer;
+    background: none;
+    border-radius: var(--bubble-round, 46% 54% 50% 50% / 52% 48% 52% 48%);
+}
+
+/* 预览里的 cell:给个过渡 + 圆形,默认演示效果 */
+.app-shell[data-app-id="relax"] .htmlbubble-host.is-popped > * {
+    filter: saturate(0.55) brightness(0.92);
+}
+
+.app-shell[data-app-id="relax"] .htmlbubble-host.is-squish > * {
+    animation: htmlbubbleSquish 0.42s var(--rx-ease-bounce);
+}
+
+@keyframes htmlbubbleSquish {
+    0%   { transform: scale(1, 1); }
+    28%  { transform: scale(1.12, 0.74); }
+    58%  { transform: scale(0.94, 1.08); }
+    100% { transform: scale(1, 1); }
+}
+
+@supports not (background: color-mix(in srgb, red 50%, white)) {
+    .app-shell[data-app-id="relax"] .htmlbubble-board {
+        background: linear-gradient(155deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 245, 232, 0.95) 100%);
+    }
+}
+
+/* ============================================================
+   自定义捏捏 · 自由模式(custom-html-board.js 的 layout: 'free')
+   - 整块只画一个东西(摇杆 / 鼠标 / 旋钮),不复制、不排格子
+   - ★ 没有 .htmlbubble-board 那层奶白外壳:垫在摇杆底下就成了
+     「摇杆自带一个托盘」。要不要盘子归「装扮 → 盘子」的开关管。
+   - 手势由 js/apps/relax-app/services/toy-parts.js 接管,
+     这里只负责「让手势落得下去」+ 给用户的根元素一个居中位
+   ============================================================ */
+.app-shell[data-app-id="relax"] .hbfree-stage {
+    position: relative;
+    /* 用户的根元素直接居中,不用每套模板自己写一遍 flex */
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+}
+
+/*
+ * ★ 这几行是自由模式能不能用的分水岭,少一条就是「怎么拖都不动」:
+ *   · touch-action 不关 —— 手机上一拖变成滚页面,摇杆永远拖不出去;
+ *   · user-select 不关 —— 按住会弹出选词放大镜,盖住整个玩具;
+ *   · tap-highlight 不关 —— 每次点击闪一块灰。
+ * 特意挂在 [data-hb] 而不是整个 .hbfree-stage 上:编辑页的预览也吃这套,
+ * 把整块设成 touch-action:none 的话,手指落在玩具旁边就划不动编辑页了。
+ */
+.app-shell[data-app-id="relax"] [data-hb] {
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="relax"] [data-hb="stick"],
+.app-shell[data-app-id="relax"] [data-hb="slide"],
+.app-shell[data-app-id="relax"] [data-hb="dial"] {
+    cursor: grab;
+}
+
+.app-shell[data-app-id="relax"] [data-hb].is-active {
+    cursor: grabbing;
+}
+
+/* ============================================================
+   自定义捏捏 · 写代码模式(custom-html-board.js 的 layout: 'code')
+   - 用户的 HTML/CSS/JS 跑在 <iframe sandbox="allow-scripts"> 里
+     (services/toy-sandbox.js),这里只负责给它一块地方
+   - ★ iframe 不许有背景和边框:里面的 body 是透明的,
+     加了背景就等于给用户的作品垫了一块白板,舞台背景全被挡住
+   ============================================================ */
+.app-shell[data-app-id="relax"] .hbcode-stage {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.app-shell[data-app-id="relax"] .hbcode-frame {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: transparent;
+    /* 深色系统下 iframe 会自己套一层暗底,声明成 light 才透得出去 */
+    color-scheme: light;
+}
+
+/* ============================================================
+   巧克力脆皮一整块(js/apps/relax-app/toys/choco-board.js)
+   - 1:1 复刻 QAQ/解压5:canvas 绘制 Voronoi 碎片 + 按压凹陷
+   - ★ 没有盘子、没有板子、没有任何包裹层。
+     主体的 DOM 就是这一张画布,画布上画的就是巧克力本身,
+     底下直接是舞台背景 —— 所以这里不许有 background / box-shadow /
+     border-radius,加了就又变成「巧克力自带一个盘子」。
+   - 奶白内层(雪糕芯)由 canvas 画在巧克力那一块的正下方,
+     碎片裂开时露出来的是芯,而不是一整张白板。
+   - 方形由 JS 内联 width/height 保证(见 choco-board.js applyUnit)。
+   ============================================================ */
+.app-shell[data-app-id="relax"] .choco-canvas {
+    display: block;
+    /* 在 .rx-toy-slot 里居中:宽高是内联的确定值,inset:0 + margin:auto 即可 */
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    background: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    cursor: pointer;
+    touch-action: none;
+}

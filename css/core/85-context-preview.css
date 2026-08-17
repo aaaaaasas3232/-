@@ -1,0 +1,376 @@
+/**
+ * ContextPreview —— 框架级「上下文可视化」基线样式
+ *
+ * 配套组件:src/core/components/context-preview.js
+ * 配套拼装:src/core/context-composer.js
+ *
+ * ★ 优先级 & 换肤(和 AcModal 同款策略)
+ *   全部用裸 class(`.ctxp-*`),特异性最低。App 换肤有两条路,优先选第一条:
+ *
+ *   1. 只覆盖变量(推荐,不用写选择器嵌套):
+ *        .app-shell[data-app-id="dream-weaver"] .ctxp {
+ *            --ctxp-accent: var(--dw-accent);
+ *            --ctxp-surface: var(--dw-surface-2);
+ *        }
+ *   2. 覆盖具体规则:
+ *        .app-shell[data-app-id="xxx"] .ctxp-item { ... }
+ *
+ * ★ 这里的默认值是**中性灰蓝**,刻意不带任何 App 的性格 ——
+ *   它应该在 murmur 的粉蓝和梦境编织的复古红里都不突兀,
+ *   真正的性格由上面第 1 条的变量覆盖提供。
+ */
+
+.ctxp {
+    --ctxp-accent: #5b8ec9;
+    --ctxp-accent-soft: rgba(91, 142, 201, 0.14);
+    --ctxp-ink: #33404f;
+    --ctxp-ink-soft: #7d8996;
+    --ctxp-surface: #ffffff;
+    --ctxp-surface-2: rgba(120, 140, 170, 0.06);
+    --ctxp-line: rgba(120, 140, 170, 0.18);
+    --ctxp-danger: #d1584f;
+    --ctxp-radius: 14px;
+    --ctxp-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    color: var(--ctxp-ink);
+}
+
+/* ============================
+   头部
+   ============================ */
+.ctxp-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.ctxp-head-main {
+    min-width: 0;
+}
+
+.ctxp-title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.ctxp-summary {
+    margin: 3px 0 0;
+    font-size: 11px;
+    color: var(--ctxp-ink-soft);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.ctxp-stat-sep {
+    opacity: 0.5;
+}
+
+.ctxp-head-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.ctxp-chip {
+    border: 1px solid var(--ctxp-line);
+    background: var(--ctxp-surface);
+    color: var(--ctxp-ink-soft);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.ctxp-chip:hover,
+.ctxp-chip.is-on {
+    color: var(--ctxp-accent);
+    border-color: var(--ctxp-accent);
+    background: var(--ctxp-accent-soft);
+}
+
+/* ============================
+   预算条
+   ============================ */
+.ctxp-budget {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.ctxp-budget-bar {
+    height: 4px;
+    border-radius: 999px;
+    background: var(--ctxp-surface-2);
+    overflow: hidden;
+}
+
+.ctxp-budget-fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--ctxp-accent);
+    transition: width 0.3s ease;
+}
+
+.ctxp-budget.is-over .ctxp-budget-fill {
+    background: var(--ctxp-danger);
+}
+
+.ctxp-budget-text {
+    margin: 0;
+    font-size: 10px;
+    color: var(--ctxp-ink-soft);
+}
+
+.ctxp-budget.is-over .ctxp-budget-text {
+    color: var(--ctxp-danger);
+}
+
+/* ============================
+   原文 / 空态
+   ============================ */
+.ctxp-raw {
+    margin: 0;
+    padding: 12px;
+    border-radius: var(--ctxp-radius);
+    background: var(--ctxp-surface-2);
+    border: 1px solid var(--ctxp-line);
+    font-family: var(--ctxp-mono);
+    font-size: 11px;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 320px;
+    overflow-y: auto;
+    color: var(--ctxp-ink);
+}
+
+.ctxp-empty {
+    padding: 22px 12px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--ctxp-ink-soft);
+    border: 1px dashed var(--ctxp-line);
+    border-radius: var(--ctxp-radius);
+}
+
+/* ============================
+   分段列表
+   ============================ */
+.ctxp-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ctxp-item {
+    border: 1px solid var(--ctxp-line);
+    border-radius: var(--ctxp-radius);
+    background: var(--ctxp-surface);
+    overflow: hidden;
+    transition: border-color 0.18s ease, opacity 0.18s ease;
+}
+
+.ctxp-item.is-off {
+    opacity: 0.5;
+}
+
+.ctxp-item.is-open {
+    border-color: var(--ctxp-accent);
+}
+
+.ctxp-item-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+}
+
+.ctxp-index {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 7px;
+    background: var(--ctxp-accent-soft);
+    color: var(--ctxp-accent);
+    font-size: 10px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ctxp-item-main {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.ctxp-item-title {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ctxp-item-preview {
+    margin: 2px 0 0;
+    font-size: 10px;
+    color: var(--ctxp-ink-soft);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ctxp-badge {
+    flex-shrink: 0;
+    font-size: 9px;
+    font-weight: 500;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--ctxp-surface-2);
+    color: var(--ctxp-ink-soft);
+}
+
+.ctxp-badge--lock {
+    background: var(--ctxp-accent-soft);
+    color: var(--ctxp-accent);
+}
+
+.ctxp-badge--empty {
+    color: var(--ctxp-danger);
+}
+
+.ctxp-item-meta {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    width: 46px;
+}
+
+.ctxp-tokens {
+    font-size: 10px;
+    font-family: var(--ctxp-mono);
+    color: var(--ctxp-ink-soft);
+}
+
+.ctxp-share {
+    display: block;
+    width: 100%;
+    height: 3px;
+    border-radius: 999px;
+    background: var(--ctxp-surface-2);
+    overflow: hidden;
+}
+
+.ctxp-share-fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--ctxp-accent);
+}
+
+/* ============================
+   段落操作条
+   ============================ */
+.ctxp-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px 10px;
+}
+
+.ctxp-source {
+    font-size: 9px;
+    color: var(--ctxp-ink-soft);
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--ctxp-surface-2);
+}
+
+.ctxp-link {
+    margin-left: auto;
+    border: none;
+    background: none;
+    color: var(--ctxp-accent);
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 0;
+}
+
+/* iOS 风开关 */
+.ctxp-switch {
+    flex-shrink: 0;
+    width: 34px;
+    height: 20px;
+    border-radius: 999px;
+    border: none;
+    padding: 0;
+    background: var(--ctxp-line);
+    cursor: pointer;
+    position: relative;
+    transition: background 0.2s ease;
+}
+
+.ctxp-switch.is-on {
+    background: var(--ctxp-accent);
+}
+
+.ctxp-switch.is-locked {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.ctxp-switch-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s ease;
+}
+
+.ctxp-switch.is-on .ctxp-switch-thumb {
+    transform: translateX(14px);
+}
+
+/* ============================
+   展开的正文
+   ============================ */
+.ctxp-item-body {
+    margin: 0;
+    padding: 10px 12px 12px;
+    border-top: 1px dashed var(--ctxp-line);
+    font-family: var(--ctxp-mono);
+    font-size: 10px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 240px;
+    overflow-y: auto;
+    color: var(--ctxp-ink);
+    background: var(--ctxp-surface-2);
+}

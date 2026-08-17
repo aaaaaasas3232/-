@@ -1,0 +1,341 @@
+/**
+ * 梦境编织 · 主题 token
+ *
+ * ★ 这个文件是整个 App 的**颜色唯一真相**。
+ *   组件 CSS 只允许写 `var(--dw-xxx)`,JS 里一个 hex 都不许出现。
+ *
+ *   原版 `dream-weaver.js` 其实已经设计了这套 `--dw-*` 变量(写在 `DW_PRESET_THEMES` 里,
+ *   由 JS 在运行时 `setProperty` 注入),思路是对的;
+ *   坏在**同时还散落着 694 处硬编码 hex(148 种不同颜色)** —— 变量系统形同虚设,
+ *   换主题时那 694 处纹丝不动。所以这次把 token 搬到 CSS,让「不写 hex」成为物理约束。
+ *
+ * ★ 主题怎么切
+ *   根元素上挂 `data-dw-theme="retro-dark" | "oriental-light" | "custom"`。
+ *   自定义主题由 JS 往元素上 `style.setProperty('--dw-xxx', value)` 覆盖 ——
+ *   这是**允许 JS 出现颜色值的唯一场景**:值来自用户,编译期不可能知道。
+ *
+ * ★ 每套主题写了**两个**选择器:shell 自身,以及 shell 内**任意带这个属性的后代**。
+ *   后一个不是冗余 —— `theme.js` 的 `readPresetColors()` 靠往 shell 里塞一个隐藏
+ *   探针 div、给它挂 `data-dw-theme` 再 `getComputedStyle` 读值,来拿到「另一套主题
+ *   长什么样」(主题弹窗里两张卡片的迷你预览就靠这个)。只写 shell 自身的话探针
+ *   永远匹配不上,两张预览卡会**全部显示成当前主题** —— 它不报错,只是看起来
+ *   「预览坏了」。2026-08-14 修,详见 AGENTS2 §18。
+ *
+ * ★ 派生规则
+ *   带 `-container` / `-hover` / `-active` 后缀的都是同色系的低透明度版本。
+ *   新增颜色时先问一句「能不能从已有 token 派生」,能就别加新 token。
+ */
+
+/* ============================================================
+   美式复古深色 —— 红为主色调,黑底蓝辅(默认主题)
+   ============================================================ */
+.app-shell[data-app-id="dream-weaver"],
+.app-shell[data-app-id="dream-weaver"][data-dw-theme="retro-dark"],
+.app-shell[data-app-id="dream-weaver"] [data-dw-theme="retro-dark"] {
+    /* 背景色系 */
+    --dw-bg: #121212;
+    --dw-bg-alt: #1E1E1E;
+    --dw-surface: #121212;
+    --dw-surface-alt: #2D2D2D;
+    --dw-surface-container: #252525;
+    --dw-surface-tint: rgba(198, 40, 40, 0.05);
+    --dw-surface-bright: #2D2D2D;
+    --dw-surface-dim: #0A0A0A;
+
+    /* 主色系 */
+    --dw-primary: #C62828;
+    --dw-primary-light: #EF5350;
+    --dw-primary-dark: #B71C1C;
+    --dw-primary-container: #3D1818;
+    --dw-primary-hover: rgba(198, 40, 40, 0.15);
+    --dw-primary-active: rgba(198, 40, 40, 0.25);
+    --dw-on-primary: #FFFFFF;
+
+    /* 次色系 */
+    --dw-secondary: #1565C0;
+    --dw-secondary-container: #0D3B66;
+    --dw-on-secondary: #FFFFFF;
+
+    /* 第三色系(紫) */
+    --dw-tertiary: #9C27B0;
+    --dw-tertiary-light: #BA68C8;
+    --dw-tertiary-dark: #7B1FA2;
+    --dw-tertiary-container: rgba(156, 39, 176, 0.15);
+    --dw-on-tertiary: #FFFFFF;
+
+    /* 强调色 */
+    --dw-accent: #FFD54F;
+    --dw-accent-light: #FFECB3;
+
+    /* 功能色 */
+    --dw-warning: #F3BF4C;
+    --dw-error: #CF6679;
+    --dw-success: #4CAF50;
+    --dw-info: #2196F3;
+    --dw-error-container: rgba(207, 102, 121, 0.15);
+    --dw-success-container: rgba(76, 175, 80, 0.15);
+    --dw-warning-container: rgba(243, 191, 76, 0.15);
+    --dw-info-container: rgba(33, 150, 243, 0.15);
+    --dw-on-error: #FFFFFF;
+    --dw-on-success: #FFFFFF;
+    --dw-on-warning: #1A1A1A;
+    --dw-on-info: #FFFFFF;
+
+    /* 文字色 */
+    --dw-text: #E8E8E8;
+    --dw-text-secondary: #A0A0A0;
+    --dw-text-tertiary: #6B6B6B;
+    --dw-text-inverse: #1A1A1A;
+
+    /* 边框和分割线 */
+    --dw-border: rgba(198, 40, 40, 0.3);
+    --dw-border-light: rgba(255, 255, 255, 0.08);
+    --dw-border-strong: rgba(198, 40, 40, 0.5);
+    --dw-divider: rgba(255, 255, 255, 0.12);
+
+    /* 卡片 */
+    --dw-card-bg: #1E1E1E;
+    --dw-card-hover: #2A2A2A;
+
+    /* 气泡 */
+    --dw-bubble-sent: #C62828;
+    --dw-bubble-received: #1565C0;
+
+    /* 导航 / 毛玻璃 */
+    --dw-nav-glow: #C62828;
+    --dw-nav-bg: rgba(20, 20, 20, 0.85);
+    --dw-nav-border: rgba(164, 36, 35, 0.3);
+    --dw-nav-active-bg: rgba(164, 36, 35, 0.25);
+    --dw-nav-active-shadow: rgba(164, 36, 35, 0.4);
+    --dw-nav-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 242, 223, 0.1);
+    --dw-glass-bg: rgba(20, 20, 20, 0.85);
+    --dw-glass-border: rgba(164, 36, 35, 0.3);
+    --dw-glass-highlight: rgba(255, 242, 223, 0.1);
+
+    /* 轮廓 / 遮罩 */
+    --dw-outline: rgba(161, 41, 41, 1);
+    --dw-outline-variant: rgba(161, 41, 41, 0.5);
+    --dw-outline-light: rgba(255, 255, 255, 0.12);
+    --dw-overlay: rgba(0, 0, 0, 0.5);
+    --dw-scrim: rgba(0, 0, 0, 0.5);
+
+    /* 阴影 */
+    --dw-shadow-color: rgba(0, 0, 0, 0.5);
+    --dw-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
+    --dw-shadow-md: 0 3px 6px rgba(0, 0, 0, 0.4);
+    --dw-shadow-lg: 0 6px 12px rgba(0, 0, 0, 0.35);
+
+    /* 交互态 */
+    --dw-hover-overlay: rgba(255, 255, 255, 0.05);
+    --dw-active-overlay: rgba(255, 255, 255, 0.08);
+    --dw-disabled-bg: rgba(255, 255, 255, 0.12);
+    --dw-disabled-text: rgba(255, 255, 255, 0.38);
+
+    /* 输入框 */
+    --dw-input-bg: rgba(255, 255, 255, 0.05);
+    --dw-input-border: rgba(255, 255, 255, 0.2);
+    --dw-input-focus: rgba(198, 40, 40, 0.5);
+
+    /* 标签 */
+    --dw-tag-bg: rgba(157, 78, 221, 0.1);
+    --dw-tag-border: rgba(157, 78, 221, 0.25);
+    --dw-tag-text: #9D4EDD;
+
+    /* 正文高亮(角色 / 地点) */
+    --dw-highlight-char-bg: rgba(232, 134, 134, 0.2);
+    --dw-highlight-loc-bg: rgba(157, 78, 221, 0.2);
+    --dw-highlight-char-text: #FFB4AB;
+    --dw-highlight-loc-text: #D4A5FF;
+
+    /* 社交模拟卡(杀青梗用) */
+    --dw-wechat-green: #07C160;
+    --dw-wechat-bubble: #95EC69;
+    --dw-qq-blue: #12B7F5;
+    --dw-imessage-blue: #007AFF;
+    --dw-video-bg: #000000;
+    --dw-danmaku-text: #FFFFFF;
+
+    /* 通用 */
+    --dw-white: #FFFFFF;
+    --dw-black: #000000;
+    --dw-toggle-thumb: #FFFFFF;
+    --dw-purple-light: #E1BEE7;
+    --dw-purple-container: rgba(156, 39, 176, 0.1);
+    --dw-home-indicator: #A0A0A0;
+}
+
+/* ============================================================
+   国风绿黄浅色 —— 绿为主色调,淡黄辅助
+   ============================================================ */
+.app-shell[data-app-id="dream-weaver"][data-dw-theme="oriental-light"],
+.app-shell[data-app-id="dream-weaver"] [data-dw-theme="oriental-light"] {
+    --dw-bg: #F5F8F5;
+    --dw-bg-alt: #EDF2ED;
+    --dw-surface: #FFFFFF;
+    --dw-surface-alt: #F0F4F0;
+    --dw-surface-container: #E8EEE8;
+    --dw-surface-tint: rgba(46, 125, 50, 0.05);
+    --dw-surface-bright: #FFFFFF;
+    --dw-surface-dim: #E8EEE8;
+
+    --dw-primary: #2E7D32;
+    --dw-primary-light: #4CAF50;
+    --dw-primary-dark: #1B5E20;
+    --dw-primary-container: #C8E6C9;
+    --dw-primary-hover: rgba(46, 125, 50, 0.1);
+    --dw-primary-active: rgba(46, 125, 50, 0.2);
+    --dw-on-primary: #FFFFFF;
+
+    --dw-secondary: #F9A825;
+    --dw-secondary-container: #FFF8E1;
+    --dw-on-secondary: #1A1A1A;
+
+    --dw-tertiary: #6C5CE7;
+    --dw-tertiary-light: #A29BFE;
+    --dw-tertiary-dark: #5849C2;
+    --dw-tertiary-container: rgba(108, 92, 231, 0.1);
+    --dw-on-tertiary: #FFFFFF;
+
+    --dw-accent: #81C784;
+    --dw-accent-light: #C8E6C9;
+
+    --dw-warning: #F3BF4C;
+    --dw-error: #B00020;
+    --dw-success: #2E7D32;
+    --dw-info: #0288D1;
+    --dw-error-container: rgba(176, 0, 32, 0.1);
+    --dw-success-container: rgba(46, 125, 50, 0.1);
+    --dw-warning-container: rgba(243, 191, 76, 0.1);
+    --dw-info-container: rgba(2, 136, 209, 0.1);
+    --dw-on-error: #FFFFFF;
+    --dw-on-success: #FFFFFF;
+    --dw-on-warning: #1A1A1A;
+    --dw-on-info: #FFFFFF;
+
+    --dw-text: #1A1A1A;
+    --dw-text-secondary: #5F5F5F;
+    --dw-text-tertiary: #8A8A8A;
+    --dw-text-inverse: #FFFFFF;
+
+    --dw-border: rgba(46, 125, 50, 0.2);
+    --dw-border-light: rgba(0, 0, 0, 0.06);
+    --dw-border-strong: rgba(46, 125, 50, 0.4);
+    --dw-divider: rgba(0, 0, 0, 0.08);
+
+    --dw-card-bg: #FFFFFF;
+    --dw-card-hover: #F5F5F5;
+
+    --dw-bubble-sent: #2E7D32;
+    --dw-bubble-received: #F9A825;
+
+    --dw-nav-glow: #2E7D32;
+    --dw-nav-bg: rgba(255, 255, 255, 0.85);
+    --dw-nav-border: rgba(46, 125, 50, 0.3);
+    --dw-nav-active-bg: rgba(46, 125, 50, 0.25);
+    --dw-nav-active-shadow: rgba(46, 125, 50, 0.4);
+    --dw-nav-shadow: 0 8px 32px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    --dw-glass-bg: rgba(255, 255, 255, 0.85);
+    --dw-glass-border: rgba(46, 125, 50, 0.3);
+    --dw-glass-highlight: rgba(255, 255, 255, 0.8);
+
+    --dw-outline: rgba(0, 0, 0, 0.12);
+    --dw-outline-variant: rgba(0, 0, 0, 0.08);
+    --dw-outline-light: rgba(0, 0, 0, 0.06);
+    --dw-overlay: rgba(0, 0, 0, 0.3);
+    --dw-scrim: rgba(0, 0, 0, 0.32);
+
+    --dw-shadow-color: rgba(0, 0, 0, 0.1);
+    --dw-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+    --dw-shadow-md: 0 3px 6px rgba(0, 0, 0, 0.1);
+    --dw-shadow-lg: 0 6px 12px rgba(0, 0, 0, 0.12);
+
+    --dw-hover-overlay: rgba(0, 0, 0, 0.04);
+    --dw-active-overlay: rgba(0, 0, 0, 0.08);
+    --dw-disabled-bg: rgba(0, 0, 0, 0.12);
+    --dw-disabled-text: rgba(0, 0, 0, 0.38);
+
+    --dw-input-bg: rgba(0, 0, 0, 0.03);
+    --dw-input-border: rgba(0, 0, 0, 0.15);
+    --dw-input-focus: rgba(46, 125, 50, 0.5);
+
+    --dw-tag-bg: rgba(46, 125, 50, 0.1);
+    --dw-tag-border: rgba(46, 125, 50, 0.25);
+    --dw-tag-text: #2E7D32;
+
+    --dw-highlight-char-bg: rgba(46, 125, 50, 0.15);
+    --dw-highlight-loc-bg: rgba(249, 168, 37, 0.15);
+    --dw-highlight-char-text: #1B5E20;
+    --dw-highlight-loc-text: #E65100;
+
+    --dw-wechat-green: #07C160;
+    --dw-wechat-bubble: #95EC69;
+    --dw-qq-blue: #12B7F5;
+    --dw-imessage-blue: #007AFF;
+    --dw-video-bg: #000000;
+    --dw-danmaku-text: #FFFFFF;
+
+    --dw-white: #FFFFFF;
+    --dw-black: #000000;
+    --dw-toggle-thumb: #FFFFFF;
+    --dw-purple-light: #F3E5F5;
+    --dw-purple-container: rgba(108, 92, 231, 0.08);
+    --dw-home-indicator: rgba(0, 0, 0, 0.3);
+}
+
+/* ============================================================
+   非颜色 token —— 圆角 / 间距 / 层级 / 动效
+   两套主题共用,不随主题变
+   ============================================================ */
+.app-shell[data-app-id="dream-weaver"] {
+    --dw-radius-sm: 8px;
+    --dw-radius: 12px;
+    --dw-radius-lg: 18px;
+    --dw-radius-pill: 999px;
+
+    --dw-gap-xs: 4px;
+    --dw-gap-sm: 8px;
+    --dw-gap: 12px;
+    --dw-gap-lg: 18px;
+
+    --dw-topbar-h: 54px;
+    --dw-navbar-h: 62px;
+    --dw-composer-min-h: 52px;
+
+    --dw-ease: cubic-bezier(0.4, 0, 0.2, 1);
+    --dw-ease-bounce: cubic-bezier(0.34, 1.4, 0.64, 1);
+
+    /* 阅读区排版 —— 显示设置面板会在运行时覆盖这几个 */
+    --dw-reader-font: inherit;
+    --dw-reader-size: 15px;
+    --dw-reader-line: 1.9;
+    --dw-reader-letter: 0px;
+    --dw-reader-indent: 2em;
+
+    /* 层级:面板 < 抽屉 < 弹窗 < 选区菜单 */
+    --dw-z-panel: 30;
+    --dw-z-drawer: 50;
+    --dw-z-sheet: 70;
+    --dw-z-popover: 90;
+}
+
+/* 把 AcModal 的皮肤桥到本 App 的 token —— 弹窗自动跟着换主题 */
+.app-shell[data-app-id="dream-weaver"] .ac-modal {
+    --ac-color-primary: var(--dw-primary);
+    --ac-color-primary-dark: var(--dw-primary-dark);
+    --ac-color-primary-soft: var(--dw-primary-light);
+    --ac-shadow-primary: var(--dw-primary);
+    --ac-shadow-secondary: var(--dw-surface-alt);
+}
+
+/* 框架级「上下文预览」组件同样跟着换主题(见 css/core/85-context-preview.css) */
+.app-shell[data-app-id="dream-weaver"] .ctxp {
+    --ctxp-accent: var(--dw-primary);
+    --ctxp-accent-soft: var(--dw-primary-hover);
+    --ctxp-ink: var(--dw-text);
+    --ctxp-ink-soft: var(--dw-text-secondary);
+    --ctxp-surface: var(--dw-card-bg);
+    --ctxp-surface-2: var(--dw-surface-tint);
+    --ctxp-line: var(--dw-border-light);
+    --ctxp-danger: var(--dw-error);
+    --ctxp-radius: var(--dw-radius);
+}

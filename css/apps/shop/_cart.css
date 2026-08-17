@@ -1,0 +1,155 @@
+/* 四叶草 · 购物车与结账
+ *
+ * 结账区那三个数（现在有 − 这单花 = 付完剩）是这一页的重点。
+ * 用户明确要求「整个资产货币链的流动要清晰透明」，
+ * 所以它们并排摆着、等宽、带运算符，像一道算式而不是三行清单。
+ */
+
+.app-shell[data-app-id="shop"] .sp-cart__list {
+    display: grid;
+    gap: 2px;
+    margin-bottom: 20px;
+}
+
+.app-shell[data-app-id="shop"] .sp-cart__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--sp-line-soft);
+}
+.app-shell[data-app-id="shop"] .sp-cart__row:last-child { border-bottom: 0; }
+
+.app-shell[data-app-id="shop"] .sp-cart__main { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+
+.app-shell[data-app-id="shop"] .sp-cart__name {
+    font-size: 13.5px;
+    font-weight: 550;
+    color: var(--sp-text);
+}
+
+.app-shell[data-app-id="shop"] .sp-cart__sub { font-size: 11.5px; color: var(--sp-text-3); }
+
+.app-shell[data-app-id="shop"] .sp-cart__right {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+}
+
+.app-shell[data-app-id="shop"] .sp-stepper {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--sp-line);
+    border-radius: 9px;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="shop"] .sp-stepper button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border: 0;
+    background: var(--sp-surface);
+    color: var(--sp-text-2);
+    cursor: pointer;
+}
+.app-shell[data-app-id="shop"] .sp-stepper button:active { background: var(--sp-surface-2); }
+
+.app-shell[data-app-id="shop"] .sp-stepper span {
+    min-width: 28px;
+    text-align: center;
+    font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+    color: var(--sp-text);
+}
+
+/* ── 结算 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-settle {
+    padding: 15px 16px;
+    margin-bottom: 16px;
+    border: 1px solid var(--sp-line);
+    border-radius: 14px;
+    background: var(--sp-surface);
+}
+
+.app-shell[data-app-id="shop"] .sp-settle--mini { padding: 12px 13px; margin: 4px 0 12px; }
+
+.app-shell[data-app-id="shop"] .sp-settle__title {
+    margin: 0 0 12px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    color: var(--sp-text-3);
+}
+
+.app-shell[data-app-id="shop"] .sp-settle__grid {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+}
+
+.app-shell[data-app-id="shop"] .sp-settle__cell {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="shop"] .sp-settle__k { font-size: 10.5px; color: var(--sp-text-3); }
+
+.app-shell[data-app-id="shop"] .sp-settle__v {
+    font-size: 17px;
+    font-weight: 640;
+    font-variant-numeric: tabular-nums;
+    color: var(--sp-text);
+}
+
+.app-shell[data-app-id="shop"] .sp-settle__v--out { color: var(--sp-expense); }
+.app-shell[data-app-id="shop"] .sp-settle__v--bad { color: var(--sp-danger); }
+
+.app-shell[data-app-id="shop"] .sp-settle__op {
+    flex: 0 0 auto;
+    font-size: 14px;
+    color: var(--sp-text-3);
+    padding-top: 12px;
+}
+
+.app-shell[data-app-id="shop"] .sp-settle__unit {
+    margin: 10px 0 0;
+    text-align: center;
+    font-size: 10.5px;
+    color: var(--sp-text-3);
+}
+
+.app-shell[data-app-id="shop"] .sp-settle__warn {
+    margin: 10px 0 0;
+    padding: 8px 11px;
+    border-radius: 9px;
+    background: var(--sp-accent-soft);
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--sp-danger);
+}
+
+.app-shell[data-app-id="shop"] .sp-settle__note {
+    margin: 9px 0 0;
+    font-size: 11.5px;
+    line-height: 1.6;
+    color: var(--sp-text-3);
+    text-align: center;
+}
+
+.app-shell[data-app-id="shop"] .sp-cart__actions {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}

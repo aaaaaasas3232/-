@@ -214,3 +214,45 @@
     margin-left: 6px;
     vertical-align: middle;
 }
+
+/* 弹窗挂在 .app-shell 内时，会被新聊天页 56px 竖排卡片样式盖掉。
+   这里用更高优先级把图标锁在左列，标题/说明只走右列。 */
+.app-shell[data-app-id="chat"] .mode-selector-modal .chat-mode-selector-card {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    column-gap: 12px;
+    row-gap: 2px;
+    align-items: center;
+    padding: 12px;
+    border-radius: 12px;
+    min-height: 80px;
+    width: auto;
+    box-shadow: none;
+}
+.app-shell[data-app-id="chat"] .mode-selector-modal .chat-mode-selector-card__icon {
+    width: 56px;
+    height: 56px;
+    margin-bottom: 0;
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    align-self: center;
+}
+.app-shell[data-app-id="chat"] .mode-selector-modal .chat-mode-selector-card__icon svg {
+    width: 28px;
+    height: 28px;
+}
+.app-shell[data-app-id="chat"] .mode-selector-modal .chat-mode-selector-card__title {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+    margin-bottom: 0;
+    font-size: 14px;
+}
+.app-shell[data-app-id="chat"] .mode-selector-modal .chat-mode-selector-card__desc {
+    grid-column: 2;
+    grid-row: 2;
+    min-width: 0;
+    margin-bottom: 0;
+    font-size: 11.5px;
+}

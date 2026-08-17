@@ -13,6 +13,22 @@ import {
     createDefaultDetailRenderer,
     createDefaultPageRenderer,
 } from '../../src/core/page-renderers.js';
+import { escapeHtml } from '../../src/core/escape.js';
+import { modals as presetModals } from '../../src/core/presets/modals.js';
+// 栏系统 (Phase 2-3)
+import {
+    normalizeTopbarConfig,
+    normalizeNavConfig,
+} from './bar-config-normalizer.js';
+import {
+    hasCustomRender,
+    renderTopbarAsync,
+    renderTabbarAsync,
+} from './bar-renderer.js';
+import {
+    createTopbarContext,
+    createNavContext,
+} from './bar-context.js';
 
 /**
  * resolveAsyncRenderer - 让 renderPage/renderDetailPage 支持 async
@@ -106,6 +122,13 @@ function resolveAsyncRenderer(renderer, content, page, app, detailRenderTick) {
 /**
  * 失效 renderer cache（让下一次 computed 重算时重新调 renderer）
  * 业务侧更新 IndexedDB 数据后调用，确保新数据能渲染出来
+ *
+ * 2026-08 修正：
+ * - 不再顺手调 window.refreshPhoneApps()（之前会触发整个桌面重渲染，
+ *   调用方只是想重画一个 detail 页时被迫承担整个桌面的重新计算），
+ *   这是 §3.5 沉淀的「API 语义没设计对」问题。
+ * - 调完 invalidateRendererCache 后，业务方再显式调
+ *   window.__appRendererBridge?.syncNow?.({ force: true }) 即可触发重画。
  */
 export function invalidateRendererCache(appId, pageId) {
     // 遍历所有 renderer，清掉对应 cacheKey
@@ -121,18 +144,34 @@ export function invalidateRendererCache(appId, pageId) {
             }
         }
     });
-    // tick++ 触发 computed 重算
+    // tick++ 触发 computed 重算（仅依赖 detailRenderTick 的视图会刷新）
     if (typeof window !== 'undefined' && window.__detailRenderTick) {
         window.__detailRenderTick.value += 1;
     }
-    if (typeof window !== 'undefined' && window.refreshPhoneApps) {
-        window.refreshPhoneApps();
-    }
+    // ★ 2026-08 移除：refreshPhoneApps() 不再顺手触发
+    //   业务方若需要刷新桌面，自己调 window.refreshPhoneApps?.()
+}
+
+/**
+ * 2026-08 新增：组合 invalidateRendererCache + bridge.syncNow，替代
+ * 业务代码里的「二段式」。保留旧函数名做兼容（内部转调 requestRerender）。
+ *
+ * ```js
+ * // 推荐写法
+ * window.__requestAppRerender?.('my-app', null);
+ * ```
+ */
+export function requestAppRerender(appId, pageId) {
+    invalidateRendererCache(appId, pageId);
+    try {
+        window.__appRendererBridge?.syncNow?.({ force: true });
+    } catch (_) {}
 }
 
 // 挂到 window 方便业务侧调用
 if (typeof window !== 'undefined') {
     window.invalidateRendererCache = invalidateRendererCache;
+    window.__requestAppRerender = requestAppRerender;
 }
 
 export function useAppNavigation({ apps, island, createModalState: createModalStateArg, resetCardState }) {
@@ -208,6 +247,33 @@ export function useAppNavigation({ apps, island, createModalState: createModalSt
         if (t.bg) style.background = t.bg;
         if (t.color) style.color = t.color;
         if (t.titleColor && t.titleColor !== 'auto') style.color = t.titleColor;
+        return style;
+    });
+    /**
+     * 底栏样式。
+     *
+     * `bar-config-normalizer` 从一开始就声明了 nav 的 bg / color / height，
+     * 但**没有任何代码读它们** —— App 照着 schema 写了，运行时一点变化都没有。
+     * 这类「schema 说有、实现里没有」的字段比缺字段更糟：作者会以为是自己写错了。
+     *
+     * 值通过 CSS 变量下发（见 css/core/50-app-shell.css 的 .app-tab-bar），
+     * 而不是直接写 background —— 因为 tab 项的前景色也要跟着变，
+     * 直接写 style 只能覆盖容器那一层。
+     */
+    const navStyle = Vue.computed(() => {
+        const n = activeApp.value?.nav;
+        if (!n) return {};
+        const style = {};
+        if (n.bg) style['--tabbar-bg'] = n.bg;
+        if (n.borderColor) style['--tabbar-border'] = n.borderColor;
+        if (typeof n.height === 'number') style['--tabbar-height'] = `${n.height}px`;
+        if (n.color) {
+            // 未选中的 tab 用同色系的淡版本：只给一个 color 就能同时管住两态，
+            // App 不用为「选中」「未选中」各配一个颜色
+            style['--tabbar-color'] = `color-mix(in srgb, ${n.color} 52%, transparent)`;
+            style['--tabbar-active-color'] = n.color;
+        }
+        if (n.activeColor) style['--tabbar-active-color'] = n.activeColor;
         return style;
     });
     const activeAppBackgroundStyle = Vue.computed(() => {
@@ -336,12 +402,7 @@ export function useAppNavigation({ apps, island, createModalState: createModalSt
         const v = cfg?.statusBarTimeColor;
         return (typeof v === 'string' && v) ? v : currentStatusBarColor.value;
     });
-    const currentSignalColor = Vue.computed(() => {
-        void statusBarConfigVersion.value;
-        const cfg = getStatusBarConfig();
-        const v = cfg?.statusBarSignalColor;
-        return (typeof v === 'string' && v) ? v : currentStatusBarColor.value;
-    });
+    // 信号格已移除（2026-08-13），currentSignalColor 一并删除。
     const currentFiveGColor = Vue.computed(() => {
         void statusBarConfigVersion.value;
         const cfg = getStatusBarConfig();
@@ -374,31 +435,99 @@ export function useAppNavigation({ apps, island, createModalState: createModalSt
             } catch (_) {}
         }
         if (typeof action === 'string') {
+            // ★ 容错剥离:有人写过 data-app-action='{"action":...}' 这种把完整
+            //   属性串塞进 dataset.value 的历史写法,需要裁掉首尾 'data-app-action=' 和 尾随 "'。
+            const nestedPrefix = "data-app-action='";
+            if (action.startsWith(nestedPrefix) && action.endsWith("'")) {
+                action = action.slice(nestedPrefix.length, -1);
+            }
             try {
                 return JSON.parse(action);
-            } catch {
+            } catch (err) {
+                if (typeof console !== 'undefined') {
+                    console.warn('[normalizeAction] JSON.parse failed:', err.message, 'raw=', JSON.stringify(action));
+                }
                 return null;
             }
         }
         return action;
     }
 
-    function handlePageAction(action) {
-        console.log('[handlePageAction] called with action:', action);
+    async function handleContentCardAction(normalizedAction) {
+        const targetAppId = normalizedAction.targetAppId || '';
+        const targetApp = externalAppRegistry.getApp(targetAppId);
+        if (!targetApp) {
+            presetModals.toast('对应的 App 还没有安装', { type: 'warning' });
+            return;
+        }
+
+        const payload = normalizedAction.payload || {};
+        const title = payload.confirmTitle || '查看这条内容？';
+        const message = payload.confirmMessage
+            || (payload.title ? `将打开「${payload.title}」的详情。` : '确认后才会生成并打开详情，不确认不会调用 API。');
+        const confirmed = await presetModals.confirm({
+            title,
+            message,
+            okLabel: payload.confirmLabel || '确认查看',
+            cancelLabel: payload.cancelLabel || '暂不查看',
+        });
+        if (!confirmed) return;
+
+        const closeLoading = presetModals.toast('正在准备内容…', { duration: 15000 });
+        try {
+            const request = {
+                sourceAppId: normalizedAction.appId || activeAppId.value,
+                targetAppId,
+                entityType: normalizedAction.entityType || '',
+                entityId: normalizedAction.entityId || '',
+                payload,
+            };
+            const resolved = await externalAppRegistry.invokeService(targetAppId, 'contentCards', request);
+            if (resolved?.ok === false) {
+                await presetModals.alert({
+                    title: '暂时打不开',
+                    message: resolved.error || '内容准备失败，请稍后再试。',
+                });
+                return;
+            }
+
+            const pageId = resolved?.pageId || normalizedAction.pageId || payload.pageId || '';
+            const pageType = resolved?.pageType || payload.pageType || 'detail';
+            const nextPayload = {
+                ...payload,
+                ...(resolved?.payload || {}),
+                entityType: normalizedAction.entityType || '',
+                entityId: normalizedAction.entityId || '',
+            };
+
+            openApp(targetAppId);
+            if (pageId) {
+                if (pageType === 'root') switchRootPage(pageId);
+                else openDetailPage(targetAppId, pageId, nextPayload);
+            }
+        } catch (err) {
+            console.error('[content-card] 打开失败', err);
+            await presetModals.alert({
+                title: '暂时打不开',
+                message: err?.message || String(err),
+            });
+        } finally {
+            closeLoading();
+        }
+    }
+
+    async function handlePageAction(action) {
         const normalizedAction = normalizeAction(action);
-        console.log('[handlePageAction] normalizedAction:', normalizedAction);
         if (!normalizedAction) {
             return;
         }
 
         if (normalizedAction.action === 'detail') {
-            console.log('[handlePageAction] detail action - calling openDetailPage with appId:', normalizedAction.appId || activeAppId.value, 'pageId:', normalizedAction.pageId);
-            openDetailPage(normalizedAction.appId || activeAppId.value, normalizedAction.pageId);
+            openDetailPage(normalizedAction.appId || activeAppId.value, normalizedAction.pageId, normalizedAction.payload);
             return;
         }
 
         if (normalizedAction.action === 'modal') {
-            console.log('[handlePageAction] modal action detected, calling openModal with:', normalizedAction.modalType, normalizedAction.payload);
             // chat-component 类型：component/props/callbacks 直接在 action 根级别
             if (normalizedAction.modalType === 'chat-component') {
                 openModal('chat-component', normalizedAction);
@@ -414,10 +543,11 @@ export function useAppNavigation({ apps, island, createModalState: createModalSt
         }
 
         if (normalizedAction.action === 'openApp') {
-            openApp(normalizedAction.appId || normalizedAction.targetAppId);
+            const targetAppId = normalizedAction.targetAppId || normalizedAction.appId;
+            openApp(targetAppId);
             if (normalizedAction.pageId) {
                 if (normalizedAction.pageType === 'detail') {
-                    openDetailPage(normalizedAction.appId || normalizedAction.targetAppId, normalizedAction.pageId);
+                    openDetailPage(targetAppId, normalizedAction.pageId, normalizedAction.payload);
                 } else {
                     switchRootPage(normalizedAction.pageId);
                 }
@@ -441,9 +571,14 @@ export function useAppNavigation({ apps, island, createModalState: createModalSt
             return;
         }
 
+        if (normalizedAction.action === 'contentCard') {
+            await handleContentCardAction(normalizedAction);
+            return;
+        }
+
         if (normalizedAction.action === 'shareRecord') {
             const sourceAppId = normalizedAction.appId || activeAppId.value;
-            externalAppRegistry.shareRecord(sourceAppId, {
+            await externalAppRegistry.shareRecord(sourceAppId, {
                 targetApp: normalizedAction.targetAppId || '',
                 entityType: normalizedAction.entityType,
                 entityId: normalizedAction.entityId,
@@ -468,9 +603,9 @@ export function useAppNavigation({ apps, island, createModalState: createModalSt
             const payload = normalizedAction.payload;
             const targetApp = externalAppRegistry.getApp(appId);
             const hasMethod = !!(targetApp?.methods?.[methodName]);
-            console.log('[chat-dispatch] appMethod invoke', { appId, methodName, hasMethod, appKeys: targetApp ? Object.keys(targetApp).slice(0, 8) : null, methodKeys: targetApp?.methods ? Object.keys(targetApp.methods) : null });
             if (methodName) {
-                externalAppRegistry.invokeMethod(appId, methodName, payload);
+                // await Promise 返回值，防止 async 方法被丢弃
+                if (hasMethod) await externalAppRegistry.invokeMethod(appId, methodName, payload);
             }
         }
     }
@@ -480,11 +615,11 @@ export function useAppNavigation({ apps, island, createModalState: createModalSt
         if (!actionElement) {
             return;
         }
-        handlePageAction(actionElement.dataset.appAction);
+        void handlePageAction(actionElement.dataset.appAction);
     }
 
     function handleExternalPageAction(event) {
-        handlePageAction(event?.detail);
+        void handlePageAction(event?.detail);
     }
 
     window.addEventListener('app:page-action', handleExternalPageAction);
@@ -506,15 +641,43 @@ export function useAppNavigation({ apps, island, createModalState: createModalSt
         appModal.value = makeModal();
         appViewMode.value = 'full';
         resetCardState();
+        // ★ 跨 App 切换必清掉 override:前一个 App 的 headerActions / title 注入
+        //   (如 chat-app 的 mode-toggle 按钮)不能泄漏到当前 App 的顶栏
+        //   修复前:chat 在 story mode 时切到 music,music 顶栏会出现 chat 的 toggleRecordMode 按钮 + "Dream" 标题
+        //   修复后:每次开新 App 都从干净状态开始
+        appTopbarOverride.value = null;
+
+        // 告诉 App「你被打开了」。
+        // 框架本身已经把 rootPage / detailStack / modal 都重置成干净状态了，
+        // 但 App 自己那些「会话级 UI 偏好」（比如 murmur 的日历/故事模式）
+        // 框架并不知道，只能由 App 自己在这个事件里归位。
+        // 没有这个事件的话，App 只能靠 renderPage 猜「这次是不是新打开的」——
+        // 而 renderPage 每次重画都会跑，分不出来。
+        try {
+            window.dispatchEvent(new CustomEvent('phone:app-opened', { detail: { appId: app.id } }));
+        } catch (_) { /* 事件失败不该挡住开 App */ }
     }
 
     function closeApp() {
+        const closedId = activeAppId.value;
         activeAppId.value = '';
         activeRootPageId.value = '';
         detailPageStack.value = [];
         appModal.value = makeModal();
         appViewMode.value = 'full';
         resetCardState();
+        // 关闭 App 时一并清掉 override(虽然顶层顶栏会被隐藏,但保持 clean state)
+        appTopbarOverride.value = null;
+
+        // 跟 openApp 的 phone:app-opened 成对。
+        // App 自己那些「会话级 UI 偏好」除了在打开时归位，关闭时也该归位 ——
+        // 只挂 open 的话，「退到桌面停一会儿再进来」这条路径依赖的还是同一次 open，
+        // 中间但凡有别的入口（卡片模式恢复之类）绕过 openApp 就会漏。
+        if (closedId) {
+            try {
+                window.dispatchEvent(new CustomEvent('phone:app-closed', { detail: { appId: closedId } }));
+            } catch (_) { /* 事件失败不该挡住关 App */ }
+        }
     }
 
     function switchRootPage(pageId) {
@@ -543,11 +706,12 @@ export function useAppNavigation({ apps, island, createModalState: createModalSt
         } catch (_) {}
     }
 
-    function openDetailPage(appId, pageId) {
+    function openDetailPage(appId, pageId, payload) {
         if (activeAppId.value !== appId || !pageId) {
             return;
         }
-        detailPageStack.value = [...detailPageStack.value, { id: pageId }];
+        // payload 会被 renderDetailPage 的 content 参数接收到
+        detailPageStack.value = [...detailPageStack.value, { id: pageId, payload }];
     }
 
     function closeDetailPage() {
@@ -563,8 +727,6 @@ export function useAppNavigation({ apps, island, createModalState: createModalSt
     let _chatComponentProps = null;
 
     function openModal(type, payload) {
-        console.log('[openModal] called with type:', type, 'payload:', payload);
-
         // chat-component 类型：组件/props/callbacks 直接在 payload 里（不是嵌套在 payload.xxx）
         if (type === 'chat-component') {
             _chatComponentCallbacks = payload?.callbacks || null;
@@ -576,7 +738,6 @@ export function useAppNavigation({ apps, island, createModalState: createModalSt
                 component: _chatComponent,
                 props: _chatComponentProps,
             };
-            console.log('[openModal] chat-component modal set:', _chatComponent?.name, _chatComponentProps);
             return;
         }
 
@@ -592,7 +753,6 @@ export function useAppNavigation({ apps, island, createModalState: createModalSt
             cancelLabel: payload?.cancelLabel || '取消',
             onConfirm: typeof payload?.onConfirm === 'function' ? payload.onConfirm : null,
         };
-        console.log('[openModal] appModal.value set:', JSON.stringify(appModal.value));
     }
 
     function confirmAppModal() {
@@ -617,6 +777,127 @@ export function useAppNavigation({ apps, island, createModalState: createModalSt
     function closeModal() {
         appModal.value = makeModal();
         _chatComponentCallbacks = null;
+        // ★ 同时清空 chat-component 内部引用,避免下一次 _dispatch 时
+        //   `:is` 引用同一个 component 对象 → Vue 触发 update 而非重新 mount → 报
+        //   「r.update is not a function」(组件已 destroyed 但 patch 还在跑)。
+        _chatComponent = null;
+        _chatComponentProps = null;
+    }
+
+    // ================================================================
+    // 栏自定义渲染（Phase 3: 彻底自定义支持）
+    // ================================================================
+
+    /**
+     * 获取当前顶栏的渲染模式
+     * @returns {'default'|'custom'}
+     */
+    function getTopbarRenderMode() {
+        const config = activeAppTopbar.value;
+        if (!config) return 'default';
+        return hasCustomRender(config) ? 'custom' : 'default';
+    }
+
+    /**
+     * 获取当前底栏的渲染模式
+     * @returns {'default'|'custom'}
+     */
+    function getNavRenderMode() {
+        const config = activeApp.value?.nav;
+        if (!config) return 'default';
+        return hasCustomRender(config) ? 'custom' : 'default';
+    }
+
+    /**
+     * 获取顶栏上下文（供自定义 render 使用）
+     * @returns {object}
+     */
+    function getTopbarContext() {
+        const app = activeApp.value;
+        const config = activeAppTopbar.value;
+        if (!app || !config) return null;
+
+        const normalizedConfig = normalizeTopbarConfig(config);
+
+        return createTopbarContext({
+            app,
+            state: app.state || {},
+            topbar: config,
+            appId: app.id,
+            pageId: activeRootPageId.value,
+            handleAction,
+            t: (key) => key, // i18n placeholder
+            escapeHtml,
+            normalizedConfig,
+        });
+    }
+
+    /**
+     * 获取底栏上下文（供自定义 render 使用）
+     * @returns {object}
+     */
+    function getNavContext() {
+        const app = activeApp.value;
+        const config = app?.nav;
+        if (!app || !config) return null;
+
+        const normalizedConfig = normalizeNavConfig(config);
+
+        // 获取当前激活的按钮 ID
+        const activePageId = activeRootPageId.value;
+        const activePage = navigationPages.value.find(p => p.id === activePageId);
+        const activeButtonId = activePage?.id || '';
+
+        return createNavContext({
+            app,
+            state: app.state || {},
+            nav: config,
+            appId: app.id,
+            activePageId,
+            handleAction,
+            t: (key) => key, // i18n placeholder
+            escapeHtml,
+            normalizedConfig,
+        });
+    }
+
+    /**
+     * 渲染自定义顶栏（供模板调用）
+     * @returns {Promise<string>} HTML 字符串
+     */
+    async function renderCustomTopbar() {
+        const config = activeAppTopbar.value;
+        if (!config || config.visible === false) {
+            return '';
+        }
+
+        const context = getTopbarContext();
+        return await renderTopbarAsync({
+            config,
+            appId: activeApp.value?.id || '',
+            context,
+        });
+    }
+
+    /**
+     * 渲染自定义底栏（供模板调用）
+     * @returns {Promise<string>} HTML 字符串
+     */
+    async function renderCustomTabbar() {
+        const config = activeApp.value?.nav;
+        if (!config || config.type === 'none') {
+            return '';
+        }
+
+        const context = getNavContext();
+        const activePageId = activeRootPageId.value;
+
+        return await renderTabbarAsync({
+            config,
+            appId: activeApp.value?.id || '',
+            activeButtonId: activePageId,
+            context,
+        });
     }
 
     /**
@@ -624,7 +905,6 @@ export function useAppNavigation({ apps, island, createModalState: createModalSt
      * 由 Vue 组件在适当时候调用
      */
     function emitChatComponentEvent(eventName, ...args) {
-        console.log('[emitChatComponentEvent]', eventName, args);
         if (_chatComponentCallbacks && typeof _chatComponentCallbacks[eventName] === 'function') {
             try {
                 _chatComponentCallbacks[eventName](...args);
@@ -651,6 +931,7 @@ export function useAppNavigation({ apps, island, createModalState: createModalSt
         activeAppSubtitle,
         activeAppTopbar,
         topbarStyle,
+        navStyle,
         activeAppBackgroundStyle,
         currentPageContent,
         currentPageView,
@@ -665,7 +946,6 @@ export function useAppNavigation({ apps, island, createModalState: createModalSt
         // 状态栏细分（由 settings app 同步到 window.__phoneStatusBarConfig）
         statusBarVisible,
         currentTimeColor,
-        currentSignalColor,
         currentFiveGColor,
         currentFiveGLabel,
         handlePageAction,
@@ -680,5 +960,12 @@ export function useAppNavigation({ apps, island, createModalState: createModalSt
         closeModal,
         confirmAppModal,
         emitChatComponentEvent,
+        // 栏自定义渲染（Phase 3）
+        getTopbarRenderMode,
+        getNavRenderMode,
+        getTopbarContext,
+        getNavContext,
+        renderCustomTopbar,
+        renderCustomTabbar,
     };
 }

@@ -53,6 +53,8 @@ import { SDK_STORES } from './defaults.js';
 const PROMPT_FIELDS = new Set([
     'id', 'title', 'content', 'source', 'active', 'order', 'longBody',
     'sourceLibraryPromptId', 'sourcePath',
+    // ★ v0.68 故事概要注入追踪字段(用于去重)
+    'sourceStorySummaryId', 'sourceStoryArchiveId',
     'createdAt', 'updatedAt',
 ]);
 
@@ -100,6 +102,9 @@ function _sortByOrder(list) {
 // ============================================
 // 工厂
 // ============================================
+
+// 显式导出工具函数,供 group-reply-prompts.js 复用(同一种业务对象)
+export { _generateId, _nextOrder, _normalize, _sortByOrder, PROMPT_FIELDS };
 
 /**
  * 给定 sdk,构造 replyPrompts API。

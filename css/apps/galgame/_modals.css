@@ -1,0 +1,334 @@
+/**
+ * 湛蓝回忆 · 弹窗皮肤 + 主题面板色板
+ *
+ * ⚠️ `GgModal` 把 class 透传到根元素 `.ac-overlay`,**不是** `.ac-modal`。
+ *    所以业务钩子一律写后代选择器:`.gg-modal .ac-modal-body` ✓
+ *    写 `.gg-modal.ac-modal` 是选不中的。
+ *
+ * ⚠️ `.ac-modal` 永远不加 `overflow: hidden` —— 框架的关闭按钮用 `top:-10px`
+ *    故意露在外面(虽然本 App 关掉了那个叉,但基线规则不该被破坏)。
+ */
+
+/* 把 AcModal 的变量桥到本 App 的 token */
+.app-shell[data-app-id="galgame"] .ac-modal {
+    --ac-color-primary: var(--gg-primary);
+    --ac-color-surface: var(--gg-panel-bg);
+    --ac-color-text: var(--gg-text);
+    --ac-color-text-secondary: var(--gg-text-secondary);
+    --ac-color-border: var(--gg-panel-border);
+    background: var(--gg-panel-bg);
+    border: 1px solid var(--gg-panel-border);
+    color: var(--gg-text);
+    box-shadow: var(--gg-shadow-lg);
+}
+
+.app-shell[data-app-id="galgame"] .gg-modal .ac-overlay,
+.app-shell[data-app-id="galgame"] .ac-overlay {
+    background: var(--gg-overlay);
+    z-index: 5;
+}
+
+.app-shell[data-app-id="galgame"] .gg-modal .ac-modal-title {
+    color: var(--gg-text);
+    font-size: 15px;
+}
+.app-shell[data-app-id="galgame"] .gg-modal .ac-modal-subtitle {
+    color: var(--gg-text-tertiary);
+    font-size: 11px;
+}
+.app-shell[data-app-id="galgame"] .gg-modal .ac-modal-body {
+    max-height: 58vh;
+    overflow-y: auto;
+    color: var(--gg-text);
+}
+.app-shell[data-app-id="galgame"] .gg-modal .ac-modal-footer {
+    display: flex;
+    gap: 8px;
+    border-top: 1px solid var(--gg-divider);
+}
+.app-shell[data-app-id="galgame"] .gg-modal .ac-btn {
+    flex: 1;
+    border-radius: var(--gg-radius-pill);
+    font-family: inherit;
+    font-size: 13px;
+}
+.app-shell[data-app-id="galgame"] .gg-modal .ac-btn-primary {
+    background: var(--gg-primary);
+    color: var(--gg-on-primary);
+    border-color: var(--gg-primary);
+}
+.app-shell[data-app-id="galgame"] .gg-modal .ac-btn-primary:disabled { opacity: 0.45; }
+.app-shell[data-app-id="galgame"] .gg-modal .ac-btn-secondary {
+    background: transparent;
+    color: var(--gg-text-secondary);
+    border-color: var(--gg-card-border);
+}
+
+.app-shell[data-app-id="galgame"] .gg-modal-count {
+    margin: 4px 0 0;
+    font-size: 11px;
+    text-align: right;
+    color: var(--gg-text-tertiary);
+}
+
+/* ============================================================
+   主题预览卡
+   ============================================================ */
+
+.app-shell[data-app-id="galgame"] .gg-theme-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+.app-shell[data-app-id="galgame"] .gg-theme-card {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 6px;
+    border: 1.5px solid var(--gg-card-border);
+    border-radius: var(--gg-radius-sm);
+    background: var(--gg-card-bg);
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.app-shell[data-app-id="galgame"] .gg-theme-card.is-active { border-color: var(--gg-primary); }
+.app-shell[data-app-id="galgame"] .gg-theme-name { font-size: 12px; color: var(--gg-text); }
+.app-shell[data-app-id="galgame"] .gg-theme-desc { font-size: 10px; color: var(--gg-text-tertiary); }
+
+/*
+ * 迷你舞台预览。
+ * 里面全部用 `var(--gg-*)`,而色表由组件挂在容器的 inline style 上 ——
+ * 所以「预览用的颜色」和「应用后的颜色」走的是同一套变量名,
+ * 不可能出现「预览好看、应用后不一样」。
+ */
+.app-shell[data-app-id="galgame"] .gg-theme-preview {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 4px;
+    height: 132px;
+    padding: 8px;
+    border-radius: var(--gg-radius-sm);
+    background: var(--gg-stage-bg);
+    overflow: hidden;
+}
+.app-shell[data-app-id="galgame"] .gg-theme-preview.is-compact { height: 76px; padding: 5px; gap: 3px; }
+
+.app-shell[data-app-id="galgame"] .gg-theme-preview-stage {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, var(--gg-stage-veil) 0%, transparent 45%, var(--gg-stage-vignette) 100%);
+}
+.app-shell[data-app-id="galgame"] .gg-theme-preview-sprite {
+    position: absolute;
+    left: 50%;
+    bottom: 34%;
+    width: 26px;
+    height: 34px;
+    transform: translateX(-50%);
+    border-radius: 12px 12px 4px 4px;
+    background: var(--gg-secondary);
+    opacity: 0.85;
+}
+.app-shell[data-app-id="galgame"] .gg-theme-preview.is-compact .gg-theme-preview-sprite { width: 16px; height: 20px; }
+
+.app-shell[data-app-id="galgame"] .gg-theme-preview-box {
+    position: relative;
+    padding: 8px 8px 6px;
+    border: 1px solid var(--gg-dialogue-border);
+    border-radius: 6px;
+    background: var(--gg-dialogue-bg);
+}
+.app-shell[data-app-id="galgame"] .gg-theme-preview-name {
+    position: absolute;
+    top: -7px;
+    left: 7px;
+    padding: 0 6px;
+    border-radius: var(--gg-radius-pill);
+    background: var(--gg-name-bg);
+    color: var(--gg-name-text);
+    font-size: 8px;
+}
+.app-shell[data-app-id="galgame"] .gg-theme-preview-text {
+    margin: 0;
+    font-size: 9px;
+    line-height: 1.5;
+    color: var(--gg-dialogue-text);
+}
+.app-shell[data-app-id="galgame"] .gg-theme-preview-options {
+    position: relative;
+    display: flex;
+    gap: 4px;
+}
+.app-shell[data-app-id="galgame"] .gg-theme-preview-option {
+    flex: 1;
+    padding: 3px 5px;
+    border: 1px solid var(--gg-option-border);
+    border-radius: var(--gg-radius-pill);
+    background: var(--gg-option-bg);
+    color: var(--gg-option-text);
+    font-size: 8px;
+    text-align: center;
+}
+.app-shell[data-app-id="galgame"] .gg-theme-preview-option.is-visited { border-color: var(--gg-option-visited); }
+
+/* ============================================================
+   色板
+   ============================================================ */
+
+.app-shell[data-app-id="galgame"] .gg-batch {
+    padding: 10px;
+    margin-bottom: 12px;
+    border: 1px dashed var(--gg-card-border);
+    border-radius: var(--gg-radius-sm);
+    background: var(--gg-input-bg);
+}
+.app-shell[data-app-id="galgame"] .gg-batch-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+.app-shell[data-app-id="galgame"] .gg-batch-title { flex: 1; font-size: 12px; font-weight: 600; }
+.app-shell[data-app-id="galgame"] .gg-batch-actions { display: flex; gap: 5px; }
+.app-shell[data-app-id="galgame"] .gg-batch-mini {
+    padding: 3px 9px;
+    border: 1px solid var(--gg-card-border);
+    border-radius: var(--gg-radius-pill);
+    background: var(--gg-card-bg);
+    color: var(--gg-text-secondary);
+    font-family: inherit;
+    font-size: 10px;
+    cursor: pointer;
+}
+.app-shell[data-app-id="galgame"] .gg-batch .gg-textarea {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    margin-bottom: 6px;
+}
+
+.app-shell[data-app-id="galgame"] .gg-color-cat { margin-bottom: 6px; }
+.app-shell[data-app-id="galgame"] .gg-color-cat-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 7px 9px;
+    border: 1px solid var(--gg-card-border);
+    border-radius: var(--gg-radius-sm);
+    background: var(--gg-card-bg);
+    color: var(--gg-text);
+    font-family: inherit;
+    font-size: 12px;
+    text-align: left;
+    cursor: pointer;
+}
+.app-shell[data-app-id="galgame"] .gg-color-cat-head span { flex: 1; }
+.app-shell[data-app-id="galgame"] .gg-color-cat-head em {
+    font-style: normal;
+    font-size: 10px;
+    color: var(--gg-text-tertiary);
+}
+
+.app-shell[data-app-id="galgame"] .gg-color-rows { padding: 6px 4px 2px; }
+.app-shell[data-app-id="galgame"] .gg-color-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--gg-divider);
+}
+.app-shell[data-app-id="galgame"] .gg-color-label {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+.app-shell[data-app-id="galgame"] .gg-color-label-top { font-size: 12px; }
+.app-shell[data-app-id="galgame"] .gg-color-label-top em {
+    margin-left: 5px;
+    font-style: normal;
+    font-size: 9px;
+    color: var(--gg-primary);
+}
+.app-shell[data-app-id="galgame"] .gg-color-var {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 9px;
+    color: var(--gg-text-tertiary);
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.app-shell[data-app-id="galgame"] .gg-color-swatch {
+    width: 28px;
+    height: 24px;
+    flex-shrink: 0;
+    padding: 0;
+    border: 1px solid var(--gg-card-border);
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+}
+.app-shell[data-app-id="galgame"] .gg-color-hex {
+    width: 108px;
+    flex-shrink: 0;
+    padding: 4px 7px;
+    border: 1px solid var(--gg-input-border);
+    border-radius: 6px;
+    background: var(--gg-input-bg);
+    color: var(--gg-input-text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px;
+    outline: none;
+}
+.app-shell[data-app-id="galgame"] .gg-color-reset {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--gg-tag-bg);
+    color: var(--gg-text-secondary);
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="galgame"] .gg-theme-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.app-shell[data-app-id="galgame"] .gg-theme-chip {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--gg-card-border);
+    border-radius: var(--gg-radius-pill);
+    background: var(--gg-card-bg);
+    overflow: hidden;
+}
+.app-shell[data-app-id="galgame"] .gg-theme-chip.is-active { border-color: var(--gg-primary); }
+.app-shell[data-app-id="galgame"] .gg-theme-chip-main {
+    padding: 5px 11px;
+    border: 0;
+    background: transparent;
+    color: var(--gg-text);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+.app-shell[data-app-id="galgame"] .gg-theme-chip-del {
+    padding: 5px 9px;
+    border: 0;
+    border-left: 1px solid var(--gg-divider);
+    background: transparent;
+    color: var(--gg-text-tertiary);
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+}

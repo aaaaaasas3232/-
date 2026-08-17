@@ -1,94 +1,30 @@
 /* ============================================
- * chat-app · 概要系统 (v0.61.3) 弹窗样式
+ * chat-app · 概要系统 (v0.61.3 · v0.69+ AcModal) 弹窗样式
  *
- *   - .summary-range-modal-*       概要范围选择弹窗
- *   - .summary-edit-modal-*        概要编辑/确认弹窗
+ *   两个弹窗都已迁移到通用 AcModal 组件,本文件只保留业务专属样式:
+ *   - .summary-range-modal-*       概要范围选择弹窗(预设按钮 + 月份 + 日期方块 + hint)
+ *   - .summary-edit-modal-*        概要编辑/确认弹窗(错误提示 + hint + 人设折叠区 + 输入区 + toggle)
  *   - .chat-history-*              历史消息页
  *   - .chat-calendar-generate-btn  日历视图顶栏「生成概要」按钮
  *   - .story-archive-summary-btn   故事存档页「故事概要」按钮
+ *
+ *   外壳(背景、圆角、宽度、阴影、动画)由 AcModal 提供
+ *   关闭按钮 ✕ 由 AcModal 提供
+ *   底部按钮由 .ac-btn / .ac-btn-primary / .ac-btn-secondary 提供
  *
  *   作用域约定:统一以 .app-shell[data-app-id="chat"] 开头,
  *   跟项目其他 chat-app 模块同款。
  * ============================================ */
 
-/* ===== 通用弹窗遮罩 + 卡片 ===== */
-.app-shell[data-app-id="chat"] .summary-range-modal-overlay,
-.app-shell[data-app-id="chat"] .summary-edit-modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.45);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-    padding: 16px;
-    box-sizing: border-box;
+/* 让 body 内容贴紧弹窗(去掉 AcModal 默认 36px 顶部 padding) */
+.app-shell[data-app-id="chat"] .summary-range-modal .ac-modal-body,
+.app-shell[data-app-id="chat"] .summary-edit-modal .ac-modal-body {
+    padding: 0 2px;
+    text-align: left;
 }
 
-.app-shell[data-app-id="chat"] .summary-range-modal,
-.app-shell[data-app-id="chat"] .summary-edit-modal {
-    background: #FFFFFF;
-    border-radius: 18px;
-    width: 100%;
-    max-width: 420px;
-    max-height: 60vh;
-    overflow-y: auto;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.18);
-    padding: 16px 14px;
-    box-sizing: border-box;
-    /* ★ v0.66 隐藏滚动条但保持滚动功能 */
-    scrollbar-width: none;       /* Firefox */
-    -ms-overflow-style: none;     /* IE/Edge */
-}
-/* WebKit 浏览器隐藏滚动条 */
-.app-shell[data-app-id="chat"] .summary-range-modal::-webkit-scrollbar,
-.app-shell[data-app-id="chat"] .summary-edit-modal::-webkit-scrollbar {
-    display: none;
-}
-
-/* ===== 概要范围选择弹窗 ===== */
-.app-shell[data-app-id="chat"] .summary-range-modal-header {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    margin-bottom: 12px;
-    position: relative;
-}
-.app-shell[data-app-id="chat"] .summary-range-modal-title {
-    font-size: 17px;
-    font-weight: 700;
-    color: #222;
-    padding-right: 32px;
-}
-.app-shell[data-app-id="chat"] .summary-range-modal-subtitle {
-    font-size: 12px;
-    color: #8E8E93;
-}
-.app-shell[data-app-id="chat"] .summary-range-modal-close {
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 28px;
-    height: 28px;
-    border: none;
-    background: rgba(0, 0, 0, 0.04);
-    border-radius: 14px;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: #666;
-}
-.app-shell[data-app-id="chat"] .summary-range-modal-close svg {
-    width: 16px;
-    height: 16px;
-}
-.app-shell[data-app-id="chat"] .summary-range-modal-body {
-    margin: 8px 0 12px;
-}
-
-/* 故事模式块 */
-.app-shell[data-app-id="chat"] .summary-range-mode-block {
+/* ===== 概要范围选择弹窗(业务样式) ===== */
+.app-shell[data-app-id="chat"] .summary-range-modal .summary-range-mode-block {
     display: flex;
     align-items: center;
     gap: 12px;
@@ -202,42 +138,20 @@
     font-size: 13px;
 }
 
-/* footer */
-.app-shell[data-app-id="chat"] .summary-range-modal-footer {
-    margin-top: 8px;
-    border-top: 1px solid rgba(0, 0, 0, 0.06);
-    padding-top: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-.app-shell[data-app-id="chat"] .summary-range-modal-hint {
+/* 底部 hint 文字 */
+.app-shell[data-app-id="chat"] .summary-range-modal .summary-range-modal-hint {
     font-size: 12px;
     color: #8E8E93;
+    margin-top: 12px;
+    text-align: center;
 }
-.app-shell[data-app-id="chat"] .summary-range-modal-actions {
-    display: flex;
-    gap: 8px;
-    justify-content: flex-end;
-}
-.app-shell[data-app-id="chat"] .summary-range-btn {
-    padding: 8px 16px;
-    font-size: 13px;
-    border-radius: 14px;
-    border: 1px solid transparent;
-    cursor: pointer;
-    font-weight: 600;
-}
-.app-shell[data-app-id="chat"] .summary-range-btn-cancel {
-    background: rgba(0, 0, 0, 0.05);
-    color: #666;
-}
-.app-shell[data-app-id="chat"] .summary-range-btn-confirm {
-    background: linear-gradient(135deg, #A8C8EC, #F4A6CD);
-    color: #FFFFFF;
-}
-.app-shell[data-app-id="chat"] .summary-range-btn-confirm.is-disabled {
-    opacity: 0.4;
+
+/* 生成概要按钮 disabled 态(覆盖 AcModal 默认 disabled 样式) */
+.app-shell[data-app-id="chat"] .summary-range-modal .summary-range-btn-confirm.is-disabled:disabled,
+.app-shell[data-app-id="chat"] .summary-range-modal .ac-btn-primary.is-disabled:disabled {
+    background: #cccccc;
+    box-shadow: 0 3px 0 #aaaaaa;
+    opacity: 0.6;
     cursor: not-allowed;
 }
 
@@ -272,51 +186,8 @@
     vertical-align: middle;
 }
 
-/* ===== 概要编辑/确认弹窗 ===== */
-.app-shell[data-app-id="chat"] .summary-edit-modal-header {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-bottom: 12px;
-    position: relative;
-}
-.app-shell[data-app-id="chat"] .summary-edit-modal-title {
-    font-size: 17px;
-    font-weight: 700;
-    color: #222;
-    padding-right: 32px;
-}
-.app-shell[data-app-id="chat"] .summary-edit-modal-subtitle {
-    font-size: 12px;
-    color: #4A6FA5;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
-.app-shell[data-app-id="chat"] .summary-edit-modal-subtitle svg {
-    width: 14px;
-    height: 14px;
-}
-.app-shell[data-app-id="chat"] .summary-edit-modal-close {
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 28px;
-    height: 28px;
-    border: none;
-    background: rgba(0, 0, 0, 0.04);
-    border-radius: 14px;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: #666;
-}
-.app-shell[data-app-id="chat"] .summary-edit-modal-close svg {
-    width: 16px;
-    height: 16px;
-}
-.app-shell[data-app-id="chat"] .summary-edit-modal-hint {
+/* ===== 概要编辑/确认弹窗(业务样式) ===== */
+.app-shell[data-app-id="chat"] .summary-edit-modal .summary-edit-modal-hint {
     display: inline-flex;
     align-items: flex-start;
     gap: 8px;
@@ -513,50 +384,36 @@
     transform: translateX(20px);
 }
 
-/* actions */
-.app-shell[data-app-id="chat"] .summary-edit-modal-actions {
+/* footer 自定义布局:重新生成(左) + 取消/保存(右) */
+.app-shell[data-app-id="chat"] .summary-edit-modal .summary-edit-footer-wrap {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
     gap: 8px;
-    margin-top: 12px;
+    width: 100%;
 }
-.app-shell[data-app-id="chat"] .summary-edit-modal-actions-right {
+.app-shell[data-app-id="chat"] .summary-edit-modal .summary-edit-footer-right {
     display: flex;
     gap: 8px;
     margin-left: auto;
 }
-.app-shell[data-app-id="chat"] .summary-edit-btn {
-    padding: 8px 14px;
-    font-size: 13px;
-    border-radius: 14px;
-    border: 1px solid transparent;
-    cursor: pointer;
-    font-weight: 600;
+
+/* ★ 重新生成按钮:在 footer 用 ac-btn-secondary 时,加 svg 图标留点空间 */
+.app-shell[data-app-id="chat"] .summary-edit-modal .summary-edit-btn-reroll {
+    padding: 11px 16px;
     display: inline-flex;
     align-items: center;
     gap: 6px;
 }
-.app-shell[data-app-id="chat"] .summary-edit-btn svg {
+.app-shell[data-app-id="chat"] .summary-edit-modal .summary-edit-btn-reroll svg {
     width: 14px;
     height: 14px;
 }
-.app-shell[data-app-id="chat"] .summary-edit-btn-cancel {
-    background: rgba(0, 0, 0, 0.05);
-    color: #666;
-}
-.app-shell[data-app-id="chat"] .summary-edit-btn-reroll {
-    background: rgba(168, 200, 236, 0.16);
-    color: #4A6FA5;
-    border-color: rgba(168, 200, 236, 0.4);
-}
-.app-shell[data-app-id="chat"] .summary-edit-btn-save {
-    background: linear-gradient(135deg, #A8C8EC, #F4A6CD);
-    color: #FFFFFF;
-}
-.app-shell[data-app-id="chat"] .summary-edit-btn-save:disabled,
-.app-shell[data-app-id="chat"] .summary-edit-btn-save.saving {
-    opacity: 0.6;
+
+/* ★ 保存按钮 loading 态 */
+.app-shell[data-app-id="chat"] .summary-edit-modal .summary-edit-btn-save.saving,
+.app-shell[data-app-id="chat"] .summary-edit-modal .summary-edit-btn-save.generating {
+    opacity: 0.7;
 }
 
 /* ===== 历史消息页 ===== */

@@ -1,114 +1,311 @@
 /* ============================================
  * 软件管理模块样式
- * 设计：蓝色辅白色主，简洁大方，禁用渐变和emoji
+ * 设计：人设页风格 · 白色卡片 · 14px圆角 · 蓝色点缀
  * ============================================ */
 
-/* 页面容器 */
+/* ============================================
+ * 页面容器
+ * ============================================ */
 .sw-mgr-page {
-    padding: 0 16px 24px;
-}
-
-/* 内容区域 */
-.sw-mgr-content {
+    padding: 0 14px 24px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 16px;
 }
 
-/* 分区 */
-.sw-mgr-section {
-    background: #fff;
-    border-radius: 12px;
-    padding: 16px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+/* ============================================
+ * 卡片基础
+ * ============================================ */
+.sw-mgr-card {
+    background: #FFFFFF;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-.sw-mgr-section-title {
-    font-size: 17px;
+.sw-mgr-card__head {
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.sw-mgr-card__title {
+    font-size: 15px;
     font-weight: 600;
     color: #1d1d1f;
-    margin-bottom: 8px;
+    letter-spacing: -0.2px;
 }
 
-.sw-mgr-desc {
-    font-size: 13px;
-    color: #86868b;
-    margin: 0 0 16px 0;
+.sw-mgr-card__sub {
+    font-size: 12px;
+    color: rgba(60, 60, 67, 0.6);
+    margin: 0;
     line-height: 1.5;
 }
 
-/* 上传区域 */
+.sw-mgr-card__body {
+    padding: 14px 16px;
+}
+
+/* ============================================
+ * 标签页
+ * ============================================ */
+.sw-mgr-tabs {
+    display: flex;
+    gap: 6px;
+    padding: 4px;
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 10px;
+    margin-bottom: 16px;
+}
+
+.sw-mgr-tab {
+    flex: 1;
+    height: 34px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: transparent;
+    color: rgba(60, 60, 67, 0.7);
+}
+
+.sw-mgr-tab:hover {
+    color: #1d1d1f;
+}
+
+.sw-mgr-tab.is-active {
+    background: #FFFFFF;
+    color: #1d1d1f;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* ============================================
+ * 上传区域
+ * ============================================ */
 .sw-mgr-upload-zone {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
-    padding: 32px 16px;
-    background: #f9f9fb;
+    gap: 10px;
+    padding: 28px 20px;
+    background: rgba(0, 0, 0, 0.02);
+    border: 1.5px dashed rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    margin-bottom: 14px;
+}
+
+.sw-mgr-upload-icon {
+    width: 44px;
+    height: 44px;
+    background: rgba(10, 132, 255, 0.08);
     border-radius: 12px;
-    border: 2px dashed #d1d1d6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #0A84FF;
 }
 
 .sw-mgr-upload-hint {
     font-size: 12px;
-    color: #86868b;
+    color: rgba(60, 60, 67, 0.5);
     margin: 0;
+    text-align: center;
 }
 
-/* 注意事项 */
-.sw-mgr-notice {
-    font-size: 13px;
-    color: #86868b;
-    padding: 12px;
-    background: #FFF8E1;
+.sw-mgr-paste {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 20px 16px;
+    background: rgba(0, 0, 0, 0.02);
+    border: 1.5px dashed rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    margin-bottom: 14px;
+}
+
+.sw-mgr-paste__input,
+.sw-mgr-paste__name {
+    width: 100%;
+    box-sizing: border-box;
+    border: none;
     border-radius: 8px;
-    margin-top: 12px;
+    background: rgba(255, 255, 255, 0.72);
+    color: #1d1d1f;
 }
 
-.sw-mgr-notice strong {
-    color: #F57C00;
+.sw-mgr-paste__input {
+    min-height: 140px;
+    padding: 12px 14px;
+    font-size: 12px;
+    line-height: 1.5;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    resize: vertical;
 }
 
-/* 按钮 */
+.sw-mgr-paste__name {
+    padding: 10px 12px;
+    font-size: 13px;
+}
+
+.sw-mgr-paste__input:focus,
+.sw-mgr-paste__name:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.12);
+}
+
+.sw-mgr-paste .sw-mgr-btn {
+    align-self: center;
+}
+
+/* ============================================
+ * 插件格式说明
+ * ============================================ */
+.sw-mgr-plugin-format {
+    background: rgba(10, 132, 255, 0.04);
+    border: 1px solid rgba(10, 132, 255, 0.12);
+    border-radius: 10px;
+    margin: 14px 0;
+    overflow: hidden;
+}
+
+.sw-mgr-plugin-format summary {
+    padding: 12px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #0A84FF;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.sw-mgr-plugin-format summary::before {
+    content: '';
+    display: inline-block;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 5px 0 5px 8px;
+    border-color: transparent transparent transparent #0A84FF;
+    transition: transform 0.2s ease;
+}
+
+.sw-mgr-plugin-format[open] summary::before {
+    transform: rotate(90deg);
+}
+
+.sw-mgr-plugin-format pre {
+    margin: 0;
+    padding: 12px 14px;
+    background: rgba(0, 0, 0, 0.03);
+    font-size: 11px;
+    line-height: 1.6;
+    color: #1d1d1f;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.sw-mgr-plugin-format p {
+    margin: 10px 14px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: rgba(60, 60, 67, 0.8);
+}
+
+.sw-mgr-plugin-format p:last-child {
+    margin-bottom: 14px;
+}
+
+.sw-mgr-plugin-format code {
+    background: rgba(0, 0, 0, 0.05);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 11px;
+    color: #0A84FF;
+}
+
+/* ============================================
+ * 注意事项
+ * ============================================ */
+.sw-mgr-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 12px;
+    background: rgba(255, 149, 0, 0.08);
+    border: 1px solid rgba(255, 149, 0, 0.2);
+    border-radius: 8px;
+    margin-top: 14px;
+}
+
+.sw-mgr-notice__icon {
+    color: #FF9500;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.sw-mgr-notice__text {
+    font-size: 12px;
+    color: rgba(60, 60, 67, 0.9);
+    line-height: 1.5;
+}
+
+.sw-mgr-notice__text strong {
+    color: #FF9500;
+}
+
+/* ============================================
+ * 按钮
+ * ============================================ */
 .sw-mgr-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 10px 20px;
-    font-size: 15px;
+    gap: 5px;
+    height: 36px;
+    padding: 0 16px;
+    font-size: 14px;
     font-weight: 500;
     border: none;
     border-radius: 10px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.18s ease;
+    white-space: nowrap;
+}
+
+.sw-mgr-btn:active {
+    transform: scale(0.97);
 }
 
 .sw-mgr-btn--primary {
-    color: #fff;
-    background: #2196F3;
+    color: #FFFFFF;
+    background: #0A84FF;
 }
 
 .sw-mgr-btn--primary:hover {
-    background: #1976D2;
+    background: #0071E3;
 }
 
-.sw-mgr-btn--primary:active {
-    background: #1565C0;
+.sw-mgr-btn--secondary {
+    color: #0A84FF;
+    background: rgba(10, 132, 255, 0.1);
 }
 
-.sw-mgr-btn--small {
-    padding: 6px 14px;
-    font-size: 13px;
-    color: #fff;
-    background: #2196F3;
-    border-radius: 8px;
-}
-
-.sw-mgr-btn--small:hover {
-    background: #1976D2;
+.sw-mgr-btn--secondary:hover {
+    background: rgba(10, 132, 255, 0.15);
 }
 
 .sw-mgr-btn--danger {
+    color: #FFFFFF;
     background: #FF3B30;
 }
 
@@ -116,29 +313,49 @@
     background: #D32F2F;
 }
 
-/* 插件列表 */
+.sw-mgr-btn--small {
+    height: 30px;
+    padding: 0 12px;
+    font-size: 13px;
+    border-radius: 8px;
+}
+
+.sw-mgr-btn--full {
+    width: 100%;
+}
+
+/* ============================================
+ * 插件卡片
+ * ============================================ */
 .sw-mgr-plugin-list {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
 }
 
-/* 插件卡片 */
 .sw-mgr-plugin-card {
-    background: #f9f9fb;
-    border-radius: 12px;
-    padding: 14px;
+    background: #FFFFFF;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    transition: box-shadow 0.2s ease;
+}
+
+.sw-mgr-plugin-card:hover {
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.06);
 }
 
 .sw-mgr-plugin-card.is-disabled {
-    opacity: 0.6;
+    opacity: 0.55;
 }
 
 .sw-mgr-plugin-card__header {
+    padding: 14px 14px 10px;
     display: flex;
-    justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 12px;
+    justify-content: space-between;
+    gap: 12px;
 }
 
 .sw-mgr-plugin-card__info {
@@ -147,38 +364,66 @@
 }
 
 .sw-mgr-plugin-card__name {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 600;
     color: #1d1d1f;
+    margin-bottom: 4px;
+    letter-spacing: -0.2px;
 }
 
 .sw-mgr-plugin-card__meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 4px;
-    font-size: 12px;
-    color: #86868b;
+    gap: 6px;
+    font-size: 11px;
+    color: rgba(60, 60, 67, 0.5);
+}
+
+.sw-mgr-plugin-card__meta span {
+    display: inline-flex;
+    align-items: center;
+}
+
+.sw-mgr-plugin-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 6px;
+    background: rgba(48, 199, 130, 0.12);
+    color: #30C782;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 500;
+}
+
+.sw-mgr-plugin-card__body {
+    padding: 0 14px 14px;
 }
 
 .sw-mgr-plugin-card__actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(0, 0, 0, 0.04);
 }
 
-/* 开关 */
+/* ============================================
+ * 开关
+ * ============================================ */
 .sw-mgr-toggle {
     position: relative;
     display: inline-block;
     width: 51px;
     height: 31px;
     cursor: pointer;
+    flex-shrink: 0;
 }
 
 .sw-mgr-toggle input {
     opacity: 0;
     width: 0;
     height: 0;
+    position: absolute;
 }
 
 .sw-mgr-toggle__track {
@@ -198,9 +443,9 @@
     left: 2px;
     width: 27px;
     height: 27px;
-    background: #fff;
+    background: #FFFFFF;
     border-radius: 50%;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
     transition: transform 0.2s ease;
 }
 
@@ -212,10 +457,77 @@
     transform: translateX(20px);
 }
 
-/* 空状态 */
+.sw-mgr-toggle input:disabled + .sw-mgr-toggle__track {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* ============================================
+ * 空状态
+ * ============================================ */
 .sw-mgr-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 32px 20px;
     text-align: center;
-    padding: 32px 16px;
-    color: #86868b;
+}
+
+.sw-mgr-empty__icon {
+    width: 48px;
+    height: 48px;
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(60, 60, 67, 0.3);
+}
+
+.sw-mgr-empty__text {
     font-size: 14px;
+    color: rgba(60, 60, 67, 0.5);
+}
+
+/* ============================================
+ * 危险操作
+ * ============================================ */
+.sw-mgr-card--danger {
+    border-color: rgba(255, 59, 48, 0.15);
+}
+
+.sw-mgr-card--danger .sw-mgr-card__head {
+    border-bottom-color: rgba(255, 59, 48, 0.08);
+}
+
+.sw-mgr-card--danger .sw-mgr-card__title {
+    color: #FF3B30;
+}
+
+.sw-mgr-danger-hint {
+    font-size: 12px;
+    color: rgba(60, 60, 67, 0.5);
+    margin: 10px 0 0;
+    line-height: 1.5;
+}
+
+/* ============================================
+ * 响应式
+ * ============================================ */
+@media (max-width: 374px) {
+    .sw-mgr-page {
+        padding: 0 12px 20px;
+    }
+
+    .sw-mgr-plugin-card__actions {
+        gap: 6px;
+    }
+
+    .sw-mgr-btn--small {
+        height: 28px;
+        padding: 0 10px;
+        font-size: 12px;
+    }
 }

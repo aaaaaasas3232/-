@@ -1,85 +1,97 @@
 /* ============================================
  * 数据库管理模块样式
- * 设计：蓝色辅白色主，简洁大方，禁用渐变和emoji
+ * 设计语言：人设主页风格
  * ============================================ */
 
-/* 页面容器 */
+/* ---------- 容器 ---------- */
 .db-mgr-page {
-    padding: 0 16px 24px;
+    padding: 4px 0 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
 }
 
-/* 标签导航 */
+/* ---------- 标签导航（Segmented Tabs）---------- */
 .db-mgr-tabs {
     display: flex;
-    gap: 8px;
-    padding: 12px 0;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-    margin-bottom: 16px;
+    gap: 4px;
+    padding: 3px;
+    background: rgba(120, 120, 128, 0.12);
+    border-radius: 10px;
+    margin: 0 16px;
 }
 
 .db-mgr-tab {
     flex: 1;
-    padding: 8px 12px;
-    font-size: 14px;
-    font-weight: 500;
-    color: #666;
-    background: #f5f5f7;
-    border: none;
+    appearance: none;
+    border: 0;
     border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(60, 60, 67, 0.72);
+    background: transparent;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.18s ease;
+    font-family: inherit;
+    -webkit-tap-highlight-color: transparent;
 }
 
-.db-mgr-tab:hover {
-    background: #e8e8ed;
+.db-mgr-tab:active {
+    transform: scale(0.97);
 }
 
 .db-mgr-tab.is-active {
-    color: #fff;
-    background: #2196F3;
-}
-
-/* 内容区域 */
-.db-mgr-content {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-/* 分区 */
-.db-mgr-section {
-    background: #fff;
-    border-radius: 12px;
-    padding: 16px;
+    color: #0A84FF;
+    background: #FFFFFF;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
-.db-mgr-section-title {
-    font-size: 17px;
-    font-weight: 600;
-    color: #1d1d1f;
-    margin-bottom: 8px;
+/* ---------- 内容区 ---------- */
+.db-mgr-content {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 0 16px;
 }
 
-.db-mgr-section-title--danger {
-    color: #FF3B30;
+/* ---------- 卡片区块 ---------- */
+.db-mgr-card {
+    background: #FFFFFF;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-.db-mgr-hint {
-    font-size: 12px;
-    color: #86868b;
-    margin: 8px 0 0 0;
-    line-height: 1.5;
+.db-mgr-card__head {
+    padding: 12px 16px 10px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    background: #F8F8FA;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
 }
 
-.db-mgr-desc {
+.db-mgr-card__title {
     font-size: 13px;
-    color: #86868b;
-    margin: 0 0 16px 0;
-    line-height: 1.5;
+    font-weight: 700;
+    color: var(--settings-color-label, #000);
+    letter-spacing: 0.005em;
 }
 
-/* ============ 数据表浏览：分类 ============ */
+.db-mgr-card__sub {
+    font-size: 11px;
+    color: rgba(60, 60, 67, 0.5);
+    line-height: 1.4;
+}
+
+.db-mgr-card__body {
+    padding: 14px 16px;
+}
+
+/* ---------- 数据表分类列表 ---------- */
 .db-mgr-categories {
     display: flex;
     flex-direction: column;
@@ -87,27 +99,28 @@
 }
 
 .db-mgr-category {
-    background: #f9f9fb;
-    border-radius: 10px;
-    padding: 12px;
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 12px;
+    padding: 12px 14px;
 }
 
 .db-mgr-category__head {
     display: flex;
-    flex-direction: column;
-    gap: 2px;
+    align-items: baseline;
+    gap: 8px;
     margin-bottom: 10px;
 }
 
 .db-mgr-category__label {
-    font-size: 14px;
-    font-weight: 600;
-    color: #1d1d1f;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--settings-color-label, #1c1c1e);
 }
 
 .db-mgr-category__desc {
-    font-size: 12px;
-    color: #86868b;
+    font-size: 11px;
+    color: rgba(60, 60, 67, 0.5);
 }
 
 .db-mgr-category__stores {
@@ -116,49 +129,70 @@
     gap: 6px;
 }
 
+/* ---------- 表按钮 ---------- */
 .db-mgr-store-btn {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
     padding: 10px 12px;
-    background: #fff;
+    background: #FFFFFF;
     border: 1px solid rgba(0, 0, 0, 0.06);
-    border-radius: 8px;
+    border-radius: 10px;
     cursor: pointer;
-    transition: background 0.15s ease;
+    transition: all 0.15s ease;
     text-align: left;
+    width: 100%;
+    font-family: inherit;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .db-mgr-store-btn:hover {
-    background: #f0f7ff;
-    border-color: #2196F3;
+    background: rgba(10, 132, 255, 0.04);
+    border-color: rgba(10, 132, 255, 0.2);
+}
+
+.db-mgr-store-btn:active {
+    transform: scale(0.99);
+    background: rgba(10, 132, 255, 0.08);
 }
 
 .db-mgr-store-btn__name {
-    font-family: 'SF Mono', Menlo, monospace;
-    font-size: 13px;
-    color: #1d1d1f;
-    font-weight: 500;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: #0A84FF;
 }
 
 .db-mgr-store-btn__label {
     font-size: 12px;
-    color: #86868b;
+    color: rgba(60, 60, 67, 0.6);
+    line-height: 1.4;
 }
 
-/* ============ 数据表详情 ============ */
+.db-mgr-store-btn__meta {
+    font-size: 10px;
+    color: rgba(60, 60, 67, 0.4);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    margin-top: 2px;
+}
+
+/* ---------- 数据表详情 ---------- */
 .db-mgr-store-detail {
-    background: #fff;
-    border-radius: 12px;
-    padding: 16px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    background: #FFFFFF;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .db-mgr-store-detail__head {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 12px;
+    padding: 12px 16px;
+    background: #F8F8FA;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .db-mgr-store-detail__title {
@@ -169,92 +203,76 @@
 }
 
 .db-mgr-store-detail__name {
-    font-family: 'SF Mono', Menlo, monospace;
-    font-size: 15px;
-    font-weight: 600;
-    color: #1d1d1f;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 14px;
+    font-weight: 700;
+    color: #0A84FF;
 }
 
 .db-mgr-store-detail__label {
-    font-size: 12px;
-    color: #86868b;
-}
-
-.db-mgr-back-btn {
-    padding: 6px 12px;
-    font-size: 14px;
-    color: #2196F3;
-    background: transparent;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-}
-
-.db-mgr-back-btn:hover {
-    background: rgba(33, 150, 243, 0.08);
+    font-size: 11px;
+    color: rgba(60, 60, 67, 0.5);
+    margin-top: 2px;
 }
 
 .db-mgr-store-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 14px;
+    background: rgba(120, 120, 128, 0.04);
     font-size: 12px;
-    color: #86868b;
-    padding: 8px 12px;
-    background: #f9f9fb;
-    border-radius: 6px;
-    margin-bottom: 12px;
+    color: rgba(60, 60, 67, 0.6);
 }
 
 .db-mgr-store-meta code {
-    font-family: 'SF Mono', Menlo, monospace;
-    background: #fff;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    background: rgba(10, 132, 255, 0.1);
+    color: #0A84FF;
     padding: 1px 6px;
-    border-radius: 3px;
+    border-radius: 4px;
+    font-size: 11px;
 }
 
-.db-mgr-link-btn {
-    padding: 0;
-    background: none;
-    border: none;
-    color: #FF3B30;
-    font-size: 12px;
-    cursor: pointer;
-    text-decoration: underline;
-}
-
-.db-mgr-link-btn:hover {
-    color: #D32F2F;
-}
-
-/* ============ 记录列表 ============ */
+/* ---------- 记录列表 ---------- */
 .db-mgr-record-list {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    padding: 12px 14px;
 }
 
 .db-mgr-record {
-    background: #f9f9fb;
-    border-radius: 8px;
-    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: box-shadow 0.15s;
+}
+
+.db-mgr-record:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .db-mgr-record--editing {
-    background: #F0F7FF;
-    border: 1px solid #2196F3;
+    background: rgba(10, 132, 255, 0.04);
+    border-color: rgba(10, 132, 255, 0.3);
 }
 
 .db-mgr-record__head {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 6px;
-    gap: 8px;
+    padding: 10px 12px;
+    gap: 10px;
 }
 
 .db-mgr-record__key {
-    font-family: 'SF Mono', Menlo, monospace;
-    font-size: 13px;
-    font-weight: 500;
-    color: #1d1d1f;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--settings-color-label, #1c1c1e);
     word-break: break-all;
 }
 
@@ -266,175 +284,279 @@
 
 .db-mgr-record__preview {
     margin: 0;
-    padding: 8px;
-    background: #fff;
-    border-radius: 4px;
-    font-family: 'SF Mono', Menlo, monospace;
-    font-size: 11px;
+    padding: 10px 12px;
+    background: #F8F8FA;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 10.5px;
     color: #515154;
     line-height: 1.5;
     white-space: pre-wrap;
     word-break: break-all;
     max-height: 120px;
     overflow: auto;
+    border-top: 1px solid rgba(0, 0, 0, 0.04);
 }
 
 .db-mgr-record__editor {
     width: 100%;
-    padding: 10px;
-    font-family: 'SF Mono', Menlo, monospace;
-    font-size: 12px;
+    padding: 12px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 11px;
     line-height: 1.5;
-    color: #1d1d1f;
-    background: #fff;
-    border: 1px solid #d1d1d6;
-    border-radius: 6px;
+    color: var(--settings-color-label, #1c1c1e);
+    background: #FFFFFF;
+    border: none;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
     resize: vertical;
     box-sizing: border-box;
-}
-
-.db-mgr-record__editor:focus {
     outline: none;
-    border-color: #2196F3;
 }
 
 .db-mgr-record__hint {
-    margin-top: 6px;
-    font-size: 12px;
-    color: #86868b;
+    padding: 8px 12px;
+    font-size: 11px;
+    color: rgba(60, 60, 67, 0.5);
+    background: #F8F8FA;
+    border-top: 1px solid rgba(0, 0, 0, 0.04);
 }
 
-/* ============ 导出行 ============ */
-.db-mgr-export-list {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.db-mgr-export-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 12px;
-    background: #f9f9fb;
-    border-radius: 8px;
-}
-
-.db-mgr-export-row__info {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
-}
-
-.db-mgr-export-row__name {
-    font-family: 'SF Mono', Menlo, monospace;
-    font-size: 13px;
-    color: #1d1d1f;
-}
-
-.db-mgr-export-row__label {
-    font-size: 12px;
-    color: #86868b;
-}
-
-/* ============ 表单行 ============ */
-.db-mgr-form-row {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-bottom: 12px;
-}
-
-.db-mgr-form-label {
-    font-size: 13px;
-    font-weight: 500;
-    color: #1d1d1f;
-}
-
-.db-mgr-form-select {
-    padding: 10px 12px;
-    font-size: 14px;
-    color: #1d1d1f;
-    background: #fff;
-    border: 1px solid #d1d1d6;
-    border-radius: 8px;
-    appearance: none;
-}
-
-.db-mgr-form-select:focus {
-    outline: none;
-    border-color: #2196F3;
-}
-
-/* ============ 按钮 ============ */
+/* ---------- 按钮 ---------- */
 .db-mgr-btn {
+    appearance: none;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 10px 20px;
-    font-size: 15px;
-    font-weight: 500;
+    gap: 5px;
+    padding: 7px 14px;
+    font-size: 12px;
+    font-weight: 600;
     border: none;
-    border-radius: 10px;
+    border-radius: 999px;
     cursor: pointer;
-    transition: all 0.2s ease;
-    color: #1d1d1f;
-    background: #f5f5f7;
+    transition: all 0.15s ease;
+    font-family: inherit;
+    -webkit-tap-highlight-color: transparent;
 }
 
-.db-mgr-btn:hover {
-    background: #e8e8ed;
+.db-mgr-btn:active {
+    transform: scale(0.97);
 }
 
 .db-mgr-btn--primary {
-    color: #fff;
-    background: #2196F3;
+    color: #FFFFFF;
+    background: #0A84FF;
+    box-shadow: 0 2px 6px rgba(10, 132, 255, 0.2);
 }
 
 .db-mgr-btn--primary:hover {
-    background: #1976D2;
+    background: #0070E0;
 }
 
-.db-mgr-btn--small {
-    padding: 5px 12px;
-    font-size: 12px;
-    border-radius: 6px;
+.db-mgr-btn--secondary {
+    color: rgba(60, 60, 67, 0.7);
+    background: rgba(120, 120, 128, 0.1);
+}
+
+.db-mgr-btn--secondary:hover {
+    background: rgba(120, 120, 128, 0.16);
+    color: rgba(60, 60, 67, 0.9);
 }
 
 .db-mgr-btn--danger {
-    color: #fff;
+    color: #FFFFFF;
     background: #FF3B30;
+    box-shadow: 0 2px 6px rgba(255, 59, 48, 0.2);
 }
 
 .db-mgr-btn--danger:hover {
     background: #D32F2F;
 }
 
-/* ============ 其它 ============ */
-.db-mgr-empty {
-    text-align: center;
-    padding: 24px 16px;
-    color: #86868b;
-    font-size: 14px;
+.db-mgr-btn--small {
+    padding: 5px 12px;
+    font-size: 11px;
 }
 
-.db-mgr-error {
-    padding: 10px 12px;
-    background: #FFF3E0;
-    color: #D32F2F;
+.db-mgr-btn--icon {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 50%;
+    font-size: 16px;
+}
+
+/* ---------- 返回按钮 ---------- */
+.db-mgr-back-btn {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    font-size: 18px;
+    color: #0A84FF;
+    background: rgba(10, 132, 255, 0.1);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.db-mgr-back-btn:hover {
+    background: rgba(10, 132, 255, 0.18);
+}
+
+.db-mgr-back-btn:active {
+    transform: scale(0.95);
+}
+
+/* ---------- 一致性对账 ---------- */
+.db-mgr-audit {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.db-mgr-audit-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.db-mgr-audit-summary.is-ok {
+    background: rgba(52, 199, 89, 0.1);
+    color: #1f8a3a;
+}
+
+.db-mgr-audit-summary.is-warn {
+    background: rgba(255, 159, 10, 0.1);
+    color: #B85C00;
+}
+
+.db-mgr-audit-block {
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
+    padding: 12px 14px;
+}
+
+.db-mgr-audit-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--settings-color-label, #1c1c1e);
+    margin-bottom: 4px;
+}
+
+.db-mgr-audit-why {
+    font-size: 11px;
+    color: rgba(60, 60, 67, 0.6);
+    line-height: 1.5;
+    margin: 4px 0 8px;
+}
+
+.db-mgr-audit-why code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    background: rgba(10, 132, 255, 0.08);
+    color: #0A84FF;
+    padding: 1px 4px;
+    border-radius: 3px;
+}
+
+.db-mgr-audit-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.db-mgr-audit-tag {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: rgba(120, 120, 128, 0.08);
+    color: rgba(60, 60, 67, 0.7);
+}
+
+.db-mgr-audit-counts {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.db-mgr-audit-count {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 10px;
     border-radius: 8px;
-    font-size: 13px;
-    margin-bottom: 12px;
+    background: #F8F8FA;
+    font-size: 10px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
+.db-mgr-audit-count.is-empty {
+    opacity: 0.5;
+}
+
+.db-mgr-audit-count b {
+    color: #0A84FF;
+    font-weight: 600;
+}
+
+/* ---------- localStorage 清单 ---------- */
+.db-mgr-ls-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.db-mgr-ls-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 2px 12px;
+    padding: 10px 12px;
+    background: rgba(120, 120, 128, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    border-radius: 10px;
+}
+
+.db-mgr-ls-key {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 11px;
+    color: var(--settings-color-label, #1c1c1e);
+    word-break: break-all;
+    font-weight: 500;
+}
+
+.db-mgr-ls-desc {
+    font-size: 11px;
+    color: rgba(60, 60, 67, 0.5);
+    line-height: 1.4;
+}
+
+.db-mgr-ls-size {
+    font-size: 11px;
+    font-weight: 600;
+    color: #0A84FF;
+    white-space: nowrap;
+}
+
+/* ---------- 诊断结果 ---------- */
 .db-mgr-import-result {
     margin: 0;
     padding: 12px;
-    background: #f9f9fb;
-    border-radius: 6px;
-    font-family: 'SF Mono', Menlo, monospace;
-    font-size: 11px;
+    background: #F8F8FA;
+    border-radius: 10px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 10px;
     color: #515154;
     white-space: pre-wrap;
     word-break: break-all;
@@ -442,41 +564,91 @@
     overflow: auto;
 }
 
-/* ============ 确认框 ============ */
+/* ---------- 确认框 ---------- */
 .db-mgr-confirm-box {
-    background: #FFF3E0;
-    border: 2px solid #FF3B30;
+    background: rgba(255, 59, 48, 0.06);
+    border: 1px solid rgba(255, 59, 48, 0.2);
     border-radius: 12px;
-    padding: 16px;
-    margin-top: 8px;
+    padding: 14px;
+    margin-top: 10px;
 }
 
 .db-mgr-confirm-text {
-    font-size: 14px;
-    color: #1d1d1f;
-    margin: 0 0 8px 0;
+    font-size: 13px;
+    color: var(--settings-color-label, #1c1c1e);
+    margin: 0 0 10px 0;
     font-weight: 500;
+    line-height: 1.5;
 }
 
 .db-mgr-confirm-list {
-    font-size: 13px;
-    color: #515154;
-    margin: 0 0 8px 0;
-    padding-left: 20px;
-}
-
-.db-mgr-confirm-list li {
-    margin: 4px 0;
+    font-size: 12px;
+    color: rgba(60, 60, 67, 0.7);
+    margin: 0 0 10px 0;
+    padding-left: 18px;
+    line-height: 1.8;
 }
 
 .db-mgr-confirm-warning {
-    font-size: 14px;
+    font-size: 13px;
     color: #FF3B30;
-    margin: 0 0 12px 0;
+    margin: 0 0 14px 0;
     font-weight: 600;
 }
 
 .db-mgr-confirm-actions {
     display: flex;
     gap: 8px;
+    justify-content: flex-end;
+}
+
+/* ---------- 其它 ---------- */
+.db-mgr-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: rgba(60, 60, 67, 0.5);
+    font-size: 13px;
+}
+
+.db-mgr-error {
+    padding: 10px 14px;
+    background: rgba(255, 59, 48, 0.08);
+    color: #D32F2F;
+    border-radius: 10px;
+    font-size: 12px;
+    margin-bottom: 12px;
+    line-height: 1.5;
+}
+
+.db-mgr-link-btn {
+    padding: 2px 8px;
+    background: rgba(255, 59, 48, 0.1);
+    color: #FF3B30;
+    border: none;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-family: inherit;
+}
+
+.db-mgr-link-btn:hover {
+    background: rgba(255, 59, 48, 0.18);
+}
+
+.db-mgr-hint {
+    font-size: 11px;
+    color: rgba(60, 60, 67, 0.5);
+    margin: 6px 0 0 0;
+    line-height: 1.5;
+}
+
+/* ---------- 危险操作卡片 ---------- */
+.db-mgr-card--danger .db-mgr-card__head {
+    background: rgba(255, 59, 48, 0.04);
+}
+
+.db-mgr-card--danger .db-mgr-card__title {
+    color: #FF3B30;
 }

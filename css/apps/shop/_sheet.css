@@ -1,0 +1,163 @@
+/* 四叶草 · 弹层
+ *
+ * 不复用 AcModal：那套是动森风 squircle + 右上角凹陷的叉，
+ * 和这里的调子不搭。这是自己的一套：从底部升起、只有上面两个角是圆的、
+ * 顶上一条小握把、点遮罩关闭、**没有叉**。
+ *
+ * ★ max-height 用 100% 不用 80vh。
+ *   vh 是**浏览器视口**高度，而这是个手机模拟器 —— 弹层活在 .app-shell 里。
+ *   桌面上 80vh 往往比手机屏还高，弹层会顶出屏幕、标题跑到状态栏后面。
+ */
+
+.app-shell[data-app-id="shop"] .sp-sheet-mask {
+    position: absolute;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: flex-end;
+    background: var(--sp-overlay);
+    animation: spMaskIn 0.2s ease;
+}
+
+@keyframes spMaskIn { from { opacity: 0; } to { opacity: 1; } }
+
+.app-shell[data-app-id="shop"] .sp-sheet {
+    width: 100%;
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+    border-radius: 20px 20px 0 0;
+    background: var(--sp-elevated);
+    box-shadow: 0 -8px 32px var(--sp-shadow);
+    animation: spSheetIn 0.26s cubic-bezier(0.32, 0.72, 0, 1);
+    padding-bottom: var(--app-safe-bottom, 0px);
+}
+
+@keyframes spSheetIn {
+    from { transform: translateY(14%); opacity: 0.6; }
+    to { transform: none; opacity: 1; }
+}
+
+.app-shell[data-app-id="shop"] .sp-sheet--sm { max-height: 46%; }
+.app-shell[data-app-id="shop"] .sp-sheet--md { max-height: 68%; }
+.app-shell[data-app-id="shop"] .sp-sheet--lg { max-height: 88%; }
+.app-shell[data-app-id="shop"] .sp-sheet--full { max-height: 100%; height: 100%; }
+
+.app-shell[data-app-id="shop"] .sp-sheet__grip {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 4px;
+    margin: 8px auto 2px;
+    border-radius: 2px;
+    background: var(--sp-line-strong);
+}
+
+.app-shell[data-app-id="shop"] .sp-sheet__head {
+    flex: 0 0 auto;          /* 标题永远可见 */
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 18px 8px;
+}
+
+.app-shell[data-app-id="shop"] .sp-sheet__title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 620;
+    color: var(--sp-text);
+}
+
+.app-shell[data-app-id="shop"] .sp-sheet__desc {
+    margin: 3px 0 0;
+    font-size: 12px;
+    color: var(--sp-text-3);
+    line-height: 1.6;
+}
+
+.app-shell[data-app-id="shop"] .sp-sheet__body {
+    flex: 1 1 auto;
+    min-height: 0;           /* 少了 overflow-y 不生效 */
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 6px 18px 12px;
+}
+
+.app-shell[data-app-id="shop"] .sp-sheet__foot {
+    flex: 0 0 auto;          /* 按钮永远可见 */
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 18px 16px;
+    border-top: 1px solid var(--sp-line-soft);
+    background: var(--sp-elevated);
+}
+
+/* ── 弹层里的几块共用件 ───────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-modes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 9px;
+    margin-bottom: 16px;
+}
+
+.app-shell[data-app-id="shop"] .sp-modes__btn {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 11px 12px;
+    border: 1px solid var(--sp-line);
+    border-radius: 12px;
+    background: var(--sp-surface);
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s ease;
+}
+
+.app-shell[data-app-id="shop"] .sp-modes__btn.is-on {
+    border-color: var(--sp-primary);
+    background: var(--sp-primary-soft);
+}
+
+.app-shell[data-app-id="shop"] .sp-modes__btn b { font-size: 13.5px; color: var(--sp-text); font-weight: 600; }
+.app-shell[data-app-id="shop"] .sp-modes__btn span { font-size: 11.5px; color: var(--sp-text-3); }
+
+.app-shell[data-app-id="shop"] .sp-ai-picks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+.app-shell[data-app-id="shop"] .sp-ai-pick {
+    padding: 7px 14px;
+    border: 1px solid var(--sp-line);
+    border-radius: 16px;
+    background: var(--sp-surface);
+    color: var(--sp-text-2);
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.app-shell[data-app-id="shop"] .sp-ai-pick.is-on {
+    border-color: var(--sp-primary);
+    background: var(--sp-primary);
+    color: var(--sp-on-primary);
+    font-weight: 560;
+}
+
+.app-shell[data-app-id="shop"] .sp-subject {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 10px 13px;
+    margin-bottom: 14px;
+    border-radius: 11px;
+    background: var(--sp-surface-2);
+}
+
+.app-shell[data-app-id="shop"] .sp-subject__k { font-size: 11.5px; color: var(--sp-text-3); flex: 0 0 auto; }
+.app-shell[data-app-id="shop"] .sp-subject__v { font-size: 13px; color: var(--sp-text); font-weight: 560; }

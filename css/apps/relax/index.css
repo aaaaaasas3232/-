@@ -1,0 +1,3445 @@
+/**
+ * relax-app / 样式入口
+ *
+ * 全部选择器都挂在 `.app-shell[data-app-id="relax"]` 下面 —— 不污染其他 app。
+ * 拆分原则:一个文件对应一块 UI,加东西时不用在 3000 行里找。
+ *
+ * ★ @import 必须带 ?v= 版本号,并且改了子文件就要跟着 +1。
+ *   index.html 上的 `?v=` 只能让浏览器重新拉 index.css 这一个文件,
+ *   下面这些 @import 进来的子文件是按各自的 URL 单独缓存的 ——
+ *   不带版本号的话,改完 _toys.css 刷新页面拿到的还是旧样式,
+ *   表现为「JS 明明生效了,CSS 死活不变」。
+ */
+
+/**
+ * relax-app / 设计 token + 全屏布局
+ *
+ * ★ 全屏沉浸的关键
+ *   框架默认给 `.app-content` 和 `.app-screen-panel` 留了内边距(见
+ *   css/core/50-app-shell.css:340 / 429),舞台需要顶到边,所以在这里
+ *   **只针对 relax** 把 padding 归零。别去改框架那两条,会影响所有 app。
+ */
+
+.app-shell[data-app-id="relax"] {
+    /* 糖果色 token —— 组件里只用变量,不散写 hex */
+    --rx-primary: #e8788f;
+    --rx-primary-soft: #ffb3c6;
+    --rx-primary-deep: #c85a75;
+    --rx-ink: #6b5560;
+    --rx-ink-soft: #a08b95;
+    --rx-surface: #fffaf6;
+    --rx-surface-2: #fff2f5;
+    --rx-line: rgba(107, 85, 96, 0.1);
+
+    /* 不规则圆角预设(动森风:四角都不一样) */
+    --rx-blob-lg: 42% 58% 46% 54% / 52% 44% 56% 48%;
+    --rx-blob-md: 38% 30% 34% 32% / 32% 36% 30% 34%;
+    --rx-squircle: 26px 30px 24px 32px;
+
+    --rx-shadow-soft: 0 10px 26px rgba(200, 90, 117, 0.14);
+    --rx-shadow-pop: 0 3px 0 var(--rx-primary-soft);
+
+    /*
+     * ── 底部 tab 栏的两个尺寸 ──────────────────────────────
+     *
+     * --rx-tabbar-bottom : tab 栏离舞台底边多高。**想整体上下挪就改这一个数。**
+     *   · 那个 34px 是「视觉留白」，跟指示条无关；
+     *   · var(--app-safe-bottom) 是框架给全屏 App 的让位高度（40px），
+     *     不加的话 tab 栏会被 home 指示条压住。非全屏时它是 0，写着也无害。
+     *
+     * --rx-tabbar-h : 抽屉/面板「要避让的下方高度」。
+     *   = tab 栏离底高度 + 60px（item 44px + 激活时 blob 顶出的 ~16px 净空）。
+     *   ★ 用表达式而不是再写一个魔法数字 —— 以前这两个值是各写各的，
+     *     改了 tab 栏位置就必须记得同步改抽屉，漏一次抽屉就会压住 tab 栏文字。
+     *   这是近似值，不要靠它做像素级对齐，真实定位走 sheet 自己的 bottom。
+     */
+    --rx-tabbar-bottom: calc(34px + var(--app-safe-bottom, 0px));
+    --rx-tabbar-h: calc(var(--rx-tabbar-bottom) + 60px);
+
+    --rx-ease-bounce: cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+/* 取消框架内边距,让舞台全屏 */
+.app-shell[data-app-id="relax"] .app-content { padding: 0; }
+.app-shell[data-app-id="relax"] .app-page { overflow: hidden; }
+
+/*
+ * ★ `.rx-root` 是 position:absolute,必须有个确定的定位祖先。
+ *   给 `.app-screen-panel` 补 position:relative + height:100%,
+ *   否则 rx-root 会往上找到 `.app-page-stack`(甚至 `.app-content`),
+ *   一旦框架改了那两层的 padding,舞台就会错位。锚在自己这层最稳。
+ */
+.app-shell[data-app-id="relax"] .app-screen-panel {
+    position: relative;
+    padding: 0;
+    height: 100%;
+    min-height: 100%;
+}
+
+.app-shell[data-app-id="relax"] .rx-root {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--rx-ink);
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* ============================
+   内联 SVG 图标
+   ============================
+   图标全部来自 js/apps/relax-app/components/icons.js(stroke 风格,
+   颜色跟 currentColor 走)。尺寸一律在 CSS 里定,SVG 上不写死宽高 ——
+   同一个图标在按钮里 15px、在小圆钮里 12px,靠这里的上下文规则区分。 */
+.app-shell[data-app-id="relax"] .rx-icon {
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+    display: block;
+}
+
+.app-shell[data-app-id="relax"] .rx-btn .rx-icon { width: 15px; height: 15px; }
+.app-shell[data-app-id="relax"] .rx-tile-badge .rx-icon { width: 12px; height: 12px; }
+.app-shell[data-app-id="relax"] .rx-swatch-check .rx-icon { width: 14px; height: 14px; }
+.app-shell[data-app-id="relax"] .rx-sound-row-del .rx-icon,
+.app-shell[data-app-id="relax"] .rx-library-del .rx-icon,
+.app-shell[data-app-id="relax"] .rx-deco-bar-close .rx-icon { width: 13px; height: 13px; }
+.app-shell[data-app-id="relax"] .rx-deco-remove .rx-icon { width: 14px; height: 14px; }
+.app-shell[data-app-id="relax"] .rx-deco-bar-btn .rx-icon { width: 13px; height: 13px; }
+
+/* ============================
+   通用文字 / 按钮
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-hint-text {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--rx-ink-soft);
+}
+
+.app-shell[data-app-id="relax"] .rx-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 11px 20px;
+    border: none;
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    transition: transform 0.16s, box-shadow 0.16s, background 0.16s;
+}
+
+.app-shell[data-app-id="relax"] .rx-btn:active {
+    transform: translateY(2px);
+}
+
+.app-shell[data-app-id="relax"] .rx-btn-block {
+    display: flex;
+    width: 100%;
+}
+
+.app-shell[data-app-id="relax"] .rx-btn-primary {
+    background: var(--rx-primary-soft);
+    color: #fff;
+    box-shadow: 0 3px 0 var(--rx-primary);
+}
+
+.app-shell[data-app-id="relax"] .rx-btn-primary:active {
+    box-shadow: 0 1px 0 var(--rx-primary);
+}
+
+.app-shell[data-app-id="relax"] .rx-btn-ghost {
+    background: #fff;
+    color: var(--rx-primary);
+    box-shadow: 0 3px 0 var(--rx-surface-2), inset 0 0 0 1.5px var(--rx-surface-2);
+}
+
+.app-shell[data-app-id="relax"] .rx-btn-ghost:active {
+    box-shadow: 0 1px 0 var(--rx-surface-2), inset 0 0 0 1.5px var(--rx-surface-2);
+}
+
+.app-shell[data-app-id="relax"] .rx-btn-danger {
+    background: #ffe3e3;
+    color: #d6516b;
+    box-shadow: 0 3px 0 #ffc4cc;
+}
+
+.app-shell[data-app-id="relax"] .rx-btn-danger:active {
+    box-shadow: 0 1px 0 #ffc4cc;
+}
+
+.app-shell[data-app-id="relax"] .rx-btn-row {
+    display: flex;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="relax"] .rx-btn-row .rx-btn {
+    flex: 1;
+}
+
+/* 「上传」按钮:外壳是 label,input 藏起来 */
+.app-shell[data-app-id="relax"] .rx-btn-file {
+    position: relative;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="relax"] .rx-btn-file input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+/* 小胶囊按钮(舞台浮动条用)
+   - 保留按钮里那个色阴影(底压感,是按钮设计的一部分)
+   - 不加外浮阴影,扁平融入舞台 */
+.app-shell[data-app-id="relax"] .rx-chip {
+    padding: 7px 14px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--rx-primary);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 2px 0 rgba(200, 90, 117, 0.18);
+    transition: background 0.16s, color 0.16s;
+}
+
+.app-shell[data-app-id="relax"] .rx-chip:active {
+    background: rgba(255, 255, 255, 0.78);
+    box-shadow: 0 2px 0 rgba(200, 90, 117, 0.18);
+}
+
+.app-shell[data-app-id="relax"] .rx-chip-quiet {
+    color: var(--rx-ink-soft);
+    box-shadow: 0 2px 0 rgba(107, 85, 96, 0.12);
+}
+
+.app-shell[data-app-id="relax"] .rx-chip-quiet:active {
+    box-shadow: 0 2px 0 rgba(107, 85, 96, 0.12);
+}
+
+/* 只有图标的 chip（灵动岛与小组件入口）：舞台浮动条已经有三个文字 chip 了，
+   再塞一个五个字的会换行，所以这个走圆形图标 */
+.app-shell[data-app-id="relax"] .rx-chip-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="relax"] .rx-chip-icon .rx-icon {
+    width: 16px;
+    height: 16px;
+}
+
+/* 空态卡 */
+.app-shell[data-app-id="relax"] .rx-empty-card {
+    padding: 18px;
+    border-radius: var(--rx-squircle);
+    background: var(--rx-surface-2);
+    text-align: left;
+}
+
+.app-shell[data-app-id="relax"] .rx-empty-title {
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--rx-primary);
+}
+
+.app-shell[data-app-id="relax"] .rx-empty-body {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.8;
+    color: var(--rx-ink-soft);
+}
+
+.app-shell[data-app-id="relax"] .rx-empty-body code {
+    padding: 1px 5px;
+    border-radius: 5px;
+    background: #fff;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    color: var(--rx-primary-deep);
+}
+
+/**
+ * relax-app / 舞台
+ *
+ * 层叠顺序(z-index):
+ *   背景 0 → 暗角 1 → 盘子 2 → 主体(盘内)→ 装饰 10+ → 浮动条 60 → 抽屉 70 → tab 栏 80
+ *
+ * ★ filter 只加在 `.rx-stage-bg` 这一层
+ *   如果把 blur 加在 `.rx-stage` 上,盘子和主体会一起被糊掉。
+ *   分层的代价是多一个绝对定位元素,换来「背景可以随便糊」。
+ */
+
+.app-shell[data-app-id="relax"] .rx-stage {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    touch-action: none;
+}
+
+.app-shell[data-app-id="relax"] .rx-stage-bg {
+    position: absolute;
+    /* 往外撑一点:blur 之后边缘会透出底色,-24px 把毛边推到屏幕外 */
+    inset: -24px;
+    z-index: 0;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
+    transition: background-color 0.3s ease, inset 0.28s ease;
+}
+
+/* 卡片模式下:rx-stage-bg 收缩到不超出 app-shell.card 的圆角(28px)
+ * 否则背景扩展部分会在四个角露出直角(被 app-shell.card overflow:hidden 裁切掉)
+ * 同时需要匹配 app-shell.card 的圆角,避免背景在角上被裁出直角边缘 */
+.app-shell.card[data-app-id="relax"] .rx-stage {
+    border-radius: inherit;
+}
+.app-shell.card[data-app-id="relax"] .rx-stage-bg {
+    inset: 0;
+    border-radius: inherit;
+}
+
+/* 顶部/底部压暗 — 已移除,舞台要求纯背景无渐变 */
+
+/* ============================
+   盘子
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-plate-wrap {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    z-index: 2;
+    width: 74%;
+    aspect-ratio: 1;
+    /* transform 由内联样式接管(scale + offset),这里只负责居中基准 */
+    margin-left: -37%;
+    margin-top: -37%;
+    transition: transform 0.28s var(--rx-ease-bounce);
+}
+
+.app-shell[data-app-id="relax"] .rx-plate-shadow {
+    position: absolute;
+    left: 6%;
+    right: 6%;
+    bottom: -4%;
+    height: 22%;
+    background: rgba(70, 45, 55, 0.24);
+    filter: blur(14px);
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="relax"] .rx-plate {
+    position: absolute;
+    inset: 0;
+    /* background / box-shadow / border-radius / clip-path 全由 plates.js 内联给 */
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.app-shell[data-app-id="relax"] .rx-plate-glaze {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="relax"] .rx-plate-inner {
+    position: absolute;
+    /* inset / border-radius 由 plates.js 按盘沿厚度内联给 */
+    /*
+     * ★ 故意 visible —— 盘子的圆角背景由 plates.js 的 background / clip-path 实现,
+     *   不再依赖此层的 overflow:hidden 裁切。
+     *   主体(气泡板 / 捏捏果冻 / 巧克力脆皮)的随机圆角格子经常被这里裁掉,
+     *   改成 visible 后板的边角能完整露出来;容器自身的圆角仍由 border-radius 给。
+     */
+    overflow: visible;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 三层套娃(解压4 风格):
+ *   rx-plate        = 奶茶色外圈 + 单层投影
+ *   rx-plate-inner  = 画布容器(白底 + 圆角 + inset 阴影)
+ *   rx-plate-center = 内切圆盘,matchInner 模式:占满 inner 的内容区,圆形
+ */
+.app-shell[data-app-id="relax"] .rx-plate-center {
+    position: absolute;
+    /* 同样的理由:让主体的圆角边缘不被裁 */
+    overflow: visible;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 关掉盘子时,主体直接铺在舞台上 */
+.app-shell[data-app-id="relax"] .rx-plate-inner--bare {
+    inset: 4%;
+    border-radius: 0;
+    overflow: visible;
+}
+
+/* fit:'stage' 的主体铺满整个舞台 */
+.app-shell[data-app-id="relax"] .rx-stage-toy-full {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ============================
+   主体宿主
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-toy-host {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.24s var(--rx-ease-bounce);
+}
+
+.app-shell[data-app-id="relax"] .rx-toy-slot {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.app-shell[data-app-id="relax"] .rx-toy-empty,
+.app-shell[data-app-id="relax"] .rx-toy-error {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-align: center;
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="relax"] .rx-toy-empty-ring {
+    width: 44px;
+    height: 44px;
+    margin-bottom: 4px;
+    border: 2.5px dashed rgba(107, 85, 96, 0.28);
+    border-radius: var(--rx-blob-lg);
+    animation: rxEmptyBreathe 3.2s ease-in-out infinite;
+}
+
+@keyframes rxEmptyBreathe {
+    0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.7; }
+    50%      { transform: scale(1.08) rotate(6deg); opacity: 1; }
+}
+
+.app-shell[data-app-id="relax"] .rx-toy-empty-text {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: rgba(107, 85, 96, 0.62);
+}
+
+.app-shell[data-app-id="relax"] .rx-toy-empty-hint {
+    margin: 0;
+    font-size: 11px;
+    color: rgba(107, 85, 96, 0.44);
+}
+
+.app-shell[data-app-id="relax"] .rx-toy-error {
+    font-size: 12px;
+    font-weight: 700;
+    color: #d6516b;
+}
+
+/* ============================
+   装饰
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-deco {
+    position: absolute;
+    /* 玩的时候不吃事件,免得挡住捏捏 */
+    pointer-events: none;
+    transition: filter 0.2s ease;
+}
+
+.app-shell[data-app-id="relax"] .rx-stage.is-editable .rx-deco {
+    pointer-events: auto;
+    cursor: grab;
+}
+
+.app-shell[data-app-id="relax"] .rx-deco-art,
+.app-shell[data-app-id="relax"] .rx-deco-art svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.app-shell[data-app-id="relax"] .rx-deco-art svg {
+    filter: drop-shadow(0 4px 8px rgba(70, 45, 55, 0.22));
+}
+
+/* ★ 自定义装饰(用户上传的 PNG/SVG):img 走 contain,免得超出框 */
+.app-shell[data-app-id="relax"] .rx-deco-custom-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+/* 选中态:虚线框 + 轻微浮起 */
+.app-shell[data-app-id="relax"] .rx-deco.is-selected::before {
+    content: "";
+    position: absolute;
+    inset: -10%;
+    border: 2px dashed rgba(255, 255, 255, 0.92);
+    border-radius: 18px;
+    box-shadow: 0 0 0 1.5px rgba(200, 90, 117, 0.45);
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="relax"] .rx-deco.is-dragging {
+    cursor: grabbing;
+}
+
+.app-shell[data-app-id="relax"] .rx-deco.is-dragging .rx-deco-art svg {
+    filter: drop-shadow(0 10px 16px rgba(70, 45, 55, 0.34));
+}
+
+.app-shell[data-app-id="relax"] .rx-deco-remove {
+    position: absolute;
+    top: -14%;
+    right: -14%;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    border-radius: 100% 46% 48% 100% / 44% 100% 46% 100%;
+    background: #fff;
+    color: #d6516b;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 3px 0 #ffc4cc;
+}
+
+.app-shell[data-app-id="relax"] .rx-deco-remove:active {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 #ffc4cc;
+}
+
+/* ============================
+   舞台浮动条
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-stage-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 60;
+    display: flex;
+    align-items: flex-start;
+    /* 三个按钮靠右排,左侧不占位 */
+    justify-content: flex-end;
+    gap: 10px;
+    /*
+     * ★ padding-top 要躲开状态栏。
+     *   relax 关掉了框架顶栏(topbar.visible:false),但手机壳的状态栏(时间 / 信号 /
+     *   灵动岛)是浮在 .app-shell 上面的,内容区从屏幕最顶端就开始了。
+     *   不留这 54px 的话「我的解压角」会跟时间叠在一起。
+     */
+    padding: 54px 16px 0;
+    transition: opacity 0.24s ease, transform 0.24s ease;
+}
+
+.app-shell[data-app-id="relax"] .rx-stage-bar.is-hidden {
+    opacity: 0;
+    transform: translateY(-14px);
+    pointer-events: none;
+}
+
+/* 装饰编辑模式下也别让舞台顶栏露出来,不然跟「返回调整」按钮打架 */
+.app-shell[data-app-id="relax"] .rx-stage-bar.is-deco-edit {
+    opacity: 0;
+    transform: translateY(-14px);
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="relax"] .rx-stage-bar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+/**
+ * relax-app / Tab 栏(简化版)
+ *
+ * 原液态 tab 栏由「白色胶囊栏 + 白色鼓包 + 彩色液体球 + 小灰点 + 文字标签」组成,
+ * 现在去掉胶囊栏容器,只保留按钮本身和它的彩色液体球 / 小灰点 / 文字标签。
+ * 按钮在「沉在底部的小圆点」和「浮起的彩色球」之间切换,本身不再有白鼓包。
+ *
+ * 视觉要点(原效果照搬过来的部分):
+ *   - tab-item 默认下沉,激活时被「托」出来
+ *   - 弹性曲线统一 cubic-bezier(0.34, 1.4, 0.64, 1)
+ *   - 允许打断:旧 blob 立刻退场(由 Vue 组件管)
+ *
+ * 几何:
+ *   - tabbar 自身只做一行布局,不再有 height / padding-top 算 item 高度的约束
+ *   - item 高度 = 自身高度 44px,内容区 = 44px
+ *   - 激活上浮 -32px 让 blob 顶出来
+ */
+
+.app-shell[data-app-id="relax"] .rx-tabbar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    /* 想把 tab 栏整体上下挪，改 _base.css 里的 --rx-tabbar-bottom 一个地方就行；
+       抽屉的避让高度 --rx-tabbar-h 是从它算出来的，会自动跟着走。 */
+    bottom: var(--rx-tabbar-bottom);
+    z-index: 80;
+    display: flex;
+    justify-content: space-evenly;
+    align-items: flex-end;
+    padding: 0 14px;
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="relax"] .rx-tabbar-shell {
+    /* 不再有胶囊:只是包一层,让按钮水平铺开 */
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-evenly;
+    width: 100%;
+    max-width: 380px;
+    height: 44px;
+    padding: 0;
+    margin: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+    pointer-events: auto;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+/* ============================
+   Tab item
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-tab-item {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    overflow: visible;
+    z-index: 1;
+    font-family: inherit;
+    /* 默认状态:小灰点居中显示在按钮里,文字标签贴在底部 */
+    transform: translateY(0);
+    transition: transform 0.6s var(--rx-ease-bounce);
+}
+
+/* 激活:整体稍稍「沉」下去,blob 反而被按得更紧贴桌面 */
+.app-shell[data-app-id="relax"] .rx-tab-item.is-active {
+    transform: translateY(2px);
+}
+
+/* 按下瞬间:再往里按一下,呼应 blob 的「按压感」 */
+.app-shell[data-app-id="relax"] .rx-tab-item.is-active:active {
+    transform: translateY(4px);
+    transition: transform 0.12s ease-out;
+}
+
+/* ============================
+   鼓包(原 .rx-tab-shape)—— 已删除,不再需要白色同色块
+   ============================ */
+
+/* ============================
+   Dot(未激活时的彩色小圆球)
+   - 用每个 tab 自己的 color,跟激活态的大矩形同色系
+   - 大小介于原来的 9px 灰点和激活态 60×44 矩形之间,做成看得清的圆球
+   - 顶部高光 + 触底阴影,跟 blob 同一套软糖语言
+   - 激活时 scale(0) 收回,留给大矩形登场
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-tab-dot {
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    box-shadow:
+        inset 0 -2px 0 rgba(0, 0, 0, 0.16),
+        inset 0 1px 0 rgba(255, 255, 255, 0.30),
+        0 3px 6px rgba(107, 85, 96, 0.22),
+        0 1px 0 rgba(107, 85, 96, 0.14);
+    transition: transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.45s ease;
+    z-index: 2;
+}
+
+.app-shell[data-app-id="relax"] .rx-tab-item.is-active .rx-tab-dot {
+    transform: scale(0);
+    opacity: 0;
+}
+
+/* ============================
+   Blob(液体块,激活时浮起来的不规则八圆角矩形)
+   - 默认形态:scale(0),圆球
+   - 激活形态:scale(1),八圆角矩形 (border-radius 用四个角的两个半径,做出柔和但不规则的有机感)
+   - 加 inset highlight + 双层投影,模拟被按下又弹起的软糖感
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-tab-blob {
+    --rx-tab-radius: 18px 22px 16px 24px / 22px 18px 24px 16px;   /* 不规则八圆角 */
+    position: absolute;
+    width: 60px;
+    height: 44px;
+    flex: 0 0 auto;
+    border-radius: var(--rx-tab-radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    z-index: 3;
+    transform: scale(0);
+    opacity: 0;
+    pointer-events: none;
+    will-change: transform, border-radius, box-shadow;
+    /* 主体阴影(浮起感) + 底部接触阴影(按压触底) + 顶部高光(糖面反光) */
+    box-shadow:
+        inset 0 -3px 0 rgba(0, 0, 0, 0.18),                 /* 底部内阴影:被按下的"压痕" */
+        inset 0 2px 0 rgba(255, 255, 255, 0.32),           /* 顶部高光:糖面亮带 */
+        0 6px 14px rgba(107, 85, 96, 0.28),                /* 浮起外阴影 */
+        0 2px 0 rgba(107, 85, 96, 0.18);                   /* 触底投影,强化按压层级 */
+}
+
+.app-shell[data-app-id="relax"] .rx-tab-blob.is-in {
+    animation: rxBlobIn 0.7s var(--rx-ease-bounce) forwards;
+}
+
+.app-shell[data-app-id="relax"] .rx-tab-blob.is-out {
+    animation: rxBlobOut 0.45s cubic-bezier(0.55, 0, 0.85, 0.35) forwards;
+}
+
+/* 入场:从圆球挤压成不规则矩形,带弹性回弹 */
+@keyframes rxBlobIn {
+    0%   { transform: scale(0)    rotate(0deg);  border-radius: 50%;                                          opacity: 0; }
+    20%  { transform: scale(0.55) rotate(-6deg); border-radius: 50%;                                          opacity: 1; }
+    45%  { transform: scale(1.16) rotate(3deg);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%;             }
+    65%  { transform: scale(0.92) rotate(-2deg); border-radius: 22px 18px 24px 16px / 18px 22px 16px 24px;     }
+    82%  { transform: scale(1.04) rotate(1deg);  border-radius: 16px 24px 18px 22px / 24px 16px 22px 18px;     }
+    100% { transform: scale(1)    rotate(0deg);  border-radius: var(--rx-tab-radius);                        opacity: 1; }
+}
+
+/* 退场:矩形收回到圆球再缩没 */
+@keyframes rxBlobOut {
+    0%   { transform: scale(1)    rotate(0deg);  border-radius: var(--rx-tab-radius);                        opacity: 1; }
+    40%  { transform: scale(1.10) rotate(4deg);  border-radius: 50%;                                          }
+    75%  { transform: scale(0.55) rotate(-3deg); border-radius: 50%;                                          }
+    100% { transform: scale(0)    rotate(0deg);  border-radius: 50%;                                         opacity: 0; }
+}
+
+/* blob 里的字:跟着浮起 / 沉下 */
+.app-shell[data-app-id="relax"] .rx-tab-blob-glyph {
+    display: inline-block;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0;
+    transform: translateY(8px);
+    opacity: 0;
+}
+
+.app-shell[data-app-id="relax"] .rx-tab-blob.is-in .rx-tab-blob-glyph {
+    animation: rxGlyphUp 0.7s var(--rx-ease-bounce) forwards;
+}
+
+.app-shell[data-app-id="relax"] .rx-tab-blob.is-out .rx-tab-blob-glyph {
+    animation: rxGlyphDown 0.45s cubic-bezier(0.55, 0, 0.85, 0.35) forwards;
+}
+
+@keyframes rxGlyphUp {
+    0%   { transform: translateY(10px) scale(0.4); opacity: 0; }
+    35%  { transform: translateY(-1px) scale(1.08); opacity: 1; }
+    65%  { transform: translateY(2px) scale(0.95); }
+    100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes rxGlyphDown {
+    0%   { transform: translateY(0) scale(1); opacity: 1; }
+    100% { transform: translateY(10px) scale(0.4); opacity: 0; }
+}
+
+/* ============================
+   Tab 文字标签(贴在按钮下方)
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-tab-label {
+    position: absolute;
+    bottom: -14px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--rx-ink-soft);
+    white-space: nowrap;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.app-shell[data-app-id="relax"] .rx-tab-item.is-active .rx-tab-label {
+    opacity: 0;
+    transform: translateY(6px);
+}
+
+/* 小屏:等比缩一档 */
+@media (max-width: 360px) {
+    .app-shell[data-app-id="relax"] .rx-tab-item { width: 40px; height: 40px; }
+    .app-shell[data-app-id="relax"] .rx-tab-blob { width: 54px; height: 40px; }
+}
+
+/**
+ * relax-app / 面板抽屉 + 通用控件
+ *
+ * ★ 抽屉高度 68vh,底部留出 tab 栏高度
+ *   抽屉用 transform 位移(不是改 height),这样 GPU 合成、不触发重排。
+ *   收起时 translateY(102%) 而不是 100% —— 多 2% 把阴影一起推出屏幕外。
+ */
+
+/*
+ * ★ 抽屉停在 tab 栏**上方**,不跟它重叠。
+ *   tab 栏现在只是底部一行按钮 + 激活时浮起的彩色球,所以抽屉的 bottom 直接
+ *   用 rx-tabbar-h + 一点净空,左右缩 8px 变成悬浮卡片,跟整体不规则语言更搭。
+ */
+.app-shell[data-app-id="relax"] .rx-sheet {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    /* +14px:激活的 blob 会顶出 tab 栏上沿约 18px,留点净空别压住面板文字 */
+    bottom: calc(var(--rx-tabbar-h) + 14px);
+    z-index: 70;
+    height: 62%;
+    display: flex;
+    flex-direction: column;
+    background: var(--rx-surface);
+    /* 四角不对称,呼应整体设计语言 */
+    border-radius: 30px 24px 22px 26px;
+    box-shadow: 0 14px 34px rgba(107, 85, 96, 0.22);
+    /* 多推 4% 把阴影也送出屏幕外,免得收起后底部留一道灰边 */
+    transform: translateY(calc(100% + var(--rx-tabbar-h) + 26px));
+    transition: transform 0.42s var(--rx-ease-bounce);
+}
+
+.app-shell[data-app-id="relax"] .rx-sheet.is-open {
+    transform: translateY(0);
+}
+
+/* 抓手:点一下回舞台 */
+.app-shell[data-app-id="relax"] .rx-sheet-grip {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 26px;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="relax"] .rx-sheet-grip-bar {
+    width: 42px;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(107, 85, 96, 0.18);
+    transition: background 0.2s ease, width 0.2s ease;
+}
+
+.app-shell[data-app-id="relax"] .rx-sheet-grip:active .rx-sheet-grip-bar {
+    width: 52px;
+    background: var(--rx-primary-soft);
+}
+
+.app-shell[data-app-id="relax"] .rx-sheet-scroll {
+    flex: 1 1 auto;
+    /* ★ flex 子项必加,否则 overflow-y 不生效 */
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    /* 抽屉已经躲开 tab 栏了,这里只需要常规内边距 */
+    padding: 4px 16px 18px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.app-shell[data-app-id="relax"] .rx-sheet-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+/* ============================
+   Section
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-section {
+    margin-bottom: 22px;
+}
+
+.app-shell[data-app-id="relax"] .rx-section-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.app-shell[data-app-id="relax"] .rx-section-title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    color: var(--rx-primary);
+}
+
+.app-shell[data-app-id="relax"] .rx-section-hint {
+    font-size: 11px;
+    color: var(--rx-ink-soft);
+}
+
+.app-shell[data-app-id="relax"] .rx-section-body > * + * {
+    margin-top: 12px;
+}
+
+/* ============================
+   子 tab
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-subtabs {
+    display: flex;
+    gap: 6px;
+    padding: 4px;
+    margin-bottom: 16px;
+    border-radius: 999px;
+    background: var(--rx-surface-2);
+}
+
+.app-shell[data-app-id="relax"] .rx-subtabs-mini {
+    margin-bottom: 12px;
+}
+
+.app-shell[data-app-id="relax"] .rx-subtab {
+    flex: 1;
+    padding: 9px 4px;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--rx-ink-soft);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.app-shell[data-app-id="relax"] .rx-subtab.is-active {
+    background: #fff;
+    color: var(--rx-primary);
+    box-shadow: 0 2px 6px rgba(200, 90, 117, 0.16);
+}
+
+/* ============================
+   素材瓦片
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-tile-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+    gap: 10px;
+}
+
+.app-shell[data-app-id="relax"] .rx-tile {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 6px 9px;
+    border: none;
+    /* 不规则圆角:瓦片本身就是「糖果块」 */
+    border-radius: 20px 16px 18px 22px;
+    background: #fff;
+    cursor: pointer;
+    font-family: inherit;
+    box-shadow: 0 2px 0 var(--rx-surface-2);
+    transition: transform 0.18s var(--rx-ease-bounce), box-shadow 0.18s ease;
+}
+
+.app-shell[data-app-id="relax"] .rx-tile:active {
+    transform: translateY(2px) scale(0.97);
+}
+
+.app-shell[data-app-id="relax"] .rx-tile.is-active {
+    box-shadow: 0 2px 0 var(--rx-primary), inset 0 0 0 2px var(--rx-primary-soft);
+}
+
+.app-shell[data-app-id="relax"] .rx-tile-preview {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 14px 11px 13px 15px;
+    background: var(--rx-surface-2);
+}
+
+.app-shell[data-app-id="relax"] .rx-tile-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--rx-ink);
+    text-align: center;
+    line-height: 1.2;
+}
+
+.app-shell[data-app-id="relax"] .rx-tile-badge {
+    position: absolute;
+    top: -5px;
+    right: -3px;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 100% 44% 46% 100% / 42% 100% 44% 100%;
+    background: var(--rx-primary);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    box-shadow: 0 2px 5px rgba(200, 90, 117, 0.36);
+}
+
+/* 各类瓦片预览内容 */
+.app-shell[data-app-id="relax"] .rx-bg-thumb {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.app-shell[data-app-id="relax"] .rx-plate-thumb {
+    display: block;
+    width: 78%;
+    aspect-ratio: 1;
+}
+
+.app-shell[data-app-id="relax"] .rx-deco-thumb,
+.app-shell[data-app-id="relax"] .rx-toy-thumb {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 74%;
+    height: 74%;
+}
+
+.app-shell[data-app-id="relax"] .rx-deco-thumb svg,
+.app-shell[data-app-id="relax"] .rx-toy-thumb svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 2px 3px rgba(107, 85, 96, 0.18));
+}
+
+/* 上传瓦片 */
+.app-shell[data-app-id="relax"] .rx-tile-upload {
+    position: relative;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="relax"] .rx-tile-upload input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="relax"] .rx-upload-plus {
+    font-size: 24px;
+    font-weight: 300;
+    color: var(--rx-primary-soft);
+}
+
+/* ============================
+   色板
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-swatches {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(38px, 1fr));
+    gap: 8px;
+}
+
+.app-shell[data-app-id="relax"] .rx-swatch {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1;
+    padding: 0;
+    border: none;
+    /* 不规则:每颗糖不是正圆 */
+    border-radius: 52% 48% 44% 56% / 48% 54% 46% 52%;
+    cursor: pointer;
+    box-shadow: 0 2px 0 rgba(107, 85, 96, 0.14), inset 0 0 0 1.5px rgba(255, 255, 255, 0.5);
+    transition: transform 0.18s var(--rx-ease-bounce), box-shadow 0.18s ease;
+}
+
+.app-shell[data-app-id="relax"] .rx-swatch:active {
+    transform: translateY(2px) scale(0.94);
+}
+
+.app-shell[data-app-id="relax"] .rx-swatch.is-active {
+    transform: scale(1.1);
+    box-shadow: 0 2px 0 rgba(107, 85, 96, 0.18), 0 0 0 2.5px var(--rx-primary);
+}
+
+.app-shell[data-app-id="relax"] .rx-swatch-check {
+    display: flex;
+}
+
+/* 自定义颜色:彩虹环包住原生 color input */
+.app-shell[data-app-id="relax"] .rx-swatch-custom {
+    overflow: hidden;
+    background: conic-gradient(#ffafcc, #ffd6a5, #cfe8b0, #a2d2ff, #cdb4db, #ffafcc);
+}
+
+.app-shell[data-app-id="relax"] .rx-swatch-custom input[type="color"] {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: none;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="relax"] .rx-swatch-custom-ring {
+    width: 42%;
+    height: 42%;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: inset 0 1px 3px rgba(107, 85, 96, 0.2);
+    pointer-events: none;
+}
+
+/* ============================
+   滑块
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-slider {
+    padding: 10px 14px 12px;
+    border-radius: 18px 22px 20px 16px;
+    background: #fff;
+    box-shadow: 0 2px 0 var(--rx-surface-2);
+}
+
+.app-shell[data-app-id="relax"] .rx-slider-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.app-shell[data-app-id="relax"] .rx-slider-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--rx-ink);
+}
+
+.app-shell[data-app-id="relax"] .rx-slider-value {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--rx-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="relax"] .rx-slider-input {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--rx-surface-2);
+    outline: none;
+}
+
+.app-shell[data-app-id="relax"] .rx-slider-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    border: none;
+    border-radius: 54% 46% 48% 52% / 46% 52% 48% 54%;
+    background: #fff;
+    box-shadow: 0 2px 0 var(--rx-primary), 0 4px 10px rgba(200, 90, 117, 0.24);
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="relax"] .rx-slider-input::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border: none;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 2px 0 var(--rx-primary);
+    cursor: pointer;
+}
+
+/* ============================
+   开关
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 20px 16px 18px 22px;
+    background: #fff;
+    box-shadow: 0 2px 0 var(--rx-surface-2);
+}
+
+.app-shell[data-app-id="relax"] .rx-toggle-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--rx-ink);
+}
+
+.app-shell[data-app-id="relax"] .rx-toggle-hint {
+    margin-top: 2px;
+    font-size: 11px;
+    color: var(--rx-ink-soft);
+}
+
+.app-shell[data-app-id="relax"] .rx-toggle {
+    flex: 0 0 auto;
+    position: relative;
+    width: 48px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    border-radius: 999px;
+    background: #e8dde2;
+    cursor: pointer;
+    transition: background 0.24s ease;
+}
+
+.app-shell[data-app-id="relax"] .rx-toggle.is-on {
+    background: var(--rx-primary-soft);
+}
+
+.app-shell[data-app-id="relax"] .rx-toggle-knob {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 2px 5px rgba(107, 85, 96, 0.28);
+    transition: transform 0.28s var(--rx-ease-bounce);
+}
+
+.app-shell[data-app-id="relax"] .rx-toggle.is-on .rx-toggle-knob {
+    transform: translateX(20px);
+}
+
+/* ============================
+   音声面板
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-sound-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 10px;
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    padding: 11px 12px;
+    border: none;
+    border-radius: 20px 15px 18px 22px;
+    background: #fff;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+    box-shadow: 0 2px 0 var(--rx-surface-2);
+    transition: transform 0.18s var(--rx-ease-bounce), box-shadow 0.18s ease;
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-chip:active {
+    transform: translateY(2px) scale(0.98);
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-chip.is-active {
+    box-shadow: 0 2px 0 var(--rx-primary), inset 0 0 0 2px var(--rx-primary-soft);
+}
+
+/* 4 根竖条 —— 选中时循环跳动,当作「正在用的音色」的视觉锚点 */
+.app-shell[data-app-id="relax"] .rx-sound-wave {
+    display: flex;
+    align-items: flex-end;
+    gap: 2.5px;
+    height: 15px;
+    margin-bottom: 2px;
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-wave i {
+    width: 3px;
+    height: 5px;
+    border-radius: 999px;
+    background: var(--rx-primary-soft);
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-chip.is-active .rx-sound-wave i {
+    background: var(--rx-primary);
+    animation: rxWave 0.9s ease-in-out infinite;
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-chip.is-active .rx-sound-wave i:nth-child(2) { animation-delay: 0.12s; }
+.app-shell[data-app-id="relax"] .rx-sound-chip.is-active .rx-sound-wave i:nth-child(3) { animation-delay: 0.24s; }
+.app-shell[data-app-id="relax"] .rx-sound-chip.is-active .rx-sound-wave i:nth-child(4) { animation-delay: 0.36s; }
+
+@keyframes rxWave {
+    0%, 100% { height: 5px; }
+    50%      { height: 15px; }
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-name {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--rx-ink);
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-hint {
+    font-size: 10px;
+    color: var(--rx-ink-soft);
+}
+
+/* 自定义音列表 */
+.app-shell[data-app-id="relax"] .rx-sound-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 6px 4px 4px;
+    border-radius: 18px 14px 16px 20px;
+    background: #fff;
+    box-shadow: 0 2px 0 var(--rx-surface-2);
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-row.is-active {
+    box-shadow: 0 2px 0 var(--rx-primary), inset 0 0 0 2px var(--rx-primary-soft);
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-row-main {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 6px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-row-dot {
+    flex: 0 0 auto;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--rx-primary-soft);
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-row-name {
+    flex: 1;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--rx-ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-row-tag {
+    flex: 0 0 auto;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--rx-surface-2);
+    color: var(--rx-primary);
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-row-del {
+    flex: 0 0 auto;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: var(--rx-surface-2);
+    color: var(--rx-ink-soft);
+    font-size: 11px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-row-del:active {
+    background: #ffe3e3;
+    color: #d6516b;
+}
+
+/* ============================
+   装饰编辑模式浮层
+   ============================ */
+/*
+ * ★ 装饰子 tab 切到「编辑装饰位置」后,面板收起,舞台完全暴露。
+ *   顶部插一条「返回调整」+ 提示,挡在状态栏(stage-bar)那一带,
+ *   跟底部的液态 tab 栏呼应,用户随时能撤回。
+ */
+.app-shell[data-app-id="relax"] .rx-deco-floating {
+    position: absolute;
+    /*
+     * 顶部 54px 留给灵动岛 / 状态栏;之后 14px 净空,跟 stage-bar 的节奏一致。
+     * 没引入新变量,直接抄它的偏移,免得以后 stage-bar 改了同步漏。
+     */
+    top: 68px;
+    left: 8px;
+    right: 8px;
+    z-index: 65;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 0;
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="relax"] .rx-deco-floating-back {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 7px 14px 7px 8px;
+    border: none;
+    border-radius: 999px;
+    background: var(--rx-surface);
+    color: var(--rx-primary);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    box-shadow: 0 4px 12px rgba(107, 85, 96, 0.2);
+    cursor: pointer;
+    pointer-events: auto;
+    transition: transform 0.16s, box-shadow 0.16s;
+}
+
+.app-shell[data-app-id="relax"] .rx-deco-floating-back:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 6px rgba(107, 85, 96, 0.18);
+}
+
+.app-shell[data-app-id="relax"] .rx-deco-floating-back-arrow {
+    display: flex;
+    margin-right: 2px;
+}
+
+.app-shell[data-app-id="relax"] .rx-deco-floating-tip {
+    flex: 1 1 auto;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.78);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    color: var(--rx-ink);
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+    box-shadow: 0 2px 6px rgba(107, 85, 96, 0.1);
+    pointer-events: auto;
+    /* 默认无文字也可正常显示 */
+    min-height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 装饰属性 mini 工具栏:
+ *   浮动在舞台底部,挨着 tab 栏上沿 ~14px(也用 rx-tabbar-h 这个变量留位)。
+ *   不抢舞台中心的视觉,用户一边看装饰一边调属性。
+ *   ★ 头部是可拖拽把手 —— 用户嫌它挡住看,可以拖到一边。
+ *     位移由组件 inline `transform: translate(X, Y)` 驱动,这里只负责初始定位。
+ *   ★ 用 left/right 各留 8px、bottom 距 tab 栏 ~14px 作为默认落点,
+ *     拖拽用 transform 而不是 left/top —— GPU 合成层,滑动不会触发布局重排。 */
+.app-shell[data-app-id="relax"] .rx-deco-bar {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    bottom: calc(var(--rx-tabbar-h) + 14px);
+    z-index: 65;
+    padding: 10px 12px 12px;
+    border-radius: 22px 18px 20px 24px;
+    background: var(--rx-surface);
+    box-shadow: 0 14px 34px rgba(107, 85, 96, 0.22);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    /* 拖拽位移:组件用 inline style 注入 transform: translate(...),
+       这里给个 will-change 让浏览器提前把这块提到合成层,拖动时不卡。 */
+    will-change: transform;
+    /* ★ 防止内部 range / button 触发系统的滚动 / 选中 */
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    animation: rxDecoBarIn 0.28s var(--rx-ease-bounce);
+}
+
+/* 拖拽中:去掉圆角阴影模糊,变成更利落的拖动观感 */
+.app-shell[data-app-id="relax"] .rx-deco-bar.is-dragging {
+    box-shadow: 0 18px 40px rgba(107, 85, 96, 0.32);
+    cursor: grabbing;
+}
+
+@keyframes rxDecoBarIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.app-shell[data-app-id="relax"] .rx-deco-bar-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    /* 整条 header 都是拖拽手柄 —— cursor: grab 提示用户能拖 */
+    cursor: grab;
+    touch-action: none;
+}
+
+.app-shell[data-app-id="relax"] .rx-deco-bar.is-dragging .rx-deco-bar-head {
+    cursor: grabbing;
+}
+
+/* 三点 grip 图标,提示「这里能拖」 */
+.app-shell[data-app-id="relax"] .rx-deco-bar-grip {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    color: var(--rx-ink-soft);
+    /* grip 本身不响应事件 —— 拖拽监听挂在 head 上 */
+    pointer-events: none;
+    user-select: none;
+}
+
+.app-shell[data-app-id="relax"] .rx-deco-bar-title {
+    flex: 1 1 auto;
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--rx-primary);
+    letter-spacing: 0.3px;
+    pointer-events: none;
+    user-select: none;
+}
+
+.app-shell[data-app-id="relax"] .rx-deco-bar-close {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: var(--rx-surface-2);
+    color: var(--rx-ink-soft);
+    font-size: 11px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background 0.16s;
+}
+
+.app-shell[data-app-id="relax"] .rx-deco-bar-close:active {
+    background: #ffe3e3;
+    color: #d6516b;
+}
+
+.app-shell[data-app-id="relax"] .rx-deco-bar-row {
+    /*
+     * 大小 / 旋转行(单字段占满一行)的布局。
+     * row 本身就是 1fr,field 在内部 grid 里 32px label + 1fr range,
+     * 配合 .rx-deco-bar-fields-row 的 row-gap 撑出两排之间的 10px 间距。
+     */
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: center;
+    column-gap: 10px;
+}
+
+/*
+ * 用一个修饰类标记「这是只装大小/旋转两个 field 的连续行段」,
+ * 在它后面的兄弟 row 之间插入 10px 间距,
+ * 而不污染 actions 行(操作行跟下面不需要这个间距)。
+ */
+.app-shell[data-app-id="relax"] .rx-deco-bar-row.rx-deco-bar-fields-row + .rx-deco-bar-row.rx-deco-bar-fields-row {
+    margin-top: 10px;
+}
+
+.app-shell[data-app-id="relax"] .rx-deco-bar-color {
+    /*
+     * 操作行里,跟「翻转 / 移除」按钮同一行的胶囊块:
+     * 白底 + 圆角,围住 swatch + 「颜色」label,跟另外两个按钮视觉等价。
+     */
+    position: relative;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px 4px 4px;
+    border-radius: 999px;
+    background: #fff;
+    box-shadow: 0 2px 0 var(--rx-surface-2);
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="relax"] .rx-deco-bar-color input[type="color"] {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: none;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="relax"] .rx-deco-bar-swatch {
+    width: 22px;
+    height: 22px;
+    border-radius: 52% 48% 44% 56% / 48% 54% 46% 52%;
+    box-shadow: inset 0 0 0 1.5px #fff, 0 1px 2px rgba(107, 85, 96, 0.18);
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="relax"] .rx-deco-bar-field {
+    /*
+     * 整行铺满网格,内部 grid:32px label + 1fr range,
+     * 跟颜色块保持同样的视觉高度。
+     */
+    display: grid;
+    grid-template-columns: 32px 1fr;
+    align-items: center;
+    column-gap: 10px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #fff;
+    box-shadow: 0 2px 0 var(--rx-surface-2);
+}
+
+.app-shell[data-app-id="relax"] .rx-deco-bar-label {
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--rx-ink-soft);
+    letter-spacing: 0.3px;
+}
+
+.app-shell[data-app-id="relax"] .rx-deco-bar-field input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    flex: 1 1 0;
+    height: 6px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 999px;
+    background: var(--rx-surface-2);
+    outline: none;
+}
+
+.app-shell[data-app-id="relax"] .rx-deco-bar-field input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border: none;
+    border-radius: 50%;
+    background: var(--rx-primary);
+    box-shadow: 0 2px 4px rgba(200, 90, 117, 0.28);
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="relax"] .rx-deco-bar-field input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border: none;
+    border-radius: 50%;
+    background: var(--rx-primary);
+    box-shadow: 0 2px 4px rgba(200, 90, 117, 0.28);
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="relax"] .rx-deco-bar-actions {
+    /*
+     * 覆盖 row 的 grid 行为,按钮行保持靠右 flex 排布。
+     */
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="relax"] .rx-deco-bar-btn {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 6px 14px;
+    border: none;
+    border-radius: 999px;
+    background: #fff;
+    color: var(--rx-primary);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 2px 0 var(--rx-surface-2);
+    transition: transform 0.16s, box-shadow 0.16s;
+}
+
+.app-shell[data-app-id="relax"] .rx-deco-bar-btn:active {
+    transform: translateY(2px);
+    box-shadow: 0 0 0 var(--rx-surface-2);
+}
+
+.app-shell[data-app-id="relax"] .rx-deco-bar-btn-danger {
+    background: #ffe3e3;
+    color: #d6516b;
+    box-shadow: 0 2px 0 #ffc4cc;
+}
+
+.app-shell[data-app-id="relax"] .rx-deco-bar-btn-danger:active {
+    box-shadow: 0 0 0 #ffc4cc;
+}
+
+/* ============================
+   「板子规格」行/列控制器
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-grid-row {
+    display: flex;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="relax"] .rx-grid-field {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 16px 18px 14px 20px;
+    background: #fff;
+    box-shadow: 0 2px 0 var(--rx-surface-2);
+}
+
+.app-shell[data-app-id="relax"] .rx-grid-label {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--rx-ink);
+}
+
+.app-shell[data-app-id="relax"] .rx-grid-input {
+    flex: 1;
+    width: 100%;
+    padding: 2px 0;
+    border: none;
+    background: transparent;
+    color: var(--rx-primary);
+    font-family: inherit;
+    font-size: 18px;
+    font-weight: 800;
+    text-align: center;
+    outline: none;
+    font-variant-numeric: tabular-nums;
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+
+.app-shell[data-app-id="relax"] .rx-grid-input::-webkit-outer-spin-button,
+.app-shell[data-app-id="relax"] .rx-grid-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.app-shell[data-app-id="relax"] .rx-grid-range {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.app-shell[data-app-id="relax"] .rx-grid-range input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    flex: 1;
+    height: 8px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 999px;
+    background: var(--rx-surface-2);
+    outline: none;
+}
+
+.app-shell[data-app-id="relax"] .rx-grid-range input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    border: none;
+    border-radius: 54% 46% 48% 52% / 46% 52% 48% 54%;
+    background: #fff;
+    box-shadow: 0 2px 0 var(--rx-primary), 0 4px 10px rgba(200, 90, 117, 0.24);
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="relax"] .rx-grid-range input[type="range"]::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border: none;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 2px 0 var(--rx-primary);
+    cursor: pointer;
+}
+
+/* ★ 必须排在 _panels.css 后面:音色瓦片的收藏 / 长按样式要覆盖那边的基础样式 */
+/**
+ * relax-app / 音色选择器(分组 + 折叠 + 长按收藏)
+ *
+ * 配套组件:js/apps/relax-app/components/sound-picker.js
+ *
+ * ★ 这个文件必须在 _panels.css **之后** import
+ *   瓦片本体(.rx-sound-chip / .rx-sound-grid)还是复用 _panels.css 里那套,
+ *   这里只加「分组外壳 + 收藏星标 + 长按反馈」。两边选择器权重一样,
+ *   靠 import 顺序决定谁覆盖谁 —— 顺序换了收藏态的描边就会被吃掉。
+ */
+
+.app-shell[data-app-id="relax"] .rx-sound-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* 一条还没收藏过任何音时的引导,收藏了就消失 */
+.app-shell[data-app-id="relax"] .rx-sound-tip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    padding: 8px 12px;
+    border-radius: 16px 12px 14px 18px;
+    background: var(--rx-surface-2);
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--rx-ink-soft);
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-tip .rx-icon {
+    width: 13px;
+    height: 13px;
+    color: var(--rx-primary-soft);
+}
+
+/* ============================
+   分组外壳
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-sound-group {
+    border-radius: 20px 16px 18px 22px;
+    background: var(--rx-surface-2);
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-group-head {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border: none;
+    border-radius: inherit;
+    background: transparent;
+    color: var(--rx-ink);
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-group-icon {
+    display: flex;
+    color: var(--rx-ink-soft);
+    transition: color 0.2s ease;
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-group.is-open .rx-sound-group-icon {
+    color: var(--rx-primary);
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-group-icon .rx-icon {
+    width: 15px;
+    height: 15px;
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-group-title {
+    flex: 1 1 auto;
+    text-align: left;
+    font-size: 12.5px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+}
+
+/* 组里有几个音 —— 折起来的时候这是唯一的信息量 */
+.app-shell[data-app-id="relax"] .rx-sound-group-count {
+    flex: 0 0 auto;
+    min-width: 20px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: #fff;
+    color: var(--rx-ink-soft);
+    font-size: 10px;
+    font-weight: 800;
+    text-align: center;
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-group-caret {
+    flex: 0 0 auto;
+    display: flex;
+    color: var(--rx-ink-soft);
+    transition: transform 0.26s var(--rx-ease-bounce);
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-group-caret .rx-icon {
+    width: 15px;
+    height: 15px;
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-group.is-open .rx-sound-group-caret {
+    transform: rotate(180deg);
+}
+
+/* 展开的内容是 v-if 挂上来的,用一小段淡入代替高度动画(高度动画要测量,不划算) */
+.app-shell[data-app-id="relax"] .rx-sound-group-body {
+    padding: 2px 10px 12px;
+    animation: rxGroupIn 0.22s ease;
+}
+
+@keyframes rxGroupIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: none; }
+}
+
+/* ============================
+   瓦片:收藏星标 + 长按反馈
+   ============================ */
+/* 删除按钮要浮在瓦片外面,所以瓦片外面再包一层定位容器 */
+.app-shell[data-app-id="relax"] .rx-sound-cell {
+    position: relative;
+    display: flex;
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-cell > .rx-sound-chip {
+    position: relative;
+    flex: 1 1 auto;
+    /* 长按不该弹出 iOS 的「拷贝/查询」气泡,也不该触发双击缩放 */
+    -webkit-touch-callout: none;
+    touch-action: manipulation;
+}
+
+/* 已收藏但没在用:给一圈浅描边,跟「使用中」的实心描边区分开 */
+.app-shell[data-app-id="relax"] .rx-sound-chip.is-fav:not(.is-active) {
+    box-shadow: 0 2px 0 var(--rx-primary-soft), inset 0 0 0 1.5px rgba(255, 179, 198, 0.55);
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-chip.is-fav .rx-sound-name {
+    /* 给右上角星标让出位置,免得长名字压在星星底下 */
+    padding-right: 16px;
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-fav {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    color: var(--rx-primary);
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-fav .rx-icon {
+    width: 12px;
+    height: 12px;
+    /* 实心 = 已收藏。stroke 图标靠填充切换状态,不用再准备一套实心图标 */
+    fill: currentColor;
+}
+
+/* 按住时整块微缩 + 逐渐泛粉,泛到顶正好是收藏触发的那一刻 */
+.app-shell[data-app-id="relax"] .rx-sound-chip.is-holding {
+    transform: scale(0.94);
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-hold {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--rx-primary-soft);
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* ⚠️ 600ms 必须跟 sound-picker.js 的 LONG_PRESS_MS 对齐,改一处要改两处 */
+.app-shell[data-app-id="relax"] .rx-sound-chip.is-holding .rx-sound-hold {
+    animation: rxHoldGlow 600ms linear forwards;
+}
+
+@keyframes rxHoldGlow {
+    from { opacity: 0; }
+    to   { opacity: 0.3; }
+}
+
+/* 收藏 / 取消收藏的瞬时反馈 */
+.app-shell[data-app-id="relax"] .rx-sound-chip.is-flash {
+    animation: rxFavPop 0.5s var(--rx-ease-bounce);
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-chip.is-flash .rx-sound-fav {
+    animation: rxFavStar 0.5s var(--rx-ease-bounce);
+}
+
+@keyframes rxFavPop {
+    0%   { transform: scale(0.94); }
+    40%  { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+@keyframes rxFavStar {
+    0%   { transform: scale(0.2) rotate(-50deg); opacity: 0; }
+    55%  { transform: scale(1.35) rotate(8deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0deg); }
+}
+
+/* 自定义音瓦片右下角的删除钮 —— 浮在瓦片外,不占瓦片内部空间 */
+.app-shell[data-app-id="relax"] .rx-sound-cell-del {
+    position: absolute;
+    right: -5px;
+    bottom: -5px;
+    z-index: 2;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: #fff;
+    color: var(--rx-ink-soft);
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(107, 85, 96, 0.2);
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-cell-del .rx-icon {
+    width: 11px;
+    height: 11px;
+}
+
+.app-shell[data-app-id="relax"] .rx-sound-cell-del:active {
+    background: #ffe3e3;
+    color: #d6516b;
+}
+
+/* 关掉动画偏好的用户:只保留状态,不做位移和缩放 */
+@media (prefers-reduced-motion: reduce) {
+    .app-shell[data-app-id="relax"] .rx-sound-group-body,
+    .app-shell[data-app-id="relax"] .rx-sound-chip.is-flash,
+    .app-shell[data-app-id="relax"] .rx-sound-chip.is-flash .rx-sound-fav {
+        animation: none;
+    }
+
+    .app-shell[data-app-id="relax"] .rx-sound-chip.is-holding {
+        transform: none;
+    }
+
+    .app-shell[data-app-id="relax"] .rx-sound-chip.is-holding .rx-sound-hold {
+        animation: none;
+        opacity: 0.3;
+    }
+}
+
+/**
+ * relax-app / 弹窗皮肤
+ *
+ * 只做两件事:
+ *   1. 把框架级 AcModal(css/core/80-ac-modal.css 的基线)染成糖果粉
+ *   2. 弹窗内部的业务样式(输入框 / 存档列表)
+ *
+ * ★ 不要重写 `.ac-modal` 的 flex 三段式 / max-height / border-radius —— 基线已经对了。
+ *   也不要给 `.ac-modal` 加 overflow:hidden(会裁掉右上角 ✕)。
+ *
+ * ★ class 透传落在 `.ac-overlay` 上,所以业务 hook 都是后代选择器:
+ *   `.rx-save-modal .ac-modal-body`,而不是 `.rx-save-modal.ac-modal`。
+ */
+
+/* 遮罩:粉调 */
+.app-shell[data-app-id="relax"] .ac-overlay {
+    background: rgba(200, 90, 117, 0.16);
+}
+
+/* 弹窗主体:糖果粉 token + 更圆润的不规则形状 */
+.app-shell[data-app-id="relax"] .ac-modal {
+    --ac-color-primary: var(--rx-primary);
+    --ac-color-primary-dark: var(--rx-primary-deep);
+    --ac-color-primary-soft: var(--rx-primary-soft);
+    --ac-shadow-primary: var(--rx-primary);
+    --ac-shadow-secondary: var(--rx-surface-2);
+
+    background: var(--rx-surface);
+    box-shadow: 0 20px 50px rgba(200, 90, 117, 0.22);
+    border-radius: 44% 68% 50% 50% / 34% 28% 26% 44%;
+}
+
+.app-shell[data-app-id="relax"] .ac-modal-subtitle {
+    color: var(--rx-ink-soft);
+}
+
+.app-shell[data-app-id="relax"] .ac-modal-body {
+    color: var(--rx-ink);
+}
+
+/* ============================
+   确认框
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-confirm-text {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.75;
+    color: var(--rx-ink-soft);
+}
+
+/* ============================
+   文本输入(另存为)
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-text-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid var(--rx-surface-2);
+    border-radius: 18px 22px 20px 16px;
+    background: #fff;
+    color: var(--rx-ink);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease;
+}
+
+.app-shell[data-app-id="relax"] .rx-text-input:focus {
+    border-color: var(--rx-primary-soft);
+}
+
+.app-shell[data-app-id="relax"] .rx-input-counter {
+    margin: 6px 0 0;
+    font-size: 11px;
+    color: var(--rx-ink-soft);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ============================
+   存档库
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-library-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="relax"] .rx-library-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 6px 4px 4px;
+    border-radius: 20px 15px 18px 22px;
+    background: #fff;
+    box-shadow: 0 2px 0 var(--rx-surface-2);
+}
+
+.app-shell[data-app-id="relax"] .rx-library-main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+        "name date"
+        "meta date";
+    align-items: center;
+    gap: 0 8px;
+    padding: 9px 8px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+}
+
+.app-shell[data-app-id="relax"] .rx-library-name {
+    grid-area: name;
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--rx-ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="relax"] .rx-library-meta {
+    grid-area: meta;
+    font-size: 11px;
+    color: var(--rx-ink-soft);
+}
+
+.app-shell[data-app-id="relax"] .rx-library-date {
+    grid-area: date;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--rx-primary-soft);
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="relax"] .rx-library-del {
+    flex: 0 0 auto;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: var(--rx-surface-2);
+    color: var(--rx-ink-soft);
+    font-size: 11px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="relax"] .rx-library-del:active {
+    background: #ffe3e3;
+    color: #d6516b;
+}
+
+/* ============================
+   自定义 HTML 捏捏编辑器
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-custom-toy-modal .ac-modal-body {
+    /* 编辑器内容长,允许内部滚动 */
+    padding: 4px 4px 4px 4px;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-templates {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 0 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-templates::-webkit-scrollbar {
+    display: none;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-template-chip {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 14px 18px 16px 20px;
+    background: #fff;
+    color: var(--rx-ink);
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    box-shadow: 0 2px 0 var(--rx-surface-2);
+    transition: transform 0.16s, box-shadow 0.16s, background 0.16s;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-template-chip:active {
+    transform: translateY(2px);
+    box-shadow: 0 0 0 var(--rx-surface-2);
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-template-chip.is-active {
+    background: var(--rx-primary-soft);
+    color: #fff;
+    box-shadow: 0 2px 0 var(--rx-primary);
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-template-chip.is-active .rx-custom-template-desc {
+    color: rgba(255, 255, 255, 0.78);
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-template-name {
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-template-desc {
+    font-size: 10px;
+    color: var(--rx-ink-soft);
+}
+
+/* 提示词块 */
+.app-shell[data-app-id="relax"] .rx-custom-prompt {
+    margin: 0 4px 12px;
+    padding: 10px 12px;
+    border-radius: 16px 20px 14px 18px;
+    background: var(--rx-surface-2);
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-prompt-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-prompt-title {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--rx-primary);
+    letter-spacing: 0.4px;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-prompt-copy {
+    padding: 4px 10px;
+    border: none;
+    border-radius: 999px;
+    background: #fff;
+    color: var(--rx-primary);
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 2px 0 var(--rx-primary-soft);
+    transition: background 0.16s, color 0.16s;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-prompt-copy.is-copied {
+    background: var(--rx-primary);
+    color: #fff;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-prompt-text {
+    margin: 0;
+    padding: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px;
+    line-height: 1.6;
+    color: var(--rx-ink);
+    white-space: pre-wrap;
+    max-height: 180px;
+    overflow-y: auto;
+}
+
+/* 编辑器两块 */
+.app-shell[data-app-id="relax"] .rx-custom-edit {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 0 4px 12px;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-field-label {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--rx-primary);
+    letter-spacing: 0.4px;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 2px solid var(--rx-surface-2);
+    border-radius: 12px 14px 10px 16px;
+    background: #fff;
+    color: var(--rx-ink);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    line-height: 1.5;
+    resize: vertical;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-textarea:focus {
+    border-color: var(--rx-primary-soft);
+}
+
+/* 预览 */
+.app-shell[data-app-id="relax"] .rx-custom-preview {
+    margin: 0 4px 4px;
+    padding: 10px 12px;
+    border-radius: 16px 20px 14px 18px;
+    background: #fff;
+    box-shadow: 0 2px 0 var(--rx-surface-2);
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-preview-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-preview-title {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--rx-primary);
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-preview-hint {
+    font-size: 9px;
+    color: var(--rx-ink-soft);
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-preview-board {
+    display: grid;
+    gap: 4px;
+    width: 100%;
+    aspect-ratio: 1;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-preview-cell {
+    border-radius: 14px;
+    background: var(--rx-surface-2);
+    overflow: hidden;
+    --htmlbubble-tint: var(--rx-toy-tint, #ffd6e0);
+}
+
+/* 弹窗底部按钮排版:三个按钮居中,只让第一个收缩 */
+.app-shell[data-app-id="relax"] .rx-custom-toy-modal .ac-modal-footer {
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-toy-modal .ac-modal-footer .ac-btn {
+    flex: 0 0 auto;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-toy-modal .ac-modal-footer .ac-btn-secondary:first-child {
+    margin-right: auto;
+}
+
+/**
+ * relax-app / 解压主体样式
+ *
+ * ★ 加新主体的样式就写在这个文件里(或者新建 `_toy-气泡纸.css` 再在 index.css @import)。
+ *
+ * 约定:
+ *   - 主体统一从 `--rx-toy-tint` 取色。ToyHost 会把用户选的颜色写到容器上
+ *     (`host.el.style.setProperty('--rx-toy-tint', hex)`),主体不用自己管染色链路。
+ *   - 主体的类名加自己的前缀(jelly- / bw- / choco-),避免互相撞。
+ *   - 不要用 `position: fixed`,主体在盘子内圈里,fixed 会跑到屏幕外。
+ */
+
+/* ============================================================
+   捏捏果冻(js/apps/relax-app/toys/demo-jelly.js)
+   - 风格跟整体软糖语言一致,共用随机 blob 圆角
+   - ★ 没有板子、没有盘子:主体的 DOM 就是这一只果冻,底下直接是舞台背景。
+     原来外面套了个 .jelly-board 的奶白圆角板(跟巧克力一样的问题),已经删掉。
+   ============================================================ */
+.app-shell[data-app-id="relax"] .jelly-cell {
+    --jelly-tint: var(--rx-toy-tint, #ffc8dd);
+
+    position: relative;
+    padding: 0;
+    border: none;
+    cursor: pointer;
+    /* 每格的随机圆角 / 倾斜由 JS 内联给,做出「手工不规则」的感觉 */
+    border-radius: var(--jelly-round, 46% 54% 50% 50% / 52% 48% 52% 48%);
+    transform: rotate(var(--jelly-skew, 0deg));
+    background:
+        radial-gradient(70% 55% at 32% 26%, rgba(255, 255, 255, 0.75) 0%, transparent 62%),
+        linear-gradient(158deg,
+            color-mix(in srgb, var(--jelly-tint) 62%, white) 0%,
+            var(--jelly-tint) 52%,
+            color-mix(in srgb, var(--jelly-tint) 78%, #6b4550) 100%);
+    box-shadow:
+        inset 0 3px 6px rgba(255, 255, 255, 0.6),
+        inset 0 -4px 8px rgba(107, 69, 80, 0.22),
+        0 4px 8px rgba(107, 69, 80, 0.18);
+    transition: transform 0.3s var(--rx-ease-bounce),
+                box-shadow 0.3s ease,
+                opacity 0.3s ease,
+                filter 0.3s ease;
+}
+
+/* 高光点:让果冻看起来是「湿的」 */
+.app-shell[data-app-id="relax"] .jelly-shine {
+    position: absolute;
+    top: 16%;
+    left: 20%;
+    width: 26%;
+    height: 20%;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.72);
+    filter: blur(1px);
+    pointer-events: none;
+}
+
+/* 按下瞬间:压扁 + 阴影收紧 */
+.app-shell[data-app-id="relax"] .jelly-cell.is-squish {
+    animation: jellySquish 0.42s var(--rx-ease-bounce);
+}
+
+@keyframes jellySquish {
+    0%   { transform: rotate(var(--jelly-skew, 0deg)) scale(1, 1); }
+    28%  { transform: rotate(var(--jelly-skew, 0deg)) scale(1.14, 0.72); }
+    58%  { transform: rotate(var(--jelly-skew, 0deg)) scale(0.92, 1.1); }
+    80%  { transform: rotate(var(--jelly-skew, 0deg)) scale(1.04, 0.97); }
+    100% { transform: rotate(var(--jelly-skew, 0deg)) scale(1, 1); }
+}
+
+/* 已经捏过的格子:塌下去一点,颜色变淡 */
+.app-shell[data-app-id="relax"] .jelly-cell.is-popped {
+    opacity: 0.5;
+    filter: saturate(0.55);
+    box-shadow:
+        inset 0 4px 10px rgba(107, 69, 80, 0.3),
+        inset 0 -1px 2px rgba(255, 255, 255, 0.3);
+}
+
+.app-shell[data-app-id="relax"] .jelly-cell.is-popped .jelly-shine {
+    opacity: 0.3;
+}
+
+/*
+ * `color-mix()` 兜底:老 WebKit(iOS 15 及更早)不支持,
+ * 不加这段的话渐变整条失效 → 格子变透明。
+ */
+@supports not (background: color-mix(in srgb, red 50%, white)) {
+    .app-shell[data-app-id="relax"] .jelly-cell {
+        background:
+            radial-gradient(70% 55% at 32% 26%, rgba(255, 255, 255, 0.75) 0%, transparent 62%),
+            linear-gradient(158deg, rgba(255, 255, 255, 0.55) 0%, var(--jelly-tint) 52%, rgba(107, 69, 80, 0.25) 100%);
+    }
+}
+
+/* ============================================================
+   果冻单只版(js/apps/relax-app/toys/demo-jelly.js mount)
+   - 用户要求「果冻只有一个」→ 没有 grid,主体就是这一只
+   - fit:'stage' → 直接铺在舞台上,没有盘子托着
+
+   ★ 宽高必须相等。以前这里写的是 width/height: 86% 再配一条 aspect-ratio: 1,
+     但宽高两个方向都给了确定值时 aspect-ratio 会被浏览器忽略 ——
+     舞台是竖长方形(约 374×534),果冻就被拉成了竖着的鸡蛋。
+     现在边长由 JS 内联成 min(容器宽,高) 的正方形(见 demo-jelly.js applyUnit),
+     这里只负责居中,不要再往回加百分比宽高。
+   ============================================================ */
+.app-shell[data-app-id="relax"] .jelly-cell.jelly-cell--single {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    cursor: pointer;
+    touch-action: none;
+    /* 圆角从内联 random blob 来,但整体偏圆(用户能看清一整只) */
+    border-radius: 44% 56% 50% 50% / 52% 48% 52% 48%;
+}
+
+/* 按住中:持续凹陷 + 轻微脉动;比 .is-squish 更夸张一点,因为是整只果冻 */
+.app-shell[data-app-id="relax"] .jelly-cell.jelly-cell--single.is-pressed {
+    animation: jellySinglePress 0.6s var(--rx-ease-bounce) infinite;
+}
+
+@keyframes jellySinglePress {
+    0%   { transform: rotate(var(--jelly-skew, 0deg)) scale(1, 1); }
+    40%  { transform: rotate(var(--jelly-skew, 0deg)) scale(0.94, 0.86); }
+    70%  { transform: rotate(var(--jelly-skew, 0deg)) scale(1.02, 0.97); }
+    100% { transform: rotate(var(--jelly-skew, 0deg)) scale(0.97, 0.92); }
+}
+
+/* ============================================================
+   气泡板(js/apps/relax-app/toys/bubble-board.js)
+   - rows/cols 由 host 传,grid 按它排
+   - 风格跟 demo-jelly 同一套软糖语言,共用随机 blob 圆角
+   ============================================================ */
+/*
+ * 结构:
+ *   .bubble-board  = 纯布局容器(★ 不画任何东西)
+ *   .bubble-grid   = 气泡阵列
+ *   .bubble-cell   = 每一颗气泡
+ *
+ * ★ .bubble-board 以前是块「奶白底 + 圆角 + 投影」的板子,垫在气泡底下。
+ *   用户不要这层板 —— 现在它只负责定位和放 --bubble-tint,
+ *   背景/圆角/投影全部去掉,气泡直接坐在盘子(或舞台背景)上。
+ *   overflow 也从 hidden 改回 visible,否则按下去鼓起的那一下会被边缘裁掉。
+ */
+.app-shell[data-app-id="relax"] .bubble-board {
+    --bubble-tint: var(--rx-toy-tint, #cdeafd);
+
+    position: relative;
+    width: 92%;
+    height: 92%;
+    margin: auto;
+    background: none;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+    box-sizing: border-box;
+}
+
+.app-shell[data-app-id="relax"] .bubble-grid {
+    position: absolute;
+    inset: 8%;
+    display: grid;
+    grid-template-columns: repeat(var(--bubble-cols, 4), 1fr);
+    grid-template-rows: repeat(var(--bubble-rows, 4), 1fr);
+    gap: 4%;
+    width: auto;
+    height: auto;
+}
+
+.app-shell[data-app-id="relax"] .bubble-cell {
+    position: relative;
+    padding: 0;
+    border: none;
+    cursor: pointer;
+    border-radius: var(--bubble-round, 46% 54% 50% 50% / 52% 48% 52% 48%);
+    transform: rotate(var(--bubble-skew, 0deg));
+    background:
+        radial-gradient(70% 55% at 32% 26%, rgba(255, 255, 255, 0.78) 0%, transparent 62%),
+        linear-gradient(158deg,
+            color-mix(in srgb, var(--bubble-tint) 62%, white) 0%,
+            var(--bubble-tint) 52%,
+            color-mix(in srgb, var(--bubble-tint) 78%, #6b4550) 100%);
+    box-shadow:
+        inset 0 3px 6px rgba(255, 255, 255, 0.6),
+        inset 0 -4px 8px rgba(107, 69, 80, 0.22),
+        0 4px 8px rgba(107, 69, 80, 0.18);
+    transition: transform 0.3s var(--rx-ease-bounce),
+                box-shadow 0.3s ease,
+                opacity 0.3s ease,
+                filter 0.3s ease;
+}
+
+/* 高光点 */
+.app-shell[data-app-id="relax"] .bubble-shine {
+    position: absolute;
+    top: 16%;
+    left: 20%;
+    width: 26%;
+    height: 20%;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.72);
+    filter: blur(1px);
+    pointer-events: none;
+}
+
+/*
+ * 按爆的那一下:先鼓起再塌下去 —— 跟 QAQ/解压7 原版同一个节奏
+ * (原版是 squeeze 放大 1.12 → 50ms 后切 popped)。
+ * 关键点:100% 停在和 .is-popped 完全一样的 transform 上,
+ * 动画结束交接给静态样式时才不会跳一下。
+ */
+.app-shell[data-app-id="relax"] .bubble-cell.is-squish {
+    animation: bubblePop 0.26s var(--rx-ease-bounce);
+}
+
+@keyframes bubblePop {
+    0%   { transform: rotate(var(--bubble-skew, 0deg)) scale(1); }
+    35%  { transform: rotate(var(--bubble-skew, 0deg)) scale(1.12); }
+    100% { transform: rotate(var(--bubble-skew, 0deg)) scale(0.92) translateY(2px); }
+}
+
+/*
+ * 已经按爆:凹陷 + 发皱的死泡泡。
+ * ★ 以前只是 opacity 0.5 + 降饱和,压下去几乎看不出变化 ——
+ *   用户要的是解压7 那种「明显瘪掉」:缩小下沉、鼓包的外投影换成内凹阴影、
+ *   高光收掉,再叠一层褶皱纹理。
+ */
+.app-shell[data-app-id="relax"] .bubble-cell.is-popped {
+    transform: rotate(var(--bubble-skew, 0deg)) scale(0.92) translateY(2px);
+    cursor: default;
+    filter: saturate(0.45);
+    background:
+        radial-gradient(60% 50% at 28% 24%, rgba(255, 255, 255, 0.32) 0%, transparent 60%),
+        linear-gradient(158deg,
+            color-mix(in srgb, var(--bubble-tint) 42%, #dfe4ea) 0%,
+            color-mix(in srgb, var(--bubble-tint) 55%, #c3ccd6) 70%,
+            color-mix(in srgb, var(--bubble-tint) 62%, #97a3b0) 100%);
+    /* 外投影收掉 = 不再鼓;内阴影反过来打在上沿 = 凹进去 */
+    box-shadow:
+        inset 0 5px 10px rgba(60, 80, 100, 0.22),
+        inset 0 -2px 4px rgba(255, 255, 255, 0.28),
+        0 1px 3px rgba(60, 80, 100, 0.08);
+}
+
+/* 褶皱纹理:只有瘪掉之后才出现 */
+.app-shell[data-app-id="relax"] .bubble-cell.is-popped::after {
+    content: '';
+    position: absolute;
+    inset: 10%;
+    border-radius: inherit;
+    background:
+        radial-gradient(circle at 22% 32%, rgba(90, 115, 140, 0.14) 0%, transparent 52%),
+        radial-gradient(circle at 72% 62%, rgba(70, 95, 120, 0.1) 0%, transparent 44%),
+        repeating-linear-gradient(45deg,
+            transparent 0 4px,
+            rgba(80, 105, 130, 0.05) 4px 5px);
+    mix-blend-mode: multiply;
+    opacity: 0.75;
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="relax"] .bubble-cell.is-popped .bubble-shine {
+    opacity: 0;
+}
+
+/* color-mix 兜底 */
+@supports not (background: color-mix(in srgb, red 50%, white)) {
+    .app-shell[data-app-id="relax"] .bubble-cell {
+        background:
+            radial-gradient(70% 55% at 32% 26%, rgba(255, 255, 255, 0.78) 0%, transparent 62%),
+            linear-gradient(158deg, rgba(255, 255, 255, 0.55) 0%, var(--bubble-tint) 52%, rgba(107, 69, 80, 0.25) 100%);
+    }
+    .app-shell[data-app-id="relax"] .bubble-cell.is-popped {
+        background: linear-gradient(158deg, rgba(210, 218, 226, 0.9) 0%, rgba(160, 172, 184, 0.9) 100%);
+    }
+}
+
+/* ============================================================
+   自定义 HTML 捏捏板(js/apps/relax-app/toys/custom-html-board.js)
+   - rows/cols 由 host 透传
+   - 主题色注入到 --htmlbubble-tint,用户提供 CSS 用这变量
+   - cell 默认外观由内置 class(.htmlbubble-host) + 旋转/圆角 给出
+   - 用户自己的 CSS 通过 <style> 注入到 :scope{},作用域隔离
+   ============================================================ */
+.app-shell[data-app-id="relax"] .htmlbubble-root {
+    --htmlbubble-tint: var(--rx-toy-tint, #ffd6e0);
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.app-shell[data-app-id="relax"] .htmlbubble-board {
+    position: relative;
+    width: 92%;
+    height: 92%;
+    margin: auto;
+    border-radius: 30px 26px 28px 32px;
+    background:
+        linear-gradient(155deg,
+            rgba(255, 255, 255, 0.95) 0%,
+            color-mix(in srgb, var(--htmlbubble-tint) 12%, #fff5e8) 100%);
+    box-shadow:
+        inset 0 2px 4px rgba(255, 255, 255, 0.85),
+        inset 0 -4px 8px rgba(107, 85, 96, 0.08),
+        0 6px 16px rgba(107, 85, 96, 0.18),
+        0 2px 0 rgba(107, 85, 96, 0.08);
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.app-shell[data-app-id="relax"] .htmlbubble-grid {
+    position: absolute;
+    inset: 8%;
+    display: grid;
+    grid-template-columns: repeat(var(--htmlbubble-cols, 4), 1fr);
+    grid-template-rows: repeat(var(--htmlbubble-rows, 4), 1fr);
+    gap: 4%;
+    width: auto;
+    height: auto;
+}
+
+.app-shell[data-app-id="relax"] .htmlbubble-host {
+    position: relative;
+    padding: 0;
+    border: none;
+    cursor: pointer;
+    background: none;
+    border-radius: var(--bubble-round, 46% 54% 50% 50% / 52% 48% 52% 48%);
+}
+
+/* 预览里的 cell:给个过渡 + 圆形,默认演示效果 */
+.app-shell[data-app-id="relax"] .htmlbubble-host.is-popped > * {
+    filter: saturate(0.55) brightness(0.92);
+}
+
+.app-shell[data-app-id="relax"] .htmlbubble-host.is-squish > * {
+    animation: htmlbubbleSquish 0.42s var(--rx-ease-bounce);
+}
+
+@keyframes htmlbubbleSquish {
+    0%   { transform: scale(1, 1); }
+    28%  { transform: scale(1.12, 0.74); }
+    58%  { transform: scale(0.94, 1.08); }
+    100% { transform: scale(1, 1); }
+}
+
+@supports not (background: color-mix(in srgb, red 50%, white)) {
+    .app-shell[data-app-id="relax"] .htmlbubble-board {
+        background: linear-gradient(155deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 245, 232, 0.95) 100%);
+    }
+}
+
+/* ============================================================
+   自定义捏捏 · 自由模式(custom-html-board.js 的 layout: 'free')
+   - 整块只画一个东西(摇杆 / 鼠标 / 旋钮),不复制、不排格子
+   - ★ 没有 .htmlbubble-board 那层奶白外壳:垫在摇杆底下就成了
+     「摇杆自带一个托盘」。要不要盘子归「装扮 → 盘子」的开关管。
+   - 手势由 js/apps/relax-app/services/toy-parts.js 接管,
+     这里只负责「让手势落得下去」+ 给用户的根元素一个居中位
+   ============================================================ */
+.app-shell[data-app-id="relax"] .hbfree-stage {
+    position: relative;
+    /* 用户的根元素直接居中,不用每套模板自己写一遍 flex */
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+}
+
+/*
+ * ★ 这几行是自由模式能不能用的分水岭,少一条就是「怎么拖都不动」:
+ *   · touch-action 不关 —— 手机上一拖变成滚页面,摇杆永远拖不出去;
+ *   · user-select 不关 —— 按住会弹出选词放大镜,盖住整个玩具;
+ *   · tap-highlight 不关 —— 每次点击闪一块灰。
+ * 特意挂在 [data-hb] 而不是整个 .hbfree-stage 上:编辑页的预览也吃这套,
+ * 把整块设成 touch-action:none 的话,手指落在玩具旁边就划不动编辑页了。
+ */
+.app-shell[data-app-id="relax"] [data-hb] {
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="relax"] [data-hb="stick"],
+.app-shell[data-app-id="relax"] [data-hb="slide"],
+.app-shell[data-app-id="relax"] [data-hb="dial"] {
+    cursor: grab;
+}
+
+.app-shell[data-app-id="relax"] [data-hb].is-active {
+    cursor: grabbing;
+}
+
+/* ============================================================
+   自定义捏捏 · 写代码模式(custom-html-board.js 的 layout: 'code')
+   - 用户的 HTML/CSS/JS 跑在 <iframe sandbox="allow-scripts"> 里
+     (services/toy-sandbox.js),这里只负责给它一块地方
+   - ★ iframe 不许有背景和边框:里面的 body 是透明的,
+     加了背景就等于给用户的作品垫了一块白板,舞台背景全被挡住
+   ============================================================ */
+.app-shell[data-app-id="relax"] .hbcode-stage {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.app-shell[data-app-id="relax"] .hbcode-frame {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: transparent;
+    /* 深色系统下 iframe 会自己套一层暗底,声明成 light 才透得出去 */
+    color-scheme: light;
+}
+
+/* ============================================================
+   巧克力脆皮一整块(js/apps/relax-app/toys/choco-board.js)
+   - 1:1 复刻 QAQ/解压5:canvas 绘制 Voronoi 碎片 + 按压凹陷
+   - ★ 没有盘子、没有板子、没有任何包裹层。
+     主体的 DOM 就是这一张画布,画布上画的就是巧克力本身,
+     底下直接是舞台背景 —— 所以这里不许有 background / box-shadow /
+     border-radius,加了就又变成「巧克力自带一个盘子」。
+   - 奶白内层(雪糕芯)由 canvas 画在巧克力那一块的正下方,
+     碎片裂开时露出来的是芯,而不是一整张白板。
+   - 方形由 JS 内联 width/height 保证(见 choco-board.js applyUnit)。
+   ============================================================ */
+.app-shell[data-app-id="relax"] .choco-canvas {
+    display: block;
+    /* 在 .rx-toy-slot 里居中:宽高是内联的确定值,inset:0 + margin:auto 即可 */
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    background: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    cursor: pointer;
+    touch-action: none;
+}
+
+/* ============================================================
+   「我的捏捏」编辑页(components/pages/custom-toy-page.js)
+   ============================================================
+   ★ 2026-08 补课:这一页的 JS 早就写完了,但 rx-toypage 的样式
+     一条都没进仓库 —— 点「写 HTML / 换模板」后 view 切过去了,
+     页面却没有定位、没有背景、没有 z-index,直接被抽屉盖住,
+     用户看到的就是「按钮点了没反应」。零报错,纯 CSS 缺失。
+
+   层级:页面 z-index 5 < .app-bottom 的 6(编辑页开着也能划出去退出 App)。
+   抽屉(z-index 4)、tab 栏、舞台浮动条在编辑态由 .is-editor 一并藏掉。 */
+
+.app-shell[data-app-id="relax"] .rx-root.is-editor .rx-sheet,
+.app-shell[data-app-id="relax"] .rx-root.is-editor .rx-tabbar,
+.app-shell[data-app-id="relax"] .rx-root.is-editor .rx-stage-bar,
+.app-shell[data-app-id="relax"] .rx-root.is-editor .rx-deco-floating,
+.app-shell[data-app-id="relax"] .rx-root.is-editor .rx-deco-bar {
+    display: none;
+}
+
+.app-shell[data-app-id="relax"] .rx-toypage {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    background: var(--rx-surface);
+    animation: rxToypageIn 0.26s var(--rx-ease-bounce);
+}
+
+@keyframes rxToypageIn {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 顶栏:状态栏 50px 是画在 App 外面的浮层,必须让开 */
+.app-shell[data-app-id="relax"] .rx-toypage-head {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 56px 16px 8px;
+}
+
+.app-shell[data-app-id="relax"] .rx-toypage-back {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 7px 12px 7px 8px;
+    border: none;
+    border-radius: 999px;
+    background: var(--rx-surface-2);
+    color: var(--rx-primary-deep);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.app-shell[data-app-id="relax"] .rx-toypage-back .rx-icon,
+.app-shell[data-app-id="relax"] .rx-toypage-back svg { width: 14px; height: 14px; }
+
+.app-shell[data-app-id="relax"] .rx-toypage-titles { min-width: 0; }
+.app-shell[data-app-id="relax"] .rx-toypage-title {
+    margin: 0;
+    font-size: 16.5px;
+    font-weight: 700;
+    color: var(--rx-ink);
+}
+.app-shell[data-app-id="relax"] .rx-toypage-subtitle {
+    margin: 1px 0 0;
+    font-size: 11px;
+    color: var(--rx-ink-soft);
+}
+
+/* 「改代码 / 让 AI 帮忙」两个页签 */
+.app-shell[data-app-id="relax"] .rx-toypage-seg {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 6px;
+    margin: 6px 16px 10px;
+    padding: 4px;
+    border-radius: 999px;
+    background: var(--rx-surface-2);
+}
+.app-shell[data-app-id="relax"] .rx-toypage-seg-item {
+    flex: 1;
+    padding: 8px 0;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--rx-ink-soft);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.18s ease, color 0.18s ease;
+}
+.app-shell[data-app-id="relax"] .rx-toypage-seg-item.is-on {
+    background: #fff;
+    color: var(--rx-primary-deep);
+    box-shadow: var(--rx-shadow-soft);
+}
+
+/* 正文滚动区 */
+.app-shell[data-app-id="relax"] .rx-toypage-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 2px 16px 16px;
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+.app-shell[data-app-id="relax"] .rx-toypage-block {
+    margin-bottom: 16px;
+    padding: 13px 14px 14px;
+    border-radius: var(--rx-squircle);
+    background: #fff;
+    box-shadow: var(--rx-shadow-soft);
+}
+
+.app-shell[data-app-id="relax"] .rx-toypage-block-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 9px;
+}
+.app-shell[data-app-id="relax"] .rx-toypage-block-title {
+    margin: 0;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--rx-ink);
+}
+.app-shell[data-app-id="relax"] .rx-toypage-block-hint {
+    font-size: 10.5px;
+    color: var(--rx-ink-soft);
+}
+
+/* 模板 / 预设 chips */
+.app-shell[data-app-id="relax"] .rx-toypage-chips {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+.app-shell[data-app-id="relax"] .rx-toypage-chip {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    text-align: left;
+    padding: 9px 11px;
+    border: 1.5px solid var(--rx-line);
+    border-radius: 14px;
+    background: var(--rx-surface);
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color 0.16s ease, background 0.16s ease;
+}
+.app-shell[data-app-id="relax"] .rx-toypage-chip.is-active {
+    border-color: var(--rx-primary);
+    background: var(--rx-surface-2);
+}
+.app-shell[data-app-id="relax"] .rx-toypage-chip-name {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--rx-ink);
+}
+.app-shell[data-app-id="relax"] .rx-toypage-chip-desc {
+    font-size: 10.5px;
+    line-height: 1.5;
+    color: var(--rx-ink-soft);
+}
+
+/* 预览板:按真实行列画 */
+.app-shell[data-app-id="relax"] .rx-toypage-preview {
+    border-radius: 16px;
+    padding: 10px;
+    background:
+        linear-gradient(155deg, #ffffff 0%, #fff5e8 100%);
+    box-shadow: inset 0 0 0 1px var(--rx-line);
+}
+.app-shell[data-app-id="relax"] .rx-toypage-preview-board {
+    display: grid;
+    gap: 5px;
+    width: 100%;
+    aspect-ratio: 1;
+}
+.app-shell[data-app-id="relax"] .rx-toypage-preview-cell {
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    transform: rotate(var(--bubble-skew, 0deg));
+}
+
+/* 自由模式的预览:和舞台上的 .hbfree-stage 同一套盒子,零件引擎直接挂上去 */
+.app-shell[data-app-id="relax"] .rx-toypage-preview-free {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 100%;
+    aspect-ratio: 1;
+}
+
+/* 写代码模式的预览:里面是沙箱 iframe */
+.app-shell[data-app-id="relax"] .rx-toypage-preview-code {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 14px;
+    overflow: hidden;
+}
+.app-shell[data-app-id="relax"] .rx-toypage-preview-code iframe {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: transparent;
+    color-scheme: light;
+}
+
+/* 沙箱里抛出来的错。红一点,但不要红到像 App 崩了 */
+.app-shell[data-app-id="relax"] .rx-toypage-runerr {
+    margin: 9px 0 0;
+    padding: 8px 11px;
+    border-radius: 10px;
+    background: #fdecec;
+    color: #9c2b2b;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+    -webkit-user-select: text;
+    user-select: text;
+}
+
+/* 零件速查 */
+.app-shell[data-app-id="relax"] .rx-toypage-parts {
+    display: grid;
+    gap: 8px;
+    margin-top: 4px;
+}
+.app-shell[data-app-id="relax"] .rx-toypage-part {
+    padding: 9px 11px;
+    border-radius: 12px;
+    background: var(--rx-surface);
+    box-shadow: inset 0 0 0 1px var(--rx-line);
+}
+.app-shell[data-app-id="relax"] .rx-toypage-part-head {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+.app-shell[data-app-id="relax"] .rx-toypage-part-tag {
+    padding: 2px 6px;
+    border-radius: 6px;
+    background: #efe4e8;
+    color: var(--rx-primary-deep);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 10.5px;
+}
+.app-shell[data-app-id="relax"] .rx-toypage-part-name {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--rx-ink);
+}
+.app-shell[data-app-id="relax"] .rx-toypage-part-gesture {
+    font-size: 10.5px;
+    color: var(--rx-ink-soft);
+}
+.app-shell[data-app-id="relax"] .rx-toypage-part-desc {
+    margin: 0 0 4px;
+    font-size: 11.5px;
+    line-height: 1.6;
+    color: var(--rx-ink);
+}
+.app-shell[data-app-id="relax"] .rx-toypage-part-meta {
+    margin: 0;
+    font-size: 10.5px;
+    line-height: 1.6;
+    color: var(--rx-ink-soft);
+    word-break: break-word;
+}
+
+.app-shell[data-app-id="relax"] .rx-toypage-more {
+    margin-top: 10px;
+    padding: 9px 11px;
+    border-radius: 12px;
+    background: #fdf9f4;
+    box-shadow: inset 0 0 0 1px var(--rx-line);
+}
+.app-shell[data-app-id="relax"] .rx-toypage-more > summary {
+    cursor: pointer;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--rx-primary-deep);
+    list-style: none;
+}
+.app-shell[data-app-id="relax"] .rx-toypage-more > summary::-webkit-details-marker {
+    display: none;
+}
+.app-shell[data-app-id="relax"] .rx-toypage-more > summary::after {
+    content: " ▾";
+    color: var(--rx-ink-soft);
+}
+.app-shell[data-app-id="relax"] .rx-toypage-more[open] > summary::after {
+    content: " ▴";
+}
+.app-shell[data-app-id="relax"] .rx-toypage-attr {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 8px;
+}
+.app-shell[data-app-id="relax"] .rx-toypage-attr code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 10.5px;
+    color: var(--rx-primary-deep);
+    word-break: break-word;
+}
+.app-shell[data-app-id="relax"] .rx-toypage-attr span {
+    font-size: 10.5px;
+    line-height: 1.6;
+    color: var(--rx-ink-soft);
+}
+
+.app-shell[data-app-id="relax"] .rx-toypage-mini-btn {
+    padding: 5px 11px;
+    border: 1.5px solid var(--rx-line);
+    border-radius: 999px;
+    background: var(--rx-surface);
+    color: var(--rx-ink-soft);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.app-shell[data-app-id="relax"] .rx-toypage-mini-btn.is-on {
+    border-color: var(--rx-primary);
+    color: var(--rx-primary-deep);
+    background: var(--rx-surface-2);
+}
+
+.app-shell[data-app-id="relax"] .rx-toypage-tip {
+    margin: 9px 0 0;
+    font-size: 11px;
+    line-height: 1.7;
+    color: var(--rx-ink-soft);
+}
+/* 「这段代码一个能按的地方都没有」这类提醒,得比普通说明扎眼一点 */
+.app-shell[data-app-id="relax"] .rx-toypage-tip.is-warn {
+    color: var(--rx-primary-deep);
+    font-weight: 600;
+}
+.app-shell[data-app-id="relax"] .rx-toypage-tip code {
+    padding: 1px 5px;
+    border-radius: 5px;
+    background: #f4ebe6;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 10.5px;
+    word-break: break-word;
+}
+
+/* 代码编辑器 */
+.app-shell[data-app-id="relax"] .rx-toypage-editor {
+    display: block;
+    width: 100%;
+    border: 1.5px solid var(--rx-line);
+    border-radius: 12px;
+    background: #fdf9f4;
+    color: #574650;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.65;
+    padding: 10px 12px;
+    resize: vertical;
+    outline: none;
+    -webkit-user-select: text;
+    user-select: text;
+}
+.app-shell[data-app-id="relax"] .rx-toypage-editor:focus { border-color: var(--rx-primary-soft); }
+.app-shell[data-app-id="relax"] .rx-toypage-editor--paste { background: #fff; }
+/* JS 那块通常最长,给深一点的底,和上面两个框区分开 */
+.app-shell[data-app-id="relax"] .rx-toypage-editor--js {
+    background: #f7f2ec;
+    color: #4c3f47;
+}
+
+/* 问卷:输入框 / 选项 / 开关 */
+.app-shell[data-app-id="relax"] .rx-toypage-input {
+    display: block;
+    width: 100%;
+    margin-top: 8px;
+    border: 1.5px solid var(--rx-line);
+    border-radius: 12px;
+    background: var(--rx-surface);
+    color: var(--rx-ink);
+    font-family: inherit;
+    font-size: 12.5px;
+    padding: 9px 12px;
+    outline: none;
+    -webkit-user-select: text;
+    user-select: text;
+}
+.app-shell[data-app-id="relax"] .rx-toypage-input:focus { border-color: var(--rx-primary-soft); }
+
+.app-shell[data-app-id="relax"] .rx-toypage-field { margin-top: 11px; }
+.app-shell[data-app-id="relax"] .rx-toypage-field-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--rx-ink-soft);
+    letter-spacing: 0.04em;
+}
+.app-shell[data-app-id="relax"] .rx-toypage-opts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.app-shell[data-app-id="relax"] .rx-toypage-opt {
+    padding: 6px 12px;
+    border: 1.5px solid var(--rx-line);
+    border-radius: 999px;
+    background: var(--rx-surface);
+    color: var(--rx-ink);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease;
+}
+.app-shell[data-app-id="relax"] .rx-toypage-opt.is-on {
+    border-color: var(--rx-primary);
+    background: var(--rx-primary);
+    color: #fff;
+}
+
+.app-shell[data-app-id="relax"] .rx-toypage-switches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 11px;
+}
+.app-shell[data-app-id="relax"] .rx-toypage-switch {
+    padding: 7px 12px;
+    border: 1.5px dashed var(--rx-line);
+    border-radius: 12px;
+    background: var(--rx-surface);
+    color: var(--rx-ink-soft);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease;
+}
+.app-shell[data-app-id="relax"] .rx-toypage-switch.is-on {
+    border-style: solid;
+    border-color: var(--rx-primary);
+    background: var(--rx-surface-2);
+    color: var(--rx-primary-deep);
+    font-weight: 600;
+}
+
+/* 提示词展示块 */
+.app-shell[data-app-id="relax"] .rx-toypage-prompt {
+    margin: 10px 0 0;
+    max-height: 220px;
+    overflow: auto;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: #fdf9f4;
+    border: 1px solid var(--rx-line);
+    color: #6d5a64;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 10.5px;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    word-break: break-word;
+    -webkit-user-select: text;
+    user-select: text;
+}
+.app-shell[data-app-id="relax"] .rx-toypage-btn-icon { display: inline-flex; }
+.app-shell[data-app-id="relax"] .rx-toypage-btn-icon svg { width: 14px; height: 14px; }
+
+/* 行内提示(体检结果 / 粘贴结果) */
+.app-shell[data-app-id="relax"] .rx-toypage-msg {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin: 10px 0 0;
+    padding: 9px 12px;
+    border-radius: 12px;
+    font-size: 11.5px;
+    line-height: 1.6;
+}
+.app-shell[data-app-id="relax"] .rx-toypage-msg.is-ok {
+    background: #eef7ef;
+    color: #4d7a55;
+}
+.app-shell[data-app-id="relax"] .rx-toypage-msg.is-bad {
+    background: #fdeeee;
+    color: #b05656;
+}
+.app-shell[data-app-id="relax"] .rx-toypage-msg-line { display: block; }
+
+/* 底部动作条:让开 home 指示条 */
+.app-shell[data-app-id="relax"] .rx-toypage-actions {
+    flex: 0 0 auto;
+    padding: 10px 16px calc(12px + var(--app-safe-bottom, 0px));
+    background: linear-gradient(180deg, rgba(255, 250, 246, 0) 0%, var(--rx-surface) 34%);
+}
+.app-shell[data-app-id="relax"] .rx-toypage-actions .rx-toypage-msg { margin: 0 0 8px; }
+

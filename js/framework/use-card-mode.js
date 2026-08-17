@@ -576,12 +576,14 @@ export function useCardMode({ activeApp, appViewMode, closeApp }) {
 
     function onCardPointerUp(e) {
         if (e.pointerType === 'mouse') return;
-        e.currentTarget?.releasePointerCapture?.(e.pointerId);
+        // 指针可能已经不在活动列表里（合成事件 / 系统手势抢走），
+        // 不包 try 的话这里一抛，下面的 endCardDrag 就永远不会执行，卡片会卡在拖拽态
+        try { e.currentTarget?.releasePointerCapture?.(e.pointerId); } catch (_) { /* 已失效 */ }
         endCardDrag();
     }
 
     function onCardPointerCancel(e) {
-        e.currentTarget?.releasePointerCapture?.(e.pointerId);
+        try { e.currentTarget?.releasePointerCapture?.(e.pointerId); } catch (_) { /* 已失效 */ }
         cardDrag.active = false;
         isCardDragging.value = false;
         cancelPendingMove();

@@ -19,9 +19,24 @@ import { escapeHtml } from '@/src/core/escape.js';
 
 // 导入各个组件
 import { renderTextBubble } from './text-bubble.js';
-import { renderCallRecordBubble, renderDescImageBubble, renderDateDivider } from './card-messages.js';
-import { renderLocationBubble, renderRedpacketBubble, renderTransferBubble, renderChatRecordBubble } from './share-cards.js';
+import { renderCallRecordBubble, renderCallChatBubble, renderCallEndNoticeBubble, renderDescImageBubble, renderDateDivider } from './card-messages.js';
+import {
+    renderLocationBubble,
+    renderRedpacketBubble,
+    renderTransferBubble,
+    renderChatRecordBubble,
+    renderMomentShareBubble,
+    renderSongShareBubble,
+    renderPlaylistShareBubble,
+    renderListenTogetherBubble,
+    renderShopItemBubble,
+    renderShopGiftBubble,
+    renderShopTheaterBubble,
+    renderYoutubeVideoBubble,
+    renderBlogPostBubble,
+} from './share-cards.js';
 import { renderVoiceBubble } from './special-messages.js';
+import { renderGameRecordBubble } from './game-cards.js';
 
 // ============================================
 // 消息类型映射
@@ -32,7 +47,12 @@ import { renderVoiceBubble } from './special-messages.js';
  */
 const cardMessageRenderers = {
     call_record: renderCallRecordBubble,
+    call_chat: renderCallChatBubble,
+    call_end_notice: renderCallEndNoticeBubble,
     descriptive_image: renderDescImageBubble,
+    // 群聊小游戏战绩卡。写入侧在 games/core/record.js，
+    // 三处（写入 type / 这张注册表 / 渲染器）必须对齐，少一处就画不出来
+    game_record: renderGameRecordBubble,
 };
 
 /**
@@ -43,6 +63,22 @@ const shareCardRenderers = {
     redpacket: renderRedpacketBubble,
     transfer: renderTransferBubble,
     chat_record: renderChatRecordBubble,
+    'share-card': renderMomentShareBubble,
+    // 音乐（由 music app 的 chat-bridge 或 AI 的特殊动作写入）
+    song_share: renderSongShareBubble,
+    playlist_share: renderPlaylistShareBubble,
+    listen_together_invite: renderListenTogetherBubble,
+    // 四叶草购物（由 shop app 的 gift-service 或 AI 的 [送礼:] 写入）。
+    // 写入 type / 这张注册表 / 渲染器三处必须对齐，少一处就画不出来
+    shop_item_share: renderShopItemBubble,
+    shop_gift: renderShopGiftBubble,
+    shop_theater_share: renderShopTheaterBubble,
+    // 萤火视频（由 youtube app 的 chat-bridge 或 AI 的 [分享视频:] 写入）。
+    // 同样三处对齐：写入 type / 这张注册表 / share-cards 渲染器
+    youtube_video_share: renderYoutubeVideoBubble,
+    // 氧气帖子（由 blog app 的 chat-bridge 或 AI 的 [分享帖子:] 写入）。
+    // 同样三处对齐：写入 type / 这张注册表 / share-cards 渲染器
+    blog_post_share: renderBlogPostBubble,
 };
 
 /**
@@ -74,6 +110,27 @@ function renderPatBubble(msg, contact = {}, options = {}) {
     const mode = options.mode || 'calendar';
     return `
         <div class="message-wrapper pat-bubble" data-message-id="${escapeHtml(msg.id || '')}" data-msg-ai="${escapeHtml(aiPersonId)}" data-msg-mode="${escapeHtml(mode)}">
+            <div class="pat-bubble-inner">
+                <div class="pat-bubble-text">${text}</div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * 群公告（群主 / 管理员 / 群昵称变更）
+ *
+ * 视觉跟「拍一拍」完全一致：居中、灰色小字、无气泡框。
+ * 复用 pat-bubble 的 class 而不是另写一套 —— 两者是同一种「系统悄悄说一句」，
+ * 视觉不同 ≠ 结构不同（AGENTS2 §13.6.3 的同款判断）。
+ * 额外加一个 group-notice class，方便以后单独调色。
+ */
+function renderGroupNoticeBubble(msg, contact = {}, options = {}) {
+    const text = escapeHtml(msg.content || '');
+    const convId = options.aiPersonId || contact?.aiPersonId || contact?.id || '';
+    const mode = options.mode || 'calendar';
+    return `
+        <div class="message-wrapper pat-bubble group-notice-bubble" data-message-id="${escapeHtml(msg.id || '')}" data-msg-ai="${escapeHtml(convId)}" data-msg-mode="${escapeHtml(mode)}">
             <div class="pat-bubble-inner">
                 <div class="pat-bubble-text">${text}</div>
             </div>
@@ -124,6 +181,11 @@ export function renderMessage(msg, contact = {}, options = {}) {
     // 拍一拍消息（居中气泡）
     if (type === 'pat') {
         return renderPatBubble(msg, contact, options);
+    }
+
+    // 群公告（设管理员 / 改群昵称 / 转让群主），同款居中灰字
+    if (type === 'group_notice') {
+        return renderGroupNoticeBubble(msg, contact, options);
     }
 
     // 普通消息 - 文本气泡
@@ -178,6 +240,16 @@ export {
     renderRedpacketBubble,
     renderTransferBubble,
     renderChatRecordBubble,
+    renderMomentShareBubble,
     // 特殊消息
     renderVoiceBubble,
+    // 系统提示类
+    renderPatBubble,
+    renderGroupNoticeBubble,
+    // 群聊小游戏
+    renderGameRecordBubble,
+    // 四叶草购物
+    renderShopItemBubble,
+    renderShopGiftBubble,
+    renderShopTheaterBubble,
 };

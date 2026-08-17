@@ -221,6 +221,13 @@
     font-size: 18px;
     font-weight: 600;
     color: white;
+    /* ★ inline style="background:..." 兜底,支持任意色(包括 #A8C8EC) */
+    background: var(--avatar-color, #A8C8EC);
+}
+
+/* ★ v0.71:实时 [data-color] 直接生效(走 CSS 变量,inline style 优先) */
+.app-shell[data-app-id="chat"] .contact-avatar[data-color] {
+    background: var(--avatar-color);
 }
 
 /* 动态背景色 */
@@ -234,6 +241,16 @@
 .app-shell[data-app-id="chat"] .contact-avatar[data-color="#F8B500"] { background: #F8B500; }
 .app-shell[data-app-id="chat"] .contact-avatar[data-color="#6C5CE7"] { background: #6C5CE7; }
 .app-shell[data-app-id="chat"] .contact-avatar[data-color="#A29BFE"] { background: #A29BFE; }
+
+/* ★ v0.71 AI 头像 8 色板变量映射(支持 resolveAiAvatar 默认色) */
+.app-shell[data-app-id="chat"] [data-color="#A8C8EC"] { --avatar-color: #A8C8EC; }
+.app-shell[data-app-id="chat"] [data-color="#F4A6CD"] { --avatar-color: #F4A6CD; }
+.app-shell[data-app-id="chat"] [data-color="#B8D4F0"] { --avatar-color: #B8D4F0; }
+.app-shell[data-app-id="chat"] [data-color="#FFD4E5"] { --avatar-color: #FFD4E5; }
+.app-shell[data-app-id="chat"] [data-color="#C8E6F4"] { --avatar-color: #C8E6F4; }
+.app-shell[data-app-id="chat"] [data-color="#FFC8DD"] { --avatar-color: #FFC8DD; }
+.app-shell[data-app-id="chat"] [data-color="#B8E6CF"] { --avatar-color: #B8E6CF; }
+.app-shell[data-app-id="chat"] [data-color="#D4B8F0"] { --avatar-color: #D4B8F0; }
 
 .app-shell[data-app-id="chat"] .friend-request-avatar-inner[data-color="#FF6B6B"] { background: linear-gradient(135deg, #FF96A8, #FF6B9D); }
 .app-shell[data-app-id="chat"] .friend-request-avatar-inner[data-color="#4ECDC4"] { background: #4ECDC4; }

@@ -1,16 +1,11 @@
-// ============================================
-// 动作系统（actions）
-// 用于 app 间跳转、弹窗、调用方法、分享等
-// ============================================
+// 命令模式 把操作封装成可序列化的对象，用于 app 间跳转、弹窗、调用方法、分享
 
 import { escapeHtml } from './escape.js';
 
 /* 规范化 action 对象，自动补 appId */
 export function createActionObject(action, appId) {
-    const normalizedAction = action && typeof action === 'object'
-        ? { ...action }
-        : {};
-
+    const normalizedAction = action && typeof action === 'object' ? { ...action } : {};
+     
     if (appId && !normalizedAction.appId) {
         normalizedAction.appId = appId;
     }
@@ -68,6 +63,22 @@ export function createShareRecordAction(targetAppId, entityType, entityId, paylo
         targetAppId,
         entityType,
         entityId,
+        payload,
+    };
+}
+
+/**
+ * 聊天里的跨 App 内容卡。
+ * 点击后由框架统一弹确认窗，再调用目标 App 的 `services.contentCards`，
+ * 最后打开目标详情页。生成动作只在用户确认后发生。
+ */
+export function createContentCardAction(targetAppId, entityType, entityId, payload = {}) {
+    return {
+        action: 'contentCard',
+        targetAppId,
+        entityType,
+        entityId,
+        pageId: payload?.pageId || '',
         payload,
     };
 }

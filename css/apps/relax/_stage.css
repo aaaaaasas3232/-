@@ -1,0 +1,318 @@
+/**
+ * relax-app / 舞台
+ *
+ * 层叠顺序(z-index):
+ *   背景 0 → 暗角 1 → 盘子 2 → 主体(盘内)→ 装饰 10+ → 浮动条 60 → 抽屉 70 → tab 栏 80
+ *
+ * ★ filter 只加在 `.rx-stage-bg` 这一层
+ *   如果把 blur 加在 `.rx-stage` 上,盘子和主体会一起被糊掉。
+ *   分层的代价是多一个绝对定位元素,换来「背景可以随便糊」。
+ */
+
+.app-shell[data-app-id="relax"] .rx-stage {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    touch-action: none;
+}
+
+.app-shell[data-app-id="relax"] .rx-stage-bg {
+    position: absolute;
+    /* 往外撑一点:blur 之后边缘会透出底色,-24px 把毛边推到屏幕外 */
+    inset: -24px;
+    z-index: 0;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
+    transition: background-color 0.3s ease, inset 0.28s ease;
+}
+
+/* 卡片模式下:rx-stage-bg 收缩到不超出 app-shell.card 的圆角(28px)
+ * 否则背景扩展部分会在四个角露出直角(被 app-shell.card overflow:hidden 裁切掉)
+ * 同时需要匹配 app-shell.card 的圆角,避免背景在角上被裁出直角边缘 */
+.app-shell.card[data-app-id="relax"] .rx-stage {
+    border-radius: inherit;
+}
+.app-shell.card[data-app-id="relax"] .rx-stage-bg {
+    inset: 0;
+    border-radius: inherit;
+}
+
+/* 顶部/底部压暗 — 已移除,舞台要求纯背景无渐变 */
+
+/* ============================
+   盘子
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-plate-wrap {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    z-index: 2;
+    width: 74%;
+    aspect-ratio: 1;
+    /* transform 由内联样式接管(scale + offset),这里只负责居中基准 */
+    margin-left: -37%;
+    margin-top: -37%;
+    transition: transform 0.28s var(--rx-ease-bounce);
+}
+
+.app-shell[data-app-id="relax"] .rx-plate-shadow {
+    position: absolute;
+    left: 6%;
+    right: 6%;
+    bottom: -4%;
+    height: 22%;
+    background: rgba(70, 45, 55, 0.24);
+    filter: blur(14px);
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="relax"] .rx-plate {
+    position: absolute;
+    inset: 0;
+    /* background / box-shadow / border-radius / clip-path 全由 plates.js 内联给 */
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.app-shell[data-app-id="relax"] .rx-plate-glaze {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="relax"] .rx-plate-inner {
+    position: absolute;
+    /* inset / border-radius 由 plates.js 按盘沿厚度内联给 */
+    /*
+     * ★ 故意 visible —— 盘子的圆角背景由 plates.js 的 background / clip-path 实现,
+     *   不再依赖此层的 overflow:hidden 裁切。
+     *   主体(气泡板 / 捏捏果冻 / 巧克力脆皮)的随机圆角格子经常被这里裁掉,
+     *   改成 visible 后板的边角能完整露出来;容器自身的圆角仍由 border-radius 给。
+     */
+    overflow: visible;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 三层套娃(解压4 风格):
+ *   rx-plate        = 奶茶色外圈 + 单层投影
+ *   rx-plate-inner  = 画布容器(白底 + 圆角 + inset 阴影)
+ *   rx-plate-center = 内切圆盘,matchInner 模式:占满 inner 的内容区,圆形
+ */
+.app-shell[data-app-id="relax"] .rx-plate-center {
+    position: absolute;
+    /* 同样的理由:让主体的圆角边缘不被裁 */
+    overflow: visible;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 关掉盘子时,主体直接铺在舞台上 */
+.app-shell[data-app-id="relax"] .rx-plate-inner--bare {
+    inset: 4%;
+    border-radius: 0;
+    overflow: visible;
+}
+
+/* fit:'stage' 的主体铺满整个舞台 */
+.app-shell[data-app-id="relax"] .rx-stage-toy-full {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ============================
+   主体宿主
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-toy-host {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.24s var(--rx-ease-bounce);
+}
+
+.app-shell[data-app-id="relax"] .rx-toy-slot {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.app-shell[data-app-id="relax"] .rx-toy-empty,
+.app-shell[data-app-id="relax"] .rx-toy-error {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-align: center;
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="relax"] .rx-toy-empty-ring {
+    width: 44px;
+    height: 44px;
+    margin-bottom: 4px;
+    border: 2.5px dashed rgba(107, 85, 96, 0.28);
+    border-radius: var(--rx-blob-lg);
+    animation: rxEmptyBreathe 3.2s ease-in-out infinite;
+}
+
+@keyframes rxEmptyBreathe {
+    0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.7; }
+    50%      { transform: scale(1.08) rotate(6deg); opacity: 1; }
+}
+
+.app-shell[data-app-id="relax"] .rx-toy-empty-text {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: rgba(107, 85, 96, 0.62);
+}
+
+.app-shell[data-app-id="relax"] .rx-toy-empty-hint {
+    margin: 0;
+    font-size: 11px;
+    color: rgba(107, 85, 96, 0.44);
+}
+
+.app-shell[data-app-id="relax"] .rx-toy-error {
+    font-size: 12px;
+    font-weight: 700;
+    color: #d6516b;
+}
+
+/* ============================
+   装饰
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-deco {
+    position: absolute;
+    /* 玩的时候不吃事件,免得挡住捏捏 */
+    pointer-events: none;
+    transition: filter 0.2s ease;
+}
+
+.app-shell[data-app-id="relax"] .rx-stage.is-editable .rx-deco {
+    pointer-events: auto;
+    cursor: grab;
+}
+
+.app-shell[data-app-id="relax"] .rx-deco-art,
+.app-shell[data-app-id="relax"] .rx-deco-art svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.app-shell[data-app-id="relax"] .rx-deco-art svg {
+    filter: drop-shadow(0 4px 8px rgba(70, 45, 55, 0.22));
+}
+
+/* ★ 自定义装饰(用户上传的 PNG/SVG):img 走 contain,免得超出框 */
+.app-shell[data-app-id="relax"] .rx-deco-custom-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+/* 选中态:虚线框 + 轻微浮起 */
+.app-shell[data-app-id="relax"] .rx-deco.is-selected::before {
+    content: "";
+    position: absolute;
+    inset: -10%;
+    border: 2px dashed rgba(255, 255, 255, 0.92);
+    border-radius: 18px;
+    box-shadow: 0 0 0 1.5px rgba(200, 90, 117, 0.45);
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="relax"] .rx-deco.is-dragging {
+    cursor: grabbing;
+}
+
+.app-shell[data-app-id="relax"] .rx-deco.is-dragging .rx-deco-art svg {
+    filter: drop-shadow(0 10px 16px rgba(70, 45, 55, 0.34));
+}
+
+.app-shell[data-app-id="relax"] .rx-deco-remove {
+    position: absolute;
+    top: -14%;
+    right: -14%;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    border-radius: 100% 46% 48% 100% / 44% 100% 46% 100%;
+    background: #fff;
+    color: #d6516b;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 3px 0 #ffc4cc;
+}
+
+.app-shell[data-app-id="relax"] .rx-deco-remove:active {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 #ffc4cc;
+}
+
+/* ============================
+   舞台浮动条
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-stage-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 60;
+    display: flex;
+    align-items: flex-start;
+    /* 三个按钮靠右排,左侧不占位 */
+    justify-content: flex-end;
+    gap: 10px;
+    /*
+     * ★ padding-top 要躲开状态栏。
+     *   relax 关掉了框架顶栏(topbar.visible:false),但手机壳的状态栏(时间 / 信号 /
+     *   灵动岛)是浮在 .app-shell 上面的,内容区从屏幕最顶端就开始了。
+     *   不留这 54px 的话「我的解压角」会跟时间叠在一起。
+     */
+    padding: 54px 16px 0;
+    transition: opacity 0.24s ease, transform 0.24s ease;
+}
+
+.app-shell[data-app-id="relax"] .rx-stage-bar.is-hidden {
+    opacity: 0;
+    transform: translateY(-14px);
+    pointer-events: none;
+}
+
+/* 装饰编辑模式下也别让舞台顶栏露出来,不然跟「返回调整」按钮打架 */
+.app-shell[data-app-id="relax"] .rx-stage-bar.is-deco-edit {
+    opacity: 0;
+    transform: translateY(-14px);
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="relax"] .rx-stage-bar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+}

@@ -29,7 +29,6 @@
 
 import {
     splitText,
-    splitCommas,
     resolveAttrKey,
     setByPath,
 } from './form-schema.js';
@@ -90,6 +89,7 @@ const readRawField = (field, schema, ctx) => {
     switch (field.type) {
         case 'text':
         case 'textarea':
+        case 'landmark-icon':
             return readTextLike(field, schema, ctx);
         case 'number':
             return readNumber(field, schema, ctx);

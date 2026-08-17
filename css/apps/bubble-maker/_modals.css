@@ -1,0 +1,82 @@
+/**
+ * 气泡机 · 弹窗皮肤
+ *
+ * 把框架 `AcModal` 的 `--ac-*` 桥到本 App 的 `--bb-*`,这样换配色时弹窗跟着变。
+ *
+ * ⚠️ `class="bb-modal"` 落在**根元素 `.ac-overlay`** 上,不是 `.ac-modal`。
+ *    所以业务钩子一律写后代选择器:`.bb-modal .ac-modal-body` ✓
+ *                                  `.bb-modal.ac-modal`      ✗
+ *
+ * ⚠️ `.ac-modal` 永远不加 `overflow: hidden` —— 关闭按钮用 `top:-10px`
+ *    故意露在弹窗外面(本 App 关掉了那个叉,但别给后来人留坑)。
+ */
+
+.app-shell[data-app-id="bubble-maker"] .bb-modal .ac-modal {
+    --ac-color-primary: var(--bb-primary);
+    --ac-color-primary-dark: var(--bb-primary-strong);
+    --ac-color-primary-soft: var(--bb-primary-soft);
+    --ac-shadow-primary: var(--bb-btn-shadow);
+    --ac-shadow-secondary: var(--bb-primary-soft);
+
+    background: var(--bb-surface);
+    color: var(--bb-text);
+    border-radius: var(--bb-r-xl);
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-modal .ac-modal-title {
+    color: var(--bb-text);
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-modal .ac-modal-subtitle {
+    color: var(--bb-text-tertiary);
+    font-size: 11px;
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-modal .ac-modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    color: var(--bb-text);
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-modal .ac-modal-footer {
+    display: flex;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-modal .ac-btn {
+    flex: 1 1 0;
+    padding: 9px 12px;
+    border: 1px solid var(--bb-btn-border);
+    border-radius: var(--bb-r-pill);
+    background: var(--bb-btn-bg);
+    color: var(--bb-btn-text);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 0 var(--bb-btn-shadow);
+    transition: transform 0.16s var(--bb-bounce), box-shadow 0.16s var(--bb-ease);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-modal .ac-btn:active {
+    transform: translateY(2px);
+    box-shadow: 0 0 0 var(--bb-btn-shadow);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-modal .ac-btn-primary {
+    background: var(--bb-primary);
+    border-color: var(--bb-primary);
+    color: var(--bb-on-primary);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-modal .ac-btn-danger {
+    background: var(--bb-danger);
+    border-color: var(--bb-danger);
+    color: var(--bb-text-inverse);
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-modal-text {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--bb-text-secondary);
+}

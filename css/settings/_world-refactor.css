@@ -1,0 +1,1372 @@
+/* ============================================
+ * 世界观（wv-*）· 视觉重构
+ *
+ * ★ 为什么单独一个文件、且由 index.html 直接 <link>：
+ *   css/settings.css 里没有任何 @import，css/settings/_world-*.css
+ *   那一批文件从来没被加载过（全是死文件）。世界观的真实样式散在
+ *   settings.css 的一万多行里，且有多处重复定义。
+ *   这个文件在 settings.css **之后**加载，是世界观视觉的唯一权威来源。
+ *
+ * 设计准则（对齐人设页）：
+ *   - 白底为主、#0A84FF 为辅，不用靛紫
+ *   - 卡片：白底 + 1px 浅边 + 14px 圆角 + 极轻投影
+ *   - 凹陷拟态只留两处：世界观介绍大卡、时间轴竖线
+ *   - 表单输入：#F2F2F7 填充，聚焦转白 + 蓝描边
+ *   - 全 SVG 图标，禁用 emoji 与符号字符
+ * ============================================ */
+
+.settings-app .wv {
+    --wv-blue: #0A84FF;
+    --wv-blue-soft: rgba(10, 132, 255, 0.10);
+    --wv-blue-line: rgba(10, 132, 255, 0.22);
+    --wv-card: #FFFFFF;
+    --wv-line: rgba(0, 0, 0, 0.06);
+    --wv-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    --wv-fill: #F2F2F7;
+    --wv-text: #1D1D1F;
+    --wv-text-2: rgba(60, 60, 67, 0.72);
+    --wv-text-3: rgba(60, 60, 67, 0.5);
+    --wv-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding-bottom: 24px;
+}
+
+/* ─── 分段控件：复原项目原本的 case-type-tabs 设计 ───
+ *
+ * 参照 css/settings.css 的 `.case-diy__controls .case-type-tabs`
+ * （手机壳 DIY 的「纯色 / 渐变 / 多色」）：
+ *   槽：fill-secondary 底、8px 圆角、2px 内边距、gap 0
+ *   片：flex 1、6px 内边距、12px 字、6px 圆角
+ *   选中：白底 + 黑字 + 0 1px 3px 投影（**不是蓝字**）
+ * 世界观所有 tab 条（世界级 / 时间维度 / 地图模式 / 设置面板）统一用它。
+ */
+
+.settings-app .wv-tabs,
+.settings-app .wv-tabs__world-tabs,
+.settings-app .wv-chronicle__tabs,
+.settings-app .wv-map__mode-tabs,
+.settings-app .wv-settings-panel__tabs {
+    display: flex;
+    gap: 0;
+    padding: 2px;
+    background: var(--settings-color-fill-secondary, rgba(120, 120, 128, 0.12));
+    border: none;
+    border-radius: 8px;
+    box-shadow: none;
+    line-height: 1.3;
+    color: var(--settings-color-secondary);
+    text-align: center;
+    overflow: hidden;
+    margin: 0;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.settings-app .wv-tab,
+.settings-app .wv-chronicle__tab,
+.settings-app .wv-map__mode-tab,
+.settings-app .wv-settings-panel__tab {
+    flex: 1;
+    min-width: 0;
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: var(--settings-color-secondary);
+    border-radius: 6px;
+    padding: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.1;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    cursor: pointer;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: all 0.18s ease;
+}
+
+.settings-app .wv-tab:hover,
+.settings-app .wv-chronicle__tab:hover,
+.settings-app .wv-map__mode-tab:hover,
+.settings-app .wv-settings-panel__tab:hover {
+    color: var(--settings-color-label);
+    background: transparent;
+}
+
+.settings-app .wv-tab.is-active,
+.settings-app .wv-chronicle__tab.is-active,
+.settings-app .wv-map__mode-tab.is-active,
+.settings-app .wv-settings-panel__tab.is-active {
+    color: var(--settings-color-label);
+    background: var(--settings-color-card, #fff);
+    font-weight: 500;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.settings-app .wv-tab__glyph {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
+}
+.settings-app .wv-tab__glyph:empty { display: none; }
+.settings-app .wv-tab__glyph svg { width: 13px; height: 13px; display: block; }
+
+/* 世界级：返回是独立动作，放在分段槽外面（原设计的灰色圆胶囊） */
+.settings-app .wv-tabs--world {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+    overflow: visible;
+}
+.settings-app .wv-tabs--world .wv-tab--back {
+    flex: 0 0 auto;
+    padding: 6px 12px;
+    background: rgba(60, 60, 67, 0.06);
+    border-radius: 999px;
+    color: var(--settings-color-label);
+    font-size: 12px;
+    font-weight: 500;
+    box-shadow: none;
+}
+.settings-app .wv-tabs--world .wv-tab--back:hover {
+    background: rgba(60, 60, 67, 0.12);
+    color: var(--settings-color-label);
+}
+.settings-app .wv-tabs--world .wv-tab--back .wv-tab__glyph { font-size: 15px; line-height: 1; }
+.settings-app .wv-tabs__world-tabs { flex: 1 1 auto; min-width: 0; }
+
+.settings-app .wv__body {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* ─── 按钮 ─────────────────────────────────── */
+
+.settings-app .wv-btn {
+    appearance: none;
+    border: 1px solid transparent;
+    background: var(--wv-fill);
+    color: var(--wv-text);
+    border-radius: 10px;
+    padding: 7px 13px;
+    font-size: 12.5px;
+    font-weight: 500;
+    line-height: 1.2;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    transition: background-color 0.15s ease, transform 0.12s ease, border-color 0.15s ease;
+}
+.settings-app .wv-btn:active { transform: scale(0.97); }
+.settings-app .wv-btn--primary {
+    background: var(--wv-blue);
+    border-color: var(--wv-blue);
+    color: #fff;
+    box-shadow: 0 1px 4px rgba(10, 132, 255, 0.24);
+}
+.settings-app .wv-btn--primary:hover { background: #0077EE; }
+.settings-app .wv-btn--ghost {
+    background: #FFFFFF;
+    border-color: var(--wv-blue-line);
+    color: var(--wv-blue);
+}
+.settings-app .wv-btn--ghost:hover { background: var(--wv-blue-soft); }
+.settings-app .wv-btn--danger {
+    background: #FFFFFF;
+    border-color: rgba(255, 59, 48, 0.28);
+    color: #FF3B30;
+}
+.settings-app .wv-btn--danger:hover { background: rgba(255, 59, 48, 0.08); }
+.settings-app .wv-btn--sm { padding: 5px 10px; font-size: 11.5px; border-radius: 8px; }
+.settings-app .wv-btn svg { width: 13px; height: 13px; display: block; }
+
+/* ─── 说明卡 / 介绍卡 ──────────────────────── */
+
+/* 普通说明：干净白卡，不再加左侧蓝条 */
+.settings-app .wv-callout {
+    position: relative;
+    background: var(--wv-card);
+    border: 1px solid var(--wv-line);
+    border-radius: var(--wv-radius);
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    box-shadow: var(--wv-shadow);
+    overflow: hidden;
+}
+.settings-app .wv-callout--info { background: var(--wv-card); box-shadow: var(--wv-shadow); }
+.settings-app .wv-callout__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+.settings-app .wv-callout__title {
+    font-size: 13.5px;
+    font-weight: 650;
+    color: var(--wv-text);
+}
+.settings-app .wv-callout__desc {
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--wv-text-2);
+}
+
+/* 世界观介绍大卡：保留用户认可的凹陷拟态 */
+.settings-app .wv-landing {
+    border: none;
+    border-radius: var(--wv-radius);
+    padding: 14px;
+    background: #FFFFFF;
+    box-shadow:
+        inset 0 2px 4px rgba(0, 0, 0, 0.10),
+        inset 0 -1px 2px rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.settings-app .wv-landing .wv-callout {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+}
+
+/* ─── 新建世界观：先选预设 ─────────────────── */
+
+.settings-app .wv-createpick {
+    margin: 2px 0 6px;
+    padding: 16px;
+    background: var(--wv-card);
+    border: 1px solid var(--wv-line);
+    border-radius: var(--wv-radius);
+    box-shadow: var(--wv-shadow);
+}
+.settings-app .wv-createpick__title {
+    font-size: 15px;
+    font-weight: 650;
+    color: var(--wv-text);
+    letter-spacing: 0.01em;
+}
+.settings-app .wv-createpick__desc {
+    margin: 5px 0 14px;
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--wv-text-2);
+}
+.settings-app .wv-createpick__grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+.settings-app .wv-createpick__card {
+    appearance: none;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+    padding: 13px 14px;
+    border: 1px solid var(--wv-line);
+    background: #FCFCFD;
+    border-radius: 12px;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.16s ease, background-color 0.16s ease, transform 0.12s ease;
+}
+.settings-app .wv-createpick__card:hover {
+    border-color: var(--wv-blue-line);
+    background: #F7FAFF;
+}
+.settings-app .wv-createpick__card:active { transform: scale(0.995); }
+.settings-app .wv-createpick__card b {
+    font-size: 14px;
+    font-weight: 650;
+    color: var(--wv-text);
+}
+.settings-app .wv-createpick__card span {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--wv-text-2);
+}
+.settings-app .wv-createpick__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+/* ─── 地标图标选择器 ───────────────────────── */
+
+.settings-app .wv-iconpick {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(34px, 1fr));
+    gap: 8px;
+    width: 100%;
+    padding: 10px;
+    background: var(--wv-fill);
+    border-radius: 12px;
+}
+.settings-app .wv-iconpick__item {
+    appearance: none;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1.5px solid var(--wv-blue-line);
+    background: #FFFFFF;
+    color: var(--wv-blue);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+}
+.settings-app .wv-iconpick__item:hover { background: #F0F7FF; transform: translateY(-1px); }
+.settings-app .wv-iconpick__item.is-on {
+    background: var(--wv-blue);
+    border-color: var(--wv-blue);
+    color: #FFFFFF;
+    box-shadow: 0 2px 6px rgba(10, 132, 255, 0.3);
+}
+.settings-app .wv-iconpick__item svg { width: 16px; height: 16px; display: block; }
+
+/* ─── 地图 ─────────────────────────────────── */
+
+.settings-app .wv-map { display: flex; flex-direction: column; gap: 12px; }
+
+/* 模式条必须始终是一行：tab 组撑满剩余空间（所以地点地图模式下 +按钮
+   紧跟在 tab 右边，中间不留空档），+按钮不压缩，挤压全部由中间的地点
+   select 吃掉（长地点名靠 ellipsis 收尾）。手机宽度只有 ~344px，
+   一旦允许换行，场所地图里 select 一长就会把 +按钮甩到第二行。 */
+.settings-app .wv-map__mode-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: nowrap;
+    padding: 0;
+    min-width: 0;
+}
+.settings-app .wv-map__mode-tabs { flex: 1 0 auto; min-width: 0; }
+.settings-app .wv-map__mode-picker {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 1 auto;
+    min-width: 0;
+}
+.settings-app .wv-map__mode-picker-placeholder { display: none; }
+.settings-app .wv-map__mode-select {
+    appearance: none;
+    background: var(--wv-fill);
+    border: 1px solid rgba(120, 120, 128, 0.14);
+    border-radius: 10px;
+    padding: 7px 24px 7px 9px;
+    font-size: 12px;
+    color: var(--wv-text);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%238E8E93' d='M5 6L0 0h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    cursor: pointer;
+    flex: 0 1 auto;
+    width: auto;
+    min-width: 0;
+    max-width: 132px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.settings-app .wv-map__mode-create {
+    appearance: none;
+    border: 1px solid var(--wv-blue);
+    background: var(--wv-blue);
+    color: #fff;
+    border-radius: 10px;
+    padding: 7px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    flex: 0 0 auto;
+    box-shadow: 0 1px 4px rgba(10, 132, 255, 0.24);
+}
+.settings-app .wv-map__mode-create:active { transform: scale(0.97); }
+
+.settings-app .wv-map__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+    padding: 10px 12px;
+    background: var(--wv-card);
+    border: 1px solid var(--wv-line);
+    border-radius: 12px;
+    box-shadow: var(--wv-shadow);
+}
+.settings-app .wv-map__toolbar-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+.settings-app .wv-map__toolbar-section--zoom { flex: 1 1 160px; }
+.settings-app .wv-map__toolbar-label {
+    font-size: 12px;
+    color: var(--wv-text-3);
+    white-space: nowrap;
+}
+.settings-app .wv-map__zoom-val {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--wv-blue);
+    font-variant-numeric: tabular-nums;
+    min-width: 38px;
+    text-align: right;
+}
+.settings-app .wv-map__zoom-reset {
+    appearance: none;
+    width: 26px;
+    height: 26px;
+    flex: 0 0 26px;
+    padding: 0;
+    border-radius: 8px;
+    border: 1px solid var(--wv-blue-line);
+    background: #FFFFFF;
+    color: var(--wv-blue);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.settings-app .wv-map__zoom-reset::before { display: none; }
+.settings-app .wv-map__zoom-reset svg {
+    width: 14px;
+    height: 14px;
+    display: block;
+}
+.settings-app .wv-map__zoom-reset:hover { background-color: var(--wv-blue-soft); }
+
+.settings-app .wv-map__stage {
+    position: relative;
+    height: 260px;
+    overflow: hidden;
+    border-radius: var(--wv-radius);
+    border: 1px solid var(--wv-line);
+    background: #F7F8FB;
+    box-shadow: var(--wv-shadow);
+    touch-action: none;
+}
+.settings-app .wv-map__world {
+    position: absolute;
+    inset: 0;
+    transform-origin: center center;
+}
+.settings-app .wv-map__grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(10, 132, 255, 0.07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(10, 132, 255, 0.07) 1px, transparent 1px);
+    background-size: 28px 28px;
+}
+.settings-app .wv-map__bg-image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* 地标：描边圆球 + 旁边胶囊词，两者无包裹关系 */
+.settings-app .wv-map__mark {
+    position: absolute;
+    transform: translate(-50%, -50%) scale(var(--pin-scale, 1));
+    transform-origin: center center;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: grab;
+    z-index: 2;
+    max-width: none;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+.settings-app .wv-map__mark:active { cursor: grabbing; }
+.settings-app .wv-map__mark.is-dragging {
+    z-index: 20;
+    cursor: grabbing;
+}
+.settings-app .wv-map__mark.is-dragging .wv-map__orb {
+    box-shadow: 0 6px 16px rgba(10, 132, 255, 0.42);
+}
+/* 拖动时的实时坐标气泡（由 events.js 动态插入） */
+.settings-app .wv-map__dragcoord {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 6px);
+    transform: translateX(-50%);
+    padding: 3px 7px;
+    border-radius: 6px;
+    background: rgba(29, 29, 31, 0.88);
+    color: #fff;
+    font-size: 10.5px;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+}
+.settings-app .wv-map__orb {
+    width: 26px;
+    height: 26px;
+    flex: 0 0 26px;
+    border-radius: 50%;
+    background: var(--mark-bg, #E8F1FF);
+    border: 2px solid var(--mark-stroke, #0A84FF);
+    color: var(--mark-stroke, #0A84FF);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(15, 30, 60, 0.16);
+    transition: box-shadow 0.16s ease, transform 0.16s ease;
+}
+.settings-app .wv-map__orb svg { width: 14px; height: 14px; display: block; }
+.settings-app .wv-map__mark:hover .wv-map__orb { transform: scale(1.06); }
+
+/* 文字：白胶囊 + 细边，取代原来的描边文字（那个很糊） */
+.settings-app .wv-map__word {
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0.01em;
+    color: var(--wv-text);
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 999px;
+    padding: 4px 9px;
+    white-space: nowrap;
+    box-shadow: 0 1px 3px rgba(15, 30, 60, 0.10);
+    -webkit-text-stroke: 0;
+    text-shadow: none;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+.settings-app .wv-map__mark.is-center .wv-map__orb {
+    box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.16), 0 2px 6px rgba(15, 30, 60, 0.16);
+}
+.settings-app .wv-map__mark.is-center .wv-map__word {
+    background: var(--wv-blue);
+    border-color: var(--wv-blue);
+    color: #fff;
+}
+.settings-app .wv-map__mark.is-restricted .wv-map__orb { --mark-stroke: #FF3B30; }
+
+.settings-app .wv-map__custom-bg-tip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+    color: var(--wv-text-3);
+}
+.settings-app .wv-map__empty-select {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 34px 16px;
+    background: var(--wv-card);
+    border: 1px dashed rgba(10, 132, 255, 0.28);
+    border-radius: var(--wv-radius);
+}
+.settings-app .wv-map__empty-icon { display: none; }
+.settings-app .wv-map__empty-text { font-size: 12.5px; color: var(--wv-text-3); }
+
+.settings-app .wv-map__list { display: flex; flex-direction: column; gap: 8px; }
+
+/* ─── 列表项：地点 / 场所 ──────────────────── */
+
+.settings-app .wv-list { display: flex; flex-direction: column; gap: 8px; }
+.settings-app .wv-list__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 2px 2px 0;
+}
+.settings-app .wv-list__title {
+    font-size: 13px;
+    font-weight: 650;
+    color: var(--wv-text);
+}
+.settings-app .wv-list__desc { font-size: 11.5px; color: var(--wv-text-3); }
+
+.settings-app .wv-place-item,
+.settings-app .wv-loc-item,
+.settings-app .wv-list__item {
+    background: var(--wv-card);
+    border: 1px solid var(--wv-line);
+    border-radius: 12px;
+    padding: 11px 13px;
+    box-shadow: var(--wv-shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+.settings-app .wv-place-item__row,
+.settings-app .wv-loc-item__row {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+}
+.settings-app .wv-place-item__name,
+.settings-app .wv-loc-item__name {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--wv-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.settings-app .wv-place-item__actions,
+.settings-app .wv-loc-item__actions {
+    display: flex;
+    gap: 6px;
+    flex: 0 0 auto;
+}
+.settings-app .wv-place-item__icon--orb,
+.settings-app .wv-loc-item__icon {
+    width: 26px;
+    height: 26px;
+    flex: 0 0 26px;
+    border-radius: 50%;
+    background: var(--mark-bg, #E8F1FF);
+    border: 1.5px solid var(--mark-stroke, #0A84FF);
+    color: var(--mark-stroke, #0A84FF);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0;
+}
+.settings-app .wv-place-item__icon--orb svg,
+.settings-app .wv-loc-item__icon svg { width: 13px; height: 13px; display: block; }
+.settings-app .wv-place-item__sub {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+    color: var(--wv-text-3);
+}
+.settings-app .wv-place-item__sub-key {
+    background: var(--wv-fill);
+    border-radius: 6px;
+    padding: 1px 6px;
+}
+.settings-app .wv-loc-item__badge,
+.settings-app .wv-tag {
+    flex: 0 0 auto;
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: var(--wv-fill);
+    color: var(--wv-text-2);
+}
+.settings-app .wv-tag--primary,
+.settings-app .wv-loc-item__badge--center {
+    background: var(--wv-blue-soft);
+    color: var(--wv-blue);
+}
+.settings-app .wv-tag--ok { background: rgba(52, 199, 89, 0.12); color: #248A3D; }
+.settings-app .wv-loc-item__badge--warn { background: rgba(255, 59, 48, 0.10); color: #FF3B30; }
+
+/* ─── 空状态 ───────────────────────────────── */
+
+.settings-app .wv-empty,
+.settings-app .wv-list__empty {
+    background: var(--wv-card);
+    border: 1px dashed rgba(0, 0, 0, 0.08);
+    border-radius: var(--wv-radius);
+    padding: 26px 16px;
+    text-align: center;
+    color: var(--wv-text-3);
+    font-size: 12.5px;
+}
+.settings-app .wv-list__empty-glyph { display: none; }
+.settings-app .wv-list__empty-text { font-size: 12.5px; color: var(--wv-text-3); }
+
+/* ─── 编辑表单：分组卡 + 细分隔线（人设页那套） ───
+ *
+ * 之前每一行都是「标签在上、输入框在下」的等宽堆叠，一屏十几个圆角框
+ * 挤在一起，没有层次 —— 用户原话「看起来就是很不舒服」。
+ * 现在：整张白卡，行与行之间只用 1px 细线分隔，标签小号灰字，
+ * 输入框只在需要时才有填充，视觉重量集中在内容上。
+ */
+
+.settings-app .wv-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 0;
+    background: var(--wv-card);
+    border: 1px solid var(--wv-line);
+    border-radius: var(--wv-radius);
+    box-shadow: var(--wv-shadow);
+    overflow: hidden;
+}
+.settings-app .wv-editor__section {
+    background: transparent;
+    border-radius: 0;
+    padding: 0;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+.settings-app .wv-editor__section-title {
+    padding: 12px 14px 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--wv-text-3);
+    letter-spacing: 0.08em;
+    text-align: left;
+    margin: 0;
+    background: #FBFBFD;
+    border-bottom: 1px solid var(--wv-line);
+}
+.settings-app .wv-editor__section + .wv-editor__section .wv-editor__section-title {
+    border-top: 1px solid var(--wv-line);
+}
+
+.settings-app .wv-editor__row {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 7px;
+    margin: 0;
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.045);
+}
+.settings-app .wv-editor__row:last-child { border-bottom: none; }
+.settings-app .wv-editor__row--inline {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.settings-app .wv-editor__label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--wv-text-3);
+    text-align: left;
+    letter-spacing: 0.01em;
+}
+.settings-app .wv-editor__input,
+.settings-app .wv-editor__textarea,
+.settings-app .wv-editor__select {
+    appearance: none;
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--wv-fill);
+    border: 1px solid transparent;
+    border-radius: 9px;
+    padding: 9px 11px;
+    font-size: 13.5px;
+    color: var(--wv-text);
+    box-shadow: none;
+    transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+.settings-app .wv-editor__input::placeholder,
+.settings-app .wv-editor__textarea::placeholder { color: rgba(60, 60, 67, 0.34); }
+.settings-app .wv-editor__input:focus,
+.settings-app .wv-editor__textarea:focus,
+.settings-app .wv-editor__select:focus {
+    outline: none;
+    background: #FFFFFF;
+    border-color: var(--wv-blue);
+    box-shadow: 0 0 0 3px var(--wv-blue-soft);
+}
+.settings-app .wv-editor__textarea {
+    resize: vertical;
+    min-height: 62px;
+    line-height: 1.55;
+    font-family: inherit;
+}
+.settings-app .wv-editor__input--num,
+.settings-app .wv-editor__input--coord {
+    width: 78px;
+    flex: 0 0 78px;
+    text-align: center;
+}
+.settings-app .wv-editor__sep { font-size: 12px; color: var(--wv-text-3); }
+.settings-app .wv-editor__hint {
+    flex-basis: 100%;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--wv-text-3);
+}
+.settings-app .wv-editor__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 12px 14px;
+    background: #FBFBFD;
+    border-top: 1px solid var(--wv-line);
+}
+
+/* ─── 查看模式：与编辑模式同一张分组卡 ───
+ *
+ * .wv-view__row 原本只有上下 padding（settings.css），套进这张整体白卡里
+ * 文字就直接贴在左右边框上。这里补回 14px 行内边距、分组标题条和细分隔线，
+ * 让「查看」和「编辑」左右对齐、看起来是同一个表单的两种状态。
+ */
+.settings-app .wv-editor--view .wv-view__section { margin: 0; }
+.settings-app .wv-editor--view .wv-view__section-title {
+    padding: 12px 14px 6px;
+    margin: 0;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--wv-text-3);
+    letter-spacing: 0.08em;
+    text-transform: none;
+    text-align: left;
+    background: #FBFBFD;
+    border-bottom: 1px solid var(--wv-line);
+}
+.settings-app .wv-editor--view .wv-view__section + .wv-view__section .wv-view__section-title {
+    border-top: 1px solid var(--wv-line);
+}
+.settings-app .wv-editor--view .wv-view__row {
+    align-items: baseline;
+    gap: 10px;
+    padding: 10px 14px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.045);
+}
+.settings-app .wv-editor--view .wv-view__row:last-child { border-bottom: none; }
+.settings-app .wv-editor--view .wv-view__label {
+    flex: 0 0 auto;
+    min-width: 68px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--wv-text-3);
+}
+.settings-app .wv-editor--view .wv-view__value { color: var(--wv-text); }
+.settings-app .wv-editor--view .wv-view__empty {
+    padding: 22px 14px;
+    color: var(--wv-text-3);
+    font-size: 12.5px;
+}
+.settings-app .wv-editor--view .wv-editor__actions:not(.wv-editor__actions--compact) {
+    justify-content: flex-end;
+    margin-top: 0;
+    padding: 12px 14px;
+    border-top: 1px solid var(--wv-line);
+}
+
+/* ─── 世界观编辑器：压掉 settings.css 里的旧 .wv-world-editor 规则 ───
+ *
+ * 旧规则把每个 section 做成独立圆角白块（padding 12 + 卡间 gap 10），
+ * 还给首行 margin-top:8px、末行 margin-bottom:14px。这些叠在上面这张
+ * 整体白卡里，就是用户看到的「段落上下莫名空隙、标题居中、左右不齐」。
+ * 世界观编辑器统一回归分组卡：分组标题满宽成条，行内 14px 内边距。
+ */
+.settings-app .wv-editor.wv-world-editor { gap: 0; }
+.settings-app .wv-editor.wv-world-editor .wv-editor__section {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    gap: 0;
+}
+.settings-app .wv-editor.wv-world-editor .wv-editor__section-title {
+    padding: 12px 14px 6px;
+    margin: 0;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--wv-text-3);
+    text-align: left;
+}
+.settings-app .wv-editor.wv-world-editor .wv-editor__row,
+.settings-app .wv-editor.wv-world-editor .wv-editor__row:first-child,
+.settings-app .wv-editor.wv-world-editor .wv-editor__row:last-child,
+.settings-app .wv-editor.wv-world-editor .wv-editor__row:last-of-type {
+    margin: 0;
+    padding: 12px 14px;
+    gap: 7px;
+}
+.settings-app .wv-editor.wv-world-editor .wv-editor__actions {
+    justify-content: flex-end;
+    margin-top: 0;
+    padding: 12px 14px;
+    border-top: 1px solid var(--wv-line);
+}
+
+/* 时段编辑器（纪时「时段设置」）是唯一不套 .wv-editor__row 的自定义块，
+   所以拿不到行内边距，24 个时段格子会直接顶到卡片左右边框上。 */
+.settings-app .wv-editor.wv-world-editor .wv-hours-block-wrapper {
+    padding: 12px 14px;
+}
+
+/* 颜色选择器：必须看得见当前颜色。
+   之前被 .wv-editor__input 的灰底盖掉，看着像「选了没生效」。 */
+.settings-app .wv-editor__color,
+.settings-app input[type="color"].wv-editor__input {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 100%;
+    height: 38px;
+    padding: 3px;
+    border: 1px solid rgba(120, 120, 128, 0.2);
+    border-radius: 9px;
+    background: #FFFFFF;
+    cursor: pointer;
+    box-shadow: none;
+}
+.settings-app .wv-editor__color::-webkit-color-swatch-wrapper { padding: 0; }
+.settings-app .wv-editor__color::-webkit-color-swatch {
+    border: none;
+    border-radius: 6px;
+}
+.settings-app .wv-editor__color::-moz-color-swatch {
+    border: none;
+    border-radius: 6px;
+}
+
+/* 行内颜色：左标签 + 右色块，两个配色并排放得下 */
+.settings-app .wv-color-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1 1 132px;
+    min-width: 0;
+    padding: 6px 8px;
+    background: var(--wv-fill);
+    border-radius: 9px;
+}
+.settings-app .wv-color-row__label {
+    font-size: 12px;
+    color: var(--wv-text-2);
+    white-space: nowrap;
+}
+.settings-app .wv-editor__color--row {
+    width: 34px;
+    height: 26px;
+    flex: 0 0 34px;
+    margin-left: auto;
+    padding: 2px;
+    border-radius: 7px;
+    background: #FFFFFF;
+}
+
+/* ─── 时间：纪时面板 / 维度 tab / 时间轴 ───── */
+
+.settings-app .wv-chronicle { display: flex; flex-direction: column; gap: 12px; }
+
+.settings-app .wv-chronology-settings {
+    background: var(--wv-card);
+    border: 1px solid var(--wv-line);
+    border-radius: var(--wv-radius);
+    box-shadow: var(--wv-shadow);
+    overflow: hidden;
+}
+.settings-app .wv-chronology-settings__header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 14px;
+    cursor: pointer;
+}
+.settings-app .wv-chronology-settings__title {
+    flex: 1;
+    font-size: 13.5px;
+    font-weight: 650;
+    color: var(--wv-text);
+}
+.settings-app .wv-chronology-settings__toggle {
+    display: inline-flex;
+    align-items: center;
+    color: var(--wv-text-3);
+    transition: transform 0.18s ease;
+}
+.settings-app .wv-chronology-settings__toggle svg { width: 14px; height: 14px; display: block; }
+.settings-app .wv-chronology-settings.is-open .wv-chronology-settings__toggle { transform: rotate(180deg); }
+.settings-app .wv-chronology-settings__body { padding: 0 14px 14px; }
+.settings-app .wv-chronology-settings__ratio-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 12px;
+    padding: 8px 10px;
+    background: var(--wv-fill);
+    border-radius: 10px;
+}
+.settings-app .wv-chronology-settings__ratio-row--live {
+    background: rgba(52, 199, 89, 0.10);
+    border-left: 3px solid #34C759;
+}
+.settings-app .wv-chronology-settings__ratio-row--live .wv-chronology-settings__value {
+    font-weight: 600;
+    color: #248A3D;
+}
+.settings-app .wv-chronology-settings__label { color: var(--wv-text-3); flex-shrink: 0; }
+.settings-app .wv-chronology-settings__value { color: var(--wv-text); }
+.settings-app .wv-cycle-tag {
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--wv-blue-soft);
+    color: var(--wv-blue);
+    border: none;
+}
+.settings-app .wv-cycle-tag--large,
+.settings-app .wv-cycle-tag--medium,
+.settings-app .wv-cycle-tag--small,
+.settings-app .wv-cycle-tag--base {
+    background: var(--wv-blue-soft);
+    color: var(--wv-blue);
+    border: none;
+}
+.settings-app .wv-cycle-tag--empty {
+    background: transparent;
+    border: 1px dashed rgba(0, 0, 0, 0.14);
+    color: var(--wv-text-3);
+    font-style: normal;
+    font-weight: 500;
+}
+
+.settings-app .wv-chronicle__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+.settings-app .wv-chronicle__hint {
+    flex-basis: 100%;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--wv-text-3);
+}
+
+/* 时间轴：竖线保留凹陷槽（用户认可） */
+.settings-app .wv-timeline {
+    position: relative;
+    padding: 4px 0 4px 26px;
+}
+.settings-app .wv-timeline__rail {
+    position: absolute;
+    left: 7px;
+    top: 8px;
+    bottom: 8px;
+    width: 6px;
+    background: #ECEEF2;
+    border-radius: 3px;
+    box-shadow:
+        inset 0 1px 3px rgba(0, 0, 0, 0.14),
+        inset 0 -1px 2px rgba(255, 255, 255, 0.75);
+}
+.settings-app .wv-timeline__node { position: relative; padding: 4px 0 14px; }
+.settings-app .wv-timeline__dot {
+    position: absolute;
+    left: -23px;
+    top: 14px;
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    background: #fff;
+    border: 2px solid var(--wv-blue);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+.settings-app .wv-timeline__node.is-editing .wv-timeline__dot { background: var(--wv-blue); }
+.settings-app .wv-timeline__card {
+    background: var(--wv-card);
+    border: 1px solid var(--wv-line);
+    border-radius: 12px;
+    box-shadow: var(--wv-shadow);
+    padding: 10px 12px;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+.settings-app .wv-timeline__node.is-editing > .wv-timeline__card {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    cursor: default;
+}
+.settings-app .wv-timeline__card.is-dragging {
+    cursor: grabbing;
+    opacity: 0.65;
+    box-shadow: 0 8px 22px rgba(10, 132, 255, 0.28);
+}
+
+.settings-app .wv-chronicle__event-date {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--wv-blue);
+    background: var(--wv-blue-soft);
+    padding: 2px 7px;
+    border-radius: 6px;
+}
+.settings-app .wv-chronicle__event-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--wv-text);
+}
+.settings-app .wv-chronicle__event-desc {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--wv-text-2);
+    margin-top: 5px;
+    padding-left: 8px;
+    border-left: 2px solid var(--wv-blue-line);
+}
+.settings-app .wv-chronicle__event-owner { font-size: 11px; color: var(--wv-text-3); }
+.settings-app .wv-chronicle__bucket {
+    background: var(--wv-card);
+    border: 1px solid var(--wv-line);
+    border-radius: var(--wv-radius);
+    box-shadow: var(--wv-shadow);
+    padding: 12px;
+}
+
+/* ─── 时间表：7 天横向卡片，不再是挤成一坨的表格 ─── */
+
+.settings-app .wv-schedule { display: flex; flex-direction: column; gap: 10px; }
+
+.settings-app .wv-schedule__pager {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    background: var(--wv-fill);
+    border: none;
+    border-radius: 10px;
+    box-shadow: none;
+}
+.settings-app .wv-schedule__pager-info {
+    flex: 1;
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 4px;
+    font-size: 12.5px;
+    color: var(--wv-text-2);
+}
+.settings-app .wv-schedule__pager-current {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--wv-text);
+}
+.settings-app .wv-schedule__pager-label { font-size: 11.5px; color: var(--wv-text-3); }
+
+.settings-app .wv-schedule__board {
+    background: var(--wv-card);
+    border: 1px solid var(--wv-line);
+    border-radius: var(--wv-radius);
+    box-shadow: var(--wv-shadow);
+    overflow: hidden;
+}
+/* 7 天：窄屏横向滚动，每天最少 104px，不再被压成一条 */
+.settings-app .wv-schedule__week-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(104px, 1fr));
+    gap: 0;
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+.settings-app .wv-schedule__week-grid::-webkit-scrollbar { height: 4px; }
+.settings-app .wv-schedule__week-grid::-webkit-scrollbar-thumb {
+    background: rgba(10, 132, 255, 0.28);
+    border-radius: 2px;
+}
+.settings-app .wv-schedule__day {
+    display: flex;
+    flex-direction: column;
+    min-height: 118px;
+    border-right: 1px solid var(--wv-line);
+    border-bottom: none;
+    background: #FFFFFF;
+}
+.settings-app .wv-schedule__day:last-child { border-right: none; }
+.settings-app .wv-schedule__day-header {
+    padding: 8px 10px;
+    background: #FBFBFD;
+    border-bottom: 1px solid var(--wv-line);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.settings-app .wv-schedule__day-name {
+    font-size: 12px;
+    font-weight: 650;
+    color: var(--wv-text);
+}
+.settings-app .wv-schedule__day-date {
+    font-size: 10.5px;
+    color: var(--wv-text-3);
+    font-variant-numeric: tabular-nums;
+}
+.settings-app .wv-schedule__day-content {
+    flex: 1;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 0;
+}
+.settings-app .wv-schedule__slot-empty {
+    padding: 10px 0;
+    text-align: center;
+    font-size: 11px;
+    color: rgba(60, 60, 67, 0.34);
+}
+.settings-app .wv-schedule__item {
+    background: #F7FAFF;
+    border: 1px solid var(--wv-blue-line);
+    border-left: 3px solid var(--wv-blue);
+    border-radius: 8px;
+    padding: 6px 7px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+.settings-app .wv-schedule__item-time {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--wv-blue);
+    background: transparent;
+    padding: 0;
+    font-variant-numeric: tabular-nums;
+}
+.settings-app .wv-schedule__item-title {
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--wv-text);
+}
+.settings-app .wv-schedule__item-from { font-size: 10px; color: var(--wv-text-3); }
+
+/* 来自日记的「日子」落在格子里：倒计时橙、纪念日粉，和日程蓝区分开 */
+.settings-app .wv-schedule__item--countdown {
+    background: rgba(255, 159, 10, 0.08);
+    border-color: rgba(255, 159, 10, 0.24);
+    border-left-color: #FF9F0A;
+}
+.settings-app .wv-schedule__item--countdown .wv-schedule__item-time { color: #C77700; }
+.settings-app .wv-schedule__item--anniversary {
+    background: rgba(236, 72, 153, 0.07);
+    border-color: rgba(236, 72, 153, 0.22);
+    border-left-color: #EC4899;
+}
+.settings-app .wv-schedule__item--anniversary .wv-schedule__item-time { color: #C0257A; }
+
+/* ─── 日子板（日记联动） ───────────────────── */
+
+.settings-app .wv-daysboard {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.settings-app .wv-daysboard__group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.settings-app .wv-daysboard__label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--wv-text-3);
+}
+.settings-app .wv-daycard {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--wv-card);
+    border: 1px solid var(--wv-line);
+    border-left: 3px solid var(--wv-blue);
+    border-radius: 12px;
+    box-shadow: var(--wv-shadow);
+}
+.settings-app .wv-daycard--countdown { border-left-color: #FF9F0A; }
+.settings-app .wv-daycard--anniversary { border-left-color: #EC4899; }
+.settings-app .wv-daycard__main { min-width: 0; flex: 1 1 auto; }
+.settings-app .wv-daycard__title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--wv-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.settings-app .wv-daycard__sub {
+    margin-top: 2px;
+    font-size: 11.5px;
+    color: var(--wv-text-3);
+    font-variant-numeric: tabular-nums;
+}
+.settings-app .wv-schedule__hint {
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--wv-text-3);
+}
+
+/* ─── 锚点区 ───────────────────────────────── */
+
+.settings-app .wv-anchors { display: flex; flex-direction: column; gap: 10px; }
+.settings-app .wv-anchor__head--inline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.settings-app .wv-anchor__head-group {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+}
+.settings-app .wv-anchor-add-form { margin-top: 2px; }
+.settings-app .wv-anchor-add-ais { min-height: 76px; }
+
+/* ─── 设置面板（资产 / 预设 / 导入导出） ───── */
+
+.settings-app .wv-settings-panel {
+    margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.settings-app .wv-settings-panel__content { padding: 0; }

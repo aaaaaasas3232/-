@@ -365,31 +365,6 @@ export async function _prerenderEmojiPicker(stickerGroupIds = [], chatRoot = nul
 // ============================================
 
 /**
- * 渲染头部条(标题 + 关闭按钮)
- */
-function renderEmojiHead() {
-    return `
-        <div class="chat-emoji-picker__head">
-            <div class="chat-emoji-picker__title">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"/>
-                    <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
-                    <line x1="9" y1="9" x2="9.01" y2="9" stroke-width="2.5"/>
-                    <line x1="15" y1="9" x2="15.01" y2="9" stroke-width="2.5"/>
-                </svg>
-                <span>表情包</span>
-            </div>
-            <button class="chat-emoji-picker__close" type="button" data-app-action='{"action":"appMethod","appId":"chat","method":"closeEmojiPicker"}' aria-label="关闭表情面板">
-                <svg viewBox="0 0 24 24">
-                    <line x1="18" y1="6" x2="6" y2="18"/>
-                    <line x1="6" y1="6" x2="18" y2="18"/>
-                </svg>
-            </button>
-        </div>
-    `;
-}
-
-/**
  * 渲染单个表情格
  * @param {Object} img {code, groupId, groupName, ...}
  * @param {Object} emojiByCode 缩略图缓存 { code → { thumbnail } }
@@ -417,7 +392,6 @@ function renderEmojiCell(img, emojiByCode) {
 function renderEmojiGrid(images, emojiByCode) {
     const cellsHtml = images.map(img => renderEmojiCell(img, emojiByCode)).join('');
     return `
-        ${renderEmojiHead()}
         <div class="chat-emoji-grid" role="grid">
             ${cellsHtml}
         </div>
@@ -429,7 +403,6 @@ function renderEmojiGrid(images, emojiByCode) {
  */
 function renderEmojiLoading() {
     return `
-        ${renderEmojiHead()}
         <div class="chat-emoji-loading">
             <div class="chat-emoji-loading__spinner"></div>
             <span>正在加载表情…</span>
@@ -449,7 +422,6 @@ function renderEmojiLoading() {
  */
 function renderEmojiEmpty(text, sub) {
     return `
-        ${renderEmojiHead()}
         <div class="chat-emoji-empty">
             <div class="chat-emoji-empty__icon">
                 <svg viewBox="0 0 24 24">

@@ -1,0 +1,877 @@
+/**
+ * 梦境编织 · 基础布局与通用控件
+ *
+ * 全部选择器挂在 `.app-shell[data-app-id="dream-weaver"]` 下。
+ * 颜色一律 `var(--dw-*)`,定义在 `_theme.css`。
+ */
+
+/* ============================================================
+   壳 / 根
+   ============================================================ */
+
+.app-shell[data-app-id="dream-weaver"] {
+    background: var(--dw-bg);
+    color: var(--dw-text);
+}
+
+/* 自己画顶栏和 tab 栏,把框架的内边距抵消掉 */
+.app-shell[data-app-id="dream-weaver"] .app-content,
+.app-shell[data-app-id="dream-weaver"] .app-screen-panel {
+    padding: 0;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-root {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--dw-bg);
+    color: var(--dw-text);
+    font-size: 14px;
+    overflow: hidden;
+}
+
+/**
+ * 全局隐藏滚动条。
+ *
+ * 原版第一条 CSS 规则就是这个(`#dream-weaver-app *::-webkit-scrollbar { display:none }`),
+ * 整个 App 没有一根可见滚动条 —— 这是它「像原生 App」的重要一环,
+ * 手机上本来也不该出现桌面式滚动条。
+ *
+ * 三个属性缺一不可:WebKit 走伪元素,Firefox 走 `scrollbar-width`,旧 Edge 走 `-ms-overflow-style`。
+ */
+.app-shell[data-app-id="dream-weaver"],
+.app-shell[data-app-id="dream-weaver"] * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.app-shell[data-app-id="dream-weaver"]::-webkit-scrollbar,
+.app-shell[data-app-id="dream-weaver"] *::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+}
+
+/**
+ * ★ SVG 尺寸兜底(AGENTS2 §9.9)
+ *
+ * 本 App 的图标全部不带 width/height,靠 CSS 撑。没有这条兜底时,
+ * 任何一个忘了配尺寸的图标会被浏览器按规范默认画成 **300×150**,直接撑爆整张卡。
+ *
+ * 两层 `:where()` 把特异性压到 (0,0,1),任何一条具名规则都能盖过它。
+ * 注意**不能只用一层** —— `svg:not([width])` 本身是 (0,2,1),
+ * 会反过来盖掉 `.dw-row-icon svg` 这种 (0,1,1) 的规则。
+ */
+:where(.app-shell[data-app-id="dream-weaver"]) svg:where(:not([width]):not([height])) {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-page {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: calc(var(--dw-topbar-h) + 6px) 14px calc(var(--dw-navbar-h) + 16px);
+}
+
+/* ============================================================
+   图标
+   ============================================================ */
+
+.app-shell[data-app-id="dream-weaver"] .dw-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    line-height: 0;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-icon svg {
+    width: var(--dw-icon-size, 18px);
+    height: var(--dw-icon-size, 18px);
+}
+
+/* ============================================================
+   按钮
+   ============================================================ */
+
+.app-shell[data-app-id="dream-weaver"] .dw-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid transparent;
+    border-radius: var(--dw-radius-pill);
+    background: transparent;
+    color: var(--dw-text);
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1;
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: background 0.18s var(--dw-ease), color 0.18s var(--dw-ease), border-color 0.18s var(--dw-ease), opacity 0.18s var(--dw-ease);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-btn:disabled {
+    opacity: 0.42;
+    cursor: not-allowed;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-btn--primary {
+    background: var(--dw-primary);
+    color: var(--dw-on-primary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-btn--primary:not(:disabled):hover {
+    background: var(--dw-primary-light);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-btn--ghost {
+    border-color: var(--dw-border);
+    color: var(--dw-primary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-btn--ghost:not(:disabled):hover {
+    background: var(--dw-primary-hover);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-btn--quiet:not(:disabled):hover {
+    background: var(--dw-hover-overlay);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-btn--danger {
+    color: var(--dw-error);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-btn--danger:not(:disabled):hover {
+    background: var(--dw-error-container);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-btn--sm { padding: 6px 11px; font-size: 12px; }
+.app-shell[data-app-id="dream-weaver"] .dw-btn--lg { padding: 11px 20px; font-size: 15px; }
+.app-shell[data-app-id="dream-weaver"] .dw-btn.is-icon-only { padding: 8px; }
+.app-shell[data-app-id="dream-weaver"] .dw-btn.is-block { width: 100%; }
+
+.app-shell[data-app-id="dream-weaver"] .dw-btn-spinner {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    animation: dwSpin 0.7s linear infinite;
+}
+
+@keyframes dwSpin { to { transform: rotate(360deg); } }
+
+/* ============================================================
+   表单
+   ============================================================ */
+
+.app-shell[data-app-id="dream-weaver"] .dw-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: var(--dw-gap);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-field-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--dw-text-secondary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-field-required {
+    color: var(--dw-error);
+    font-style: normal;
+    margin-left: 2px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-field-hint {
+    font-size: 11px;
+    color: var(--dw-text-tertiary);
+    line-height: 1.5;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-input,
+.app-shell[data-app-id="dream-weaver"] .dw-textarea,
+.app-shell[data-app-id="dream-weaver"] .dw-select-native {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--dw-input-border);
+    border-radius: var(--dw-radius-sm);
+    background: var(--dw-input-bg);
+    color: var(--dw-text);
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 9px 11px;
+    transition: border-color 0.18s var(--dw-ease), box-shadow 0.18s var(--dw-ease);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-input:focus,
+.app-shell[data-app-id="dream-weaver"] .dw-textarea:focus,
+.app-shell[data-app-id="dream-weaver"] .dw-select-native:focus {
+    outline: none;
+    border-color: var(--dw-primary);
+    box-shadow: 0 0 0 3px var(--dw-input-focus);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-input::placeholder,
+.app-shell[data-app-id="dream-weaver"] .dw-textarea::placeholder {
+    color: var(--dw-text-tertiary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-textarea {
+    resize: vertical;
+    min-height: 60px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-textarea.is-auto {
+    resize: none;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-select {
+    position: relative;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-select-native {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 30px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-select-arrow {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    border-right: 1.5px solid var(--dw-text-secondary);
+    border-bottom: 1.5px solid var(--dw-text-secondary);
+    transform: translateY(-70%) rotate(45deg);
+    pointer-events: none;
+}
+
+/* 分段选择 */
+.app-shell[data-app-id="dream-weaver"] .dw-segmented {
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    border-radius: var(--dw-radius-sm);
+    background: var(--dw-surface-container);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-segmented-item {
+    flex: 1 1 0;
+    border: none;
+    background: transparent;
+    color: var(--dw-text-secondary);
+    font-family: inherit;
+    font-size: 12px;
+    padding: 7px 4px;
+    border-radius: calc(var(--dw-radius-sm) - 2px);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.18s var(--dw-ease), color 0.18s var(--dw-ease);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-segmented-item.is-active {
+    background: var(--dw-primary);
+    color: var(--dw-on-primary);
+}
+
+/* 开关 */
+.app-shell[data-app-id="dream-weaver"] .dw-switch {
+    position: relative;
+    flex-shrink: 0;
+    width: 42px;
+    height: 24px;
+    border: none;
+    border-radius: var(--dw-radius-pill);
+    background: var(--dw-disabled-bg);
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.2s var(--dw-ease);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-switch.is-on { background: var(--dw-primary); }
+.app-shell[data-app-id="dream-weaver"] .dw-switch.is-disabled { opacity: 0.45; cursor: not-allowed; }
+
+.app-shell[data-app-id="dream-weaver"] .dw-switch-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--dw-toggle-thumb);
+    box-shadow: var(--dw-shadow-sm);
+    transition: transform 0.2s var(--dw-ease);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-switch.is-on .dw-switch-thumb {
+    transform: translateX(18px);
+}
+
+/* 滑块 */
+.app-shell[data-app-id="dream-weaver"] .dw-slider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-slider-input {
+    flex: 1 1 auto;
+    appearance: none;
+    -webkit-appearance: none;
+    height: 4px;
+    border-radius: var(--dw-radius-pill);
+    background: linear-gradient(
+        to right,
+        var(--dw-primary) 0%,
+        var(--dw-primary) var(--dw-slider-percent, 0%),
+        var(--dw-disabled-bg) var(--dw-slider-percent, 0%),
+        var(--dw-disabled-bg) 100%
+    );
+    outline: none;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-slider-input::-webkit-slider-thumb {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--dw-toggle-thumb);
+    box-shadow: var(--dw-shadow-sm);
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-slider-input::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border: none;
+    border-radius: 50%;
+    background: var(--dw-toggle-thumb);
+    box-shadow: var(--dw-shadow-sm);
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-slider-value {
+    flex-shrink: 0;
+    min-width: 40px;
+    text-align: right;
+    font-size: 12px;
+    color: var(--dw-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================
+   分区 / 行
+   ============================================================ */
+
+.app-shell[data-app-id="dream-weaver"] .dw-section {
+    margin-bottom: var(--dw-gap-lg);
+    border-radius: var(--dw-radius);
+    background: var(--dw-card-bg);
+    border: 1px solid var(--dw-border-light);
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-section-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--dw-border-light);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-section.is-collapsed .dw-section-head {
+    border-bottom-color: transparent;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-section-toggle {
+    border: none;
+    background: none;
+    color: var(--dw-text-secondary);
+    padding: 0;
+    cursor: pointer;
+    display: inline-flex;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-section-icon { color: var(--dw-primary); }
+
+.app-shell[data-app-id="dream-weaver"] .dw-section-titles { flex: 1 1 auto; min-width: 0; }
+
+.app-shell[data-app-id="dream-weaver"] .dw-section-title {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-section-subtitle {
+    margin: 2px 0 0;
+    font-size: 11px;
+    color: var(--dw-text-tertiary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-section-body { padding: 12px 14px; }
+
+.app-shell[data-app-id="dream-weaver"] .dw-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--dw-border-light);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-row:last-child { border-bottom: none; }
+.app-shell[data-app-id="dream-weaver"] .dw-row.is-interactive { cursor: pointer; }
+.app-shell[data-app-id="dream-weaver"] .dw-row.is-interactive:hover { background: var(--dw-hover-overlay); }
+.app-shell[data-app-id="dream-weaver"] .dw-row.is-danger .dw-row-label { color: var(--dw-error); }
+.app-shell[data-app-id="dream-weaver"] .dw-row.is-disabled { opacity: 0.45; pointer-events: none; }
+
+.app-shell[data-app-id="dream-weaver"] .dw-row-icon { color: var(--dw-text-secondary); }
+.app-shell[data-app-id="dream-weaver"] .dw-row-main { flex: 1 1 auto; min-width: 0; }
+
+.app-shell[data-app-id="dream-weaver"] .dw-row-label {
+    margin: 0;
+    font-size: 13px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-row-hint {
+    margin: 2px 0 0;
+    font-size: 11px;
+    color: var(--dw-text-tertiary);
+    line-height: 1.5;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-row-value {
+    flex-shrink: 0;
+    font-size: 12px;
+    color: var(--dw-text-secondary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-row-chevron { color: var(--dw-text-tertiary); }
+
+/* ============================================================
+   空状态 / 加载
+   ============================================================ */
+
+.app-shell[data-app-id="dream-weaver"] .dw-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 40px 20px;
+    text-align: center;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-empty-icon {
+    color: var(--dw-text-tertiary);
+    opacity: 0.6;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-empty-icon svg { width: 34px; height: 34px; }
+
+.app-shell[data-app-id="dream-weaver"] .dw-empty-title {
+    margin: 0;
+    font-size: 14px;
+    color: var(--dw-text-secondary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-empty-text {
+    margin: 0;
+    font-size: 12px;
+    color: var(--dw-text-tertiary);
+    line-height: 1.6;
+    max-width: 240px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-spinner-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 48px 20px;
+    margin: auto;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-spinner {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid var(--dw-border);
+    border-top-color: var(--dw-primary);
+    animation: dwSpin 0.8s linear infinite;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-spinner-label {
+    font-size: 12px;
+    color: var(--dw-text-tertiary);
+}
+
+/* ============================================================
+   色调色板
+   ============================================================ */
+
+.app-shell[data-app-id="dream-weaver"] .dw-tones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-tone {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    padding: 0;
+    background: var(--dw-tone-color, var(--dw-primary));
+    transition: transform 0.18s var(--dw-ease-bounce), border-color 0.18s var(--dw-ease);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-tone.is-active {
+    border-color: var(--dw-text);
+    transform: scale(1.14);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-tone--none {
+    background: transparent;
+    border: 2px dashed var(--dw-border-light);
+}
+
+/**
+ * 八种色调。
+ *
+ * ★ 这是本 App 里**唯一**允许出现「一组固定颜色」的地方,
+ *   因为它是用户从预设里选的**数据**(封面色 / 角色标记色),不是主题色。
+ *   即便如此也没有写死在 JS 里 —— JS 存的是 `ember` 这样的名字,
+ *   具体是什么颜色由这里决定,所以两套主题下可以给不同的实际值。
+ */
+.app-shell[data-app-id="dream-weaver"] [data-tone="ember"]  { --dw-tone-color: #C62828; }
+.app-shell[data-app-id="dream-weaver"] [data-tone="ink"]    { --dw-tone-color: #37474F; }
+.app-shell[data-app-id="dream-weaver"] [data-tone="jade"]   { --dw-tone-color: #2E7D32; }
+.app-shell[data-app-id="dream-weaver"] [data-tone="amber"]  { --dw-tone-color: #F9A825; }
+.app-shell[data-app-id="dream-weaver"] [data-tone="violet"] { --dw-tone-color: #7B1FA2; }
+.app-shell[data-app-id="dream-weaver"] [data-tone="ocean"]  { --dw-tone-color: #1565C0; }
+.app-shell[data-app-id="dream-weaver"] [data-tone="rose"]   { --dw-tone-color: #C2185B; }
+.app-shell[data-app-id="dream-weaver"] [data-tone="moss"]   { --dw-tone-color: #689F38; }
+
+/* 浅色主题下同名色调换成更沉的版本,避免在白底上刺眼 */
+.app-shell[data-app-id="dream-weaver"][data-dw-theme="oriental-light"] [data-tone="amber"] { --dw-tone-color: #E08A00; }
+.app-shell[data-app-id="dream-weaver"][data-dw-theme="oriental-light"] [data-tone="ink"]   { --dw-tone-color: #263238; }
+
+/* ============================================================
+   标签
+   ============================================================ */
+
+.app-shell[data-app-id="dream-weaver"] .dw-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 9px;
+    border-radius: var(--dw-radius-pill);
+    background: var(--dw-tag-bg);
+    border: 1px solid var(--dw-tag-border);
+    color: var(--dw-tag-text);
+    font-size: 11px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-tag[data-tone] {
+    background: color-mix(in srgb, var(--dw-tone-color) 14%, transparent);
+    border-color: color-mix(in srgb, var(--dw-tone-color) 34%, transparent);
+    color: var(--dw-tone-color);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-tag-remove {
+    border: none;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+    padding: 0;
+    font-size: 13px;
+    line-height: 1;
+}
+
+/* ============================================================
+   底部抽屉 / 菜单
+   ============================================================ */
+
+.app-shell[data-app-id="dream-weaver"] .dw-sheet-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: var(--dw-z-sheet);
+    background: var(--dw-scrim);
+    display: flex;
+    align-items: flex-end;
+    animation: dwFadeIn 0.2s var(--dw-ease);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-sheet {
+    width: 100%;
+    max-height: 76%;
+    display: flex;
+    flex-direction: column;
+    background: var(--dw-surface-container);
+    border-radius: var(--dw-radius-lg) var(--dw-radius-lg) 0 0;
+    box-shadow: var(--dw-shadow-lg);
+    padding: 8px 14px calc(14px + env(safe-area-inset-bottom, 0px));
+    animation: dwSheetUp 0.26s var(--dw-ease-bounce);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-sheet-grip {
+    width: 34px;
+    height: 4px;
+    border-radius: var(--dw-radius-pill);
+    background: var(--dw-divider);
+    margin: 0 auto 8px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-sheet-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 8px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-sheet-title {
+    flex: 1 1 auto;
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--dw-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-sheet-close {
+    border: none;
+    background: none;
+    color: var(--dw-text-secondary);
+    cursor: pointer;
+    padding: 4px;
+    display: inline-flex;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-sheet-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-sheet-empty {
+    padding: 20px 4px;
+    font-size: 12px;
+    color: var(--dw-text-tertiary);
+    text-align: center;
+    line-height: 1.6;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    border: none;
+    background: none;
+    color: var(--dw-text);
+    font-family: inherit;
+    font-size: 14px;
+    text-align: left;
+    padding: 13px 4px;
+    border-bottom: 1px solid var(--dw-border-light);
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-menu-item:last-child { border-bottom: none; }
+.app-shell[data-app-id="dream-weaver"] .dw-menu-item:hover { background: var(--dw-hover-overlay); }
+.app-shell[data-app-id="dream-weaver"] .dw-menu-item.is-danger { color: var(--dw-error); }
+.app-shell[data-app-id="dream-weaver"] .dw-menu-item:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.app-shell[data-app-id="dream-weaver"] .dw-menu-item-main {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-menu-item-hint {
+    font-size: 11px;
+    color: var(--dw-text-tertiary);
+}
+
+/* ── 「更多操作」列表(复原原版 .dw-option-item)── */
+
+.app-shell[data-app-id="dream-weaver"] .dw-option-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-option-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-option-item:hover { background: var(--dw-card-bg); }
+
+.app-shell[data-app-id="dream-weaver"] .dw-option-icon {
+    color: var(--dw-primary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-option-icon svg { width: 18px; height: 18px; }
+
+/* 原版给每一项配了不同的图标色,照抄那套分配 */
+.app-shell[data-app-id="dream-weaver"] .dw-option-icon--drawer-tools { color: var(--dw-accent); }
+.app-shell[data-app-id="dream-weaver"] .dw-option-icon--drawer-context,
+.app-shell[data-app-id="dream-weaver"] .dw-option-icon--generate-mode { color: var(--dw-secondary); }
+.app-shell[data-app-id="dream-weaver"] .dw-option-icon--input-mode-manage { color: var(--dw-accent); }
+.app-shell[data-app-id="dream-weaver"] .dw-option-icon--api-switch { color: var(--dw-error); }
+.app-shell[data-app-id="dream-weaver"] .dw-option-icon--display-settings { color: var(--dw-text); }
+.app-shell[data-app-id="dream-weaver"] .dw-option-icon--regex-replace { color: var(--dw-tertiary); }
+.app-shell[data-app-id="dream-weaver"] .dw-option-icon--quick-settings { color: var(--dw-warning); }
+
+.app-shell[data-app-id="dream-weaver"] .dw-option-label {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+    color: var(--dw-text);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-option-value {
+    flex-shrink: 0;
+    font-size: 11px;
+    color: var(--dw-text-secondary);
+    background: var(--dw-hover-overlay);
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+/* ── 故事时间快捷调整 ────────────────── */
+
+.app-shell[data-app-id="dream-weaver"] .dw-sheet-note {
+    margin: 0 4px 10px;
+    font-size: 12px;
+    color: var(--dw-text-secondary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-time-shift {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-time-shift-btn {
+    padding: 9px 0;
+    border: 1px solid var(--dw-outline);
+    border-radius: var(--dw-radius-sm);
+    background: var(--dw-card-bg);
+    color: var(--dw-text);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-time-shift-btn:hover {
+    border-color: var(--dw-primary);
+    color: var(--dw-primary-light);
+}
+
+/* ============================================================
+   底部 tab 栏
+   ============================================================ */
+
+.app-shell[data-app-id="dream-weaver"] .dw-tabbar {
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    z-index: var(--dw-z-panel);
+    display: flex;
+    gap: 4px;
+    padding: 6px;
+    border-radius: var(--dw-radius-pill);
+    background: var(--dw-nav-bg);
+    border: 1px solid var(--dw-nav-border);
+    box-shadow: var(--dw-nav-shadow);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-tabbar-item {
+    flex: 1 1 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: none;
+    background: transparent;
+    color: var(--dw-text-secondary);
+    font-family: inherit;
+    font-size: 12px;
+    padding: 9px 0;
+    border-radius: var(--dw-radius-pill);
+    cursor: pointer;
+    transition: background 0.2s var(--dw-ease), color 0.2s var(--dw-ease);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-tabbar-item.is-active {
+    background: var(--dw-nav-active-bg);
+    color: var(--dw-primary-light);
+    box-shadow: 0 2px 10px var(--dw-nav-active-shadow);
+}
+
+/* ============================================================
+   提示
+   ============================================================ */
+
+.app-shell[data-app-id="dream-weaver"] .dw-toast {
+    position: absolute;
+    left: 50%;
+    bottom: calc(var(--dw-navbar-h) + 26px);
+    transform: translateX(-50%);
+    z-index: var(--dw-z-popover);
+    margin: 0;
+    max-width: 84%;
+    padding: 9px 16px;
+    border-radius: var(--dw-radius-pill);
+    background: var(--dw-surface-alt);
+    border: 1px solid var(--dw-border-light);
+    color: var(--dw-text);
+    font-size: 12px;
+    text-align: center;
+    box-shadow: var(--dw-shadow-md);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-toast-enter-active,
+.app-shell[data-app-id="dream-weaver"] .dw-toast-leave-active {
+    transition: opacity 0.22s var(--dw-ease), transform 0.22s var(--dw-ease);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-toast-enter-from,
+.app-shell[data-app-id="dream-weaver"] .dw-toast-leave-to {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+}
+
+@keyframes dwFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dwSheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }

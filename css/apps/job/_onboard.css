@@ -1,0 +1,152 @@
+/* 灯塔 · 首次配置 */
+
+.app-shell[data-app-id="job"] .jb-ob {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-shell[data-app-id="job"] .jb-ob__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    touch-action: pan-y;
+    padding: 22px 20px 16px;
+}
+
+.app-shell[data-app-id="job"] .jb-ob__kicker {
+    margin: 0 0 4px;
+    font-size: 11.5px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--jb-accent);
+}
+
+.app-shell[data-app-id="job"] .jb-ob__title {
+    margin: 0 0 10px;
+    font-size: 25px;
+    font-weight: 660;
+    line-height: 1.35;
+    letter-spacing: 0.2px;
+    color: var(--jb-text);
+}
+
+.app-shell[data-app-id="job"] .jb-ob__lead {
+    margin: 0 0 18px;
+    font-size: 13.5px;
+    line-height: 1.8;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-ob__list {
+    margin: 0 0 18px;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+}
+
+.app-shell[data-app-id="job"] .jb-ob__list li {
+    position: relative;
+    padding-left: 15px;
+    font-size: 13px;
+    line-height: 1.75;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-ob__list li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 9px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--jb-accent);
+}
+
+.app-shell[data-app-id="job"] .jb-ob__list b { color: var(--jb-text); font-weight: 600; }
+
+.app-shell[data-app-id="job"] .jb-ob__note {
+    margin: 0;
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-ob__blank {
+    padding: 14px;
+    border: 1px dashed var(--jb-line-strong);
+    border-radius: 12px;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-ob__picks {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="job"] .jb-ob__pick {
+    display: block;
+    width: 100%;
+    padding: 11px 13px;
+    border: 1px solid var(--jb-line);
+    border-radius: 13px;
+    background: var(--jb-surface);
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.app-shell[data-app-id="job"] .jb-ob__pick.is-on {
+    border-color: var(--jb-primary);
+    background: var(--jb-primary-soft);
+}
+
+.app-shell[data-app-id="job"] .jb-ob__pick b {
+    display: block;
+    font-size: 13px;
+    font-weight: 580;
+    color: var(--jb-text);
+}
+
+.app-shell[data-app-id="job"] .jb-ob__pick span {
+    display: block;
+    margin-top: 2px;
+    font-size: 11.5px;
+    line-height: 1.55;
+    color: var(--jb-text-3);
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.app-shell[data-app-id="job"] .jb-ob__failed {
+    margin-top: 14px;
+    padding: 11px 13px;
+    border: 1px solid var(--jb-danger);
+    border-radius: 12px;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--jb-danger);
+}
+
+.app-shell[data-app-id="job"] .jb-ob__foot {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px calc(14px + var(--app-safe-bottom, 0px));
+    border-top: 1px solid var(--jb-line-soft);
+    background: var(--jb-glass-strong);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+}

@@ -1,0 +1,343 @@
+/* ============================================
+ * cover-designer / _archive.css
+ * 历史存档面板 + 全局 toast + 导出用的屏外画布
+ * ============================================ */
+
+/* ---------- 历史存档遮罩 ---------- */
+/* z-index 要压过 .cd-floating-add-btn(fixed / z-index:100) */
+.app-shell[data-app-id="cover-designer"] .cd-archive-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+
+/* 面板打开时收起画布上的浮动控件,免得从半透明遮罩后面透出来 */
+.app-shell[data-app-id="cover-designer"].cd-archive-active .cd-floating-add-btn,
+.app-shell[data-app-id="cover-designer"].cd-archive-active .cd-floating-controls {
+    display: none !important;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-archive-overlay[hidden] {
+    display: none;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-archive-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(48, 44, 42, 0.32);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    opacity: 0;
+    transition: opacity 0.22s ease;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-archive-overlay.cd-archive-open .cd-archive-backdrop {
+    opacity: 1;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-archive-sheet {
+    position: relative;
+    width: 100%;
+    max-height: 78%;
+    display: flex;
+    flex-direction: column;
+    background: #fbfaf8;
+    border-radius: 22px 22px 0 0;
+    box-shadow: 0 -12px 34px rgba(0, 0, 0, 0.14);
+    padding: 16px 16px 20px;
+    transform: translateY(100%);
+    transition: transform 0.26s cubic-bezier(0.32, 0.72, 0.24, 1);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-archive-overlay.cd-archive-open .cd-archive-sheet {
+    transform: translateY(0);
+}
+
+/* ---------- 头部 ---------- */
+.app-shell[data-app-id="cover-designer"] .cd-archive-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-archive-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #4a4642;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-archive-count {
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 10px;
+    background: #ede9e3;
+    color: #8a8279;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 20px;
+    text-align: center;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-archive-count:empty {
+    display: none;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-archive-close {
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 50%;
+    background: #efece7;
+    color: #7a736b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-archive-close:hover {
+    background: #e3dfd8;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-archive-close svg {
+    width: 15px;
+    height: 15px;
+}
+
+/* ---------- 顶部两个动作按钮 ---------- */
+.app-shell[data-app-id="cover-designer"] .cd-archive-actions {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-archive-primary,
+.app-shell[data-app-id="cover-designer"] .cd-archive-ghost {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 42px;
+    border: none;
+    border-radius: 13px;
+    font-size: 13.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-archive-primary {
+    background: #b86f6f;
+    color: #fff;
+    box-shadow: 0 5px 14px rgba(184, 111, 111, 0.26);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-archive-primary:hover {
+    background: #a45d5d;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-archive-ghost {
+    background: #efece7;
+    color: #6c6861;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-archive-ghost:hover {
+    background: #e3dfd8;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-archive-primary svg,
+.app-shell[data-app-id="cover-designer"] .cd-archive-ghost svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* ---------- 列表 ---------- */
+.app-shell[data-app-id="cover-designer"] .cd-archive-list {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-archive-list::-webkit-scrollbar {
+    display: none;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-archive-item {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 9px;
+    border-radius: 15px;
+    background: #fff;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.04);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-archive-thumb {
+    flex: 0 0 auto;
+    width: 44px;
+    height: 58px;
+    border-radius: 9px;
+    overflow: hidden;
+    background: #f1efeb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #b7b0a6;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-archive-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-archive-thumb svg {
+    width: 20px;
+    height: 20px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-archive-meta {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-archive-name {
+    font-size: 13.5px;
+    color: #4d4944;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-archive-time {
+    margin-top: 3px;
+    font-size: 11.5px;
+    color: #a29a90;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-archive-ops {
+    display: flex;
+    gap: 5px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-archive-ops button {
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 9px;
+    background: #f3f1ed;
+    color: #6f6960;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.18s ease;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-archive-ops button:hover {
+    background: #e6e2db;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-archive-ops button svg {
+    width: 15px;
+    height: 15px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-archive-ops .cd-archive-danger:hover {
+    background: #f3dede;
+    color: #b05a5a;
+}
+
+/* ---------- 空态 ---------- */
+.app-shell[data-app-id="cover-designer"] .cd-archive-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 38px 0;
+    color: #a8a199;
+    font-size: 13px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-archive-empty svg {
+    width: 30px;
+    height: 30px;
+    margin-bottom: 2px;
+    opacity: 0.55;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-archive-empty small {
+    font-size: 11.5px;
+    color: #bab3aa;
+}
+
+/* ---------- 面板里的说明文字 ---------- */
+.app-shell[data-app-id="cover-designer"] .cd-panel-hint {
+    margin-top: 14px;
+    font-size: 11.5px;
+    line-height: 1.6;
+    color: #a8a199;
+}
+
+/* ---------- 导出:临时屏外画布 + 截图时隐藏干扰元素 ---------- */
+.app-shell[data-app-id="cover-designer"] .cd-offscreen-stage {
+    position: absolute;
+    left: -10000px;
+    top: 0;
+    pointer-events: none;
+    opacity: 1;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-card.is-exporting .cd-selected {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-card.is-exporting .cd-floating-controls,
+.app-shell[data-app-id="cover-designer"] .cd-card.is-exporting .cd-floating-add-btn,
+.app-shell[data-app-id="cover-designer"] .cd-card.is-exporting .cd-blur-control {
+    display: none !important;
+}
+
+/* ---------- Toast(挂在 body 上,不能加 app-shell 前缀) ---------- */
+.cd-toast {
+    position: fixed;
+    top: 22px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-8px);
+    max-width: 78vw;
+    padding: 11px 22px;
+    border-radius: 18px;
+    background: rgba(40, 38, 36, 0.88);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #fff;
+    font-size: 13.5px;
+    line-height: 1.4;
+    text-align: center;
+    z-index: 100000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.28s ease, transform 0.28s ease;
+}
+
+.cd-toast.cd-toast-show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}

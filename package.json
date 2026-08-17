@@ -8,6 +8,9 @@
     "dev": "vite",
     "build": "vite build",
     "build:single": "vite build --config vite.config.single.js",
+    "test": "node --experimental-loader ./__loader-alias.mjs --test tests/core-foundations.test.js tests/api-manager.test.js tests/travel-app.test.js tests/youtube-app.test.js tests/blog-app.test.js tests/actor-career.test.js tests/esports.test.js",
+    "test:regression": "node --experimental-loader ./__loader-alias.mjs tests/regression/__probe-games.mjs && node --experimental-loader ./__loader-alias.mjs tests/regression/__test-codegen.mjs && node --experimental-loader ./__loader-alias.mjs tests/regression/__repro-desktop-order.mjs",
+    "check:emoji": "node scripts/quality/__scan-emoji.mjs",
     "preview": "vite preview"
   },
   "devDependencies": {
@@ -16,5 +19,8 @@
     "tailwindcss": "^3.4.19",
     "vite": "^5.4.10",
     "vite-plugin-singlefile": "^2.3.3"
+  },
+  "dependencies": {
+    "modern-screenshot": "^4.7.0"
   }
 }

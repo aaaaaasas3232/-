@@ -15,118 +15,33 @@
  *     - chat-app/index.js createChatApp() 里 registerIslandComponent('app-prompt-preview', ...)
  */
 
-const PREVIEW_TYPE_LABELS = Object.freeze({
-    'text': '文本预览',
-    'music-card': '音乐卡片',
-    'red-packet-card': '红包卡片',
-    'location-card': '位置卡片',
-});
-
-// 局部 XSS escape 工具
-function _escape(s) {
-    return String(s == null ? '' : s)
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
+import { renderAppPromptCardPreview, getPreviewTypeLabel } from './app-prompt-card.js';
 
 // ============================================================
-// 子组件:实时预览(每个 previewType 一个)
+// 实时预览
+// ------------------------------------------------------------
+// ★ 这里以前给每种 previewType 各写了一个组件，各自拼一套
+//   `.pm-preview-card--*` 的 HTML —— 和聊天里真正发出去的卡片
+//   （share-cards.js）类名不同、结构不同、图标也不同。用户按预览调好，
+//   发出来是另一副样子；想自定义样式还得写两套 CSS。
+//
+//   现在统一走 renderAppPromptCardPreview()，它内部调的就是聊天气泡用的
+//   renderShareCardBody()。改一处两处一起变，不可能再漂移。
 // ============================================================
-const IslandMusicPreview = {
-    name: 'IslandMusicPreview',
-    props: { previewData: { type: Object, default: () => ({}) }, label: { type: String, default: '' } },
-    computed: {
-        html() {
-            const d = this.previewData || {};
-            const song = String(d.song || d.title || this.label || '未命名歌曲');
-            const artist = String(d.artist || d.singer || '未知歌手');
-            const cover = String(d.cover || '');
-            const coverHtml = cover
-                ? `<div class="pm-preview-card__cover" style="background-image:url('${_escape(cover)}')"></div>`
-                : `<div class="pm-preview-card__cover pm-preview-card__cover--placeholder">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
-                    </svg>
-                </div>`;
-            return `
-                <div class="pm-preview-card pm-preview-card--music">
-                    ${coverHtml}
-                    <div class="pm-preview-card__meta">
-                        <div class="pm-preview-card__title">${_escape(song)}</div>
-                        <div class="pm-preview-card__sub">${_escape(artist)}</div>
-                    </div>
-                </div>`;
-        },
+const IslandCardPreview = {
+    name: 'IslandCardPreview',
+    props: {
+        previewType: { type: String, default: 'text' },
+        previewData: { type: Object, default: () => ({}) },
+        label: { type: String, default: '' },
     },
-    template: `<div class="app-prompt-preview-stage-inner" v-html="html"></div>`,
-};
-const IslandRedPacketPreview = {
-    name: 'IslandRedPacketPreview',
-    props: { previewData: { type: Object, default: () => ({}) }, label: { type: String, default: '' } },
     computed: {
         html() {
-            const d = this.previewData || {};
-            const message = String(d.message || d.title || this.label || '恭喜发财');
-            const sender = String(d.sender || '对方发来红包');
-            return `
-                <div class="pm-preview-card pm-preview-card--red-packet">
-                    <div class="pm-preview-card__redpacket-header">
-                        <div class="pm-preview-card__redpacket-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="3" y="8" width="18" height="12" rx="2"/><circle cx="12" cy="14" r="2.5"/>
-                            </svg>
-                        </div>
-                        <div class="pm-preview-card__redpacket-text">
-                            <div class="pm-preview-card__redpacket-title">${_escape(message)}</div>
-                            <div class="pm-preview-card__redpacket-sender">${_escape(sender)}</div>
-                        </div>
-                    </div>
-                    <div class="pm-preview-card__redpacket-footer">
-                        <span class="pm-preview-card__redpacket-cta">点击领取红包</span>
-                    </div>
-                </div>`;
-        },
-    },
-    template: `<div class="app-prompt-preview-stage-inner" v-html="html"></div>`,
-};
-const IslandLocationPreview = {
-    name: 'IslandLocationPreview',
-    props: { previewData: { type: Object, default: () => ({}) }, label: { type: String, default: '' } },
-    computed: {
-        html() {
-            const d = this.previewData || {};
-            const name = String(d.name || d.title || this.label || '位置');
-            const address = String(d.address || '');
-            return `
-                <div class="pm-preview-card pm-preview-card--location">
-                    <div class="pm-preview-card__location-map">
-                        <div class="pm-preview-card__location-grid"></div>
-                        <div class="pm-preview-card__location-pin">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
-                            </svg>
-                        </div>
-                    </div>
-                    <div class="pm-preview-card__location-info">
-                        <div class="pm-preview-card__location-name">${_escape(name)}</div>
-                        ${address ? `<div class="pm-preview-card__location-address">${_escape(address)}</div>` : ''}
-                    </div>
-                </div>`;
-        },
-    },
-    template: `<div class="app-prompt-preview-stage-inner" v-html="html"></div>`,
-};
-const IslandTextPreview = {
-    name: 'IslandTextPreview',
-    props: { previewData: { type: Object, default: () => ({}) }, label: { type: String, default: '' } },
-    computed: {
-        html() {
-            const d = this.previewData || {};
-            const text = String(d.text || d.preview || this.label || '(空文本)');
-            return `
-                <div class="pm-preview-card pm-preview-card--text">
-                    <div class="pm-preview-card__text">${_escape(text)}</div>
-                </div>`;
+            return renderAppPromptCardPreview({
+                previewType: this.previewType,
+                previewData: this.previewData,
+                label: this.label,
+            });
         },
     },
     template: `<div class="app-prompt-preview-stage-inner" v-html="html"></div>`,
@@ -137,12 +52,7 @@ const IslandTextPreview = {
 // ============================================================
 export const AppPromptPreviewIsland = {
     name: 'AppPromptPreviewIsland',
-    components: {
-        IslandMusicPreview,
-        IslandRedPacketPreview,
-        IslandLocationPreview,
-        IslandTextPreview,
-    },
+    components: { IslandCardPreview },
     props: {
         appId: { type: String, default: '' },
         promptId: { type: String, default: '' },
@@ -185,7 +95,7 @@ export const AppPromptPreviewIsland = {
             return !this.isSaving && !this.parseError && this.jsonText.trim().length > 0;
         },
         effectiveTypeLabel() {
-            return this.typeLabel || PREVIEW_TYPE_LABELS[this.previewType] || '卡片';
+            return this.typeLabel || getPreviewTypeLabel(this.previewType);
         },
     },
     methods: {
@@ -260,10 +170,7 @@ export const AppPromptPreviewIsland = {
     template: `
         <div class="app-prompt-preview-island">
             <div class="app-prompt-preview-stage">
-                <island-music-preview v-if="previewType === 'music-card'" :preview-data="previewObject" :label="label" />
-                <island-red-packet-preview v-else-if="previewType === 'red-packet-card'" :preview-data="previewObject" :label="label" />
-                <island-location-preview v-else-if="previewType === 'location-card'" :preview-data="previewObject" :label="label" />
-                <island-text-preview v-else :preview-data="previewObject" :label="label" />
+                <island-card-preview :preview-type="previewType" :preview-data="previewObject" :label="label" />
             </div>
             <div class="app-prompt-preview-field">
                 <label class="app-prompt-preview-label">

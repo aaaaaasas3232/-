@@ -1,17 +1,22 @@
 /* ============================================
  * chat-app 发起聊天页面样式
  *
- * 仿妆原则: 1:1 复刻旧版 chat.js 的 openNewChatSelector() UI
- *
+ * ★ v0.71 仿妆原则:1:1 对齐 chat-favorites / wallet 详情页的粉蓝渐变设计
+ *   - 同样的 topbar:blur 毛玻璃 + 蓝色标题
+ *   - 同样的渐变背景:linear-gradient 蓝(#e8f2ff) → 粉(#fff5f7) → 白(#fff)
+ *   - 同样的卡片:白半透明 + 圆角 16px + 蓝边框 + 蓝阴影
+ *   - 同样的颜色调色板:主 #4a6fa5 蓝、辅 #f2aacb/#ffcbdc 粉
+ *   - 搜索框已删除(留注释占位)
  * ============================================ */
 
 /* ---- 发起聊天页面容器 ---- */
 .app-shell[data-app-id="chat"] .new-chat-page {
-    height: 100%;
-    background: #F8F9FA;
-    overflow: hidden;
+    position: absolute;
+    inset: 0;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+    background: linear-gradient(180deg, #e8f2ff 0%, #fff5f7 48%, #fff 100%);
 }
 
 /* 隐藏 framework 自带的 detail header */
@@ -26,25 +31,27 @@
 }
 
 .app-shell[data-app-id="chat"] .app-detail-panel {
+    padding: 0;
     height: 100%;
     overflow: hidden;
 }
 
-/* ---- 顶部栏 ---- */
+/* ---- 顶部栏(对齐 chat-favorites-topbar / wallet-topbar) ---- */
 .app-shell[data-app-id="chat"] .new-chat-page .new-chat-header {
     flex-shrink: 0;
-    background: #edf2fd;
-    padding: 60px 16px 12px;
+    padding: 50px 16px 12px;
     display: flex;
     align-items: center;
     gap: 12px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    background: rgba(237, 242, 253, 0.72);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     z-index: 10;
 }
 
 .app-shell[data-app-id="chat"] .new-chat-page .new-chat-back-btn {
-    width: 28px;
-    height: 28px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     background: transparent;
     border: none;
@@ -54,26 +61,31 @@
     justify-content: center;
     transition: all 0.2s;
     padding: 0;
+    color: #4a6fa5;
 }
 
-.app-shell[data-app-id="chat"] .new-chat-page .new-chat-back-btn:hover {
-    background: #E9ECEF;
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-back-btn:active {
+    background: rgba(74, 111, 165, 0.12);
 }
 
 .app-shell[data-app-id="chat"] .new-chat-page .new-chat-back-btn svg {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     fill: none;
-    stroke: #4A6FA5;
+    stroke: currentColor;
     stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 /* ---- 内容区域 ---- */
 .app-shell[data-app-id="chat"] .new-chat-page .new-chat-content {
     flex: 1;
     overflow-y: auto;
-    padding: 20px;
+    padding: 16px 14px 34px;
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
 }
 
 /* 隐藏滚动条 */
@@ -81,54 +93,17 @@
     display: none;
 }
 
-.app-shell[data-app-id="chat"] .new-chat-page .new-chat-content {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-}
-
 /* ---- 标题 ---- */
 .app-shell[data-app-id="chat"] .new-chat-page .new-chat-title {
     font-size: 17px;
-    font-weight: 600;
-    color: #333;
+    font-weight: 650;
+    color: #344b68;
+    letter-spacing: 0;
 }
 
-/* ---- 搜索框 ---- */
-.app-shell[data-app-id="chat"] .new-chat-page .new-chat-search {
-    position: relative;
-    margin-bottom: 20px;
-}
-
-.app-shell[data-app-id="chat"] .new-chat-page .new-chat-search .search-icon {
-    position: absolute;
-    left: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 18px;
-    height: 18px;
-    color: #999;
-    pointer-events: none;
-}
-
-.app-shell[data-app-id="chat"] .new-chat-page .new-chat-search .search-input {
-    width: 100%;
-    padding: 12px 15px 12px 40px;
-    border: 1px solid #e0e0e0;
-    border-radius: 10px;
-    font-size: 14px;
-    background: white;
-    box-sizing: border-box;
-    outline: none;
-    transition: border-color 0.2s;
-}
-
-.app-shell[data-app-id="chat"] .new-chat-page .new-chat-search .search-input:focus {
-    border-color: #A8C8EC;
-}
-
-.app-shell[data-app-id="chat"] .new-chat-page .new-chat-search .search-input::placeholder {
-    color: #999;
-}
+/* ---- 搜索框(已删除,占位) ---- */
+/* v0.71:new-chat 页面的搜索框已删除,样式暂留以防回滚。新版布局直接是
+   发起群聊按钮 + 联系人列表,见 new-chat-page.js */
 
 /* ---- 操作项按钮 (创建群聊/添加朋友) ---- */
 .app-shell[data-app-id="chat"] .new-chat-page .new-chat-action-item,
@@ -136,12 +111,13 @@
     display: flex;
     align-items: center;
     padding: 15px;
-    background: white;
-    border-radius: 12px;
-    margin-bottom: 15px;
+    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid rgba(168, 200, 236, 0.22);
+    border-radius: 16px;
+    margin-bottom: 14px;
     cursor: pointer;
     transition: all 0.2s;
-    border: none;
+    box-shadow: 0 5px 18px rgba(74, 111, 165, 0.06);
     width: 100%;
     text-align: left;
     font: inherit;
@@ -150,8 +126,9 @@
 
 .app-shell[data-app-id="chat"] .new-chat-page .new-chat-action-item:hover,
 .app-shell[data-app-id="chat"] .new-chat-page .new-chat-create-group-btn:hover {
-    background: #F8FBFF;
-    transform: translateX(4px);
+    background: rgba(255, 255, 255, 0.95);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(74, 111, 165, 0.1);
 }
 
 .app-shell[data-app-id="chat"] .new-chat-page .new-chat-action-item:active,
@@ -159,21 +136,40 @@
     transform: scale(0.98);
 }
 
-.app-shell[data-app-id="chat"] .new-chat-page .new-chat-action-item .action-icon,
-.app-shell[data-app-id="chat"] .new-chat-page .new-chat-create-group-btn svg {
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-action-item .action-icon {
     width: 24px;
     height: 24px;
     margin-right: 12px;
     flex-shrink: 0;
 }
 
-.app-shell[data-app-id="chat"] .new-chat-page .new-chat-action-item .action-icon.create-group,
-.app-shell[data-app-id="chat"] .new-chat-page .new-chat-create-group-btn svg {
-    color: #34C759;
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-create-group-btn__icon {
+    width: 36px;
+    height: 36px;
+    margin-right: 12px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    background: #4A6FA5;
+    color: #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-create-group-btn__icon svg {
+    width: 18px;
+    height: 18px;
+    color: #FFFFFF;
+    stroke: #FFFFFF;
+}
+
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-action-item .action-icon.create-group {
+    color: #FF6B9D;
+    stroke: #FF6B9D;
 }
 
 .app-shell[data-app-id="chat"] .new-chat-page .new-chat-action-item .action-icon.add-friend {
-    background: #007AFF;
+    background: #4a6fa5;
 }
 
 .app-shell[data-app-id="chat"] .new-chat-page .new-chat-action-item .action-icon svg {
@@ -182,91 +178,90 @@
 }
 
 .app-shell[data-app-id="chat"] .new-chat-page .new-chat-action-item .action-label,
-.app-shell[data-app-id="chat"] .new-chat-page .new-chat-create-group-btn span {
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-create-group-btn > span:not(.new-chat-create-group-btn__icon) {
     font-weight: 500;
-    color: #333;
+    color: #344b68;
     font-size: 15px;
 }
 
-/* ---- 联系人列表标题 ---- */
+/* ---- 联系人列表标题(对齐 chat-favorites-section-title) ---- */
 .app-shell[data-app-id="chat"] .new-chat-page .contacts-title {
-    font-weight: 500;
-    color: #666;
-    font-size: 14px;
-    margin-bottom: 10px;
-    padding-left: 4px;
+    margin: 6px 2px 9px;
+    color: #718092;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
 }
 
-/* ---- 联系人列表 ---- */
+/* ---- 联系人列表(对齐 chat-favorites-list) ---- */
 .app-shell[data-app-id="chat"] .new-chat-page .contacts-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 0;
+    overflow: hidden;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid rgba(168, 200, 236, 0.22);
+    box-shadow: 0 5px 18px rgba(74, 111, 165, 0.06);
 }
 
-/* ---- 联系人项 ---- */
+/* ---- 联系人项(对齐 chat-favorite-item) ---- */
 .app-shell[data-app-id="chat"] .new-chat-page .contact-select-item {
     display: flex;
     align-items: center;
-    padding: 12px;
-    background: white;
-    border-radius: 12px;
+    padding: 12px 14px;
+    background: transparent;
+    border-bottom: 1px solid rgba(168, 200, 236, 0.12);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.15s ease;
     position: relative;
 }
 
+.app-shell[data-app-id="chat"] .new-chat-page .contacts-list .contact-select-item:last-child {
+    border-bottom: none;
+}
+
 .app-shell[data-app-id="chat"] .new-chat-page .contact-select-item:hover {
-    background: #F8FBFF;
-    transform: translateX(4px);
+    background: rgba(74, 111, 165, 0.05);
 }
 
 .app-shell[data-app-id="chat"] .new-chat-page .contact-select-item:active {
-    transform: scale(0.98);
+    background: rgba(74, 111, 165, 0.08);
 }
 
 .app-shell[data-app-id="chat"] .new-chat-page .contact-avatar {
-    width: 45px;
-    height: 45px;
+    width: 38px;
+    height: 38px;
     border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
-    font-size: 18px;
-    font-weight: 500;
+    font-size: 16px;
+    font-weight: 600;
     margin-right: 12px;
     flex-shrink: 0;
 }
 
 .app-shell[data-app-id="chat"] .new-chat-page .contact-info {
     flex: 1;
+    min-width: 0;
 }
 
 .app-shell[data-app-id="chat"] .new-chat-page .contact-name {
     font-weight: 500;
-    font-size: 15px;
-    color: #333;
+    font-size: 14px;
+    color: #344b68;
+    line-height: 1.4;
 }
 
 .app-shell[data-app-id="chat"] .new-chat-page .contact-type {
-    font-size: 12px;
-    color: #666;
+    font-size: 11px;
+    color: #8896a8;
     margin-top: 2px;
 }
 
-/* ---- 在线状态点 ---- */
-.app-shell[data-app-id="chat"] .new-chat-page .contact-online-dot {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 10px;
-    height: 10px;
-    background: #4ade80;
-    border-radius: 50%;
-    border: 2px solid white;
-}
+/* ---- ★ 已删除:contact-online-dot(在线状态绿点)。chat-app 不再展示在线/离线 ---- */
 
 /* ---- v0.27:右侧元数据容器(放 badge + online-dot) ---- */
 .app-shell[data-app-id="chat"] .new-chat-page .contact-meta {
@@ -285,14 +280,14 @@
     border-radius: 12px;
     font-size: 11px;
     font-weight: 500;
-    background: #FFE0EC;
-    color: #D4728A;
-    border: 1px solid rgba(212, 114, 138, 0.25);
+    background: rgba(255, 107, 157, 0.12);
+    color: #FF6B9D;
+    border: 1px solid rgba(255, 107, 157, 0.25);
     white-space: nowrap;
 }
 
 .app-shell[data-app-id="chat"] .new-chat-page .contact-added-badge--other {
-    background: #E8F2FF;
+    background: rgba(74, 111, 165, 0.1);
     color: #4A6FA5;
     border: 1px solid rgba(74, 111, 165, 0.25);
 }
@@ -301,12 +296,12 @@
 .app-shell[data-app-id="chat"] .new-chat-page .contact-select-item--disabled {
     cursor: not-allowed;
     opacity: 0.55;
-    background: #F8F9FA;
+    background: rgba(248, 248, 248, 0.4);
     filter: grayscale(0.4);
 }
 
 .app-shell[data-app-id="chat"] .new-chat-page .contact-select-item--disabled:hover {
-    background: #F8F9FA;
+    background: rgba(248, 248, 248, 0.4);
     transform: none;
 }
 
@@ -318,33 +313,42 @@
 .app-shell[data-app-id="chat"] .new-chat-page .new-chat-empty-state {
     text-align: center;
     padding: 48px 24px;
-    background: white;
-    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid rgba(168, 200, 236, 0.22);
+    border-radius: 16px;
     margin-top: 12px;
+    box-shadow: 0 5px 18px rgba(74, 111, 165, 0.06);
 }
 
 .app-shell[data-app-id="chat"] .new-chat-page .new-chat-empty-icon {
-    font-size: 36px;
-    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 12px;
+    color: #A8C8EC;
+}
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-empty-icon svg {
+    width: 36px;
+    height: 36px;
 }
 
 .app-shell[data-app-id="chat"] .new-chat-page .new-chat-empty-text {
     font-size: 16px;
     font-weight: 500;
-    color: #333;
+    color: #344b68;
     margin-bottom: 6px;
 }
 
 .app-shell[data-app-id="chat"] .new-chat-page .new-chat-empty-hint {
     font-size: 13px;
-    color: #888;
+    color: #8896a8;
     line-height: 1.6;
 }
 
 .app-shell[data-app-id="chat"] .new-chat-page .new-chat-empty-link {
     display: inline-block;
     margin-top: 8px;
-    color: #007aff;
+    color: #4a6fa5;
     font-weight: 500;
 }
 
@@ -356,17 +360,19 @@
 .app-shell[data-app-id="chat"] .new-chat-page .new-chat-loading {
     text-align: center;
     padding: 48px 24px;
-    background: white;
-    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid rgba(168, 200, 236, 0.22);
+    border-radius: 16px;
     margin-top: 12px;
+    box-shadow: 0 5px 18px rgba(74, 111, 165, 0.06);
 }
 
 .app-shell[data-app-id="chat"] .new-chat-page .new-chat-loading-spinner {
     width: 28px;
     height: 28px;
     margin: 0 auto 12px;
-    border: 3px solid rgba(0, 122, 255, 0.15);
-    border-top-color: #007aff;
+    border: 3px solid rgba(74, 111, 165, 0.15);
+    border-top-color: #4a6fa5;
     border-radius: 50%;
     animation: new-chat-spin 0.8s linear infinite;
 }
@@ -376,7 +382,7 @@
 }
 
 .app-shell[data-app-id="chat"] .new-chat-page .new-chat-loading-text {
-    color: #888;
+    color: #8896a8;
     font-size: 13px;
 }
 
@@ -396,19 +402,12 @@
     animation: slideDown 0.3s ease;
 }
 
-.app-shell[data-app-id="chat"] .new-chat-page .new-chat-search {
+.app-shell[data-app-id="chat"] .new-chat-page .new-chat-create-group-btn {
     animation: slideDown 0.3s ease 0.05s backwards;
 }
 
-.app-shell[data-app-id="chat"] .new-chat-page .new-chat-action-item {
-    animation: slideDown 0.3s ease backwards;
-}
-
-.app-shell[data-app-id="chat"] .new-chat-page .new-chat-action-item:nth-child(1) { animation-delay: 0.1s; }
-.app-shell[data-app-id="chat"] .new-chat-page .new-chat-action-item:nth-child(2) { animation-delay: 0.15s; }
-
 .app-shell[data-app-id="chat"] .new-chat-page .contacts-title {
-    animation: slideDown 0.3s ease 0.2s backwards;
+    animation: slideDown 0.3s ease 0.1s backwards;
 }
 
 .app-shell[data-app-id="chat"] .new-chat-page .contact-select-item {
@@ -570,4 +569,14 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* ---- 响应式 ---- */
+@media (max-height: 600px) {
+    .app-shell[data-app-id="chat"] .new-chat-page .new-chat-content {
+        padding: 12px 14px 20px;
+    }
+    .app-shell[data-app-id="chat"] .new-chat-page .contact-select-item {
+        padding: 10px 14px;
+    }
 }

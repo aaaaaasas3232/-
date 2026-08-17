@@ -1,0 +1,532 @@
+/* 灯塔 · 通用控件
+ *
+ * 全部只认 `--jb-*` 变量，这里不出现任何色值。
+ * 毛玻璃是这个 App 的基调：卡片是「一层浮在底色上的玻璃 + 一条描边」，
+ * 不用渐变、不用彩色阴影。
+ */
+
+/* ── 按钮 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 15px;
+    height: 38px;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    background: transparent;
+    color: var(--jb-text);
+    font-size: 13.5px;
+    font-weight: 520;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.16s ease, border-color 0.16s ease, opacity 0.16s ease, transform 0.12s ease;
+}
+
+.app-shell[data-app-id="job"] .jb-btn:active:not(:disabled) { transform: scale(0.975); }
+.app-shell[data-app-id="job"] .jb-btn:disabled { opacity: 0.42; cursor: not-allowed; }
+.app-shell[data-app-id="job"] .jb-btn.is-block { flex: 1; }
+
+.app-shell[data-app-id="job"] .jb-btn--primary {
+    background: var(--jb-primary);
+    color: var(--jb-on-primary);
+}
+.app-shell[data-app-id="job"] .jb-btn--primary:active:not(:disabled) { background: var(--jb-primary-strong); }
+
+.app-shell[data-app-id="job"] .jb-btn--accent {
+    background: var(--jb-accent);
+    color: var(--jb-on-accent);
+}
+
+.app-shell[data-app-id="job"] .jb-btn--soft {
+    background: var(--jb-primary-soft);
+    color: var(--jb-primary-strong);
+}
+
+.app-shell[data-app-id="job"] .jb-btn--line {
+    border-color: var(--jb-line-strong);
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-btn--ghost { color: var(--jb-text-2); padding: 0 10px; }
+.app-shell[data-app-id="job"] .jb-btn--ghost:active:not(:disabled) { background: var(--jb-surface-2); }
+
+.app-shell[data-app-id="job"] .jb-btn--danger {
+    background: var(--jb-danger);
+    color: var(--jb-text-inverse);
+}
+
+.app-shell[data-app-id="job"] .jb-btn--sm { height: 30px; padding: 0 11px; font-size: 12px; border-radius: 9px; }
+.app-shell[data-app-id="job"] .jb-btn--lg { height: 46px; font-size: 15px; border-radius: 13px; }
+
+.app-shell[data-app-id="job"] .jb-btn__spin {
+    width: 13px;
+    height: 13px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: jbSpin 0.7s linear infinite;
+}
+
+@keyframes jbSpin { to { transform: rotate(360deg); } }
+
+.app-shell[data-app-id="job"] .jb-iconbtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--jb-text-2);
+    cursor: pointer;
+}
+.app-shell[data-app-id="job"] .jb-iconbtn:active { background: var(--jb-surface-2); }
+.app-shell[data-app-id="job"] .jb-iconbtn.is-on { color: var(--jb-accent); }
+.app-shell[data-app-id="job"] .jb-iconbtn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.app-shell[data-app-id="job"] .jb-linkbtn {
+    border: 0;
+    background: none;
+    padding: 0 4px;
+    color: var(--jb-primary-strong);
+    font: inherit;
+    font-size: 12.5px;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* ── chip / tag ───────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+.app-shell[data-app-id="job"] .jb-chips--scroll {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    margin: 0 -16px;
+    padding-left: 16px;
+    padding-right: 16px;
+}
+
+.app-shell[data-app-id="job"] .jb-chip {
+    flex: 0 0 auto;
+    padding: 5px 12px;
+    border: 1px solid var(--jb-line);
+    border-radius: 15px;
+    background: var(--jb-surface);
+    color: var(--jb-text-2);
+    font-size: 12.5px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.app-shell[data-app-id="job"] .jb-chip.is-active {
+    background: var(--jb-primary-soft);
+    border-color: var(--jb-primary);
+    color: var(--jb-primary-strong);
+    font-weight: 560;
+}
+
+.app-shell[data-app-id="job"] .jb-chip--rival.is-active {
+    background: var(--jb-accent-soft);
+    border-color: var(--jb-accent);
+    color: var(--jb-accent);
+}
+
+.app-shell[data-app-id="job"] .jb-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border: 1px solid var(--jb-tag-line);
+    border-radius: 6px;
+    background: var(--jb-tag-bg);
+    color: var(--jb-tag-text);
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.app-shell[data-app-id="job"] .jb-tag--accent {
+    border-color: var(--jb-accent);
+    background: var(--jb-accent-soft);
+    color: var(--jb-accent);
+}
+
+.app-shell[data-app-id="job"] .jb-tag--ok {
+    border-color: var(--jb-success);
+    background: transparent;
+    color: var(--jb-success);
+}
+
+.app-shell[data-app-id="job"] .jb-tag--bad {
+    border-color: var(--jb-danger);
+    background: transparent;
+    color: var(--jb-danger);
+}
+
+/* ── 表单 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-field { margin-bottom: 14px; }
+
+.app-shell[data-app-id="job"] .jb-field__head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.app-shell[data-app-id="job"] .jb-field__label {
+    font-size: 12.5px;
+    font-weight: 560;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-field__hint {
+    margin: 5px 0 0;
+    font-size: 11.5px;
+    line-height: 1.6;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-input,
+.app-shell[data-app-id="job"] .jb-textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--jb-input-line);
+    border-radius: 11px;
+    background: var(--jb-input-bg);
+    color: var(--jb-text);
+    font-size: 13.5px;
+    font-family: inherit;
+    line-height: 1.6;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.app-shell[data-app-id="job"] .jb-input:focus,
+.app-shell[data-app-id="job"] .jb-textarea:focus {
+    border-color: var(--jb-primary);
+    box-shadow: 0 0 0 3px var(--jb-input-focus);
+}
+
+.app-shell[data-app-id="job"] .jb-textarea { resize: vertical; min-height: 64px; }
+
+.app-shell[data-app-id="job"] .jb-input::placeholder,
+.app-shell[data-app-id="job"] .jb-textarea::placeholder { color: var(--jb-text-3); }
+
+.app-shell[data-app-id="job"] .jb-switch {
+    position: relative;
+    width: 42px;
+    height: 24px;
+    flex: 0 0 auto;
+    border: 1px solid var(--jb-line-strong);
+    border-radius: 12px;
+    background: var(--jb-surface-2);
+    cursor: pointer;
+    transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.app-shell[data-app-id="job"] .jb-switch.is-on {
+    background: var(--jb-primary);
+    border-color: var(--jb-primary);
+}
+
+.app-shell[data-app-id="job"] .jb-switch__dot {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--jb-surface);
+    box-shadow: 0 1px 3px var(--jb-shadow);
+    transition: transform 0.18s cubic-bezier(0.34, 1.3, 0.64, 1);
+}
+
+.app-shell[data-app-id="job"] .jb-switch.is-on .jb-switch__dot { transform: translateX(18px); }
+
+/* ── 卡片 / 分区 ──────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-section { margin-bottom: 20px; }
+
+.app-shell[data-app-id="job"] .jb-section__head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 9px;
+}
+
+.app-shell[data-app-id="job"] .jb-section__title {
+    margin: 0;
+    font-size: 13.5px;
+    font-weight: 620;
+    letter-spacing: 0.2px;
+    color: var(--jb-text);
+}
+
+.app-shell[data-app-id="job"] .jb-section__sub {
+    font-size: 11.5px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-section__head > :last-child { margin-left: auto; }
+
+/* 毛玻璃卡：这个 App 的基本单元 */
+.app-shell[data-app-id="job"] .jb-card {
+    border: 1px solid var(--jb-line);
+    border-radius: 15px;
+    background: var(--jb-glass);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 1px 2px var(--jb-shadow);
+}
+
+.app-shell[data-app-id="job"] .jb-card--solid {
+    background: var(--jb-card);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+.app-shell[data-app-id="job"] .jb-card--pad { padding: 14px 15px; }
+
+.app-shell[data-app-id="job"] button.jb-card {
+    display: block;
+    width: 100%;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.12s ease;
+}
+
+.app-shell[data-app-id="job"] button.jb-card:active { transform: scale(0.99); }
+
+/* ── 一行「标签 → 值」 ────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-kv {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--jb-line-soft);
+}
+
+.app-shell[data-app-id="job"] .jb-kv:last-child { border-bottom: 0; }
+
+.app-shell[data-app-id="job"] .jb-kv__k {
+    flex: 0 0 auto;
+    font-size: 12.5px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-kv__v {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    color: var(--jb-text);
+    text-align: right;
+    word-break: break-word;
+}
+
+.app-shell[data-app-id="job"] .jb-kv.is-strong .jb-kv__v { font-weight: 600; }
+
+/* ── 金额 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-money {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 3px;
+    font-variant-numeric: tabular-nums;
+    color: var(--jb-pay);
+}
+
+.app-shell[data-app-id="job"] .jb-money__num { font-size: 16px; font-weight: 640; }
+.app-shell[data-app-id="job"] .jb-money__unit { font-size: 11px; color: var(--jb-text-3); }
+.app-shell[data-app-id="job"] .jb-money--sm .jb-money__num { font-size: 13.5px; font-weight: 600; }
+.app-shell[data-app-id="job"] .jb-money--lg .jb-money__num { font-size: 24px; font-weight: 660; }
+.app-shell[data-app-id="job"] .jb-money--in { color: var(--jb-income); }
+.app-shell[data-app-id="job"] .jb-money--out { color: var(--jb-expense); }
+.app-shell[data-app-id="job"] .jb-money--coin { color: var(--jb-coin); }
+
+/* ── 空状态 ───────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 38px 20px;
+    text-align: center;
+}
+
+.app-shell[data-app-id="job"] .jb-empty__mark {
+    display: inline-flex;
+    color: var(--jb-text-3);
+    opacity: 0.6;
+}
+
+.app-shell[data-app-id="job"] .jb-empty__title {
+    margin: 0;
+    font-size: 13.5px;
+    font-weight: 560;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-empty__desc {
+    margin: 0;
+    max-width: 260px;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-empty__slot { margin-top: 6px; }
+
+/* ── 骨架 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="job"] .jb-skeleton__item {
+    height: 78px;
+    border-radius: 15px;
+    background: var(--jb-skeleton);
+    position: relative;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="job"] .jb-skeleton--line .jb-skeleton__item { height: 15px; border-radius: 7px; }
+
+.app-shell[data-app-id="job"] .jb-skeleton__item::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--jb-skeleton-shine);
+    opacity: 0;
+    animation: jbShine 1.4s ease-in-out infinite;
+}
+
+.app-shell[data-app-id="job"] .jb-skeleton__item:nth-child(2)::after { animation-delay: 0.12s; }
+.app-shell[data-app-id="job"] .jb-skeleton__item:nth-child(3)::after { animation-delay: 0.24s; }
+.app-shell[data-app-id="job"] .jb-skeleton__item:nth-child(4)::after { animation-delay: 0.36s; }
+.app-shell[data-app-id="job"] .jb-skeleton__item:nth-child(5)::after { animation-delay: 0.48s; }
+
+@keyframes jbShine {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 0.55; }
+}
+
+/* ── 加载动画 ─────────────────────────────────────────────────────
+   详情 / HR / 小剧场生成期间**不用骨架屏**：那时候连有几条内容都不知道，
+   画一堆假条目再整个换掉，跳变比等待更难受。
+   这个动画要能表达「过了多久」—— 灯塔的光一圈圈扫（一圈 1.6 秒，
+   用户能数圈），文案每 2.4 秒换一句，超过 12 秒承认「有点慢」。 */
+
+.app-shell[data-app-id="job"] .jb-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    padding: 46px 20px;
+    text-align: center;
+}
+
+.app-shell[data-app-id="job"] .jb-loading__beam {
+    position: relative;
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    border: 1px solid var(--jb-line);
+    display: grid;
+    place-items: center;
+    color: var(--jb-accent);
+}
+
+.app-shell[data-app-id="job"] .jb-loading__beam::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    border-top-color: var(--jb-accent);
+    animation: jbSpin 1.6s linear infinite;
+}
+
+.app-shell[data-app-id="job"] .jb-loading__line {
+    margin: 0;
+    font-size: 13px;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-loading__slow {
+    margin: 0;
+    font-size: 11.5px;
+    color: var(--jb-text-3);
+}
+
+/* ── 错误条 ───────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-error {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--jb-danger);
+    border-radius: 11px;
+    color: var(--jb-danger);
+    font-size: 12.5px;
+    line-height: 1.6;
+}
+
+.app-shell[data-app-id="job"] .jb-error__close {
+    margin-left: auto;
+    border: 0;
+    background: none;
+    padding: 0;
+    color: inherit;
+    cursor: pointer;
+}
+
+/* ── 分段选择 ─────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-seg {
+    display: flex;
+    gap: 3px;
+    padding: 3px;
+    border: 1px solid var(--jb-line);
+    border-radius: 11px;
+    background: var(--jb-surface-2);
+}
+
+.app-shell[data-app-id="job"] .jb-seg__btn {
+    flex: 1;
+    padding: 7px 6px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--jb-text-2);
+    font: inherit;
+    font-size: 12.5px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.app-shell[data-app-id="job"] .jb-seg__btn.is-on {
+    background: var(--jb-surface);
+    color: var(--jb-text);
+    font-weight: 560;
+    box-shadow: 0 1px 2px var(--jb-shadow);
+}

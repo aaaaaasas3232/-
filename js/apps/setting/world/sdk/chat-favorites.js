@@ -52,6 +52,8 @@
  *     has(user, aiPersonId, mode, messageId)                  是否已收藏
  *     add(user, aiPersonId, mode, message, options?)          新增(自动去重)
  *     remove(user, aiPersonId, mode, messageId)               删除
+ *     removeById(id)                                          按收藏记录自己的 id 删（收藏页用）
+ *     updateById(id, patch)                                   按 id 局部更新（收藏页「编辑」用）
  *     removeAllForConversation(user, aiPersonId, mode?)       清空某会话全部单条收藏
  *     count(user, aiPersonId, mode?)                          统计
  *     hydrate()                                                从 db 加载到 cache
@@ -109,6 +111,16 @@ function compactMessageForFavorite(message) {
         base.gameTitle = message.gameTitle || message.content || '';
     } else if (type === 'chat_record') {
         base.chatRecord = message.chatRecord || null;
+    } else if (type === 'moments') {
+        // ★ v0.87 朋友圈收藏。收的不是聊天消息而是一条动态,
+        //   所以要单独保留 momentId(点回原动态)和图片/位置(卡片要画出来)。
+        base.momentId = String(message.momentId || '');
+        base.momentAuthorId = String(message.momentAuthorId || '');
+        base.momentIsUser = !!message.momentIsUser;
+        base.momentImages = Array.isArray(message.momentImages) ? message.momentImages : [];
+        base.momentAiImages = Array.isArray(message.momentAiImages) ? message.momentAiImages : [];
+        base.momentLocation = String(message.momentLocation || '');
+        base.momentTimestamp = Number(message.momentTimestamp) || 0;
     }
 
     return base;
@@ -241,6 +253,58 @@ export function createChatFavoritesApi({ toolkit, cache, events, bump }) {
     };
 
     /**
+     * 按收藏记录自己的 id 删除。
+     *
+     * 为什么需要它：收藏页拿到的是一条**收藏记录**（它自己的 id），
+     * 而不是「user + aiPersonId + mode + messageId」这四元组。
+     * 让 UI 去反推那四个字段既啰嗦又容易错（mode 拼错就静默删不掉），
+     * 所以直接给一个按 id 删的入口。
+     */
+    const removeById = async (id) => {
+        if (!toolkit?.db) return false;
+        const key = String(id || '');
+        if (!key) return false;
+        if (!cacheMap.has(key)) return false;
+        cacheMap.delete(key);
+        await toolkit.db.remove(SDK_STORES.chatFavorites, key);
+        try { bump && bump('chatFavorites', 'remove', { id: key }); } catch (_) {}
+        return true;
+    };
+
+    /**
+     * 按 id 局部更新一条收藏（目前用于收藏页的「编辑」）。
+     *
+     * 只允许改「用户自己写的那些字段」—— id / userId / messageId / createdAt
+     * 这些是身份和溯源信息，改了会让这条收藏跟原消息对不上。
+     */
+    const ALLOWED_PATCH_KEYS = new Set([
+        'content', 'summary', 'senderName',
+        'locationName', 'locationAddress',
+        'imageDescription', 'gameTitle', 'note',
+    ]);
+
+    const updateById = async (id, patch = {}) => {
+        if (!toolkit?.db) return null;
+        const key = String(id || '');
+        const existing = mapGet(cacheMap, key);
+        if (!existing) return null;
+        const next = { ...existing };
+        let changed = false;
+        for (const [k, v] of Object.entries(patch || {})) {
+            if (!ALLOWED_PATCH_KEYS.has(k)) continue;
+            if (next[k] === v) continue;
+            next[k] = v;
+            changed = true;
+        }
+        if (!changed) return existing;
+        next.updatedAt = now();
+        cacheMap.set(key, next);
+        await persist(next);
+        try { bump && bump('chatFavorites', 'update', next); } catch (_) {}
+        return next;
+    };
+
+    /**
      * 清空某会话的全部单条收藏
      */
     const removeAllForConversation = async (user, aiPersonId, mode) => {
@@ -269,6 +333,8 @@ export function createChatFavoritesApi({ toolkit, cache, events, bump }) {
         has,
         add,
         remove,
+        removeById,
+        updateById,
         removeAllForConversation,
         count,
         hydrate,

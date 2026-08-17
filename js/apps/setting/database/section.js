@@ -2,15 +2,19 @@
  * 设置 App · 数据库管理模块
  *
  * 设计目标：把 IndexedDB 里的每一张数据表都「暴露在用户面前」，
- * 用户可以查看、编辑、删除、新增记录。
+ * 用户可以查看、编辑、删除，新增记录。
  *
- * 任务边界：
- *   - 本模块只负责「低级数据表」可视化和编辑
- *   - 业务级「导入与导出」（角色卡、AI 人设卡、世界观）由
- *     import-export/section.js 负责
+ * UI 设计：人设主页风格
  */
 
 import { escapeHtml } from '@/src/core/escape.js';
+import { listCatalog, getStoreInfo, auditStores, LOCAL_STORAGE_KEYS } from '@/src/core/db-catalog.js';
+import { closeGalleryDb } from '../gallery/gallery-db.js';
+import { closePromptDb } from '../prompt/prompt-db.js';
+
+// 图库 / Prompt 各自跑在独立的 IndexedDB 里，不在 listen_db 的 store 清单内，
+// 「一键清除」必须显式点名，否则它们会在清库后原样留下来。
+const ALL_DATABASES = ['listen_db', 'listen_music_db', 'gallery_db', 'prompt_db'];
 
 // ============================================
 // 工具函数
@@ -30,89 +34,6 @@ function safeJSONStringify(value) {
 }
 
 // ============================================
-// 数据表分类
-// ============================================
-
-const STORE_CATEGORIES = [
-    {
-        id: 'users',
-        label: '用户 / AI 人设',
-        desc: '多用户、多 AI 实例的人设数据',
-        stores: [
-            { name: 'sdkUsers', label: '用户列表' },
-            { name: 'sdkAiPersons', label: 'AI 人设列表' },
-        ],
-    },
-    {
-        id: 'worlds',
-        label: '世界观',
-        desc: '世界、组、地点、标签、阵营等',
-        stores: [
-            { name: 'sdkWorlds', label: '世界观' },
-            { name: 'sdkWorldGroups', label: '世界观组' },
-            { name: 'sdkPlaces', label: '地点（地图）' },
-            { name: 'sdkLocations', label: '场所（地点下的 pin）' },
-            { name: 'sdkFactions', label: '阵营' },
-            { name: 'sdkTagGroups', label: '标签组' },
-            { name: 'sdkTags', label: '标签' },
-            { name: 'sdkSnapshots', label: '快照' },
-        ],
-    },
-    {
-        id: 'persona',
-        label: '人设主页',
-        desc: '心情 / 周历 / 日程 / 日记 / 草稿',
-        stores: [
-            { name: 'sdkDrafts', label: '草稿' },
-            { name: 'sdkDiaries', label: '日记' },
-            { name: 'sdkSchedules', label: '日程' },
-            { name: 'sdkActive', label: '激活状态' },
-        ],
-    },
-    {
-        id: 'api',
-        label: 'API 管理',
-        desc: 'API 密钥 / 组 / 调用日志',
-        stores: [
-            { name: 'apiKeys', label: 'API 密钥' },
-            { name: 'apiGroups', label: 'API 组' },
-            { name: 'apiUsageLogs', label: '调用日志' },
-            { name: 'apiProfiles', label: '旧版 API 配置' },
-        ],
-    },
-    {
-        id: 'device',
-        label: '设备 / 外观',
-        desc: '手机壳、电池、壁纸等设备级设置',
-        stores: [
-            { name: 'deviceSettings', label: '设备设置' },
-            { name: 'AppSettings', label: '应用设置' },
-        ],
-    },
-    {
-        id: 'weather',
-        label: '天气 App',
-        desc: '天气 App 的城市列表与缓存',
-        stores: [
-            { name: 'weatherCities', label: '城市与天气缓存' },
-        ],
-    },
-    {
-        id: 'base',
-        label: '基础数据',
-        desc: '框架启动时建立的旧表',
-        stores: [
-            { name: 'Userinfo', label: '旧用户表' },
-            { name: 'charInfo', label: '旧角色表' },
-            { name: 'worldInfo', label: '旧世界观表' },
-            { name: 'apiInfo', label: '旧 API 表' },
-        ],
-    },
-];
-
-const ALL_STORES = STORE_CATEGORIES.flatMap(c => c.stores.map(s => ({ ...s, categoryId: c.id, categoryLabel: c.label })));
-
-// ============================================
 // IndexedDB 工具
 // ============================================
 
@@ -121,34 +42,7 @@ function getDb() {
 }
 
 function getStoreKeyPath(storeName) {
-    const declared = {
-        sdkUsers: 'id',
-        sdkAiPersons: 'id',
-        sdkWorlds: 'id',
-        sdkWorldGroups: 'id',
-        sdkTagGroups: 'id',
-        sdkTags: 'id',
-        sdkFactions: 'id',
-        sdkPlaces: 'id',
-        sdkLocations: 'id',
-        sdkSnapshots: 'key',
-        sdkActive: 'key',
-        sdkDrafts: 'id',
-        sdkDiaries: 'id',
-        sdkSchedules: 'id',
-        apiKeys: 'id',
-        apiGroups: 'id',
-        apiUsageLogs: 'id',
-        apiProfiles: 'key',
-        deviceSettings: 'key',
-        AppSettings: 'key',
-        weatherCities: 'id',
-        Userinfo: 'userId',
-        charInfo: 'charId',
-        worldInfo: 'worldId',
-        apiInfo: 'apiId',
-    };
-    return declared[storeName] || 'id';
+    return getStoreInfo(storeName)?.keyPath || 'id';
 }
 
 async function listStore(storeName) {
@@ -222,27 +116,33 @@ function renderBrowseTab(app) {
 
     return `
         <div class="db-mgr-content">
-            <div class="db-mgr-section">
-                <div class="db-mgr-section-title">所有数据表</div>
-                <p class="db-mgr-desc">点开任意一张表，可查看、编辑、删除、新增记录</p>
-                <div class="db-mgr-categories">
-                    ${STORE_CATEGORIES.map(cat => `
-                        <div class="db-mgr-category">
-                            <div class="db-mgr-category__head">
-                                <span class="db-mgr-category__label">${escapeHtml(cat.label)}</span>
-                                <span class="db-mgr-category__desc">${escapeHtml(cat.desc)}</span>
+            <div class="db-mgr-card">
+                <div class="db-mgr-card__head">
+                    <span class="db-mgr-card__title">所有数据表</span>
+                </div>
+                <div class="db-mgr-card__body">
+                    <p class="db-mgr-card__sub" style="margin:0 0 14px;font-size:12px;color:rgba(60,60,67,0.6);">点开任意一张表，可查看、编辑、删除、新增记录</p>
+                    <div class="db-mgr-categories">
+                        ${listCatalog().map(cat => `
+                            <div class="db-mgr-category">
+                                <div class="db-mgr-category__head">
+                                    <span class="db-mgr-category__label">${escapeHtml(cat.label)}</span>
+                                    <span class="db-mgr-category__desc">${escapeHtml(cat.desc)}</span>
+                                </div>
+                                <div class="db-mgr-category__stores">
+                                    ${cat.stores.map(s => `
+                                        <button class="db-mgr-store-btn"
+                                            ${dbAction('dbOpenStore', { store: s.name })}
+                                            title="${escapeHtml(s.note || s.desc)}">
+                                            <span class="db-mgr-store-btn__name">${escapeHtml(s.name)}</span>
+                                            <span class="db-mgr-store-btn__label">${escapeHtml(s.desc)}</span>
+                                            <span class="db-mgr-store-btn__meta">${escapeHtml(s.owner)} · 主键 ${escapeHtml(s.keyPath)}</span>
+                                        </button>
+                                    `).join('')}
+                                </div>
                             </div>
-                            <div class="db-mgr-category__stores">
-                                ${cat.stores.map(s => `
-                                    <button class="db-mgr-store-btn"
-                                        ${dbAction('dbOpenStore', { store: s.name })}>
-                                        <span class="db-mgr-store-btn__name">${escapeHtml(s.name)}</span>
-                                        <span class="db-mgr-store-btn__label">${escapeHtml(s.label)}</span>
-                                    </button>
-                                `).join('')}
-                            </div>
-                        </div>
-                    `).join('')}
+                        `).join('')}
+                    </div>
                 </div>
             </div>
         </div>
@@ -251,13 +151,13 @@ function renderBrowseTab(app) {
 
 function renderStoreDetail(app, { activeStore, storeData, editingKey, editDraft, loadError }) {
     const keyPath = getStoreKeyPath(activeStore);
-    const storeLabel = ALL_STORES.find(s => s.name === activeStore)?.label || activeStore;
+    const storeLabel = getStoreInfo(activeStore)?.desc || activeStore;
 
     return `
         <div class="db-mgr-content">
             <div class="db-mgr-store-detail">
                 <div class="db-mgr-store-detail__head">
-                    <button class="db-mgr-back-btn" ${dbAction('dbCloseStore')}>‹ 返回</button>
+                    <button class="db-mgr-back-btn" ${dbAction('dbCloseStore')}>&#8249;</button>
                     <div class="db-mgr-store-detail__title">
                         <span class="db-mgr-store-detail__name">${escapeHtml(activeStore)}</span>
                         <span class="db-mgr-store-detail__label">${escapeHtml(storeLabel)}</span>
@@ -266,13 +166,15 @@ function renderStoreDetail(app, { activeStore, storeData, editingKey, editDraft,
                 </div>
 
                 ${loadError ? `
-                    <div class="db-mgr-error">${escapeHtml(loadError)}</div>
+                    <div style="padding:12px 14px;">
+                        <div class="db-mgr-error">${escapeHtml(loadError)}</div>
+                    </div>
                 ` : ''}
 
                 <div class="db-mgr-store-meta">
-                    主键：<code>${escapeHtml(keyPath)}</code>
-                    · 共 <strong>${storeData.length}</strong> 条
-                    · <button class="db-mgr-link-btn" ${dbAction('dbClearStore')}>清空整张表</button>
+                    <span>主键: <code>${escapeHtml(keyPath)}</code></span>
+                    <span>共 <strong>${storeData.length}</strong> 条</span>
+                    <button class="db-mgr-link-btn" ${dbAction('dbClearStore')}>清空整张表</button>
                 </div>
 
                 ${storeData.length === 0 ? `
@@ -301,9 +203,9 @@ function renderRecordRow(record, idx, keyPath, activeStore, editingKey) {
                 <div class="db-mgr-record__head">
                     <span class="db-mgr-record__key">${isNew ? '新增记录' : '编辑主键：' + escapeHtml(keyStr)}</span>
                     <div class="db-mgr-record__actions">
-                        <button class="db-mgr-btn db-mgr-btn--small db-mgr-btn--primary" ${dbAction(saveAction, isNew ? {} : { store: activeStore, key })}>保存</button>
-                        <button class="db-mgr-btn db-mgr-btn--small" ${dbAction('dbCancelEdit')}>取消</button>
-                        ${isNew ? '' : `<button class="db-mgr-btn db-mgr-btn--small db-mgr-btn--danger" ${dbAction('dbDeleteRecord', { store: activeStore, key })}>删除</button>`}
+                        <button class="db-mgr-btn db-mgr-btn--primary db-mgr-btn--small" ${dbAction(saveAction, isNew ? {} : { store: activeStore, key })}>保存</button>
+                        <button class="db-mgr-btn db-mgr-btn--secondary db-mgr-btn--small" ${dbAction('dbCancelEdit')}>取消</button>
+                        ${isNew ? '' : `<button class="db-mgr-btn db-mgr-btn--danger db-mgr-btn--small" ${dbAction('dbDeleteRecord', { store: activeStore, key })}>删除</button>`}
                     </div>
                 </div>
                 <textarea class="db-mgr-record__editor" data-record-editor rows="14"
@@ -321,8 +223,8 @@ function renderRecordRow(record, idx, keyPath, activeStore, editingKey) {
             <div class="db-mgr-record__head">
                 <span class="db-mgr-record__key">${escapeHtml(keyStr)}</span>
                 <div class="db-mgr-record__actions">
-                    <button class="db-mgr-btn db-mgr-btn--small" ${dbAction('dbEditRecord', { store: activeStore, key })}>编辑</button>
-                    <button class="db-mgr-btn db-mgr-btn--small db-mgr-btn--danger" ${dbAction('dbDeleteRecord', { store: activeStore, key })}>删除</button>
+                    <button class="db-mgr-btn db-mgr-btn--secondary db-mgr-btn--small" ${dbAction('dbEditRecord', { store: activeStore, key })}>编辑</button>
+                    <button class="db-mgr-btn db-mgr-btn--danger db-mgr-btn--small" ${dbAction('dbDeleteRecord', { store: activeStore, key })}>删除</button>
                 </div>
             </div>
             <pre class="db-mgr-record__preview">${escapeHtml(truncated)}</pre>
@@ -340,49 +242,138 @@ function renderInspectTab(app) {
     const error = state.inspectError || '';
     const isClearing = state.isClearing || false;
     const showConfirm = state.showClearConfirm || false;
+    const audit = state.audit || null;
 
     return `
         <div class="db-mgr-content">
-            <div class="db-mgr-section">
-                <div class="db-mgr-section-title">数据库连接</div>
-                <p class="db-mgr-desc">检查 IndexedDB 连接、版本、当前已存在的表</p>
-                <button class="db-mgr-btn db-mgr-btn--primary" ${dbAction('dbInspect')}>立即检查</button>
-                ${error ? `<div class="db-mgr-error">${escapeHtml(error)}</div>` : ''}
+            <div class="db-mgr-card">
+                <div class="db-mgr-card__head">
+                    <span class="db-mgr-card__title">一致性对账</span>
+                </div>
+                <div class="db-mgr-card__body">
+                    <p class="db-mgr-card__sub" style="margin:0 0 14px;font-size:12px;color:rgba(60,60,67,0.6);">把三份清单摆在一起比：数据库里实际有的表、各 App 声明的表、目录登记的表。三者本该完全一致，对不上就是「保存成功但刷新就没了」这类问题的来源。</p>
+                    <button class="db-mgr-btn db-mgr-btn--primary" ${dbAction('dbAudit')}>开始对账</button>
+                    ${audit ? renderAuditResult(audit) : ''}
+                </div>
+            </div>
+
+            <div class="db-mgr-card">
+                <div class="db-mgr-card__head">
+                    <span class="db-mgr-card__title">localStorage 键</span>
+                </div>
+                <div class="db-mgr-card__body">
+                    <p class="db-mgr-card__sub" style="margin:0 0 14px;font-size:12px;color:rgba(60,60,67,0.6);">不走 IndexedDB、但同样是持久化数据的那几项</p>
+                    <div class="db-mgr-ls-list">
+                        ${LOCAL_STORAGE_KEYS.map(k => {
+                            const raw = (() => { try { return localStorage.getItem(k.key); } catch (_) { return null; } })();
+                            const size = raw ? `${(raw.length / 1024).toFixed(1)} KB` : '空';
+                            return `
+                                <div class="db-mgr-ls-row">
+                                    <div class="db-mgr-ls-key">${escapeHtml(k.key)}</div>
+                                    <div class="db-mgr-ls-desc">${escapeHtml(k.desc)}</div>
+                                    <div class="db-mgr-ls-size">${escapeHtml(size)}</div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            </div>
+
+            <div class="db-mgr-card">
+                <div class="db-mgr-card__head">
+                    <span class="db-mgr-card__title">数据库连接</span>
+                </div>
+                <div class="db-mgr-card__body">
+                    <p class="db-mgr-card__sub" style="margin:0 0 14px;font-size:12px;color:rgba(60,60,67,0.6);">检查 IndexedDB 连接、版本、当前已存在的表</p>
+                    <button class="db-mgr-btn db-mgr-btn--primary" ${dbAction('dbInspect')}>立即检查</button>
+                    ${error ? `<div class="db-mgr-error" style="margin-top:12px;">${escapeHtml(error)}</div>` : ''}
+                </div>
             </div>
 
             ${inspect ? `
-                <div class="db-mgr-section">
-                    <div class="db-mgr-section-title">诊断结果</div>
-                    <pre class="db-mgr-import-result">${escapeHtml(safeJSONStringify(inspect))}</pre>
+                <div class="db-mgr-card">
+                    <div class="db-mgr-card__head">
+                        <span class="db-mgr-card__title">诊断结果</span>
+                    </div>
+                    <div class="db-mgr-card__body">
+                        <pre class="db-mgr-import-result">${escapeHtml(safeJSONStringify(inspect))}</pre>
+                    </div>
                 </div>
             ` : ''}
 
-            <div class="db-mgr-section">
-                <div class="db-mgr-section-title db-mgr-section-title--danger">危险操作</div>
-                <p class="db-mgr-desc">以下操作不可恢复，请谨慎使用</p>
-                ${showConfirm ? `
-                    <div class="db-mgr-confirm-box">
-                        <p class="db-mgr-confirm-text">确定要清除所有数据库内容吗？这将删除：</p>
-                        <ul class="db-mgr-confirm-list">
-                            <li>listen_db（所有用户/AI/世界数据）</li>
-                            <li>listen_music_db（音乐数据）</li>
-                            <li>所有 localStorage 数据</li>
-                        </ul>
-                        <p class="db-mgr-confirm-warning">此操作不可恢复，确定继续吗？</p>
-                        <div class="db-mgr-confirm-actions">
-                            <button class="db-mgr-btn db-mgr-btn--danger" ${dbAction('dbConfirmClearAll')}>确定清除</button>
-                            <button class="db-mgr-btn db-mgr-btn--primary" ${dbAction('dbCancelClearAll')}>取消</button>
+            <div class="db-mgr-card db-mgr-card--danger">
+                <div class="db-mgr-card__head">
+                    <span class="db-mgr-card__title">危险操作</span>
+                </div>
+                <div class="db-mgr-card__body">
+                    <p class="db-mgr-card__sub" style="margin:0 0 14px;font-size:12px;color:rgba(60,60,67,0.6);">以下操作不可恢复，请谨慎使用</p>
+                    ${showConfirm ? `
+                        <div class="db-mgr-confirm-box">
+                            <p class="db-mgr-confirm-text">确定要清除所有数据库内容吗？这将删除：</p>
+                            <ul class="db-mgr-confirm-list">
+                                <li>listen_db（所有用户/AI/世界数据）</li>
+                                <li>listen_music_db（音乐数据）</li>
+                                <li>gallery_db（图库/图包/图组/图片）</li>
+                                <li>prompt_db（Prompt 库/包/组/条目）</li>
+                                <li>所有 localStorage 数据</li>
+                            </ul>
+                            <p class="db-mgr-confirm-warning">此操作不可恢复，确定继续吗？</p>
+                            <div class="db-mgr-confirm-actions">
+                                <button class="db-mgr-btn db-mgr-btn--danger" ${dbAction('dbConfirmClearAll')}>确定清除</button>
+                                <button class="db-mgr-btn db-mgr-btn--primary" ${dbAction('dbCancelClearAll')}>取消</button>
+                            </div>
                         </div>
-                    </div>
-                ` : `
-                    <button class="db-mgr-btn db-mgr-btn--danger"
-                        ${dbAction('dbClearAll')}
-                        ${isClearing ? 'disabled' : ''}>
-                        ${isClearing ? '清除中...' : '一键清除所有数据库内容'}
-                    </button>
-                    <p class="db-mgr-hint">这将删除 listen_db、listen_music_db 和所有 localStorage 数据，重置数据库版本</p>
-                `}
+                    ` : `
+                        <button class="db-mgr-btn db-mgr-btn--danger"
+                            ${dbAction('dbClearAll')}
+                            ${isClearing ? 'disabled' : ''}>
+                            ${isClearing ? '清除中...' : '一键清除所有数据库内容'}
+                        </button>
+                        <p class="db-mgr-hint">这将删除 listen_db、listen_music_db、gallery_db、prompt_db 和所有 localStorage 数据，重置数据库版本</p>
+                    `}
+                </div>
             </div>
+        </div>
+    `;
+}
+
+function renderAuditResult(audit) {
+    const problem = (title, why, list) => {
+        if (!list.length) return '';
+        return `
+            <div class="db-mgr-audit-block">
+                <div class="db-mgr-audit-title">${escapeHtml(title)}（${list.length}）</div>
+                <div class="db-mgr-audit-why">${why}</div>
+                <div class="db-mgr-audit-tags">${list.map(n => `<span class="db-mgr-audit-tag">${escapeHtml(n)}</span>`).join('')}</div>
+            </div>
+        `;
+    };
+
+    const clean = audit.missingInDb.length === 0
+        && audit.uncatalogued.length === 0
+        && audit.undeclared.length === 0;
+
+    return `
+        <div class="db-mgr-audit">
+            <div class="db-mgr-audit-summary ${clean ? 'is-ok' : 'is-warn'}">
+                数据库里 ${audit.actual.length} 张表 · App 声明 ${audit.appDeclared.length} 张 · 目录登记 ${audit.declared.length} 张
+                ${clean ? ' · 完全一致' : ''}
+            </div>
+            ${problem('声明了但数据库里没有', '多半是声明了 stores 却走同步注册，表压根没建出来，写入会静默失败。修法：在 js/apps/index.js 的 appFactories 里把它改成 <code>async: true</code>。', audit.missingInDb)}
+            ${problem('数据库里有但没人声明', '要么是已卸载 App 留下的孤儿表，要么是代码里直接写死表名在用。前者可以清掉，后者要补 stores 声明。', audit.undeclared)}
+            ${problem('还没登记进目录', '表是真实存在的，只是 <code>src/core/db-catalog.js</code> 里没写。补上说明，这个页面才能显示它。', audit.uncatalogued)}
+            ${Object.keys(audit.counts).length ? `
+                <div class="db-mgr-audit-block">
+                    <div class="db-mgr-audit-title">各表记录数</div>
+                    <div class="db-mgr-audit-counts">
+                        ${Object.entries(audit.counts).sort((a, b) => b[1] - a[1]).map(([name, n]) => `
+                            <div class="db-mgr-audit-count ${n === 0 ? 'is-empty' : ''}">
+                                <span>${escapeHtml(name)}</span><b>${n < 0 ? '读取失败' : n}</b>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : ''}
         </div>
     `;
 }
@@ -393,6 +384,13 @@ function renderInspectTab(app) {
 
 export function buildDatabaseMethods() {
     function refresh() {
+        // 触发 detail 页面重画（根据 AGENTS.md §32 规则，detail 页修改数据后用 __detailRenderTick 触发）
+        try {
+            if (typeof window.__detailRenderTick !== 'undefined' && window.__detailRenderTick.value !== undefined) {
+                window.__detailRenderTick.value++;
+            }
+        } catch (_) {}
+        // 同时 try refreshPhoneApps 作为兜底
         try { window.refreshPhoneApps?.(); } catch (_) {}
     }
 
@@ -572,6 +570,23 @@ export function buildDatabaseMethods() {
             }
         },
 
+        async dbAudit() {
+            const app = this.app;
+            try {
+                const audit = await auditStores({ withCounts: true });
+                setState(app, { audit });
+                const problems = audit.missingInDb.length + audit.uncatalogued.length + audit.undeclared.length;
+                this.app.toolkit.island.notify(
+                    problems ? 'warning' : 'success',
+                    problems ? `发现 ${problems} 处不一致` : '三份清单完全一致',
+                    problems ? '展开看每一类该怎么修' : `共 ${audit.actual.length} 张表`,
+                );
+            } catch (err) {
+                setState(app, { inspectError: err?.message || String(err) });
+            }
+            refresh();
+        },
+
         async dbInspect() {
             const app = this.app;
             setState(app, { inspectError: '' });
@@ -624,7 +639,6 @@ export function buildDatabaseMethods() {
             refresh();
 
             try {
-                // 关闭现有数据库连接
                 if (window.myDb) {
                     window.myDb.close();
                     window.myDb = null;
@@ -633,39 +647,47 @@ export function buildDatabaseMethods() {
                     window.musicDb.close();
                     window.musicDb = null;
                 }
+                closeGalleryDb();
+                closePromptDb();
 
-                // 删除 IndexedDB 数据库（必须等待删除完成！）
                 const deleteDb = (name) => {
                     return new Promise((resolve) => {
                         const req = indexedDB.deleteDatabase(name);
-                        req.onsuccess = () => {
-                            console.log(`[dbClearAll] 已删除数据库: ${name}`);
+                        // 有连接没关干净时 deleteDatabase 会一直挂着，超时兜底避免卡在「清除中...」
+                        const timer = setTimeout(() => {
+                            console.warn(`[dbClearAll] 删除数据库超时: ${name}`);
                             resolve();
-                        };
-                        req.onerror = () => {
-                            console.warn(`[dbClearAll] 删除数据库失败: ${name}`, req.error);
-                            resolve();
-                        };
-                        req.onblocked = () => {
-                            console.warn(`[dbClearAll] 删除数据库被阻塞: ${name}，等待连接关闭...`);
-                        };
+                        }, 3000);
+                        const done = (log) => { clearTimeout(timer); log(); resolve(); };
+                        req.onsuccess = () => done(() => console.log(`[dbClearAll] 已删除数据库: ${name}`));
+                        req.onerror = () => done(() => console.warn(`[dbClearAll] 删除数据库失败: ${name}`, req.error));
+                        req.onblocked = () => console.warn(`[dbClearAll] 删除数据库被阻塞: ${name}，等待连接关闭...`);
                     });
                 };
 
-                // 依次删除，等每个完成再删下一个
-                await deleteDb('listen_db');
-                await deleteDb('listen_music_db');
+                // 已知库 + 运行时实际存在的库（覆盖后加的独立库）
+                let names = [...ALL_DATABASES];
+                if (typeof indexedDB.databases === 'function') {
+                    try {
+                        const existing = await indexedDB.databases();
+                        for (const { name } of existing) {
+                            if (name && !names.includes(name)) names.push(name);
+                        }
+                    } catch (e) {
+                        console.warn('[dbClearAll] 枚举数据库失败，仅清除已知库', e);
+                    }
+                }
+                for (const name of names) {
+                    await deleteDb(name);
+                }
 
-                // 清除 localStorage
                 localStorage.clear();
                 console.log('[dbClearAll] 已清除 localStorage');
 
                 setState(app, { isClearing: false, inspect: null });
 
-                // 短暂延迟确保所有连接都关闭了
                 await new Promise(r => setTimeout(r, 100));
 
-                // 刷新页面
                 window.location.reload();
             } catch (e) {
                 setState(app, { isClearing: false });
@@ -688,9 +710,7 @@ if (typeof window !== 'undefined') {
     };
 }
 
-export function handleDatabaseChange(event) {
-    // 编辑器实时同步在 window.__dbRecordEditInput 处理
-}
+export function handleDatabaseChange(event) {}
 
 export function handleDatabaseClick(event) {
     const target = event.target;

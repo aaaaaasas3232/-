@@ -1,0 +1,287 @@
+/**
+ * 情景剧场 · 界面配色 token
+ *
+ * ★ 这个文件是整个 App 界面颜色的**唯一真相**。
+ *   其他 CSS 只允许写 `var(--sp-*)`,JS 里一个 hex 都不许出现。
+ *
+ * ★ 主题怎么切
+ *   `.app-shell[data-app-id="scene-play"]` 上挂
+ *   `data-sp-theme="jelly|peach|soda|plum"`。
+ *   用户自定义色由 JS 往同一个元素 `style.setProperty` 覆盖 ——
+ *   这是**允许 JS 出现颜色值的唯一场景**:值来自用户,编译期不可能知道。
+ *
+ * ★ 每套主题写了**两个**选择器:shell 自身,以及 shell 内任意带这个属性的后代。
+ *   后一个不是冗余 —— `theme-tokens.js` 的 `readPresetColors()` 靠往 shell 里塞
+ *   一个隐藏探针 div 再 `getComputedStyle` 读值。只写 shell 自身的话探针永远
+ *   匹配不上,配色卡会**全部显示成当前主题**,而且不报错。
+ *
+ * ★ 全 App 禁用渐变。所有 token 都是纯色或 rgba,没有一个 linear-gradient。
+ *   动森那种 q 弹感来自**大圆角 + 硬边落影**,不来自渐变。
+ */
+
+/* ============================================================
+   果冻 —— 默认。马卡龙 + 奶油,低饱和高明度
+   ============================================================ */
+.app-shell[data-app-id="scene-play"],
+.app-shell[data-app-id="scene-play"][data-sp-theme="jelly"],
+.app-shell[data-app-id="scene-play"] [data-sp-theme="jelly"] {
+    /* 底与面 */
+    --sp-bg: #FDF7F4;
+    --sp-surface: #FFFFFF;
+    --sp-surface-2: #FBF1EE;
+    --sp-sunken: #F5E9E5;
+    --sp-divider: rgba(90, 74, 82, 0.09);
+    --sp-border: rgba(90, 74, 82, 0.14);
+
+    /* 文字 */
+    --sp-text: #5A4A52;
+    --sp-text-secondary: #8A757E;
+    --sp-text-tertiary: #B4A2AA;
+    --sp-text-inverse: #FFFFFF;
+
+    /* 主色 */
+    --sp-primary: #F2A9BE;
+    --sp-primary-soft: rgba(242, 169, 190, 0.2);
+    --sp-primary-strong: #DE86A1;
+    --sp-on-primary: #FFFFFF;
+    --sp-accent: #9BCFC4;
+    --sp-accent-soft: rgba(155, 207, 196, 0.22);
+
+    /* 抽屉 */
+    --sp-drawer-bg: #FFFFFF;
+    --sp-drawer-head: #FBF1EE;
+    --sp-drawer-tab: rgba(90, 74, 82, 0.06);
+    --sp-drawer-tab-on: #F2A9BE;
+    --sp-drawer-shadow: rgba(140, 95, 110, 0.24);
+
+    /* 舞台 */
+    --sp-stage-bg: #FBF3EF;
+    --sp-stage-veil: rgba(60, 44, 52, 1);
+    --sp-meta: #B4A2AA;
+    --sp-system: #8A757E;
+    --sp-system-bg: rgba(90, 74, 82, 0.07);
+
+    /* 输入区 */
+    --sp-input-bg: #FFFFFF;
+    --sp-input-border: rgba(90, 74, 82, 0.14);
+    --sp-input-focus: rgba(242, 169, 190, 0.34);
+    --sp-placeholder: #C4B4BA;
+    --sp-composer-bg: #FFFFFF;
+
+    /* 控件 */
+    --sp-btn-bg: #FFFFFF;
+    --sp-btn-border: rgba(90, 74, 82, 0.14);
+    --sp-btn-text: #6E5B63;
+    --sp-btn-shadow: rgba(160, 115, 130, 0.28);
+    --sp-track: #F0E2E5;
+    --sp-thumb: #F2A9BE;
+    --sp-switch-off: #E6D8DC;
+    --sp-switch-on: #9BCFC4;
+
+    /* 标签与状态 */
+    --sp-tag-bg: rgba(242, 169, 190, 0.18);
+    --sp-tag-text: #C0708B;
+    --sp-success: #6FBFA4;
+    --sp-warning: #E0A85C;
+    --sp-danger: #E07E86;
+
+    /* 遮罩与阴影 */
+    --sp-overlay: rgba(70, 52, 60, 0.3);
+    --sp-shadow: rgba(120, 90, 100, 0.16);
+    --sp-scrollbar: rgba(120, 90, 100, 0.22);
+
+    /* ── 不进色板(派生值) ── */
+    --sp-home-indicator: rgba(90, 74, 82, 0.28);
+}
+
+/* ============================================================
+   蜜桃 —— 暖橘奶油
+   ============================================================ */
+.app-shell[data-app-id="scene-play"][data-sp-theme="peach"],
+.app-shell[data-app-id="scene-play"] [data-sp-theme="peach"] {
+    --sp-bg: #FFF8F1;
+    --sp-surface: #FFFFFF;
+    --sp-surface-2: #FDF0E4;
+    --sp-sunken: #FAE6D6;
+    --sp-divider: rgba(122, 86, 60, 0.10);
+    --sp-border: rgba(122, 86, 60, 0.16);
+
+    --sp-text: #6B4F3A;
+    --sp-text-secondary: #97785F;
+    --sp-text-tertiary: #BFA48D;
+    --sp-text-inverse: #FFFFFF;
+
+    --sp-primary: #F0AE7E;
+    --sp-primary-soft: rgba(240, 174, 126, 0.22);
+    --sp-primary-strong: #DD9260;
+    --sp-on-primary: #FFFFFF;
+    --sp-accent: #A8C9D8;
+    --sp-accent-soft: rgba(168, 201, 216, 0.24);
+
+    --sp-drawer-bg: #FFFFFF;
+    --sp-drawer-head: #FDF0E4;
+    --sp-drawer-tab: rgba(122, 86, 60, 0.07);
+    --sp-drawer-tab-on: #F0AE7E;
+    --sp-drawer-shadow: rgba(160, 110, 70, 0.24);
+
+    --sp-stage-bg: #FDF2E7;
+    --sp-stage-veil: rgba(70, 48, 32, 1);
+    --sp-meta: #BFA48D;
+    --sp-system: #97785F;
+    --sp-system-bg: rgba(122, 86, 60, 0.08);
+
+    --sp-input-bg: #FFFFFF;
+    --sp-input-border: rgba(122, 86, 60, 0.16);
+    --sp-input-focus: rgba(240, 174, 126, 0.36);
+    --sp-placeholder: #CBB49F;
+    --sp-composer-bg: #FFFFFF;
+
+    --sp-btn-bg: #FFFFFF;
+    --sp-btn-border: rgba(122, 86, 60, 0.16);
+    --sp-btn-text: #7C6048;
+    --sp-btn-shadow: rgba(180, 130, 90, 0.28);
+    --sp-track: #F5E4D3;
+    --sp-thumb: #F0AE7E;
+    --sp-switch-off: #EBDACA;
+    --sp-switch-on: #A8C9D8;
+
+    --sp-tag-bg: rgba(240, 174, 126, 0.22);
+    --sp-tag-text: #B87740;
+    --sp-success: #6FBFA4;
+    --sp-warning: #DDA24F;
+    --sp-danger: #DE8072;
+
+    --sp-overlay: rgba(70, 48, 32, 0.32);
+    --sp-shadow: rgba(140, 100, 66, 0.16);
+    --sp-scrollbar: rgba(140, 100, 66, 0.22);
+
+    --sp-home-indicator: rgba(107, 79, 58, 0.28);
+}
+
+/* ============================================================
+   汽水 —— 薄荷淡蓝
+   ============================================================ */
+.app-shell[data-app-id="scene-play"][data-sp-theme="soda"],
+.app-shell[data-app-id="scene-play"] [data-sp-theme="soda"] {
+    --sp-bg: #F4FAFB;
+    --sp-surface: #FFFFFF;
+    --sp-surface-2: #E9F4F6;
+    --sp-sunken: #DCEDF0;
+    --sp-divider: rgba(52, 90, 100, 0.10);
+    --sp-border: rgba(52, 90, 100, 0.16);
+
+    --sp-text: #3E5B63;
+    --sp-text-secondary: #6C878E;
+    --sp-text-tertiary: #9BB0B6;
+    --sp-text-inverse: #FFFFFF;
+
+    --sp-primary: #86C7D4;
+    --sp-primary-soft: rgba(134, 199, 212, 0.22);
+    --sp-primary-strong: #63AEBE;
+    --sp-on-primary: #FFFFFF;
+    --sp-accent: #F2BBC8;
+    --sp-accent-soft: rgba(242, 187, 200, 0.26);
+
+    --sp-drawer-bg: #FFFFFF;
+    --sp-drawer-head: #E9F4F6;
+    --sp-drawer-tab: rgba(52, 90, 100, 0.07);
+    --sp-drawer-tab-on: #86C7D4;
+    --sp-drawer-shadow: rgba(70, 120, 132, 0.24);
+
+    --sp-stage-bg: #EBF5F7;
+    --sp-stage-veil: rgba(28, 52, 60, 1);
+    --sp-meta: #9BB0B6;
+    --sp-system: #6C878E;
+    --sp-system-bg: rgba(52, 90, 100, 0.08);
+
+    --sp-input-bg: #FFFFFF;
+    --sp-input-border: rgba(52, 90, 100, 0.16);
+    --sp-input-focus: rgba(134, 199, 212, 0.36);
+    --sp-placeholder: #A9BCC2;
+    --sp-composer-bg: #FFFFFF;
+
+    --sp-btn-bg: #FFFFFF;
+    --sp-btn-border: rgba(52, 90, 100, 0.16);
+    --sp-btn-text: #4F6C74;
+    --sp-btn-shadow: rgba(80, 130, 142, 0.26);
+    --sp-track: #DFEDF0;
+    --sp-thumb: #86C7D4;
+    --sp-switch-off: #D5E4E7;
+    --sp-switch-on: #86C7D4;
+
+    --sp-tag-bg: rgba(134, 199, 212, 0.22);
+    --sp-tag-text: #4A93A4;
+    --sp-success: #6FBFA4;
+    --sp-warning: #DDA24F;
+    --sp-danger: #DE8080;
+
+    --sp-overlay: rgba(28, 52, 60, 0.32);
+    --sp-shadow: rgba(60, 100, 110, 0.16);
+    --sp-scrollbar: rgba(60, 100, 110, 0.22);
+
+    --sp-home-indicator: rgba(62, 91, 99, 0.28);
+}
+
+/* ============================================================
+   夜莓 —— 深色
+   ============================================================ */
+.app-shell[data-app-id="scene-play"][data-sp-theme="plum"],
+.app-shell[data-app-id="scene-play"] [data-sp-theme="plum"] {
+    --sp-bg: #1C1920;
+    --sp-surface: #292430;
+    --sp-surface-2: #322C3A;
+    --sp-sunken: #201C26;
+    --sp-divider: rgba(255, 255, 255, 0.08);
+    --sp-border: rgba(255, 255, 255, 0.14);
+
+    --sp-text: #EDE6EE;
+    --sp-text-secondary: #B3A7B8;
+    --sp-text-tertiary: #857A8B;
+    --sp-text-inverse: #201C26;
+
+    --sp-primary: #E9A0B7;
+    --sp-primary-soft: rgba(233, 160, 183, 0.2);
+    --sp-primary-strong: #F3B8CB;
+    --sp-on-primary: #2A1E24;
+    --sp-accent: #8FC6BA;
+    --sp-accent-soft: rgba(143, 198, 186, 0.2);
+
+    --sp-drawer-bg: #292430;
+    --sp-drawer-head: #322C3A;
+    --sp-drawer-tab: rgba(255, 255, 255, 0.07);
+    --sp-drawer-tab-on: #E9A0B7;
+    --sp-drawer-shadow: rgba(0, 0, 0, 0.55);
+
+    --sp-stage-bg: #211D27;
+    --sp-stage-veil: rgba(0, 0, 0, 1);
+    --sp-meta: #857A8B;
+    --sp-system: #B3A7B8;
+    --sp-system-bg: rgba(255, 255, 255, 0.06);
+
+    --sp-input-bg: #201C26;
+    --sp-input-border: rgba(255, 255, 255, 0.16);
+    --sp-input-focus: rgba(233, 160, 183, 0.34);
+    --sp-placeholder: #7A7080;
+    --sp-composer-bg: #292430;
+
+    --sp-btn-bg: #322C3A;
+    --sp-btn-border: rgba(255, 255, 255, 0.14);
+    --sp-btn-text: #DCD3DE;
+    --sp-btn-shadow: rgba(0, 0, 0, 0.5);
+    --sp-track: #3B3444;
+    --sp-thumb: #E9A0B7;
+    --sp-switch-off: #443C4C;
+    --sp-switch-on: #8FC6BA;
+
+    --sp-tag-bg: rgba(233, 160, 183, 0.18);
+    --sp-tag-text: #F0B9CA;
+    --sp-success: #7FC8AE;
+    --sp-warning: #E3B872;
+    --sp-danger: #E58E8E;
+
+    --sp-overlay: rgba(8, 6, 10, 0.62);
+    --sp-shadow: rgba(0, 0, 0, 0.5);
+    --sp-scrollbar: rgba(255, 255, 255, 0.18);
+
+    --sp-home-indicator: rgba(237, 230, 238, 0.3);
+}

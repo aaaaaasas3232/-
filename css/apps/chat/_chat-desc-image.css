@@ -1,16 +1,6 @@
-/**
- * chat-app / 模拟图片组件样式
- *
- * 包含:
- * - 模拟图片详情弹窗样式
- * - 模拟图片发送弹窗样式
- * - 聊天消息中的模拟图片卡片样式
- * - 动态页面的 AI 图片样式
- */
+/* 模拟图片组件样式 */
 
-/* ========================================
-   模拟图片详情弹窗
-   ======================================== */
+/* 模拟图片详情弹窗 */
 
 .desc-image-modal-overlay {
     position: fixed;
@@ -98,7 +88,7 @@
     margin-top: 4px;
 }
 
-/* ---- 图片描述弹窗操作按钮 ---- */
+/* 图片描述弹窗操作按钮  */
 .desc-image-modal-actions {
     display: flex;
     gap: 12px;
@@ -137,7 +127,7 @@
     height: 12px;
 }
 
-/* ---- 卡片内图片内容区域 ---- */
+/*  卡片内图片内容区域 */
 .desc-image-modal-card-img {
     display: flex;
     flex-direction: column;
@@ -174,98 +164,64 @@
     }
 }
 
-/* ========================================
-   模拟图片发送弹窗
-   ======================================== */
-
-.desc-image-send-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 9998;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    animation: fadeIn 0.2s ease;
-}
-
-.desc-image-send-overlay--closing {
-    animation: fadeOut 0.2s ease forwards;
-}
+/* 模拟图片发送弹窗  */
 
 .desc-image-send-modal {
-    background: white;
-    border-radius: 20px;
-    width: 70%;
-    max-width: 280px;
-    padding-bottom: env(safe-area-inset-bottom, 10px);
-    animation: scaleIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    /* 由 AcModal 提供 squircle 形状 */
 }
 
-.desc-image-send-header {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 16px 16px 8px;
-}
-
-.desc-image-send-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #333;
-    text-align: center;
-}
-
-.desc-image-send-body {
-    padding: 12px 16px;
+.app-shell[data-app-id="chat"] .desc-image-send-body {
+    padding: 0;
     position: relative;
     z-index: 1;
+    text-align: left;
 }
 
-.desc-image-send-hint {
+.app-shell[data-app-id="chat"] .desc-image-send-hint {
     font-size: 13px;
     color: #666;
     margin-bottom: 8px;
 }
 
-.desc-image-send-textarea {
+.app-shell[data-app-id="chat"] .desc-image-send-textarea {
     width: 100%;
-    padding: 10px 12px;
-    border: 1px solid #e0e0e0;
-    border-radius: 12px;
+    padding: 12px 14px;
+    border: 1.5px solid #e8eef5;
+    border-radius: 18px;
     font-size: 13px;
+    line-height: 1.5;
     resize: none;
     outline: none;
     box-sizing: border-box;
-    transition: all 0.2s;
+    transition: border-color 0.2s, box-shadow 0.2s;
     font-family: inherit;
+    background: #f6fafe;
+    color: #4a6079;
 }
 
-.desc-image-send-textarea:focus {
-    border-color: #A8C8EC;
-    box-shadow: 0 0 0 2px rgba(168, 200, 236, 0.2);
+.app-shell[data-app-id="chat"] .desc-image-send-textarea:focus {
+    border-color: #a8c8ed;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(168, 200, 236, 0.18);
 }
 
-.desc-image-send-textarea::placeholder {
-    color: #bbb;
+.app-shell[data-app-id="chat"] .desc-image-send-textarea::placeholder {
+    color: #b8cce0;
 }
 
-.desc-image-send-colors {
-    margin-top: 12px;
+.app-shell[data-app-id="chat"] .desc-image-send-colors {
+    margin-top: 14px;
     position: relative;
     z-index: 1;
 }
 
-.desc-image-send-colors-label {
+.app-shell[data-app-id="chat"] .desc-image-send-colors-label {
     font-size: 11px;
     color: #999;
     margin-bottom: 8px;
 }
 
-.desc-image-send-colors-grid {
+.app-shell[data-app-id="chat"] .desc-image-send-colors-grid {
     display: flex;
     gap: 6px;
     flex-wrap: wrap;
@@ -273,90 +229,39 @@
     justify-content: center;
 }
 
-.desc-image-send-color-btn {
-    padding: 6px 14px;
+.app-shell[data-app-id="chat"] .desc-image-send-color-btn {
+    padding: 8px 9px;
+    margin-bottom: 3px;
     border: 2px solid transparent;
-    border-radius: 16px;
+    border-radius: 999px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
     font-size: 12px;
-    font-weight: 500;
+    font-weight: 600;
     user-select: none;
     -webkit-user-select: none;
     display: flex;
     align-items: center;
     gap: 5px;
+    font-family: inherit;
+    box-shadow: 0 3px 0 var(--color-btn-shadow, rgba(0, 0, 0, 0.2));
 }
 
-.desc-image-send-color-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: currentColor;
-    opacity: 0.7;
+.app-shell[data-app-id="chat"] .desc-image-send-color-btn:hover {
+    transform: translateY(-2px);
 }
 
-.desc-image-send-color-btn:hover {
-    transform: scale(1.05);
+.app-shell[data-app-id="chat"] .desc-image-send-color-btn:active {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 var(--color-btn-shadow, rgba(0, 0, 0, 0.2));
 }
 
-.desc-image-send-color-btn:active {
-    transform: scale(0.95);
+.app-shell[data-app-id="chat"] .desc-image-send-color-btn.active {
+    box-shadow: 0 1px 0 var(--color-btn-shadow, rgba(0, 0, 0, 0.2));
 }
 
-.desc-image-send-color-btn.active {
-    border-color: currentColor;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
 
-/* ========== 发送图片弹窗底部按钮 ========== */
-.desc-image-send-footer {
-    display: flex;
-    justify-content: center;
-    gap: 12px;
-    padding: 10px 12px 14px;
-}
-
-.desc-image-send-cancel,
-.desc-image-send-confirm {
-    padding: 7px 20px;
-    border: none;
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    border-radius: 16px;
-    transition: all 0.2s;
-}
-
-.desc-image-send-cancel {
-    background: #F5F5F5;
-    color: #666;
-}
-
-.desc-image-send-cancel:hover {
-    background: #EBEBEB;
-}
-
-.desc-image-send-cancel:active {
-    transform: scale(0.98);
-}
-
-.desc-image-send-confirm {
-    background: #4A6FA5;
-    color: white;
-}
-
-.desc-image-send-confirm:hover {
-    background: #3A5F95;
-}
-
-.desc-image-send-confirm:active {
-    transform: scale(0.98);
-}
-
-/* ========================================
-   聊天消息中的模拟图片卡片
-   ======================================== */
+/* 聊天消息中的模拟图片卡片 */
 
 .desc-image-card {
     cursor: pointer;
@@ -417,9 +322,7 @@
     text-align: left;
 }
 
-/* ========================================
-   动态页面的 AI 图片样式
-   ======================================== */
+/*动态页面的 AI 图片样式 */
 
 /* 单图大卡片样式 */
 .ai-image-display {
@@ -454,9 +357,7 @@
     transform: scale(0.98);
 }
 
-/* ========================================
-   动画
-   ======================================== */
+/* 动画 */
 
 @keyframes fadeIn {
     from {
@@ -498,9 +399,7 @@
     }
 }
 
-/* ========================================
-   响应式适配
-   ======================================== */
+/* 响应式适配 */
 
 @media (max-width: 360px) {
     .desc-image-modal {

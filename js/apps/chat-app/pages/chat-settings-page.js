@@ -9,110 +9,24 @@
  *   - 头像 + 名字 + 状态
  *   - 三个圆形入口按钮(语音 / 视频 / 朋友圈)
  *   - 设置卡片组:备注 / 置顶 / 免打扰 / 聊天背景 / 拍一拍后缀
- *   - AI 设置卡片:上下文长度 / 上下文稀释 / 朋友圈读取 / 回复提示词 / 回复增强 / 关键词触发 / 表情库
+ *   - AI 设置卡片:上下文长度 / 朋友圈读取 / 回复提示词 / 回复增强 / 关键词触发 / 表情库
  *   - 聊天记录管理:日历视图 / 故事记录
- *   - 互动统计(仅主角色):总消息 / AI 回复 / 聊天天数 / 日均消息 / 拉黑统计
- *   - 危险操作:清空聊天记录 / 拉黑联系人
+ *   - 互动统计(仅主角色):总消息 / AI 回复 / 聊天天数 / 日均消息
+ *   - 危险操作:清空聊天记录
  *
  * 当前阶段:1:1 复原 UI,交互留待 Phase 4+ 接入
  */
 
 import { escapeHtml } from '@/src/core/escape.js';
-import { getAiMeta, resolveContactDisplay } from '../aiMeta.js';
+import { resolveContactDisplay, resolveAiAvatar, DEFAULT_AI_AVATAR_BG } from '../aiMeta.js';
+import { countPending as countKChainPending } from '../services/k-chain-service.js';
 
 // Demo 联系人数据(与 chat-page.js 共享,后续 Phase 接入 IndexedDB)
-const DEMO_CONTACTS = {
-    'ai-1': {
-        id: 'ai-1',
-        name: '小美',
-        type: 'main',
-        status: '在线',
-        avatar: null,
-        remark: '',
-        isPinned: false,
-        isMuted: false,
-        chatBackground: null,
-        pokeSuffix: '',
-        contextLength: 20,
-        contextDiluteEnabled: true,
-        momentsReadConfig: { self: 3, user: 3, social: 3 },
-        replyPromptIds: [],
-        replyEnhanceEnabled: false,
-        keywordPrompts: [],
-        stickerLibraryIds: [],
-        isBlocked: false,
-    },
-    'ai-2': {
-        id: 'ai-2',
-        name: '小明',
-        type: 'main',
-        status: '在线',
-        avatar: null,
-        remark: '游戏搭子',
-        isPinned: true,
-        isMuted: false,
-        chatBackground: null,
-        pokeSuffix: '在干嘛',
-        contextLength: -1,
-        contextDiluteEnabled: true,
-        momentsReadConfig: { self: 5, user: 5, social: 5 },
-        replyPromptIds: ['p1'],
-        replyEnhanceEnabled: true,
-        keywordPrompts: [],
-        stickerLibraryIds: [],
-        isBlocked: false,
-    },
-    'ai-3': {
-        id: 'ai-3',
-        name: '小蓝',
-        type: 'main',
-        status: '离线',
-        avatar: null,
-        remark: '',
-        isPinned: false,
-        isMuted: true,
-        chatBackground: null,
-        pokeSuffix: '',
-        contextLength: 20,
-        contextDiluteEnabled: true,
-        momentsReadConfig: { self: 3, user: 3, social: 3 },
-        replyPromptIds: [],
-        replyEnhanceEnabled: false,
-        keywordPrompts: [],
-        stickerLibraryIds: [],
-        isBlocked: false,
-    },
-    'group-1': {
-        id: 'group-1',
-        name: '游戏群',
-        type: 'group',
-        status: '在线',
-        avatar: null,
-        remark: '',
-        isPinned: false,
-        isMuted: false,
-        chatBackground: null,
-        pokeSuffix: '',
-        contextLength: 30,
-        contextDiluteEnabled: true,
-        momentsReadConfig: { self: 0, user: 3, social: 3 },
-        replyPromptIds: [],
-        replyEnhanceEnabled: false,
-        keywordPrompts: [],
-        stickerLibraryIds: [],
-        isBlocked: false,
-    },
-};
+// ★ v0.80:移除占位联系人(小美/小明/小蓝/小红) — 真实联系人全部走 SDK,
+//   找不到就返回空对象,UI 走空状态。
+const DEMO_CONTACTS = {};
 
-// 头像背景色工具
-function getAvatarColor(id) {
-    const palette = ['#A8C8EC', '#F4A6CD', '#B8D4F0', '#FFD4E5', '#C8E6F4', '#FFC8DD'];
-    let hash = 0;
-    for (let i = 0; i < (id || '').length; i++) {
-        hash = (hash * 31 + id.charCodeAt(i)) & 0xffffffff;
-    }
-    return palette[Math.abs(hash) % palette.length];
-}
+// ★ v0.71 头像背景色已统一到 aiMeta.resolveAiAvatar,删除本地 getAvatarColor 重复实现
 
 /**
  * 把带前缀的 chatBackground 值转成 CSS background 值。
@@ -270,8 +184,9 @@ export function renderChatSettingsPage(app, contactId) {
     const contactName = display.nickname;
     // ★ v0.31 兜底 baseDemo 也补 avatarBg / pokeSuffix 默认值,
     //   防止 demo 路径走不到实时 aiPerson 时这两个字段 undefined
+    // ★ v0.71 改用 aiMeta.DEFAULT_AI_AVATAR_BG(同一来源)
     const baseDemoWithDefaults = {
-        avatarBg: '#A8C8EC',
+        avatarBg: DEFAULT_AI_AVATAR_BG,
         pokeSuffix: '',
         ...baseDemo,
     };
@@ -293,7 +208,8 @@ export function renderChatSettingsPage(app, contactId) {
         }
         : baseDemoWithDefaults;
 
-    const avatarColor = getAvatarColor(contact.id);
+    // ★ v0.71 头像背景:contact.avatarBg (aiMeta 实时) → resolveAiAvatar 默认
+    const avatarColor = contact.avatarBg || resolveAiAvatar(contact.id).bg;
     const avatarText = (contact.name || '?').charAt(0);
 
     const isMain = contact.type === 'main';
@@ -319,6 +235,20 @@ export function renderChatSettingsPage(app, contactId) {
     // 朋友圈可读取条数显示
     const mr = contact.momentsReadConfig || { self: 3, user: 3, social: 3 };
     const momentsReadDisplay = `自己${mr.self}/用户${mr.user}/交际圈${mr.social}`;
+
+    // ★ v0.79 AI 朋友圈概要管理显示(数量)
+    //   - 从 sdk.moments.list(aiPersonId) 读全部朋友圈,显示「N 条」给用户感知
+    //   - 概要由 chat-asset-service.aiSendMoment 在后台异步生成,可能为空
+    let aiMomentsTotalCount = 0;
+    let aiMomentsSummaryCount = 0;
+    try {
+        const list = window.settingsSdk?.moments?.list?.(aiPersonId) || [];
+        aiMomentsTotalCount = Array.isArray(list) ? list.length : 0;
+        aiMomentsSummaryCount = Array.isArray(list) ? list.filter((m) => m && m.summary).length : 0;
+    } catch (_) { /* keep default 0 */ }
+    const momentsManageDisplay = aiMomentsTotalCount > 0
+        ? `共 ${aiMomentsTotalCount} 条 · ${aiMomentsSummaryCount} 条已生成概要`
+        : '未发过朋友圈';
 
     // 上下文长度显示(★ v0.61.8.12 改:从真实存储 sdk.rollingSummaries.getRollingConfig(aiPersonId).contextRounds 读)
     //   - 历史 bug:之前读 contact.contextLength(实际是 DEMO_CONTACTS.ai-1 的 20 / 兜底 20),
@@ -357,20 +287,25 @@ export function renderChatSettingsPage(app, contactId) {
         } catch (_) { /* 静默 */ }
     }
 
-    // ★ v0.61.3 「滚动摘要」状态:从 sdk.rollingSummaries.getRollingConfig 读
-    //   - enabled → toggle「滚动摘要启用」
-    //   - rollingConfig 不存在时回落到默认值(enabled=false)
-    let rollingEnabled = false;
-    let rollingConfigDesc = '';
+    // ★ v0.88 K 链记忆显示
+    //   三种状态说清楚:没开 / 开了但还没攒够 / 已经压过几版。
+    //   「还差 N 轮」很重要 —— 用户要能预期「下一次什么时候会生成」,
+    //   否则开了之后什么都看不到,只会以为又坏了(上一版 K 链就是这么被删掉的)。
+    let kChainDisplay = '未启用';
     try {
         const sdk = window.settingsSdk;
-        const cfg = sdk?.rollingSummaries?.getRollingConfig?.(aiPersonId);
-        if (cfg) {
-            rollingEnabled = !!cfg.enabled;
-            const styleText = cfg.style === 'detailed' ? '详细' : '简洁';
-            rollingConfigDesc = `风格:${styleText} · 压缩阈值 ${Number(cfg.contextRounds) || 20} 回合`;
+        const cfg = sdk?.kChain?.getConfig?.(aiPersonId);
+        if (cfg?.enabled) {
+            const slot = sdk.kChain.getSlot(aiPersonId, mode);
+            const version = Number(slot?.current?.index) || 0;
+            const pending = countKChainPending(aiPersonId, mode);
+            const left = Math.max(0, cfg.windowSize - pending);
+            const head = version > 0 ? `第 ${version} 版` : '未生成';
+            kChainDisplay = left > 0
+                ? `${head} · 还差 ${left} 轮`
+                : `${head} · 下一轮更新`;
         }
-    } catch (_) { /* 静默兜底 */ }
+    } catch (_) { /* SDK 没就绪就显示「未启用」 */ }
 
     // 表情库显示
     const stickerDisplay = (contact.stickerLibraryIds?.length || 0) > 0
@@ -406,26 +341,23 @@ export function renderChatSettingsPage(app, contactId) {
             <div class="chat-settings-icon-btn" id="profile-voice-call" data-app-action='${escapeHtml(voiceAction)}'>
                 <div class="chat-settings-icon-circle">
                     <svg viewBox="0 0 24 24">
-                        <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+                        <path fill="#ffffff" d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
                     </svg>
                 </div>
-                <div class="chat-settings-icon-label">语音</div>
             </div>
             <div class="chat-settings-icon-btn" id="profile-video-call" data-app-action='${escapeHtml(videoAction)}'>
                 <div class="chat-settings-icon-circle">
                     <svg viewBox="0 0 24 24">
-                        <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
+                        <path fill="#ffffff" d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
                     </svg>
                 </div>
-                <div class="chat-settings-icon-label">视频</div>
             </div>
             <div class="chat-settings-icon-btn" id="profile-moments" data-app-action='${escapeHtml(momentsAction)}'>
                 <div class="chat-settings-icon-circle">
                     <svg viewBox="0 0 24 24">
-                        <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                        <path fill="#ffffff" d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
                     </svg>
                 </div>
-                <div class="chat-settings-icon-label">朋友圈</div>
             </div>
         </div>
     `;
@@ -497,31 +429,17 @@ export function renderChatSettingsPage(app, contactId) {
                     <svg class="chat-setting-arrow" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
                 </span>
             </div>
-            ${renderToggleItem({
-                id: 'set-rolling-enabled',
-                label: '滚动摘要是否开启',
-                desc: rollingConfigDesc || '超出阈值自动合并相邻概要,节省 Token',
-                checked: rollingEnabled,
-            })}
-            ${rollingEnabled ? `
-            <div class="chat-setting-item" id="set-rolling-capacity"
-                data-app-action='${JSON.stringify({ action: 'appMethod', appId: 'chat', method: 'openRollingCapacityModal', payload: { contactId: aiPersonId, mode } })}'>
+            <div class="chat-setting-item" id="set-kchain"
+                data-app-action='${JSON.stringify({ action: 'appMethod', appId: 'chat', method: 'openKChainModal', payload: { contactId: aiPersonId, mode } })}'>
                 <span class="chat-setting-label">
-                    滚动摘要容量
-                    <span class="chat-setting-badge" title="K 链长度 / 合并粒度">配置</span>
+                    K 链记忆
+                    <span class="chat-setting-badge chat-setting-badge--new" title="每攒够 N 个回合,AI 在回复的同时顺手把记忆压缩更新一次;不够轮数时这段指令不会发出去">新增</span>
                 </span>
                 <span class="chat-setting-value">
-                    ${(() => {
-                        try {
-                            const cfg = window.settingsSdk?.rollingSummaries?.getRollingConfig?.(aiPersonId);
-                            const len = Number(cfg?.maxChainLength) || 10;
-                            const k = Number(cfg?.kMergeSize) || 5;
-                            return `链长 ${len} · 合并粒度 ${k}`;
-                        } catch (_) { return '链长 10 · 合并粒度 5'; }
-                    })()}
+                    ${kChainDisplay}
                     <svg class="chat-setting-arrow" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
                 </span>
-            </div>` : ''}
+            </div>
             <div class="chat-setting-item" id="set-api-call"
                 data-app-action='{"action":"appMethod","appId":"chat","method":"openApiCallModal","payload":{"contactId":"${escapeHtml(contactId)}","mode":"${escapeHtml(mode)}"}}'>
                 <span class="chat-setting-label">API 调用</span>
@@ -533,7 +451,6 @@ export function renderChatSettingsPage(app, contactId) {
                             const bound = ai?.boundResources?.apiRefs || [];
                             const localKey = 'xiaoting::chat-default-api-key::' + aiPersonId;
                             const savedRaw = (() => { try { return localStorage.getItem(localKey) || ''; } catch (_) { return ''; } })();
-                            console.log('[chat][renderChatSettings] render ts=' + Date.now() + ' aiPersonId=' + aiPersonId + ' window.__apiSdk?=' + !!window.__apiSdk + ' savedRaw=' + savedRaw + ' bound.length=' + bound.length);
                             // 兼容 refType::refId 新形态 + 老形态(纯 id)
                             let savedType = '';
                             let savedId = savedRaw;
@@ -563,7 +480,6 @@ export function renderChatSettingsPage(app, contactId) {
                                 } catch (_) {}
                                 return '';
                             };
-                            console.log('[chat][renderChatSettings] savedRaw=' + savedRaw + ' savedId=' + savedId + ' savedType=' + savedType + ' bound.length=' + bound.length, 'hasApiSdk=' + !!apiSdk, 'findById(savedId)=' + (savedId ? findById(savedId) : '(empty)'));
                             if (savedId) {
                                 const label = findById(savedId);
                                 if (label) return savedType === 'group' ? label + ' (组)' : label;
@@ -581,10 +497,19 @@ export function renderChatSettingsPage(app, contactId) {
                     <svg class="chat-setting-arrow" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
                 </span>
             </div>
-            <div class="chat-setting-item chat-setting-last" id="set-moments-read">
+            <div class="chat-setting-item" id="set-moments-read"
+                data-app-action='{"action":"appMethod","appId":"chat","method":"openMomentsReadModal","payload":{"contactId":"${escapeHtml(aiPersonId)}","mode":"${escapeHtml(mode)}"}}'>
                 <span class="chat-setting-label">可读取朋友圈</span>
                 <span class="chat-setting-value">
                     ${momentsReadDisplay}
+                    <svg class="chat-setting-arrow" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+                </span>
+            </div>
+            <div class="chat-setting-item chat-setting-last" id="set-moments-manage"
+                data-app-action='{"action":"appMethod","appId":"chat","method":"openAiMomentsDetailModal","payload":{"contactId":"${escapeHtml(aiPersonId)}","mode":"${escapeHtml(mode)}"}}'>
+                <span class="chat-setting-label">朋友圈管理</span>
+                <span class="chat-setting-value">
+                    ${momentsManageDisplay}
                     <svg class="chat-setting-arrow" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
                 </span>
             </div>
@@ -598,13 +523,16 @@ export function renderChatSettingsPage(app, contactId) {
     );
 
     const isCalendarMode = mode === 'calendar';
-    // ★ v0.65 聊天记录管理：统一入口「层级管理」+ 日历视图 / 故事记录 子项
+    // ★ v0.68 聊天记录管理卡片:
+    //   - 日历模式:层级管理 + 日历视图(故事概要不参与层级管理,层级管理是给日历视图的 L1/L2/L3/L4 用的)
+    //   - 故事模式:仅「故事管理」入口(故事概要本身就是主角,不需要走「层级管理」)
+    //     · 故事模式里的「故事管理」对应日历模式的「层级管理」位,二者互斥
     const levelManageAction = JSON.stringify({
         action: 'detail',
         appId: 'chat',
         pageId: `memory-management-${escapeHtml(aiPersonId)}-${escapeHtml(mode)}`,
     });
-    const historyEntryHtml = `
+    const historyEntryHtml = isCalendarMode ? `
         <div class="chat-setting-item chat-setting-icon-item" id="open-memory-management"
             data-app-action='${escapeHtml(levelManageAction)}'>
             <div class="chat-setting-icon-mini" data-color-kind="blue">
@@ -616,7 +544,7 @@ export function renderChatSettingsPage(app, contactId) {
             </div>
             <svg class="chat-setting-arrow chat-setting-arrow-solo" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
         </div>
-    `;
+    ` : '';
     const historyCardBody = `
         <div class="chat-settings-card">
             ${historyCardTitle}
@@ -635,13 +563,13 @@ export function renderChatSettingsPage(app, contactId) {
             </div>
             ` : `
             <div class="chat-setting-item chat-setting-icon-item chat-setting-last" id="open-story-archive"
-                data-app-action='{"action":"detail","appId":"chat","pageId":"story-archive-${escapeHtml(contactId)}"}'>
+                data-app-action='{"action":"detail","appId":"chat","pageId":"story-management-${escapeHtml(contactId)}"}'>
                 <div class="chat-setting-icon-mini" data-color-kind="pink">
                     <svg viewBox="0 0 24 24"><path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z"/></svg>
                 </div>
                 <div class="chat-setting-label-block">
-                    <span class="chat-setting-label">故事记录</span>
-                    <span class="chat-setting-desc">封存、恢复和管理聊天存档</span>
+                    <span class="chat-setting-label">故事管理</span>
+                    <span class="chat-setting-desc">封存聊天、生成和管理故事概要</span>
                 </div>
                 <svg class="chat-setting-arrow chat-setting-arrow-solo" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
             </div>
@@ -657,30 +585,49 @@ export function renderChatSettingsPage(app, contactId) {
             '互动统计'
         );
 
-        // demo 数据(后续 Phase 接 IndexedDB)
-        const totalMessages = 0;
-        const aiReplies = 0;
-        const chatDays = 0;
-        const avgPerDay = '0';
+        // ★ v0.67.x 实时统计:从 sdk.chatMessages.list(aiPersonId, mode) 拿真实数据
+        //   - 总消息数 = messages.length
+        //   - AI 回复数 = sender === 'ai'
+        //   - 聊天天数 = unique timestamp 日期(yyyy-mm-dd 去重)
+        //   - 日均消息 = 总数 / 天数(向上取整,0 天显示 0)
+        let totalMessages = 0;
+        let aiReplies = 0;
+        let chatDays = 0;
+        let avgPerDay = '0';
+        try {
+            const sdk = window.settingsSdk;
+            const defaultUser = sdk?.defaultUserCard?.getDefault?.() || sdk?.users?.getActive?.();
+            const msgList = (sdk?.chatMessages?.list && defaultUser)
+                ? sdk.chatMessages.list(defaultUser, aiPersonId, mode)
+                : [];
+            totalMessages = msgList.length;
+            aiReplies = msgList.filter((m) => m && m.sender === 'ai').length;
+            const daySet = new Set();
+            for (const m of msgList) {
+                const ts = Number(m && m.timestamp);
+                if (!Number.isFinite(ts) || ts <= 0) continue;
+                const d = new Date(ts);
+                const key = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+                daySet.add(key);
+            }
+            chatDays = daySet.size;
+            avgPerDay = chatDays > 0 ? String(Math.ceil(totalMessages / chatDays)) : '0';
+        } catch (_) {
+            // 静默兜底,统计全 0
+        }
 
         statsCardBody = `
             <div class="chat-settings-card">
                 ${statsTitle}
-                <div class="chat-stat-grid">
+                <div class="chat-stat-grid" data-chat-settings-stats
+                     data-total-messages="${escapeHtml(String(totalMessages))}"
+                     data-ai-replies="${escapeHtml(String(aiReplies))}"
+                     data-chat-days="${escapeHtml(String(chatDays))}"
+                     data-avg-per-day="${escapeHtml(avgPerDay)}">
                     ${renderStatCard(totalMessages, '发送消息数', 'blue')}
                     ${renderStatCard(aiReplies, 'AI 回复数', 'pink')}
                     ${renderStatCard(chatDays, '聊天天数', 'green')}
                     ${renderStatCard(avgPerDay, '日均消息', 'amber')}
-                </div>
-                <div class="chat-setting-item chat-setting-icon-item chat-setting-last" id="open-stats-prompt-config">
-                    <div class="chat-setting-icon-mini" data-color-kind="blue">
-                        <svg viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-2.3l-.85-.6C7.8 12.16 7 10.63 7 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.16-2.15 4.1z"/></svg>
-                    </div>
-                    <div class="chat-setting-label-block">
-                        <span class="chat-setting-label">统计数据进入 Prompt</span>
-                        <span class="chat-setting-desc">配置哪些统计信息让 AI 知道</span>
-                    </div>
-                    <svg class="chat-setting-arrow chat-setting-arrow-solo" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
                 </div>
             </div>
         `;
@@ -689,14 +636,13 @@ export function renderChatSettingsPage(app, contactId) {
     // 危险操作卡片
     const dangerCardBody = `
         <div class="chat-settings-card chat-settings-card-danger">
-            <div class="chat-setting-item chat-setting-last chat-setting-danger-item" id="clear-chat-history">
+            <div class="chat-setting-item chat-setting-item-clickable chat-setting-last chat-setting-danger-item" id="clear-chat-history"
+                data-app-action='${escapeHtml(JSON.stringify({
+                    action: 'appMethod', appId: 'chat', method: 'clearChatHistory',
+                    payload: { aiPersonId, mode },
+                }))}'>
                 <span class="chat-setting-danger-text">清空聊天记录</span>
             </div>
-            ${isMain ? `
-            <div class="chat-setting-item chat-setting-last chat-setting-danger-item" id="block-ai">
-                <span class="chat-setting-danger-text">${contact.isBlocked ? '解除拉黑' : '拉黑此联系人'}</span>
-            </div>
-            ` : ''}
         </div>
     `;
 

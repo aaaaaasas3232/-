@@ -37,7 +37,7 @@ export class ListenDb {
      *   - 传 'id' 这种字符串：当作 keyPath，indexes 空
      *   - 传 { keyPath?: 'id', indexes?: [{name, keyPath, unique?, multiEntry?}] }
      */
-    registerStore(storeName, keyPathOrOpts = 'id') {
+    registerStore(storeName, keyPathOrOpts = 'id', { defer = false } = {}) {
         if (!storeName) {
             return;
         }
@@ -54,6 +54,15 @@ export class ListenDb {
         // Track the store if not already known (avoid duplicate pending entries)
         if (!this._hasStoreDefinition(storeName)) {
             this._pendingStores.push({ name: storeName, ...opts });
+        }
+
+        // ★ defer: 只登记、不立刻 close+reopen。
+        //   一个 app 声明 N 张表时，逐张 registerStore 会触发 N 次
+        //   close → bump version → open，每次都可能撞上「数据库升级被阻塞」，
+        //   启动明显变慢。调用方（registerAppAsync）应该全部 defer 登记完，
+        //   再调一次 ensureSchema() 一把升上去。
+        if (defer) {
+            return;
         }
 
         // Database is open but missing this store (e.g. the DB was created
@@ -360,6 +369,20 @@ export class ListenDb {
         });
     }
 
+    bulkRemove(storeName, keys = []) {
+        return new Promise((resolve, reject) => {
+            try {
+                this._exec(storeName, 'readwrite', (store, tx) => {
+                    keys.forEach(key => store.delete(key));
+                    tx.oncomplete = () => resolve(true);
+                    tx.onerror = e => reject(e);
+                });
+            } catch (error) {
+                reject(error);
+            }
+        });
+    }
+
     _exec(storeName, mode, callback) {
         if (!this.db) {
             throw new Error('[ListenDb] 数据库未初始化，请先调用 open()');
@@ -472,7 +495,11 @@ export class ListenDb {
         const nextVersion = Math.max(currentVersion + 1, this._baseStores.length + this._pendingStores.length + 1);
         this.close();
         this.dbVersion = nextVersion;
-        this._pendingStores = [];
+        // ★ 这里以前有一行 `this._pendingStores = []`，是个坑：
+        //   紧接着的 open() → onupgradeneeded 正是靠 `_pendingStores` 才知道要建哪些表，
+        //   提前清空会导致「升级跑了但表没建出来」。而且 _pendingStores 还存着索引定义，
+        //   后续 ensureSchema 的索引一致性检查也要用。
+        //   保留它是幂等的 —— 上面的 missing / missingIndexes 过滤已经跳过了已存在的表。
         return this.open();
     }
 }

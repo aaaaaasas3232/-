@@ -1,12 +1,16 @@
 /**
- * chat-app / 历史消息页样式 (v0.65 新建)
+ * chat-app / 历史消息页样式 (v0.71 重写)
  *
- *   蓝色主 (#4A6FA5) · 白色辅 · 简洁大方
- *   上下结构:顶部层级 tab + 下方概要列表
+ * ★ v0.71 仿妆原则:对齐 chat-favorites / wallet / memory-management 的粉蓝渐变设计
+ *   - 同样的 topbar:blur 毛玻璃 + 蓝色标题(17px / 650 #344b68)
+ *   - 同样的渐变背景:linear-gradient 蓝(#e8f2ff) → 粉(#fff5f7) → 白(#fff)
+ *   - 同样的卡片:白半透明(rgba(255,255,255,0.88)) + 圆角 16px + 蓝边框 + 蓝阴影
+ *   - 颜色调色板:主 #4a6fa5 蓝、辅 #f2aacb/#ffcbdc 粉
+ *   - 层级 tab 激活态用蓝渐变(从纯色 #4A6FA5 升级为主蓝渐变)
  */
 
 /* ============================================
- * 页面容器
+ * 页面容器(对齐 chat-favorites 渐变背景)
  * ============================================ */
 
 .app-shell[data-app-id="chat"] .memory-history {
@@ -15,13 +19,13 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    background: #F5F7FA;
+    background: linear-gradient(180deg, #e8f2ff 0%, #fff5f7 48%, #fff 100%);
 }
 
 .app-shell[data-app-id="chat"] .memory-history-page {
     flex: 1;
     overflow-y: auto;
-    padding: 16px 16px 80px;
+    padding: 16px 14px 80px;
     box-sizing: border-box;
     scrollbar-width: none;
 }
@@ -31,7 +35,7 @@
 }
 
 /* ============================================
- * 顶栏
+ * 顶栏(对齐 chat-favorites-topbar / wallet-topbar)
  * ============================================ */
 
 .app-shell[data-app-id="chat"] .memory-history-topbar {
@@ -39,15 +43,16 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 50px 12px 8px;
-    background: #FFFFFF;
-    border-bottom: 1px solid #E9ECEF;
+    padding: 50px 14px 10px;
+    background: rgba(237, 242, 253, 0.72);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     z-index: 10;
 }
 
 .app-shell[data-app-id="chat"] .memory-history-topbar .chat-back-btn {
-    width: 28px;
-    height: 28px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     background: transparent;
     border: none;
@@ -55,60 +60,67 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #4A6FA5;
+    color: #4a6fa5;
     flex-shrink: 0;
+    transition: background 0.15s ease;
+    padding: 0;
 }
 
-.app-shell[data-app-id="chat"] .memory-history-topbar .chat-back-btn:hover {
-    background: #F0F4FA;
+.app-shell[data-app-id="chat"] .memory-history-topbar .chat-back-btn:active {
+    background: rgba(74, 111, 165, 0.12);
 }
 
 .app-shell[data-app-id="chat"] .memory-history-topbar .chat-back-btn svg {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     fill: none;
-    stroke: #4A6FA5;
+    stroke: currentColor;
     stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 .app-shell[data-app-id="chat"] .memory-history-topbar-title {
-    font-size: 16px;
-    font-weight: 600;
-    color: #1F2937;
+    font-size: 17px;
+    font-weight: 650;
+    color: #344b68;
     margin-left: 4px;
     flex: 1;
 }
 
 .app-shell[data-app-id="chat"] .memory-history-topbar-spacer {
-    width: 28px;
-    height: 28px;
+    width: 30px;
+    height: 30px;
     flex-shrink: 0;
 }
 
 /* ============================================
- * 上下文名称
+ * 上下文名称(对齐 chat-favorites-section-title)
  * ============================================ */
 
 .app-shell[data-app-id="chat"] .memory-history-context-name {
-    font-size: 13px;
-    color: #6B7280;
-    margin-bottom: 10px;
+    margin: 0 2px 12px;
+    color: #718092;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
 }
 
 /* ============================================
- * 层级 tab 切换器
+ * 层级 tab 切换器(对齐 chat-favorites-category-tabs)
  * ============================================ */
 
 .app-shell[data-app-id="chat"] .memory-history-level-tabs {
     display: flex;
-    gap: 6px;
-    padding: 6px;
-    background: #FFFFFF;
-    border-radius: 12px;
-    border: 1px solid #E9ECEF;
+    gap: 8px;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.88);
+    border-radius: 16px;
+    border: 1px solid rgba(168, 200, 236, 0.22);
     margin-bottom: 14px;
     overflow-x: auto;
     scrollbar-width: none;
+    box-shadow: 0 5px 18px rgba(74, 111, 165, 0.06);
 }
 
 .app-shell[data-app-id="chat"] .memory-history-level-tabs::-webkit-scrollbar {
@@ -118,64 +130,60 @@
 .app-shell[data-app-id="chat"] .memory-history-level-tab {
     flex-shrink: 0;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    gap: 1px;
-    padding: 8px 14px;
+    justify-content: center;
+    gap: 4px;
+    padding: 6px 12px;
     background: transparent;
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     cursor: pointer;
-    transition: background 0.15s;
-    min-width: 50px;
+    transition: all 0.2s ease;
+    min-width: 40px;
 }
 
 .app-shell[data-app-id="chat"] .memory-history-level-tab:hover {
-    background: #F5F8FC;
+    background: rgba(74, 111, 165, 0.06);
+}
+
+.app-shell[data-app-id="chat"] .memory-history-level-tab:active {
+    transform: scale(0.96);
 }
 
 .app-shell[data-app-id="chat"] .memory-history-level-tab.is-active {
-    background: #4A6FA5;
+    background: linear-gradient(135deg, #4a6fa5 0%, #6b8cbe 100%);
+    box-shadow: 0 4px 12px rgba(74, 111, 165, 0.3);
 }
 
 .app-shell[data-app-id="chat"] .memory-history-level-tab-label {
-    font-size: 14px;
-    font-weight: 600;
-    color: #4A6FA5;
-    line-height: 1.2;
-}
-
-.app-shell[data-app-id="chat"] .memory-history-level-tab-name {
-    font-size: 10px;
-    color: #9CA3AF;
+    font-size: 13px;
+    font-weight: 700;
+    color: #4a6fa5;
     line-height: 1.2;
 }
 
 .app-shell[data-app-id="chat"] .memory-history-level-tab-count {
-    font-size: 9px;
-    color: #6B7280;
-    background: #F0F2F5;
+    font-size: 10px;
+    color: #8896a8;
+    background: rgba(120, 120, 128, 0.1);
     padding: 1px 5px;
-    border-radius: 8px;
-    margin-top: 1px;
-    line-height: 1.3;
+    border-radius: 6px;
+    line-height: 1.2;
+    font-weight: 500;
 }
 
 .app-shell[data-app-id="chat"] .memory-history-level-tab.is-active .memory-history-level-tab-label {
     color: #FFFFFF;
 }
 
-.app-shell[data-app-id="chat"] .memory-history-level-tab.is-active .memory-history-level-tab-name {
-    color: rgba(255, 255, 255, 0.7);
-}
-
 .app-shell[data-app-id="chat"] .memory-history-level-tab.is-active .memory-history-level-tab-count {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.25);
     color: #FFFFFF;
 }
 
 /* ============================================
- * 生成按钮(L2+ 才显示)
+ * 生成按钮(L2+ 才显示) — 蓝渐变(对齐 wallet-refresh-btn 风格)
  * ============================================ */
 
 .app-shell[data-app-id="chat"] .memory-history-generate-btn {
@@ -184,27 +192,34 @@
     justify-content: center;
     gap: 6px;
     width: 100%;
-    padding: 10px 16px;
-    background: #4A6FA5;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #4a6fa5 0%, #6b8cbe 100%);
     color: #FFFFFF;
     border: none;
-    border-radius: 10px;
+    border-radius: 16px;
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
-    transition: background 0.15s;
-    margin-bottom: 12px;
+    transition: all 0.2s ease;
+    margin-bottom: 14px;
+    box-shadow: 0 4px 12px rgba(74, 111, 165, 0.25);
 }
 
-.app-shell[data-app-id="chat"] .memory-history-generate-btn:hover {
-    background: #3E5F8E;
+.app-shell[data-app-id="chat"] .memory-history-generate-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(74, 111, 165, 0.35);
+}
+
+.app-shell[data-app-id="chat"] .memory-history-generate-btn:active:not(:disabled) {
+    transform: scale(0.98);
 }
 
 .app-shell[data-app-id="chat"] .memory-history-generate-btn.is-disabled,
 .app-shell[data-app-id="chat"] .memory-history-generate-btn:disabled {
-    background: #E5E7EB;
-    color: #9CA3AF;
+    background: rgba(120, 120, 128, 0.1);
+    color: #9aa8b5;
     cursor: not-allowed;
+    box-shadow: none;
 }
 
 .app-shell[data-app-id="chat"] .memory-history-generate-btn svg {
@@ -213,7 +228,7 @@
 }
 
 /* ============================================
- * 概要列表
+ * 概要列表(对齐 chat-favorites-list)
  * ============================================ */
 
 .app-shell[data-app-id="chat"] .memory-history-list {
@@ -223,15 +238,18 @@
 }
 
 .app-shell[data-app-id="chat"] .memory-history-card {
-    background: #FFFFFF;
-    border-radius: 12px;
-    border: 1px solid #E9ECEF;
-    padding: 12px 14px;
-    transition: border-color 0.15s;
+    background: rgba(255, 255, 255, 0.88);
+    border-radius: 16px;
+    border: 1px solid rgba(168, 200, 236, 0.22);
+    padding: 14px 14px;
+    transition: all 0.2s ease;
+    box-shadow: 0 5px 18px rgba(74, 111, 165, 0.06);
 }
 
 .app-shell[data-app-id="chat"] .memory-history-card:hover {
-    border-color: #A8C8EC;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(74, 111, 165, 0.1);
+    border-color: rgba(74, 111, 165, 0.35);
 }
 
 .app-shell[data-app-id="chat"] .memory-history-card-head {
@@ -239,13 +257,13 @@
     justify-content: space-between;
     align-items: baseline;
     gap: 8px;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
 }
 
 .app-shell[data-app-id="chat"] .memory-history-card-title {
     font-size: 14px;
     font-weight: 600;
-    color: #1F2937;
+    color: #344b68;
     line-height: 1.3;
     flex: 1;
     min-width: 0;
@@ -256,13 +274,14 @@
 
 .app-shell[data-app-id="chat"] .memory-history-card-date {
     font-size: 11px;
-    color: #6B7280;
+    color: #8896a8;
     flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
 }
 
 .app-shell[data-app-id="chat"] .memory-history-card-preview {
     font-size: 12px;
-    color: #4B5563;
+    color: #647282;
     line-height: 1.5;
     margin-bottom: 10px;
     display: -webkit-box;
@@ -272,42 +291,58 @@
     word-break: break-word;
 }
 
-/* ★ v0.66 「应用到 Prompt 管理」按钮行 */
+/* ★ v0.66 「应用到 Prompt 管理」按钮行 — 蓝渐变激活态 */
 .app-shell[data-app-id="chat"] .memory-history-card-apply-row {
     display: flex;
     justify-content: flex-end;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
 }
+
 .app-shell[data-app-id="chat"] .memory-history-card-apply-btn {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 5px 10px;
-    background: linear-gradient(135deg, #A8C8EC, #4A6FA5);
+    padding: 6px 11px;
+    background: linear-gradient(135deg, #4a6fa5 0%, #6b8cbe 100%);
     color: #FFFFFF;
     border: none;
-    border-radius: 7px;
+    border-radius: 8px;
     font-size: 11px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.15s;
-    box-shadow: 0 1px 3px rgba(74, 111, 165, 0.25);
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(74, 111, 165, 0.25);
 }
+
 .app-shell[data-app-id="chat"] .memory-history-card-apply-btn svg {
     width: 12px;
     height: 12px;
 }
+
 .app-shell[data-app-id="chat"] .memory-history-card-apply-btn:hover:not(:disabled) {
-    box-shadow: 0 2px 6px rgba(74, 111, 165, 0.35);
+    box-shadow: 0 3px 10px rgba(74, 111, 165, 0.35);
     transform: translateY(-1px);
 }
+
 .app-shell[data-app-id="chat"] .memory-history-card-apply-btn:active:not(:disabled) {
     transform: translateY(0) scale(0.98);
 }
-.app-shell[data-app-id="chat"] .memory-history-card-apply-btn.is-applied,
+
+.app-shell[data-app-id="chat"] .memory-history-card-apply-btn.is-applied {
+    background: rgba(74, 111, 165, 0.12);
+    color: #4a6fa5;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(74, 111, 165, 0.15);
+}
+
+.app-shell[data-app-id="chat"] .memory-history-card-apply-btn.is-applied:hover {
+    background: rgba(74, 111, 165, 0.2);
+    box-shadow: 0 2px 6px rgba(74, 111, 165, 0.25);
+}
+
 .app-shell[data-app-id="chat"] .memory-history-card-apply-btn:disabled {
     background: rgba(120, 120, 128, 0.08);
-    color: #9CA3AF;
+    color: #9aa8b5;
     cursor: not-allowed;
     box-shadow: none;
 }
@@ -317,13 +352,13 @@
     justify-content: space-between;
     align-items: center;
     gap: 8px;
-    padding-top: 8px;
-    border-top: 1px solid #F0F2F5;
+    padding-top: 10px;
+    border-top: 1px solid rgba(168, 200, 236, 0.12);
 }
 
 .app-shell[data-app-id="chat"] .memory-history-card-source {
     font-size: 11px;
-    color: #9CA3AF;
+    color: #9aa8b5;
 }
 
 .app-shell[data-app-id="chat"] .memory-history-card-actions {
@@ -333,34 +368,34 @@
 
 .app-shell[data-app-id="chat"] .memory-history-card-btn {
     padding: 4px 10px;
-    background: #F5F8FC;
-    color: #4A6FA5;
-    border: 1px solid #E9ECEF;
-    border-radius: 6px;
+    background: rgba(74, 111, 165, 0.08);
+    color: #4a6fa5;
+    border: 1px solid rgba(74, 111, 165, 0.18);
+    border-radius: 7px;
     font-size: 11px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: all 0.15s ease;
 }
 
 .app-shell[data-app-id="chat"] .memory-history-card-btn:hover {
-    background: #E8F2FF;
-    border-color: #A8C8EC;
+    background: rgba(74, 111, 165, 0.14);
+    border-color: rgba(74, 111, 165, 0.35);
 }
 
 .app-shell[data-app-id="chat"] .memory-history-card-btn.is-danger {
-    color: #DC2626;
-    background: #FEF2F2;
-    border-color: #FEE2E2;
+    color: #FF6B9D;
+    background: rgba(255, 107, 157, 0.08);
+    border-color: rgba(255, 107, 157, 0.25);
 }
 
 .app-shell[data-app-id="chat"] .memory-history-card-btn.is-danger:hover {
-    background: #FEE2E2;
-    border-color: #FCA5A5;
+    background: rgba(255, 107, 157, 0.14);
+    border-color: rgba(255, 107, 157, 0.4);
 }
 
 /* ============================================
- * 空状态
+ * 空状态(对齐 chat-favorites-empty)
  * ============================================ */
 
 .app-shell[data-app-id="chat"] .memory-history-empty {
@@ -375,8 +410,8 @@
 .app-shell[data-app-id="chat"] .memory-history-empty-icon {
     width: 56px;
     height: 56px;
-    border-radius: 50%;
-    background: #F0F4FA;
+    border-radius: 16px;
+    background: rgba(74, 111, 165, 0.08);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -384,42 +419,42 @@
 }
 
 .app-shell[data-app-id="chat"] .memory-history-empty-icon svg {
-    width: 24px;
-    height: 24px;
-    stroke: #A8C8EC;
+    width: 26px;
+    height: 26px;
+    stroke: #a8b8cc;
 }
 
 .app-shell[data-app-id="chat"] .memory-history-empty-text {
     font-size: 13px;
-    color: #9CA3AF;
+    color: #8896a8;
     line-height: 1.5;
 }
 
 /* ============================================
- * 浮动 + 新建概要按钮(只 L1 显示)
+ * 浮动 + 新建概要按钮(只 L1 显示) — 蓝渐变
  * ============================================ */
 
 .app-shell[data-app-id="chat"] .memory-history-create-btn {
     position: absolute;
     right: 20px;
     bottom: 24px;
-    width: 48px;
-    height: 48px;
+    width: 52px;
+    height: 52px;
     border-radius: 50%;
-    background: #4A6FA5;
+    background: linear-gradient(135deg, #4a6fa5 0%, #6b8cbe 100%);
     border: none;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 16px rgba(74, 111, 165, 0.4);
-    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 6px 20px rgba(74, 111, 165, 0.4);
+    transition: all 0.2s ease;
     z-index: 100;
 }
 
 .app-shell[data-app-id="chat"] .memory-history-create-btn:hover {
     transform: scale(1.06);
-    box-shadow: 0 6px 20px rgba(74, 111, 165, 0.5);
+    box-shadow: 0 8px 24px rgba(74, 111, 165, 0.5);
 }
 
 .app-shell[data-app-id="chat"] .memory-history-create-btn:active {
@@ -427,7 +462,28 @@
 }
 
 .app-shell[data-app-id="chat"] .memory-history-create-btn svg {
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
     stroke: #FFFFFF;
+    stroke-width: 2.2;
+}
+
+/* ============================================
+ * 响应式
+ * ============================================ */
+@media (max-height: 600px) {
+    .app-shell[data-app-id="chat"] .memory-history-page {
+        padding: 12px 14px 70px;
+    }
+    .app-shell[data-app-id="chat"] .memory-history-card {
+        padding: 10px 14px;
+    }
+    .app-shell[data-app-id="chat"] .memory-history-topbar {
+        padding: 40px 14px 8px;
+    }
+    .app-shell[data-app-id="chat"] .memory-history-create-btn {
+        width: 46px;
+        height: 46px;
+        bottom: 16px;
+    }
 }

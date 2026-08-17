@@ -8,8 +8,8 @@
  *   import { renderVoiceBubble } from './special-messages.js';
  */
 
-import { escapeHtml } from '@/src/core/escape.js';
-import { renderMessageActions, renderSelectButton, renderAvatar, renderTime } from './message-actions.js';
+import { renderMessageActions, renderSelectButton, renderTime } from './message-actions.js';
+import { DEFAULT_AI_AVATAR_BG, DEFAULT_USER_AVATAR_BG } from '../aiMeta.js';
 
 // ============================================
 // SVG 图标
@@ -54,8 +54,8 @@ export function renderVoiceBubble(msg, contact = {}, options = {}) {
     const aiAvatarBg = contact?.avatarBg || '';
     const aiAvatar = contact?.avatar || '';
     const avatarBg = isUser
-        ? (userAvatarBg || '#F4A6CD')
-        : (aiAvatarBg || '#A8C8EC');
+        ? (userAvatarBg || DEFAULT_USER_AVATAR_BG)
+        : (aiAvatarBg || DEFAULT_AI_AVATAR_BG);
     const avatarUrl = isUser ? userAvatar : aiAvatar;
     const avatarText = isUser ? '我' : (msg.senderName?.charAt(0) || '?');
     const duration = msg.duration || msg.voiceDuration || 5;
@@ -65,7 +65,7 @@ export function renderVoiceBubble(msg, contact = {}, options = {}) {
     // 根据时长计算气泡宽度
     const voiceWidth = Math.min(50 + duration * 8, 180);
     const bubbleColor = isUser ? '#FFE8F0' : '#E8F2FF';
-    const waveColor = isUser ? '#F4A6CD' : '#A8C8EC';
+    const waveColor = isUser ? DEFAULT_USER_AVATAR_BG : DEFAULT_AI_AVATAR_BG;
 
     // 波形条
     const waveBars = generateWaveBars(8);
@@ -113,6 +113,9 @@ export function renderVoiceBubble(msg, contact = {}, options = {}) {
         mode: options.mode || 'calendar',
         text: voiceContent || '',
         senderLabel,
+        // ★ v0.72 透传 conversationType + senderId,让重roll 按钮能识别群聊
+        conversationType: options.conversationType || msg.conversationType || 'private',
+        senderId: msg.senderId || '',
     };
     const actionsHtml = renderMessageActions(msg.id, actionsCtx, {
         ...options,

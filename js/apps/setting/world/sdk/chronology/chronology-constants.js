@@ -96,7 +96,32 @@ export const DEFAULT_CHRONOLOGY_FALLBACK = Object.freeze({
     // 日期录入时哪些周期字段可见（默认全部可见）。
     // 仅剩 year / month / day 三段
     dateFieldVisibility: { year: true, month: true, day: true },
+
+    // 时差系统（与纪时映射并行，见 defaults.js DEFAULT_WORLD_INSTANCE 的注释）
+    timeOffsetEnabled: false,
+    userRegionName: '',
+    userOffsetHours: 0,
+    aiRegionName: '',
+    aiOffsetHours: 0,
 });
+
+// 顶部状态栏时间的显示模式（存 localStorage，见 world/chronology-clock.js）
+export const CLOCK_MODES = Object.freeze({
+    REAL: 'real',              // 现实时间 12:33
+    CHRONOLOGY: 'chronology',  // 世界观纪时 辰时
+    OFFSET: 'offset',          // 同世界不同地区 —— 用户所在地的钟点
+});
+
+export const CLOCK_MODE_LABELS = Object.freeze({
+    real: '真实时间',
+    chronology: '纪时',
+    offset: '时差',
+});
+
+// 状态栏时间显示模式的 localStorage key。
+// 为什么用 localStorage 而不是 IndexedDB：状态栏每秒重算一次，
+// 格式化函数必须**同步**拿到配置，异步读盘来不及（同 §9.10 灵动岛偏好）。
+export const CLOCK_MODE_STORAGE_KEY = 'xiaoting::phone-clock-mode-v1';
 
 // 默认细分规则（v0.17：周期层级 = 大 / 中 / 日）
 export const DEFAULT_DIVISIONS = Object.freeze({

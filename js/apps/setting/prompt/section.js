@@ -287,7 +287,6 @@ function renderPromptCard(prompt, index) {
         ? `覆盖优先级: ${prompt.priority.value}`
         : '继承组优先级';
 
-    const hasKeywords = prompt.keywords && prompt.keywords.length > 0;
     const hasTimeWindow = prompt.timeWindow?.enabled;
 
     const previewTime = getPromptCache()._previewTime;
@@ -299,15 +298,12 @@ function renderPromptCard(prompt, index) {
             <div class="prompt-item-card__header">
                 <span class="prompt-item-card__index">${index + 1}</span>
                 <div class="prompt-item-card__tags">
-                    ${hasKeywords ? '<span class="prompt-badge prompt-badge--kw">关键词</span>' : ''}
                     ${hasTimeWindow ? `<span class="prompt-badge prompt-badge--tw ${inTimeWindow ? '' : 'prompt-badge--inactive'}">时间窗</span>` : ''}
-                    ${prompt.vectorFallback ? '<span class="prompt-badge prompt-badge--vec">向量</span>' : ''}
                 </div>
             </div>
             <div class="prompt-item-card__text">${escapeHtml(prompt.text || '')}</div>
             <div class="prompt-item-card__footer">
                 <span class="prompt-item-card__priority">${priorityLabel}</span>
-                ${hasKeywords ? `<span class="prompt-item-card__keywords">${escapeHtml(prompt.keywords.join(', '))}</span>` : ''}
             </div>
         </div>
     `;
@@ -569,11 +565,6 @@ function renderModalAddPrompt() {
                         <label class="prompt-form-label">Prompt 内容</label>
                         <textarea class="prompt-textarea prompt-textarea--lg" id="prompt-item-text" placeholder="输入提示词内容，支持变量 {{ai.name}}、{{user.name}}、{{now}} 等" rows="5"></textarea>
                     </div>
-                    <div class="prompt-form-group">
-                        <label class="prompt-form-label">关键词</label>
-                        <input class="prompt-input" type="text" id="prompt-item-keywords" placeholder="用逗号分隔，如：吃饭,餐厅,外卖" autocomplete="off"/>
-                        <span class="prompt-form-hint">配置后可在历史消息中触发该 Prompt</span>
-                    </div>
                 </div>
                 <div class="prompt-modal__actions">
                     <button class="prompt-modal__btn prompt-modal__btn--ghost" ${wvAction('promptCloseModal')}>取消</button>
@@ -593,11 +584,6 @@ function renderModalEditPrompt(data) {
                     <div class="prompt-form-group">
                         <label class="prompt-form-label">Prompt 内容</label>
                         <textarea class="prompt-textarea prompt-textarea--lg" id="prompt-item-text" placeholder="输入提示词内容" rows="5">${escapeHtml(data.text || '')}</textarea>
-                    </div>
-                    <div class="prompt-form-group">
-                        <label class="prompt-form-label">关键词</label>
-                        <input class="prompt-input" type="text" id="prompt-item-keywords" placeholder="用逗号分隔" value="${escapeHtml(data.keywords || '')}" autocomplete="off"/>
-                        <span class="prompt-form-hint">配置后可在历史消息中触发该 Prompt</span>
                     </div>
                     <div class="prompt-form-row">
                         <div class="prompt-form-group prompt-form-group--half">
@@ -624,16 +610,6 @@ function renderModalEditPrompt(data) {
                             <input class="prompt-input prompt-input--sm" type="time" id="prompt-item-tw-start" value="${data.timeWindowStart ?? '00:00'}"/>
                             <span class="prompt-form-sep">至</span>
                             <input class="prompt-input prompt-input--sm" type="time" id="prompt-item-tw-end" value="${data.timeWindowEnd ?? '23:59'}"/>
-                        </div>
-                    </div>
-                    <div class="prompt-form-group">
-                        <label class="prompt-form-label">
-                            <input type="checkbox" id="prompt-item-vector" ${data.vectorFallback ? 'checked' : ''}/>
-                            向量兜底
-                        </label>
-                        <div class="prompt-form-row">
-                            <span class="prompt-form-hint">相似度阈值</span>
-                            <input class="prompt-input prompt-input--sm" type="number" id="prompt-item-threshold" value="${data.vectorThreshold ?? 0.6}" min="0" max="1" step="0.1"/>
                         </div>
                     </div>
                 </div>

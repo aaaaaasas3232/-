@@ -240,19 +240,29 @@
 }
 
 /* 消息项(用户靠右 / AI 靠左) */
+.app-shell[data-app-id="chat"] .call-record-detail-page .call-record-message-list {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
 .app-shell[data-app-id="chat"] .call-record-detail-page .call-record-msg {
     display: flex;
     align-items: flex-end;
     gap: 8px;
+    width: 100%;
 }
 
 .app-shell[data-app-id="chat"] .call-record-detail-page .call-record-msg.user {
     justify-content: flex-end;
     flex-direction: row-reverse;
+    margin-left: auto;
 }
 
 .app-shell[data-app-id="chat"] .call-record-detail-page .call-record-msg.ai {
     justify-content: flex-start;
+    margin-right: auto;
 }
 
 /* AI 头像小圆 */
@@ -288,6 +298,7 @@
     font-size: 14px;
     line-height: 1.5;
     word-break: break-word;
+    margin-left: auto;
 }
 
 /* AI 气泡 — 主题浅色 */
@@ -300,6 +311,7 @@
     font-size: 14px;
     line-height: 1.5;
     word-break: break-word;
+    margin-right: auto;
 }
 
 .app-shell[data-app-id="chat"] .call-record-detail-page[data-call-type="video"] .call-record-msg-bubble.ai {

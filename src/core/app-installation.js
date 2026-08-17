@@ -1,5 +1,8 @@
+import { isAppAvailableForWorld, readWorldProfile } from './world-profile.js';
+
 const STORAGE_KEY = 'xiaoting::installed-apps-v1';
 export const APP_INSTALLATION_CHANGED_EVENT = 'phone:app-installation-changed';
+export const WORLD_AVAILABILITY_CHANGED_EVENT = 'phone:world-availability-changed';
 
 // appId -> 安装状态（true / false）。系统级 App（无 requiresInstall）始终视为已安装。
 const installationState = new Map();
@@ -112,5 +115,44 @@ export function listInstalledAppIds() {
  * 这是 framework 桌面 icons 的唯一过滤口径。
  */
 export function listLaunchableApps(apps) {
-    return (Array.isArray(apps) ? apps : []).filter(app => isAppInstalled(app));
+    const profile = readWorldProfile();
+    return (Array.isArray(apps) ? apps : [])
+        .filter(app => isAppInstalled(app) && isAppAvailableForWorld(app, profile));
+}
+
+let boundSdk = null;
+let unsubscribeSdk = null;
+
+/**
+ * 默认用户或世界观变化时，通知桌面与 App Store 重新计算可见 App。
+ * 返回清理函数，框架卸载时调用。
+ */
+export function installWorldAvailabilityRefresh() {
+    if (typeof window === 'undefined') return () => {};
+
+    const refresh = () => {
+        window.dispatchEvent(new CustomEvent(WORLD_AVAILABILITY_CHANGED_EVENT));
+    };
+    const bindSdk = () => {
+        const sdk = window.settingsSdk;
+        if (!sdk || sdk === boundSdk || typeof sdk.events?.on !== 'function') return;
+        unsubscribeSdk?.();
+        boundSdk = sdk;
+        unsubscribeSdk = sdk.events.on((event) => {
+            if (['users', 'worlds', 'defaultUserCard'].includes(event?.scope)) refresh();
+        });
+        refresh();
+    };
+
+    window.addEventListener('settings-sdk-ready', bindSdk);
+    window.addEventListener('settings:user-switched', refresh);
+    queueMicrotask(bindSdk);
+
+    return () => {
+        window.removeEventListener('settings-sdk-ready', bindSdk);
+        window.removeEventListener('settings:user-switched', refresh);
+        unsubscribeSdk?.();
+        unsubscribeSdk = null;
+        boundSdk = null;
+    };
 }

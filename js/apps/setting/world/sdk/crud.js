@@ -21,6 +21,7 @@ import {
     SDK_STORES,
     nextIndexedId,
 } from './defaults.js';
+import { resolveWorldMode } from '@/src/core/world-profile.js';
 import {
     createPersister,
     loadFromDb,
@@ -173,8 +174,13 @@ export function createEntityApi({ toolkit, cache, events, bump, scope = 'users' 
         // 防止旧 DB 记录缺字段（典型如 chronologySettings）渲染时拿不到。
         for (const [id, rec] of cacheMap) {
             const defaultsCopy = JSON.parse(JSON.stringify(defaultInstance));
+            const inferredWorldMode = scope === 'worlds'
+                && !String(rec?.experienceMode || '').trim()
+                ? resolveWorldMode(rec)
+                : '';
             // 浅合并（顶层字段）
             const merged = { ...defaultsCopy, ...rec };
+            if (inferredWorldMode) merged.experienceMode = inferredWorldMode;
             // 嵌套字段：缺则用 defaults，否则把 defaults 的子字段补进去
             for (const subKey of ['chronologySettings', 'eventAggregator', 'timelines']) {
                 if (!defaultsCopy[subKey]) continue;

@@ -1,0 +1,263 @@
+/**
+ * relax-app / 设计 token + 全屏布局
+ *
+ * ★ 全屏沉浸的关键
+ *   框架默认给 `.app-content` 和 `.app-screen-panel` 留了内边距(见
+ *   css/core/50-app-shell.css:340 / 429),舞台需要顶到边,所以在这里
+ *   **只针对 relax** 把 padding 归零。别去改框架那两条,会影响所有 app。
+ */
+
+.app-shell[data-app-id="relax"] {
+    /* 糖果色 token —— 组件里只用变量,不散写 hex */
+    --rx-primary: #e8788f;
+    --rx-primary-soft: #ffb3c6;
+    --rx-primary-deep: #c85a75;
+    --rx-ink: #6b5560;
+    --rx-ink-soft: #a08b95;
+    --rx-surface: #fffaf6;
+    --rx-surface-2: #fff2f5;
+    --rx-line: rgba(107, 85, 96, 0.1);
+
+    /* 不规则圆角预设(动森风:四角都不一样) */
+    --rx-blob-lg: 42% 58% 46% 54% / 52% 44% 56% 48%;
+    --rx-blob-md: 38% 30% 34% 32% / 32% 36% 30% 34%;
+    --rx-squircle: 26px 30px 24px 32px;
+
+    --rx-shadow-soft: 0 10px 26px rgba(200, 90, 117, 0.14);
+    --rx-shadow-pop: 0 3px 0 var(--rx-primary-soft);
+
+    /*
+     * ── 底部 tab 栏的两个尺寸 ──────────────────────────────
+     *
+     * --rx-tabbar-bottom : tab 栏离舞台底边多高。**想整体上下挪就改这一个数。**
+     *   · 那个 34px 是「视觉留白」，跟指示条无关；
+     *   · var(--app-safe-bottom) 是框架给全屏 App 的让位高度（40px），
+     *     不加的话 tab 栏会被 home 指示条压住。非全屏时它是 0，写着也无害。
+     *
+     * --rx-tabbar-h : 抽屉/面板「要避让的下方高度」。
+     *   = tab 栏离底高度 + 60px（item 44px + 激活时 blob 顶出的 ~16px 净空）。
+     *   ★ 用表达式而不是再写一个魔法数字 —— 以前这两个值是各写各的，
+     *     改了 tab 栏位置就必须记得同步改抽屉，漏一次抽屉就会压住 tab 栏文字。
+     *   这是近似值，不要靠它做像素级对齐，真实定位走 sheet 自己的 bottom。
+     */
+    --rx-tabbar-bottom: calc(34px + var(--app-safe-bottom, 0px));
+    --rx-tabbar-h: calc(var(--rx-tabbar-bottom) + 60px);
+
+    --rx-ease-bounce: cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+/* 取消框架内边距,让舞台全屏 */
+.app-shell[data-app-id="relax"] .app-content { padding: 0; }
+.app-shell[data-app-id="relax"] .app-page { overflow: hidden; }
+
+/*
+ * ★ `.rx-root` 是 position:absolute,必须有个确定的定位祖先。
+ *   给 `.app-screen-panel` 补 position:relative + height:100%,
+ *   否则 rx-root 会往上找到 `.app-page-stack`(甚至 `.app-content`),
+ *   一旦框架改了那两层的 padding,舞台就会错位。锚在自己这层最稳。
+ */
+.app-shell[data-app-id="relax"] .app-screen-panel {
+    position: relative;
+    padding: 0;
+    height: 100%;
+    min-height: 100%;
+}
+
+.app-shell[data-app-id="relax"] .rx-root {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--rx-ink);
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* ============================
+   内联 SVG 图标
+   ============================
+   图标全部来自 js/apps/relax-app/components/icons.js(stroke 风格,
+   颜色跟 currentColor 走)。尺寸一律在 CSS 里定,SVG 上不写死宽高 ——
+   同一个图标在按钮里 15px、在小圆钮里 12px,靠这里的上下文规则区分。 */
+.app-shell[data-app-id="relax"] .rx-icon {
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+    display: block;
+}
+
+.app-shell[data-app-id="relax"] .rx-btn .rx-icon { width: 15px; height: 15px; }
+.app-shell[data-app-id="relax"] .rx-tile-badge .rx-icon { width: 12px; height: 12px; }
+.app-shell[data-app-id="relax"] .rx-swatch-check .rx-icon { width: 14px; height: 14px; }
+.app-shell[data-app-id="relax"] .rx-sound-row-del .rx-icon,
+.app-shell[data-app-id="relax"] .rx-library-del .rx-icon,
+.app-shell[data-app-id="relax"] .rx-deco-bar-close .rx-icon { width: 13px; height: 13px; }
+.app-shell[data-app-id="relax"] .rx-deco-remove .rx-icon { width: 14px; height: 14px; }
+.app-shell[data-app-id="relax"] .rx-deco-bar-btn .rx-icon { width: 13px; height: 13px; }
+
+/* ============================
+   通用文字 / 按钮
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-hint-text {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--rx-ink-soft);
+}
+
+.app-shell[data-app-id="relax"] .rx-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 11px 20px;
+    border: none;
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    transition: transform 0.16s, box-shadow 0.16s, background 0.16s;
+}
+
+.app-shell[data-app-id="relax"] .rx-btn:active {
+    transform: translateY(2px);
+}
+
+.app-shell[data-app-id="relax"] .rx-btn-block {
+    display: flex;
+    width: 100%;
+}
+
+.app-shell[data-app-id="relax"] .rx-btn-primary {
+    background: var(--rx-primary-soft);
+    color: #fff;
+    box-shadow: 0 3px 0 var(--rx-primary);
+}
+
+.app-shell[data-app-id="relax"] .rx-btn-primary:active {
+    box-shadow: 0 1px 0 var(--rx-primary);
+}
+
+.app-shell[data-app-id="relax"] .rx-btn-ghost {
+    background: #fff;
+    color: var(--rx-primary);
+    box-shadow: 0 3px 0 var(--rx-surface-2), inset 0 0 0 1.5px var(--rx-surface-2);
+}
+
+.app-shell[data-app-id="relax"] .rx-btn-ghost:active {
+    box-shadow: 0 1px 0 var(--rx-surface-2), inset 0 0 0 1.5px var(--rx-surface-2);
+}
+
+.app-shell[data-app-id="relax"] .rx-btn-danger {
+    background: #ffe3e3;
+    color: #d6516b;
+    box-shadow: 0 3px 0 #ffc4cc;
+}
+
+.app-shell[data-app-id="relax"] .rx-btn-danger:active {
+    box-shadow: 0 1px 0 #ffc4cc;
+}
+
+.app-shell[data-app-id="relax"] .rx-btn-row {
+    display: flex;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="relax"] .rx-btn-row .rx-btn {
+    flex: 1;
+}
+
+/* 「上传」按钮:外壳是 label,input 藏起来 */
+.app-shell[data-app-id="relax"] .rx-btn-file {
+    position: relative;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="relax"] .rx-btn-file input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+/* 小胶囊按钮(舞台浮动条用)
+   - 保留按钮里那个色阴影(底压感,是按钮设计的一部分)
+   - 不加外浮阴影,扁平融入舞台 */
+.app-shell[data-app-id="relax"] .rx-chip {
+    padding: 7px 14px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--rx-primary);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 2px 0 rgba(200, 90, 117, 0.18);
+    transition: background 0.16s, color 0.16s;
+}
+
+.app-shell[data-app-id="relax"] .rx-chip:active {
+    background: rgba(255, 255, 255, 0.78);
+    box-shadow: 0 2px 0 rgba(200, 90, 117, 0.18);
+}
+
+.app-shell[data-app-id="relax"] .rx-chip-quiet {
+    color: var(--rx-ink-soft);
+    box-shadow: 0 2px 0 rgba(107, 85, 96, 0.12);
+}
+
+.app-shell[data-app-id="relax"] .rx-chip-quiet:active {
+    box-shadow: 0 2px 0 rgba(107, 85, 96, 0.12);
+}
+
+/* 只有图标的 chip（灵动岛与小组件入口）：舞台浮动条已经有三个文字 chip 了，
+   再塞一个五个字的会换行，所以这个走圆形图标 */
+.app-shell[data-app-id="relax"] .rx-chip-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="relax"] .rx-chip-icon .rx-icon {
+    width: 16px;
+    height: 16px;
+}
+
+/* 空态卡 */
+.app-shell[data-app-id="relax"] .rx-empty-card {
+    padding: 18px;
+    border-radius: var(--rx-squircle);
+    background: var(--rx-surface-2);
+    text-align: left;
+}
+
+.app-shell[data-app-id="relax"] .rx-empty-title {
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--rx-primary);
+}
+
+.app-shell[data-app-id="relax"] .rx-empty-body {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.8;
+    color: var(--rx-ink-soft);
+}
+
+.app-shell[data-app-id="relax"] .rx-empty-body code {
+    padding: 1px 5px;
+    border-radius: 5px;
+    background: #fff;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    color: var(--rx-primary-deep);
+}

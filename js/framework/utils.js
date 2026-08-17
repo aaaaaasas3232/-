@@ -34,8 +34,24 @@ const TIME_FORMATTER = new Intl.DateTimeFormat('zh-CN', {
     hour12: false,
 });
 
+/**
+ * 状态栏时间。
+ *
+ * 默认是现实时间 HH:mm。如果 settings App 装了时钟适配器
+ * （`window.__phoneClockAdapter`，见 js/apps/setting/world/chronology-clock.js），
+ * 就先问它一句 —— 用户可以把顶部时间换成世界观纪时（「辰时」）
+ * 或者带时差的本地时间。
+ *
+ * 适配器返回空 / 抛错 / 根本不存在时一律回落到 HH:mm：
+ * 顶部时间是底座的东西，不能因为某个业务 App 没就绪就变空白。
+ */
 export function getTime() {
-    return TIME_FORMATTER.format(new Date());
+    const now = new Date();
+    try {
+        const adapted = window.__phoneClockAdapter?.formatStatusBarTime?.(now);
+        if (typeof adapted === 'string' && adapted) return adapted;
+    } catch (_) { /* 适配器出问题不影响状态栏 */ }
+    return TIME_FORMATTER.format(now);
 }
 
 // 灵动岛关闭原因：所有 dismiss 路径必须经过 closeIsland(reason)，
@@ -56,6 +72,9 @@ export const ISLAND_RESTORE_DELAY_MS = 300;
 
 export function createEmptyIslandContent() {
     return {
+        // 声明式岛形态 id（对应 appConfig.islandKinds[].id）。
+        // 「灵动岛与小组件」总览页靠它认出当前这颗岛属于哪一种形态。
+        kind: '',
         type: 'info',
         title: '',
         message: '',
@@ -78,6 +97,10 @@ export function createEmptyIslandContent() {
         lifecycle: 'manual',           // 'time' = 到期自动消失；'manual' = 永不自动退
         duration: 0,                   // ms（lifecycle=time 时生效）
         maxSize: null,                 // 'mini'|'compact'|'medium'|'large'|null = 点击不允许超过此 size
+        // 点岛外部收起时不允许低于此 size；设成 'mini' 就表示"可以收成小豆子，但别关掉"。
+        // 给音乐播放这种「活动还在继续」的岛用：随手点几下页面不该把它点没。
+        // null = 不限，收到 mini 再点一下就关岛（通知、临时提示走这个）。
+        minSize: null,
         closeReason: '',               // 当前岛是因为什么原因显示的（便于 app 区分处理）
         onKicked: null,                // 被另一个岛顶替时调（app 可选注册）
         onLongPress: null,             // mini 长按时调（app 可选注册）

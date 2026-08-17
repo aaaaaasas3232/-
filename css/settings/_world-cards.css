@@ -209,7 +209,7 @@
     min-height: 80px;
     border-radius: 8px;
     background: rgba(255, 255, 255, 0.60);
-    border: 1px solid rgba(99, 102, 241, 0.08);
+    border: 1px solid rgba(10, 132, 255, 0.08);
 }
 .settings-app .wv-schedule__day-header {
     font-size: 11px;
@@ -217,12 +217,12 @@
     color: var(--settings-color-secondary);
     text-align: center;
     padding: 6px 4px;
-    background: rgba(99, 102, 241, 0.06);
+    background: rgba(10, 132, 255, 0.06);
     border-radius: 6px 6px 0 0;
 }
 .settings-app .wv-schedule__day.is-active .wv-schedule__day-header {
-    background: rgba(99, 102, 241, 0.18);
-    color: rgba(99, 102, 241, 0.95);
+    background: rgba(10, 132, 255, 0.18);
+    color: rgba(10, 132, 255, 0.95);
 }
 .settings-app .wv-schedule__day-content {
     flex: 1;
@@ -307,7 +307,7 @@
 
 .settings-app .wv-overview__card:hover {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    border-color: rgba(99, 102, 241, 0.3);
+    border-color: rgba(10, 132, 255, 0.3);
 }
 
 .settings-app .wv-overview__card:active { transform: scale(0.98); }

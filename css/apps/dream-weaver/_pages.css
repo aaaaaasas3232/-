@@ -1,0 +1,355 @@
+/**
+ * 梦境编织 · 全屏子页面（store.page）
+ *
+ * 灵感、IF 线这类「要待一会儿」的界面，以前塞在 340px 的弹窗或半屏浮层里，
+ * 长内容永远在一个小框里滚。现在统一走这套整页外壳：
+ *
+ *   .dw-page-full          铺满 shell，自带层级和进场动画
+ *     .dw-page-topbar      返回 + 标题 + 右侧动作，给状态栏留了 44px
+ *     .dw-page-body        可滚区，底部留了指示条的位置
+ */
+
+.app-shell[data-app-id="dream-weaver"] .dw-page-full {
+    position: absolute;
+    inset: 0;
+    z-index: var(--dw-z-drawer);
+    display: flex;
+    flex-direction: column;
+    background: var(--dw-bg);
+    animation: dwPageIn 0.2s var(--dw-ease);
+}
+
+@keyframes dwPageIn {
+    from { opacity: 0; transform: translateX(12px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-page-topbar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    /* 44px 顶部内边距 = 给状态栏（时间 / 灵动岛 / 电量）让位 */
+    padding: 44px 12px 10px;
+    border-bottom: 1px solid var(--dw-border-light);
+    background: var(--dw-surface);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-page-topbar-title {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-page-topbar-title h1 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--dw-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-page-topbar-title p {
+    margin: 2px 0 0;
+    font-size: 11px;
+    color: var(--dw-text-tertiary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-page-topbar-act {
+    flex-shrink: 0;
+    border: none;
+    border-radius: var(--dw-radius-pill);
+    padding: 6px 14px;
+    background: var(--dw-surface-container);
+    color: var(--dw-text-secondary);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+/* 有未保存改动时按钮才变主色 —— 一眼看出「这里还欠一次保存」 */
+.app-shell[data-app-id="dream-weaver"] .dw-page-topbar-act.is-dirty {
+    background: var(--dw-primary);
+    color: var(--dw-on-primary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-page-topbar-spacer {
+    flex-shrink: 0;
+    width: 32px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-page-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 12px 14px calc(24px + var(--app-safe-bottom, 40px));
+}
+
+/* ============================================================
+   灵感页
+   ============================================================ */
+
+.app-shell[data-app-id="dream-weaver"] .dw-inspiration-add {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-inspiration-add > *:first-child { flex: 1; min-width: 0; }
+
+.app-shell[data-app-id="dream-weaver"] .dw-inspiration-filters {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-inspiration-sorts {
+    display: flex;
+    gap: 6px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-chip {
+    border: 1px solid var(--dw-border);
+    border-radius: var(--dw-radius-pill);
+    background: var(--dw-surface);
+    color: var(--dw-text-secondary);
+    font-family: inherit;
+    font-size: 11px;
+    padding: 5px 12px;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-chip.is-on {
+    background: var(--dw-primary);
+    border-color: transparent;
+    color: var(--dw-on-primary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-inspiration-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-inspiration-card {
+    padding: 12px 14px;
+    border: 1px solid var(--dw-border-light);
+    border-radius: var(--dw-radius);
+    background: var(--dw-card-bg);
+    cursor: pointer;
+    transition: border-color 0.15s;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-inspiration-card:active {
+    border-color: var(--dw-primary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-inspiration-card-text {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--dw-text);
+    word-break: break-word;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-inspiration-card-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--dw-text-tertiary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-inspiration-card-acts {
+    display: flex;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-inspiration-count {
+    margin: 8px 0 0;
+    font-size: 11px;
+    color: var(--dw-text-tertiary);
+    text-align: right;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-inspiration-detail-acts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+/* ============================================================
+   IF 线工作台（页面版）
+   ============================================================ */
+
+.app-shell[data-app-id="dream-weaver"] .dw-ifline-segs {
+    flex-shrink: 0;
+    display: flex;
+    gap: 6px;
+    padding: 10px 14px 0;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-ifline-segs--sub {
+    padding: 0;
+    margin-bottom: 8px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-ifline-seg {
+    flex: 1;
+    border: 1px solid var(--dw-border);
+    border-radius: var(--dw-radius-pill);
+    background: var(--dw-surface);
+    color: var(--dw-text-secondary);
+    font-family: inherit;
+    font-size: 12px;
+    padding: 7px 0;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-ifline-seg.is-on {
+    background: var(--dw-primary);
+    border-color: transparent;
+    color: var(--dw-on-primary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-ifline-run {
+    display: flex;
+    gap: 8px;
+    margin: 12px 0;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-ifline-run > * { flex: 1; }
+
+.app-shell[data-app-id="dream-weaver"] .dw-ifline-meta {
+    margin: 0 0 8px;
+    font-size: 11px;
+    color: var(--dw-text-tertiary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-ifline-out-acts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-ifline-archive-head {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-ifline-archives {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-ifline-archive {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 12px;
+    border: 1px solid var(--dw-border-light);
+    border-radius: var(--dw-radius);
+    background: var(--dw-card-bg);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-ifline-archive-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    border: none;
+    background: none;
+    padding: 0;
+    text-align: left;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-ifline-archive-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--dw-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-ifline-archive-sub {
+    font-size: 11px;
+    color: var(--dw-text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-ifline-archive-time {
+    font-size: 10px;
+    color: var(--dw-text-tertiary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-ifline-archive-acts {
+    display: flex;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+/* 对话区在整页里要能撑满剩余高度 */
+.app-shell[data-app-id="dream-weaver"] .dw-ifline-chat {
+    display: flex;
+    flex-direction: column;
+    min-height: 58vh;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-ifline-chat .if-chat-messages {
+    flex: 1;
+    min-height: 200px;
+}
+
+/* 气泡右上角的删除，平时藏着，按住气泡才浮出来 */
+.app-shell[data-app-id="dream-weaver"] .dw-ifline-chat .if-chat-bubble {
+    position: relative;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-ifline-msg-del {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 18px;
+    height: 18px;
+    border: none;
+    border-radius: 50%;
+    background: var(--dw-surface-container);
+    color: var(--dw-text-tertiary);
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-chat-bubble:hover .dw-ifline-msg-del,
+.app-shell[data-app-id="dream-weaver"] .if-chat-bubble:active .dw-ifline-msg-del {
+    opacity: 1;
+}

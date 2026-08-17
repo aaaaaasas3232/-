@@ -1,0 +1,485 @@
+/**
+ * 情景剧场 · 舞台(消息流 + 输入区)
+ *
+ * ── 背景为什么要三层 ──────────────────────────────────────────────
+ *
+ *   `.sp-stage-bg`    背景图 / 底色。模糊做在**它自己**身上
+ *   `.sp-stage-veil`  压暗 / 提亮的蒙层
+ *   `.sp-flow`        消息流,透明
+ *
+ * 直接给舞台加 `filter: blur()` 会把上面的消息一起糊掉 ——
+ * filter 会给整个子树建一个新的层叠上下文,这一点很容易踩。
+ *
+ * ── 气泡为什么不写在这儿 ──────────────────────────────────────────
+ *
+ * 气泡的一切(底色、圆角、描边、尾巴)由 `src/core/bubble-style.js` 以
+ * inline style 给出,那才是用户在气泡机里调的那份数据。
+ * 这里只管**气泡之外**的排版:头像、名字、时间戳、行距。
+ */
+
+.app-shell[data-app-id="scene-play"] .sp-stage {
+    position: relative;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--sp-stage-bg);
+}
+
+.app-shell[data-app-id="scene-play"] .sp-stage-bg,
+.app-shell[data-app-id="scene-play"] .sp-stage-veil {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+.app-shell[data-app-id="scene-play"] .sp-stage-veil {
+    transition: opacity 0.2s var(--sp-ease);
+}
+
+/* ============================================================
+   顶栏
+   ============================================================ */
+.app-shell[data-app-id="scene-play"] .sp-stage-top {
+    position: relative;
+    z-index: 2;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    /*
+     * ★ 顶部必须让满 54px,不能少给。
+     *   状态栏和灵动岛是画在整个手机屏最上层的,不在 App 的文档流里;
+     *   而这里的标题是**居中**的,正好在灵动岛底下 —— 少让 14px 的话
+     *   标题会被那颗黑药丸压掉一半(第一版就是这样,截图才看出来)。
+     *   这一块还必须是实色:内容从底下滚过去时透出来会和时间叠在一起。
+     */
+    padding: var(--sp-top-safe) 14px 10px;
+    background: var(--sp-surface);
+    border-bottom: 1px solid var(--sp-divider);
+}
+.app-shell[data-app-id="scene-play"] .sp-stage-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 auto;
+    border: 1px solid var(--sp-btn-border);
+    border-radius: var(--sp-r);
+    background: var(--sp-btn-bg);
+    color: var(--sp-btn-text);
+    cursor: pointer;
+    transition: transform 0.16s var(--sp-bounce);
+}
+.app-shell[data-app-id="scene-play"] .sp-stage-btn:active { transform: scale(0.92); }
+.app-shell[data-app-id="scene-play"] .sp-stage-title {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+    text-align: center;
+}
+.app-shell[data-app-id="scene-play"] .sp-stage-name {
+    font-size: 14px;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.app-shell[data-app-id="scene-play"] .sp-stage-sub {
+    font-size: 10px;
+    color: var(--sp-text-tertiary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ============================================================
+   情景常驻条
+   ============================================================ */
+/*
+ * 顶栏和消息流之间的一条,把情景正文一直摆在眼前。
+ *
+ * ★ 实色 `--sp-surface`,**不做半透明**。它底下是背景图 + 蒙层两层,
+ *   而背景图是用户自己传的:任何一点透明度都可能在某张图上把字糊掉,
+ *   而且四套配色里各有一套会先出问题,自己测的时候多半看不出来。
+ * ★ z-index 2,和顶栏 / 输入区同层。全 App 的层都 < 6,
+ *   不会盖住底部那条 Home 指示条(盖住就退不出 App 了)。
+ * ★ `flex: 0 0 auto` + 展开时 `max-height` 自己滚 ——
+ *   不给上限的话,一段长设定能把消息区挤到只剩一行。
+ */
+.app-shell[data-app-id="scene-play"] .sp-scene-bar {
+    position: relative;
+    z-index: 2;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 8px 10px 8px 12px;
+    background: var(--sp-surface);
+    border-bottom: 1px solid var(--sp-divider);
+}
+.app-shell[data-app-id="scene-play"] .sp-scene-bar-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.app-shell[data-app-id="scene-play"] .sp-scene-bar-text {
+    /* 收起时钳成两行。`-webkit-line-clamp` 必须配 `-webkit-box` 才生效 */
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    font-size: 11.5px;
+    line-height: 1.65;
+    color: var(--sp-text-secondary);
+}
+.app-shell[data-app-id="scene-play"] .sp-scene-bar-text.is-empty { color: var(--sp-text-tertiary); }
+.app-shell[data-app-id="scene-play"] .sp-scene-bar.is-open .sp-scene-bar-text {
+    display: block;
+    max-height: 30vh;
+    overflow-y: auto;
+    /* 展开才认换行:收起时按普通段落流,免得两行里有一行是空的 */
+    white-space: pre-wrap;
+}
+
+.app-shell[data-app-id="scene-play"] .sp-scene-bar-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 6px;
+}
+.app-shell[data-app-id="scene-play"] .sp-scene-bar-fact {
+    padding: 2px 8px;
+    border-radius: var(--sp-r-pill);
+    background: var(--sp-sunken);
+    color: var(--sp-text-secondary);
+    font-size: 10.5px;
+    line-height: 1.6;
+}
+.app-shell[data-app-id="scene-play"] .sp-scene-bar-fact em {
+    margin-right: 4px;
+    font-style: normal;
+    color: var(--sp-text-tertiary);
+}
+
+.app-shell[data-app-id="scene-play"] .sp-scene-bar-acts {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+.app-shell[data-app-id="scene-play"] .sp-scene-bar-btn {
+    --sp-icon-size: 15px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: none;
+    border-radius: var(--sp-r-sm);
+    background: transparent;
+    color: var(--sp-text-tertiary);
+    cursor: pointer;
+    transition: transform 0.16s var(--sp-bounce), color 0.16s var(--sp-ease);
+}
+.app-shell[data-app-id="scene-play"] .sp-scene-bar-btn:active {
+    transform: scale(0.9);
+    color: var(--sp-text-secondary);
+}
+
+/* ============================================================
+   消息流
+   ============================================================ */
+.app-shell[data-app-id="scene-play"] .sp-flow {
+    position: relative;
+    z-index: 1;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 14px 14px 8px;
+}
+
+.app-shell[data-app-id="scene-play"] .sp-msg {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 12px;
+}
+.app-shell[data-app-id="scene-play"] .sp-msg[data-density="compact"] { margin-bottom: 7px; }
+.app-shell[data-app-id="scene-play"] .sp-msg[data-density="loose"] { margin-bottom: 20px; }
+
+.app-shell[data-app-id="scene-play"] .sp-msg-line {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+.app-shell[data-app-id="scene-play"] .sp-msg.is-right .sp-msg-line { flex-direction: row-reverse; }
+
+.app-shell[data-app-id="scene-play"] .sp-msg-body {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+.app-shell[data-app-id="scene-play"] .sp-msg.is-right .sp-msg-body { align-items: flex-end; }
+
+.app-shell[data-app-id="scene-play"] .sp-msg-meta {
+    display: flex;
+    gap: 6px;
+    padding: 0 4px;
+    font-size: 10px;
+    color: var(--sp-meta);
+}
+.app-shell[data-app-id="scene-play"] .sp-msg.is-right .sp-msg-meta { justify-content: flex-end; }
+
+.app-shell[data-app-id="scene-play"] .sp-msg-inline-name {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--sp-meta);
+}
+.app-shell[data-app-id="scene-play"] .sp-msg-inline-time {
+    margin-left: 6px;
+    font-size: 9.5px;
+    font-style: normal;
+    opacity: 0.6;
+}
+.app-shell[data-app-id="scene-play"] .sp-msg-time-below {
+    padding: 0 4px;
+    font-size: 9.5px;
+    color: var(--sp-meta);
+}
+
+/* 头像 */
+.app-shell[data-app-id="scene-play"] .sp-avatar {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--sp-sunken);
+    background-size: cover;
+    background-position: center;
+    color: var(--sp-text-secondary);
+    font-size: 12px;
+    font-weight: 700;
+    overflow: hidden;
+}
+.app-shell[data-app-id="scene-play"] .sp-avatar[data-shape="circle"] { border-radius: 50%; }
+.app-shell[data-app-id="scene-play"] .sp-avatar[data-shape="squircle"] { border-radius: 34%; }
+.app-shell[data-app-id="scene-play"] .sp-avatar[data-shape="square"] { border-radius: 4px; }
+.app-shell[data-app-id="scene-play"] .sp-avatar em { font-style: normal; }
+
+/* 旁白 */
+.app-shell[data-app-id="scene-play"] .sp-msg.is-system { align-items: center; }
+.app-shell[data-app-id="scene-play"] .sp-msg-system {
+    margin: 0;
+    max-width: 86%;
+    padding: 7px 14px;
+    border-radius: var(--sp-r-pill);
+    background: var(--sp-system-bg);
+    color: var(--sp-system);
+    font-size: 11.5px;
+    line-height: 1.7;
+    text-align: center;
+    white-space: pre-wrap;
+}
+
+/* 每条消息的操作 */
+.app-shell[data-app-id="scene-play"] .sp-msg-more {
+    flex: 0 0 auto;
+    align-self: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--sp-meta);
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.16s var(--sp-ease);
+}
+/* 手机上没有 hover,所以默认给一点点可见度 —— 完全隐藏的话用户找不到入口 */
+.app-shell[data-app-id="scene-play"] .sp-msg:hover .sp-msg-more,
+.app-shell[data-app-id="scene-play"] .sp-msg.has-menu .sp-msg-more { opacity: 1; }
+@media (hover: none) {
+    .app-shell[data-app-id="scene-play"] .sp-msg-more { opacity: 0.4; }
+}
+
+.app-shell[data-app-id="scene-play"] .sp-msg-tools {
+    display: flex;
+    gap: 6px;
+    padding: 0 4px;
+}
+.app-shell[data-app-id="scene-play"] .sp-msg.is-right .sp-msg-tools { justify-content: flex-end; }
+.app-shell[data-app-id="scene-play"] .sp-msg-tool {
+    padding: 3px 10px;
+    border: 1px solid var(--sp-border);
+    border-radius: var(--sp-r-pill);
+    background: var(--sp-surface);
+    color: var(--sp-text-secondary);
+    font-size: 10.5px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.app-shell[data-app-id="scene-play"] .sp-msg-tool.is-primary {
+    background: var(--sp-primary);
+    border-color: var(--sp-primary);
+    color: var(--sp-on-primary);
+}
+.app-shell[data-app-id="scene-play"] .sp-msg-tool.is-danger { color: var(--sp-danger); border-color: var(--sp-danger); }
+
+.app-shell[data-app-id="scene-play"] .sp-msg-editor {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--sp-primary);
+    border-radius: var(--sp-r);
+    background: var(--sp-input-bg);
+    color: var(--sp-text);
+    font-size: 13px;
+    font-family: inherit;
+    line-height: 1.6;
+    resize: vertical;
+    outline: none;
+}
+.app-shell[data-app-id="scene-play"] .sp-msg-editor-acts {
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end;
+}
+
+/* 正则卡片的容器 —— 卡片本身的样式在 _cards.css */
+.app-shell[data-app-id="scene-play"] .sp-card-slot {
+    width: 100%;
+    max-width: 100%;
+}
+
+/* 流式生成中 */
+.app-shell[data-app-id="scene-play"] .sp-streaming {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 13px;
+    border-radius: var(--sp-r-lg);
+    background: var(--sp-surface);
+    border: 1px dashed var(--sp-border);
+}
+.app-shell[data-app-id="scene-play"] .sp-streaming-dot {
+    flex: 0 0 auto;
+    width: 7px;
+    height: 7px;
+    margin-top: 6px;
+    border-radius: 50%;
+    background: var(--sp-primary);
+    animation: sp-pulse 1s ease-in-out infinite;
+}
+@keyframes sp-pulse {
+    0%, 100% { opacity: 0.3; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1.2); }
+}
+.app-shell[data-app-id="scene-play"] .sp-streaming-text {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--sp-text-secondary);
+    white-space: pre-wrap;
+}
+
+.app-shell[data-app-id="scene-play"] .sp-gen-error {
+    margin: 8px 0 0;
+    padding: 9px 12px;
+    border-radius: var(--sp-r);
+    background: var(--sp-primary-soft);
+    color: var(--sp-danger);
+    font-size: 11.5px;
+    line-height: 1.6;
+}
+
+/* ============================================================
+   输入区
+   ============================================================ */
+.app-shell[data-app-id="scene-play"] .sp-composer {
+    position: relative;
+    z-index: 2;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    padding: 10px 12px;
+    /* ★ `--app-safe-bottom` 只让一次:底栏已经让过指示条了 */
+    padding-bottom: calc(10px + var(--app-safe-bottom, 0px));
+    background: var(--sp-composer-bg);
+    border-top: 1px solid var(--sp-divider);
+}
+.app-shell[data-app-id="scene-play"] .sp-composer-btn,
+.app-shell[data-app-id="scene-play"] .sp-composer-send {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--sp-btn-border);
+    border-radius: var(--sp-r);
+    background: var(--sp-btn-bg);
+    color: var(--sp-btn-text);
+    cursor: pointer;
+    transition: transform 0.16s var(--sp-bounce);
+}
+.app-shell[data-app-id="scene-play"] .sp-composer-btn:active,
+.app-shell[data-app-id="scene-play"] .sp-composer-send:active { transform: scale(0.92); }
+.app-shell[data-app-id="scene-play"] .sp-composer-send {
+    background: var(--sp-primary);
+    border-color: var(--sp-primary);
+    color: var(--sp-on-primary);
+    box-shadow: 0 2px 0 var(--sp-btn-shadow);
+}
+.app-shell[data-app-id="scene-play"] .sp-composer-send.is-ghost {
+    background: var(--sp-accent-soft);
+    border-color: var(--sp-accent);
+    color: var(--sp-accent);
+    box-shadow: none;
+}
+.app-shell[data-app-id="scene-play"] .sp-composer-send.is-stop {
+    background: var(--sp-danger);
+    border-color: var(--sp-danger);
+    color: var(--sp-text-inverse);
+}
+.app-shell[data-app-id="scene-play"] .sp-composer-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.app-shell[data-app-id="scene-play"] .sp-composer-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-height: 108px;
+    padding: 9px 13px;
+    border: 1px solid var(--sp-input-border);
+    border-radius: var(--sp-r-lg);
+    background: var(--sp-input-bg);
+    color: var(--sp-text);
+    font-size: 13px;
+    font-family: inherit;
+    line-height: 1.6;
+    resize: none;
+    outline: none;
+    transition: border-color 0.16s var(--sp-ease), box-shadow 0.16s var(--sp-ease);
+}
+.app-shell[data-app-id="scene-play"] .sp-composer-input:focus {
+    border-color: var(--sp-primary);
+    box-shadow: 0 0 0 3px var(--sp-input-focus);
+}
+.app-shell[data-app-id="scene-play"] .sp-composer-input::placeholder { color: var(--sp-placeholder); }

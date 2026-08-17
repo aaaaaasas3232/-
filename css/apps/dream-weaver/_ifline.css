@@ -1,0 +1,657 @@
+/**
+ * 梦境编织 · IF 线工作台 + 章节信息管理
+ *
+ * IF 面板是**盖在编辑器上的整块面板**(原版 `top:50px; bottom:80px` 绝对定位),
+ * 不是弹窗 —— 它要长期开着,用户一边看正文一边推演。
+ */
+
+/* ============================================================
+   IF 线面板
+   ============================================================ */
+
+.app-shell[data-app-id="dream-weaver"] .dw-if-panel {
+    position: absolute;
+    /* 顶部留出状态栏 + 工具栏,底部留出输入区 —— 和原版一样不盖住这两处 */
+    top: calc(40px + 52px);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: var(--dw-z-drawer);
+    display: flex;
+    flex-direction: column;
+    background: var(--dw-glass-bg);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-top: 1px solid var(--dw-border);
+    animation: dwIfPanelIn 0.25s var(--dw-ease);
+}
+
+@keyframes dwIfPanelIn {
+    from { opacity: 0; transform: translateY(-16px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-mode-tabs {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--dw-border-light);
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-mode-tab {
+    padding: 6px 14px;
+    border-radius: var(--dw-radius-pill);
+    border: 1px solid var(--dw-border-light);
+    background: transparent;
+    color: var(--dw-text-secondary);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-mode-tab.active {
+    background: var(--dw-primary);
+    border-color: var(--dw-primary);
+    color: var(--dw-on-primary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-close-btn {
+    margin-left: auto;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 50%;
+    background: var(--dw-hover-overlay);
+    color: var(--dw-text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-close-btn .dw-icon svg { width: 14px; height: 14px; }
+
+.app-shell[data-app-id="dream-weaver"] .if-panel-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 12px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-mode-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: 100%;
+}
+
+/* ── 顶部两个 chip ─────────────────── */
+
+.app-shell[data-app-id="dream-weaver"] .if-archive-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 11px;
+    border-radius: var(--dw-radius-pill);
+    border: 1px solid var(--dw-border-light);
+    background: var(--dw-card-bg);
+    color: var(--dw-text-secondary);
+    font-family: inherit;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-chip.active,
+.app-shell[data-app-id="dream-weaver"] .if-chip:hover {
+    border-color: var(--dw-primary);
+    color: var(--dw-primary-light);
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-chip .dw-icon svg { width: 12px; height: 12px; }
+
+/* ── 设置区 ────────────────────────── */
+
+.app-shell[data-app-id="dream-weaver"] .if-new-section {
+    padding: 12px;
+    border-radius: var(--dw-radius);
+    background: var(--dw-card-bg);
+    border: 1px solid var(--dw-border-light);
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-section-title {
+    margin: 0 0 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--dw-text);
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-field-label {
+    margin: 10px 0 5px;
+    font-size: 11px;
+    color: var(--dw-text-secondary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-char-selector,
+.app-shell[data-app-id="dream-weaver"] .if-pov-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-char-btn,
+.app-shell[data-app-id="dream-weaver"] .if-pov-btn {
+    padding: 5px 12px;
+    border-radius: var(--dw-radius-pill);
+    border: 1px solid var(--dw-border-light);
+    background: transparent;
+    color: var(--dw-text-secondary);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.18s;
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-char-btn.active,
+.app-shell[data-app-id="dream-weaver"] .if-pov-btn.active {
+    border-color: var(--dw-primary);
+    background: var(--dw-primary-hover);
+    color: var(--dw-primary-light);
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-char-btn[data-tone].active {
+    border-color: var(--dw-tone-color);
+    color: var(--dw-tone-color);
+    background: color-mix(in srgb, var(--dw-tone-color) 14%, transparent);
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-generate-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    margin-top: 12px;
+    padding: 10px;
+    border: none;
+    border-radius: var(--dw-radius-sm);
+    background: var(--dw-primary);
+    color: var(--dw-on-primary);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-generate-btn:disabled {
+    background: var(--dw-disabled-bg);
+    color: var(--dw-disabled-text);
+    cursor: not-allowed;
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-generate-btn .dw-icon svg { width: 14px; height: 14px; }
+
+/* ── 输出 ─────────────────────────── */
+
+.app-shell[data-app-id="dream-weaver"] .if-output-area {
+    padding: 12px;
+    border-radius: var(--dw-radius);
+    background: var(--dw-card-bg);
+    border: 1px solid var(--dw-border);
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-output-meta {
+    margin: 0 0 8px;
+    font-size: 11px;
+    color: var(--dw-accent);
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-output-text {
+    margin: 0;
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.85;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--dw-text);
+    max-height: 34vh;
+    overflow-y: auto;
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-output-tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--dw-border-light);
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-tool-btn {
+    padding: 5px 12px;
+    border-radius: var(--dw-radius-pill);
+    border: 1px solid var(--dw-border-light);
+    background: transparent;
+    color: var(--dw-text-secondary);
+    font-family: inherit;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-tool-btn:hover { border-color: var(--dw-primary); color: var(--dw-primary-light); }
+.app-shell[data-app-id="dream-weaver"] .if-tool-btn.danger { border-color: var(--dw-error); color: var(--dw-error); }
+
+/* ── 存档列表 ──────────────────────── */
+
+.app-shell[data-app-id="dream-weaver"] .if-archive-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-archive-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border-radius: var(--dw-radius-sm);
+    background: var(--dw-card-bg);
+    border: 1px solid var(--dw-border-light);
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-archive-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    border: none;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+    padding: 0;
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-archive-title { font-size: 12px; color: var(--dw-text); }
+
+.app-shell[data-app-id="dream-weaver"] .if-archive-sub {
+    font-size: 11px;
+    color: var(--dw-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-archive-time { font-size: 10px; color: var(--dw-text-tertiary); }
+
+.app-shell[data-app-id="dream-weaver"] .if-empty-state {
+    margin: 0;
+    padding: 24px 12px;
+    text-align: center;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--dw-text-tertiary);
+}
+
+/* ── 对话 ─────────────────────────── */
+
+.app-shell[data-app-id="dream-weaver"] .if-chat-container {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--dw-radius);
+    background: var(--dw-card-bg);
+    border: 1px solid var(--dw-border-light);
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-chat-header {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--dw-border-light);
+    background: var(--dw-surface-tint);
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-chat-avatar {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--dw-primary);
+    color: var(--dw-on-primary);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-chat-avatar[data-tone] { background: var(--dw-tone-color); }
+
+.app-shell[data-app-id="dream-weaver"] .if-chat-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--dw-text);
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-chat-messages {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-chat-bubble {
+    max-width: 82%;
+    padding: 9px 13px;
+    border-radius: 16px;
+    font-size: 13px;
+    line-height: 1.6;
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-chat-bubble.user {
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+    background: var(--dw-bubble-sent);
+    color: var(--dw-white);
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-chat-bubble.ai {
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+    background: var(--dw-surface-container);
+    color: var(--dw-text);
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-chat-input {
+    flex-shrink: 0;
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--dw-border-light);
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-chat-input .dw-textarea {
+    flex: 1;
+    min-height: 36px;
+    max-height: 90px;
+    border-radius: 18px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-chat-send {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    border: none;
+    border-radius: 50%;
+    background: var(--dw-primary);
+    color: var(--dw-on-primary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="dream-weaver"] .if-chat-send:disabled { background: var(--dw-disabled-bg); color: var(--dw-disabled-text); }
+.app-shell[data-app-id="dream-weaver"] .if-chat-send.is-stop { background: var(--dw-error); }
+.app-shell[data-app-id="dream-weaver"] .if-chat-send .dw-icon svg { width: 16px; height: 16px; }
+
+/* ============================================================
+   章节信息管理
+   ============================================================ */
+
+.app-shell[data-app-id="dream-weaver"] .cim-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 3px;
+    margin-bottom: 14px;
+    border-radius: var(--dw-radius-sm);
+    background: var(--dw-surface-container);
+}
+
+.app-shell[data-app-id="dream-weaver"] .cim-tab {
+    flex: 1;
+    padding: 7px 4px;
+    border: none;
+    border-radius: calc(var(--dw-radius-sm) - 2px);
+    background: transparent;
+    color: var(--dw-text-secondary);
+    font-family: inherit;
+    font-size: 11px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.18s;
+}
+
+.app-shell[data-app-id="dream-weaver"] .cim-tab.active {
+    background: var(--dw-primary);
+    color: var(--dw-on-primary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .cim-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .cim-hint {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--dw-text-tertiary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .cim-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: 9px;
+    border-radius: var(--dw-radius-sm);
+    border: 1px solid transparent;
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="dream-weaver"] .cim-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.app-shell[data-app-id="dream-weaver"] .cim-btn .dw-icon svg { width: 13px; height: 13px; }
+
+.app-shell[data-app-id="dream-weaver"] .cim-btn-primary {
+    background: var(--dw-primary);
+    color: var(--dw-on-primary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .cim-btn-secondary {
+    background: transparent;
+    border-color: var(--dw-border);
+    color: var(--dw-text-secondary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .cim-char-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 40vh;
+    overflow-y: auto;
+}
+
+.app-shell[data-app-id="dream-weaver"] .cim-char-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: var(--dw-radius-sm);
+    background: var(--dw-surface-tint);
+    border: 1px solid var(--dw-border-light);
+}
+
+.app-shell[data-app-id="dream-weaver"] .cim-char-avatar {
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--dw-primary);
+    color: var(--dw-on-primary);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.app-shell[data-app-id="dream-weaver"] .cim-char-avatar[data-tone] { background: var(--dw-tone-color); }
+
+.app-shell[data-app-id="dream-weaver"] .cim-char-main { flex: 1; min-width: 0; }
+
+.app-shell[data-app-id="dream-weaver"] .cim-char-name {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--dw-text);
+}
+
+.app-shell[data-app-id="dream-weaver"] .cim-char-sub {
+    margin: 2px 0 0;
+    font-size: 10px;
+    color: var(--dw-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="dream-weaver"] .cim-editing-name {
+    margin: 0 0 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--dw-text);
+}
+
+.app-shell[data-app-id="dream-weaver"] .cim-appear-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .cim-appear-chip {
+    padding: 5px 12px;
+    border-radius: var(--dw-radius-pill);
+    border: 1px solid var(--dw-border-light);
+    background: transparent;
+    color: var(--dw-text-secondary);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="dream-weaver"] .cim-appear-chip.active {
+    border-color: var(--dw-primary);
+    background: var(--dw-primary-hover);
+    color: var(--dw-primary-light);
+}
+
+.app-shell[data-app-id="dream-weaver"] .cim-appear-chip[data-tone].active {
+    border-color: var(--dw-tone-color);
+    color: var(--dw-tone-color);
+    background: color-mix(in srgb, var(--dw-tone-color) 14%, transparent);
+}
+
+.app-shell[data-app-id="dream-weaver"] .cim-mode-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    width: 100%;
+    padding: 12px;
+    border-radius: var(--dw-radius-sm);
+    border: 1px solid var(--dw-border-light);
+    background: transparent;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="dream-weaver"] .cim-mode-option.active {
+    border-color: var(--dw-primary);
+    background: var(--dw-primary-hover);
+}
+
+.app-shell[data-app-id="dream-weaver"] .cim-mode-option:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.app-shell[data-app-id="dream-weaver"] .cim-mode-radio {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    border-radius: 50%;
+    border: 2px solid var(--dw-border);
+    transition: all 0.18s;
+}
+
+.app-shell[data-app-id="dream-weaver"] .cim-mode-option.active .cim-mode-radio {
+    border-color: var(--dw-primary);
+    border-width: 5px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .cim-mode-main { display: flex; flex-direction: column; gap: 3px; }
+.app-shell[data-app-id="dream-weaver"] .cim-mode-title { font-size: 13px; color: var(--dw-text); }
+.app-shell[data-app-id="dream-weaver"] .cim-mode-sub { font-size: 11px; color: var(--dw-text-tertiary); }
+
+/* ============================================================
+   聊天背景设置
+   ============================================================ */
+
+.app-shell[data-app-id="dream-weaver"] .dw-bg-color {
+    width: 100%;
+    height: 40px;
+    border: 1px solid var(--dw-border);
+    border-radius: var(--dw-radius-sm);
+    background: none;
+    cursor: pointer;
+    padding: 2px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-bg-preview {
+    position: relative;
+    height: 90px;
+    margin: 10px 0;
+    border-radius: var(--dw-radius-sm);
+    background-size: cover;
+    background-position: center;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-bg-preview-mask {
+    position: absolute;
+    inset: 0;
+    background: var(--dw-bg);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-bg-preview-text {
+    position: relative;
+    font-size: 12px;
+    color: var(--dw-text);
+}

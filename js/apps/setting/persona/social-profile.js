@@ -1,56 +1,37 @@
 /**
  * Settings App · 人设主页 · 社媒形象配置
  *
- * 用于配置 AI 在各社交软件（murmur/博客/日记）里的形象展示
- * 包括：网名、头像、背景、在线时间段
+ * 用于配置 AI 在各社交软件里的形象展示（网名、头像、背景……）
+ *
+ * 有哪几个软件不写死在这里 —— 由 App 自己在 appConfig 里声明
+ * socialProfile，框架收进 src/core/social-app-registry.js。
+ * 每个 App 配哪几样也由它的 fields 决定（signature / patSetting
+ * 目前只有 murmur 有消费方）。
  *
  * 数据结构：
  * persona.socialProfiles = {
- *   chat: { nickname, avatarCode, backgroundCode, onlineHours: { start: 'HH:mm', end: 'HH:mm' } },
+ *   chat: { nickname, signature, patSetting, avatarCode, backgroundCode },
  *   blog: { nickname, avatarCode, backgroundCode },
- *   diary: { nickname, avatarCode, backgroundCode }
+ *   youtube: { nickname, avatarCode, backgroundCode },
  * }
  *
- * 在线状态判断：isOnline(onlineHours) -> boolean
+ * ★ 已删除:onlineHours 字段。chat-app 不再展示"在线/离线"。
+ *   isOnline / formatOnlineHours / getContactOnlineStatus / getContactOnlineStatusSync
+ *   仍作为兼容层保留导出(返回 false / 空字符串),但 chat-app 不再调用。
  */
 
-import { escapeHtml } from '@/src/core/escape.js';
-import { getGroupImages, getImageSrcByCode } from '../gallery/gallery-db.js';
+import { getImageSrcByCode } from '../gallery/gallery-db.js';
 
 // ============================================
-// 在线状态判断
+// 在线状态判断(已废弃 — 保留仅为兼容旧调用)
 // ============================================
 
 /**
- * 判断当前时间是否在在线时间段内
- * @param {Object} onlineHours - { start: 'HH:mm', end: 'HH:mm' } 或 null
- * @returns {boolean} true=在线, false=离线
+ * @deprecated chat-app 不再展示在线/离线。保留导出以兼容可能的旧代码,
+ *              始终返回 false。
  */
-export function isOnline(onlineHours) {
-    if (!onlineHours) return true; // 没设置时间默认在线
-
-    const now = new Date();
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
-
-    const parseTime = (timeStr) => {
-        if (!timeStr || typeof timeStr !== 'string') return null;
-        const [h, m] = timeStr.split(':').map(Number);
-        if (isNaN(h) || isNaN(m)) return null;
-        return h * 60 + m;
-    };
-
-    const startMinutes = parseTime(onlineHours.start);
-    const endMinutes = parseTime(onlineHours.end);
-
-    // 无效时间默认在线
-    if (startMinutes === null || endMinutes === null) return true;
-
-    // 跨天情况（如 22:00 - 06:00）
-    if (startMinutes <= endMinutes) {
-        return currentMinutes >= startMinutes && currentMinutes < endMinutes;
-    } else {
-        return currentMinutes >= startMinutes || currentMinutes < endMinutes;
-    }
+export function isOnline(_onlineHours) {
+    return false;
 }
 
 // ============================================
@@ -70,16 +51,10 @@ export function getSocialProfile(persona, appId = 'chat') {
 
 /**
  * 格式化在线时间段显示
- * @param {Object} onlineHours
- * @returns {string}
+ * @deprecated chat-app 不再展示在线时间。保留导出以兼容,返回空字符串。
  */
-export function formatOnlineHours(onlineHours) {
-    if (!onlineHours?.start && !onlineHours?.end) {
-        return '24 小时在线';
-    }
-    const start = onlineHours.start || '00:00';
-    const end = onlineHours.end || '23:59';
-    return `${start} - ${end}`;
+export function formatOnlineHours(_onlineHours) {
+    return '';
 }
 
 // ============================================
@@ -105,86 +80,28 @@ export async function getSocialAvatarSrc(persona, appId = 'chat') {
 }
 
 // ============================================
-// Chat-app 专用：获取联系人在线状态
+// Chat-app 专用：获取联系人在线状态(已废弃)
 // ============================================
 
 /**
- * 获取 AI 联系人的在线状态
- * @param {string} contactId - 联系人 ID（如 'ai-1', 'ai-4' 等）
- * @returns {Promise<{isOnline: boolean, profile: Object}>}
+ * @deprecated chat-app 不再展示"在线/离线"。保留为 noop。
  */
-export async function getContactOnlineStatus(contactId) {
-    const sdk = window.settingsSdk;
-    if (!sdk?.aiPersons) {
-        return { isOnline: true, profile: {} }; // 默认在线
-    }
-
-    // 从 aiPersons 里找匹配的 persona
-    // contactId 格式: 'ai-1' -> persona id 可能是 'ai1' 或通过映射找
-    const persons = sdk.aiPersons.list?.() || [];
-
-    // 尝试多种匹配方式
-    let persona = null;
-
-    // 1. 直接匹配
-    persona = persons.find(p => p.id === contactId || p.id === contactId.replace('ai-', 'ai'));
-
-    // 2. 如果没找到，尝试按顺序匹配（ai-1 对应列表第一个，以此类推）
-    if (!persona) {
-        const match = contactId.match(/^ai-(\d+)$/);
-        if (match) {
-            const index = parseInt(match[1], 10) - 1;
-            if (index >= 0 && index < persons.length) {
-                persona = persons[index];
-            }
-        }
-    }
-
-    if (!persona) {
-        return { isOnline: true, profile: {} }; // 找不到默认在线
-    }
-
-    const profile = persona.socialProfiles?.chat || {};
-    return {
-        isOnline: isOnline(profile.onlineHours),
-        profile,
-    };
+export async function getContactOnlineStatus(_contactId) {
+    return { isOnline: false, profile: {} };
 }
 
 /**
- * 同步版本：获取联系人在线状态（使用缓存）
- * 首次调用会发起异步加载，之后返回缓存值
+ * @deprecated chat-app 不再展示"在线/离线"。保留为 noop。
  */
-const _onlineStatusCache = new Map();
-const _pendingLoads = new Map();
-
-export function getContactOnlineStatusSync(contactId) {
-    if (_onlineStatusCache.has(contactId)) {
-        return _onlineStatusCache.get(contactId);
-    }
-
-    // 还没加载过，发起异步加载
-    if (!_pendingLoads.has(contactId)) {
-        const promise = getContactOnlineStatus(contactId).then(result => {
-            _onlineStatusCache.set(contactId, result);
-            _pendingLoads.delete(contactId);
-            // 通知 UI 刷新
-            window.dispatchEvent(new CustomEvent('chat:online-status-updated', {
-                detail: { contactId, ...result }
-            }));
-            return result;
-        });
-        _pendingLoads.set(contactId, promise);
-    }
-
-    return { isOnline: true, profile: {} }; // 加载中默认在线
+export function getContactOnlineStatusSync(_contactId) {
+    return { isOnline: false, profile: {} };
 }
 
 /**
- * 清除缓存（当 persona 配置变更时调用）
+ * @deprecated 保留为 noop(原缓存逻辑已不需要)。
  */
 export function clearOnlineStatusCache() {
-    _onlineStatusCache.clear();
+    // noop
 }
 
 // ============================================

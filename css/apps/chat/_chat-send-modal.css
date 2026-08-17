@@ -2,78 +2,46 @@
  * chat-app / 红包&转账发送弹窗样式
  *
  * v0.45 — 红包/转账发送弹窗样式
+ * v0.69+ — 迁移到 AcModal,只保留业务专属样式
+ *   - 外壳(背景、圆角、宽度、阴影、动画)由 AcModal 提供
+ *   - 关闭按钮 ✕ 由 AcModal 提供
+ *   - 底部按钮由 AcModal 提供(.ac-btn / .ac-btn-primary / .ac-btn-secondary)
+ *
+ * 保留:
+ *   - 业务表单(金额输入、消息/备注输入)
+ *   - 余额显示 + 警告样式
+ *
+ * AcModal CSS Hooks:
+ *   - .ac-modal-body(主体内容容器)
+ *   - .ac-modal-footer(底部按钮容器)
  */
 
 /* ============================================
    红包发送弹窗
    ============================================ */
 
-.app-shell[data-app-id="chat"] .redpacket-send-modal-overlay {
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 9999;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    animation: fadeIn 0.2s ease;
-}
-
-.app-shell[data-app-id="chat"] .redpacket-send-modal {
-    background: white;
-    border-radius: 16px 16px 0 0;
-    width: 100%;
-    max-width: 420px;
-    padding: 20px 20px 40px;
-    box-sizing: border-box;
-    animation: slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1);
-}
-
-.app-shell[data-app-id="chat"] .redpacket-send-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 20px;
-}
-
-.app-shell[data-app-id="chat"] .redpacket-send-title {
-    font-size: 16px;
-    font-weight: 600;
-    color: #333;
-}
-
-.app-shell[data-app-id="chat"] .redpacket-send-close {
-    width: 28px; height: 28px;
-    border-radius: 50%;
-    background: #f5f5f5;
-    border: none;
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    color: #666;
-    padding: 0;
-}
-
-.app-shell[data-app-id="chat"] .redpacket-send-close svg {
-    width: 14px; height: 14px;
+.app-shell[data-app-id="chat"] .redpacket-send-modal .ac-modal-body {
+    padding: 0 4px;
 }
 
 .app-shell[data-app-id="chat"] .redpacket-send-form {
-    margin-bottom: 16px;
+    margin-bottom: 4px;
 }
 
 .app-shell[data-app-id="chat"] .redpacket-send-amount-row {
     display: flex;
     align-items: center;
+    justify-content: center;
+    gap: 4px;
     border-bottom: 2px solid #FF6B8A;
     padding-bottom: 8px;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
 }
 
 .app-shell[data-app-id="chat"] .redpacket-send-yen {
     font-size: 28px;
     font-weight: 700;
     color: #FF6B8A;
-    margin-right: 4px;
     line-height: 1;
 }
 
@@ -87,6 +55,7 @@
     background: transparent;
     font-family: inherit;
     min-width: 0;
+    text-align: left;
 }
 
 .app-shell[data-app-id="chat"] .redpacket-send-amount-input::placeholder {
@@ -108,6 +77,7 @@
     box-sizing: border-box;
     font-family: inherit;
     transition: border-color 0.2s;
+    background: #fff;
 }
 
 .app-shell[data-app-id="chat"] .redpacket-send-message-input:focus {
@@ -121,111 +91,81 @@
 .app-shell[data-app-id="chat"] .redpacket-send-hint {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 4px;
     font-size: 11px;
     color: #adb5bd;
-    margin-bottom: 20px;
+    margin: 4px 0 0;
 }
 
-.app-shell[data-app-id="chat"] .redpacket-send-actions {
-    display: flex;
-    gap: 10px;
+/* ★ v0.67.x 余额不足警告样式 */
+.app-shell[data-app-id="chat"] .redpacket-send-hint--warning {
+    color: #FF3B5C;
+    font-weight: 600;
 }
 
-.app-shell[data-app-id="chat"] .redpacket-send-btn {
-    flex: 1;
+.app-shell[data-app-id="chat"] .redpacket-send-hint--warning svg {
+    stroke: #FF3B5C;
+}
+
+/* ★ v0.67.x 余额显示 */
+.app-shell[data-app-id="chat"] .redpacket-send-balance {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 14px;
-    background: linear-gradient(135deg, #FF6B8A, #FF3B5C);
-    color: white;
-    border: none;
-    border-radius: 12px;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    font-family: inherit;
-    box-shadow: 0 4px 12px rgba(255, 59, 92, 0.35);
-    transition: transform 0.15s, box-shadow 0.15s;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: #FFF5F7;
+    border-radius: 10px;
+    margin-top: 8px;
 }
 
-.app-shell[data-app-id="chat"] .redpacket-send-btn:active {
-    transform: scale(0.97);
-    box-shadow: 0 2px 6px rgba(255, 59, 92, 0.25);
+.app-shell[data-app-id="chat"] .redpacket-send-balance-label {
+    font-size: 12px;
+    color: #999;
+}
+
+.app-shell[data-app-id="chat"] .redpacket-send-balance-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: #FF6B8A;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ★ v0.67.x 余额不足时确认按钮禁用(覆盖 AcModal 默认 disabled 样式) */
+.app-shell[data-app-id="chat"] .redpacket-send-confirm-btn:disabled,
+.app-shell[data-app-id="chat"] .redpacket-send-confirm-btn[disabled] {
+    background: #cccccc;
+    box-shadow: 0 3px 0 #aaaaaa;
+    opacity: 0.7;
 }
 
 /* ============================================
    转账发送弹窗
    ============================================ */
 
-.app-shell[data-app-id="chat"] .transfer-send-modal-overlay {
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 9999;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    animation: fadeIn 0.2s ease;
-}
-
-.app-shell[data-app-id="chat"] .transfer-send-modal {
-    background: white;
-    border-radius: 16px 16px 0 0;
-    width: 100%;
-    max-width: 420px;
-    padding: 20px 20px 40px;
-    box-sizing: border-box;
-    animation: slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1);
-}
-
-.app-shell[data-app-id="chat"] .transfer-send-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 20px;
-}
-
-.app-shell[data-app-id="chat"] .transfer-send-title {
-    font-size: 16px;
-    font-weight: 600;
-    color: #333;
-}
-
-.app-shell[data-app-id="chat"] .transfer-send-close {
-    width: 28px; height: 28px;
-    border-radius: 50%;
-    background: #f5f5f5;
-    border: none;
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    color: #666;
-    padding: 0;
-}
-
-.app-shell[data-app-id="chat"] .transfer-send-close svg {
-    width: 14px; height: 14px;
+.app-shell[data-app-id="chat"] .transfer-send-modal .ac-modal-body {
+    padding: 0 4px;
 }
 
 .app-shell[data-app-id="chat"] .transfer-send-form {
-    margin-bottom: 16px;
+    margin-bottom: 4px;
 }
 
 .app-shell[data-app-id="chat"] .transfer-send-amount-row {
     display: flex;
     align-items: center;
+    justify-content: center;
+    gap: 4px;
     border-bottom: 2px solid #52c41a;
     padding-bottom: 8px;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
 }
 
 .app-shell[data-app-id="chat"] .transfer-send-yen {
     font-size: 28px;
     font-weight: 700;
     color: #52c41a;
-    margin-right: 4px;
+    margin-right: 0;
     line-height: 1;
 }
 
@@ -239,6 +179,7 @@
     background: transparent;
     font-family: inherit;
     min-width: 0;
+    text-align: left;
 }
 
 .app-shell[data-app-id="chat"] .transfer-send-amount-input::placeholder {
@@ -260,6 +201,7 @@
     box-sizing: border-box;
     font-family: inherit;
     transition: border-color 0.2s;
+    background: #fff;
 }
 
 .app-shell[data-app-id="chat"] .transfer-send-note-input:focus {
@@ -270,44 +212,49 @@
     color: #adb5bd;
 }
 
-.app-shell[data-app-id="chat"] .transfer-send-actions {
+/* ★ v0.67.x 余额显示 */
+.app-shell[data-app-id="chat"] .transfer-send-balance {
     display: flex;
-    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: #F6FFED;
+    border-radius: 10px;
+    margin-top: 8px;
 }
 
-.app-shell[data-app-id="chat"] .transfer-send-btn {
-    flex: 1;
+.app-shell[data-app-id="chat"] .transfer-send-balance-label {
+    font-size: 12px;
+    color: #999;
+}
+
+.app-shell[data-app-id="chat"] .transfer-send-balance-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: #52c41a;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ★ v0.67.x 余额不足警告 */
+.app-shell[data-app-id="chat"] .transfer-send-hint--warning {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    padding: 14px;
-    background: linear-gradient(135deg, #52c41a, #389e0d);
-    color: white;
-    border: none;
-    border-radius: 12px;
-    font-size: 15px;
+    gap: 4px;
+    font-size: 11px;
+    color: #FF3B5C;
     font-weight: 600;
-    cursor: pointer;
-    font-family: inherit;
-    box-shadow: 0 4px 12px rgba(82, 196, 26, 0.3);
-    transition: transform 0.15s, box-shadow 0.15s;
+    margin: 8px 0 0;
 }
 
-.app-shell[data-app-id="chat"] .transfer-send-btn:active {
-    transform: scale(0.97);
-    box-shadow: 0 2px 6px rgba(82, 196, 26, 0.2);
+.app-shell[data-app-id="chat"] .transfer-send-hint--warning svg {
+    stroke: #FF3B5C;
 }
 
-/* ============================================
-   动画
-   ============================================ */
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-@keyframes slideUp {
-    from { transform: translateY(100%); }
-    to { transform: translateY(0); }
+/* ★ v0.67.x 余额不足时确认按钮禁用(覆盖 AcModal 默认 disabled 样式) */
+.app-shell[data-app-id="chat"] .transfer-send-confirm-btn:disabled,
+.app-shell[data-app-id="chat"] .transfer-send-confirm-btn[disabled] {
+    background: #cccccc;
+    box-shadow: 0 3px 0 #aaaaaa;
+    opacity: 0.7;
 }

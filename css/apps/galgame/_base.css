@@ -1,0 +1,458 @@
+/**
+ * 湛蓝回忆 · 根布局 + 通用控件
+ *
+ * 全部选择器挂 `.app-shell[data-app-id="galgame"]` 下 —— 不污染其他 App。
+ * **这里一个 hex 都没有**,所有颜色走 `var(--gg-*)`(定义在 `_theme.css`)。
+ */
+
+/* ============================================================
+   尺寸 / 动效常量(非配色,不进色板)
+   ============================================================ */
+.app-shell[data-app-id="galgame"] {
+    --gg-radius-sm: 8px;
+    --gg-radius: 14px;
+    --gg-radius-lg: 20px;
+    --gg-radius-pill: 999px;
+    --gg-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --gg-ease-bounce: cubic-bezier(0.34, 1.4, 0.64, 1);
+    /* ★ 层级铁律：fullscreen App 的 home 指示条浮在 .app-bottom（z-index 6），
+     *   App 内一切绝对定位层必须 < 6（菜单 4、面板/弹窗/toast 5），否则指示条被盖住退不出 App。 */
+    --gg-z-menu: 4;
+    --gg-z-panel: 5;
+    --gg-z-toast: 5;
+    /* 状态栏浮在 shell 之上,自绘内容要让开 */
+    --gg-top-safe: 54px;
+
+    background: var(--gg-stage-bg);
+    color: var(--gg-text);
+}
+
+/* 自己画顶栏和 tab 栏,把框架的内边距抵消掉 */
+.app-shell[data-app-id="galgame"] .app-content {
+    padding: 0;
+    position: relative;
+    z-index: 1;
+}
+.app-shell[data-app-id="galgame"] .app-page-stack {
+    border-radius: 0;
+}
+.app-shell[data-app-id="galgame"] .app-screen-panel {
+    position: relative;
+    height: 100%;
+    min-height: 100%;
+    padding: 0;
+}
+
+.app-shell[data-app-id="galgame"] .gg-root {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--gg-stage-bg);
+    color: var(--gg-text);
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+/* ============================================================
+   全局:隐藏滚动条 + SVG 兜底
+   ============================================================ */
+
+.app-shell[data-app-id="galgame"] *::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+}
+.app-shell[data-app-id="galgame"] *::-webkit-scrollbar-thumb {
+    background: var(--gg-scrollbar);
+    border-radius: var(--gg-radius-pill);
+}
+.app-shell[data-app-id="galgame"] *::-webkit-scrollbar-track {
+    background: transparent;
+}
+.app-shell[data-app-id="galgame"] * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--gg-scrollbar) transparent;
+}
+
+/*
+ * SVG 没有 width/height 又没配对 CSS 时,浏览器按规范画成 300×150,整张卡直接撑爆。
+ * 两层 `:where()` 把特异性压到 (0,0,1),任何具名规则都能盖过它 ——
+ * 只写一层的话 `svg:not([width]):not([height])` 本身是 (0,2,1),会反过来盖掉
+ * `.gg-icon svg` 这种 (0,1,1) 的规则。
+ */
+:where(.app-shell[data-app-id="galgame"]) svg:where(:not([width]):not([height])) {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+/* ============================================================
+   图标
+   ============================================================ */
+
+.app-shell[data-app-id="galgame"] .gg-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.app-shell[data-app-id="galgame"] .gg-icon svg {
+    width: var(--gg-icon-size, 18px);
+    height: var(--gg-icon-size, 18px);
+}
+
+/* ============================================================
+   按钮
+   ============================================================ */
+
+.app-shell[data-app-id="galgame"] .gg-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border: 1px solid transparent;
+    border-radius: var(--gg-radius-pill);
+    background: transparent;
+    color: var(--gg-text);
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.2;
+    cursor: pointer;
+    transition: transform 0.16s var(--gg-ease), background 0.16s var(--gg-ease), opacity 0.16s;
+}
+.app-shell[data-app-id="galgame"] .gg-btn:active:not(:disabled) { transform: scale(0.96); }
+.app-shell[data-app-id="galgame"] .gg-btn:disabled { opacity: 0.42; cursor: not-allowed; }
+
+.app-shell[data-app-id="galgame"] .gg-btn--primary {
+    background: var(--gg-primary);
+    color: var(--gg-on-primary);
+    box-shadow: var(--gg-shadow-sm);
+}
+.app-shell[data-app-id="galgame"] .gg-btn--ghost {
+    border-color: var(--gg-primary);
+    color: var(--gg-primary);
+    background: var(--gg-primary-soft);
+}
+.app-shell[data-app-id="galgame"] .gg-btn--quiet {
+    color: var(--gg-text-secondary);
+    background: var(--gg-glass-bg);
+    border-color: var(--gg-glass-border);
+}
+.app-shell[data-app-id="galgame"] .gg-btn--danger {
+    color: var(--gg-danger);
+    border-color: var(--gg-danger);
+    background: transparent;
+}
+
+.app-shell[data-app-id="galgame"] .gg-btn--sm { padding: 5px 10px; font-size: 12px; }
+.app-shell[data-app-id="galgame"] .gg-btn--lg { padding: 12px 22px; font-size: 15px; }
+.app-shell[data-app-id="galgame"] .gg-btn.is-icon-only { padding: 7px; }
+.app-shell[data-app-id="galgame"] .gg-btn.is-block { width: 100%; }
+
+.app-shell[data-app-id="galgame"] .gg-btn-spinner {
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    animation: ggSpin 0.7s linear infinite;
+}
+
+@keyframes ggSpin { to { transform: rotate(360deg); } }
+
+/* ============================================================
+   表单
+   ============================================================ */
+
+.app-shell[data-app-id="galgame"] .gg-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 12px;
+}
+.app-shell[data-app-id="galgame"] .gg-field-label {
+    font-size: 12px;
+    color: var(--gg-text-secondary);
+}
+.app-shell[data-app-id="galgame"] .gg-field-hint,
+.app-shell[data-app-id="galgame"] .gg-hint {
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--gg-text-tertiary);
+}
+.app-shell[data-app-id="galgame"] .gg-hint { margin: 6px 0 10px; }
+
+.app-shell[data-app-id="galgame"] .gg-input,
+.app-shell[data-app-id="galgame"] .gg-textarea,
+.app-shell[data-app-id="galgame"] .gg-select {
+    width: 100%;
+    padding: 8px 11px;
+    border: 1px solid var(--gg-input-border);
+    border-radius: var(--gg-radius-sm);
+    background: var(--gg-input-bg);
+    color: var(--gg-input-text);
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.5;
+    outline: none;
+    transition: border-color 0.16s, box-shadow 0.16s;
+}
+.app-shell[data-app-id="galgame"] .gg-input:focus,
+.app-shell[data-app-id="galgame"] .gg-textarea:focus,
+.app-shell[data-app-id="galgame"] .gg-select:focus {
+    border-color: var(--gg-primary);
+    box-shadow: 0 0 0 3px var(--gg-input-focus);
+}
+.app-shell[data-app-id="galgame"] .gg-input::placeholder,
+.app-shell[data-app-id="galgame"] .gg-textarea::placeholder {
+    color: var(--gg-placeholder);
+}
+.app-shell[data-app-id="galgame"] .gg-textarea { resize: vertical; min-height: 60px; }
+
+.app-shell[data-app-id="galgame"] .gg-switch {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    cursor: pointer;
+}
+.app-shell[data-app-id="galgame"] .gg-switch.is-disabled { opacity: 0.45; cursor: not-allowed; }
+.app-shell[data-app-id="galgame"] .gg-switch-text { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.app-shell[data-app-id="galgame"] .gg-switch-label { font-size: 13px; }
+.app-shell[data-app-id="galgame"] .gg-switch-hint { font-size: 11px; color: var(--gg-text-tertiary); }
+.app-shell[data-app-id="galgame"] .gg-switch-input { position: absolute; opacity: 0; pointer-events: none; }
+.app-shell[data-app-id="galgame"] .gg-switch-track {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    flex-shrink: 0;
+    border-radius: var(--gg-radius-pill);
+    background: var(--gg-affection-track);
+    transition: background 0.2s var(--gg-ease);
+}
+.app-shell[data-app-id="galgame"] .gg-switch-thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--gg-card-bg);
+    box-shadow: var(--gg-shadow-sm);
+    transition: transform 0.2s var(--gg-ease-bounce);
+}
+.app-shell[data-app-id="galgame"] .gg-switch-input:checked + .gg-switch-track { background: var(--gg-primary); }
+.app-shell[data-app-id="galgame"] .gg-switch-input:checked + .gg-switch-track .gg-switch-thumb { transform: translateX(18px); }
+
+.app-shell[data-app-id="galgame"] .gg-slider { display: block; padding: 8px 0; }
+.app-shell[data-app-id="galgame"] .gg-slider-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 4px;
+}
+.app-shell[data-app-id="galgame"] .gg-slider-label { font-size: 13px; }
+.app-shell[data-app-id="galgame"] .gg-slider-value { font-size: 12px; font-style: normal; color: var(--gg-primary); }
+.app-shell[data-app-id="galgame"] .gg-slider-input {
+    width: 100%;
+    accent-color: var(--gg-primary);
+}
+
+/* ============================================================
+   结构
+   ============================================================ */
+
+.app-shell[data-app-id="galgame"] .gg-section {
+    margin-bottom: 14px;
+    border: 1px solid var(--gg-card-border);
+    border-radius: var(--gg-radius);
+    background: var(--gg-card-bg);
+    overflow: hidden;
+}
+.app-shell[data-app-id="galgame"] .gg-section-head {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 12px;
+    background: var(--gg-panel-header);
+    color: var(--gg-text);
+    border: 0;
+    width: 100%;
+    font-family: inherit;
+    text-align: left;
+}
+.app-shell[data-app-id="galgame"] .gg-section-head.is-clickable { cursor: pointer; }
+.app-shell[data-app-id="galgame"] .gg-section-title { font-size: 13px; font-weight: 600; }
+.app-shell[data-app-id="galgame"] .gg-section-hint {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--gg-text-tertiary);
+}
+.app-shell[data-app-id="galgame"] .gg-section-extra { display: flex; gap: 6px; }
+.app-shell[data-app-id="galgame"] .gg-section-body { padding: 12px; }
+
+.app-shell[data-app-id="galgame"] .gg-sub-title {
+    margin: 14px 0 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gg-text-secondary);
+}
+.app-shell[data-app-id="galgame"] .gg-sub-title em {
+    margin-left: 6px;
+    font-style: normal;
+    font-weight: 400;
+    font-size: 11px;
+    color: var(--gg-text-tertiary);
+}
+
+.app-shell[data-app-id="galgame"] .gg-row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0;
+}
+
+.app-shell[data-app-id="galgame"] .gg-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 26px 14px;
+    text-align: center;
+    color: var(--gg-text-tertiary);
+}
+.app-shell[data-app-id="galgame"] .gg-empty-icon { --gg-icon-size: 28px; opacity: 0.5; }
+.app-shell[data-app-id="galgame"] .gg-empty-text { margin: 0; font-size: 13px; }
+.app-shell[data-app-id="galgame"] .gg-empty-hint { margin: 0; font-size: 11px; line-height: 1.6; }
+.app-shell[data-app-id="galgame"] .gg-empty-action { margin-top: 6px; }
+
+.app-shell[data-app-id="galgame"] .gg-spinner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 30px;
+    color: var(--gg-text-secondary);
+}
+.app-shell[data-app-id="galgame"] .gg-spinner-ring {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 2px solid var(--gg-primary-soft);
+    border-top-color: var(--gg-primary);
+    animation: ggSpin 0.8s linear infinite;
+}
+.app-shell[data-app-id="galgame"] .gg-spinner-label { font-size: 12px; }
+
+.app-shell[data-app-id="galgame"] .gg-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border: 1px solid var(--gg-tag-border);
+    border-radius: var(--gg-radius-pill);
+    background: var(--gg-tag-bg);
+    color: var(--gg-tag-text);
+    font-size: 10px;
+    line-height: 1.6;
+    white-space: nowrap;
+}
+.app-shell[data-app-id="galgame"] .gg-tag[data-tone="k"] {
+    background: var(--gg-k-bg);
+    border-color: var(--gg-k-border);
+    color: var(--gg-k-accent);
+}
+.app-shell[data-app-id="galgame"] .gg-tag[data-tone="ok"] {
+    color: var(--gg-success);
+    border-color: var(--gg-success);
+    background: transparent;
+}
+.app-shell[data-app-id="galgame"] .gg-tag[data-tone="muted"] {
+    color: var(--gg-text-tertiary);
+    border-color: var(--gg-divider);
+    background: transparent;
+}
+
+/* 好感度条 —— 档位走 data-tone,换主题时跟着变 */
+.app-shell[data-app-id="galgame"] .gg-affection-bar {
+    display: block;
+    flex: 1;
+    height: 6px;
+    border-radius: var(--gg-radius-pill);
+    background: var(--gg-affection-track);
+    overflow: hidden;
+}
+.app-shell[data-app-id="galgame"] .gg-affection-fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--gg-affection-mid);
+    transition: width 0.4s var(--gg-ease);
+}
+.app-shell[data-app-id="galgame"] .gg-affection-bar[data-tone="low"] .gg-affection-fill { background: var(--gg-affection-low); }
+.app-shell[data-app-id="galgame"] .gg-affection-bar[data-tone="high"] .gg-affection-fill { background: var(--gg-affection-high); }
+
+/* ============================================================
+   提示条
+   ============================================================ */
+
+.app-shell[data-app-id="galgame"] .gg-toast {
+    position: absolute;
+    left: 50%;
+    bottom: calc(22px + var(--app-safe-bottom, env(safe-area-inset-bottom, 0px)));
+    z-index: var(--gg-z-toast);
+    transform: translateX(-50%);
+    max-width: 84%;
+    margin: 0;
+    padding: 9px 16px;
+    border-radius: var(--gg-radius-pill);
+    background: var(--gg-glass-bg);
+    border: 1px solid var(--gg-glass-border);
+    backdrop-filter: blur(12px);
+    color: var(--gg-text);
+    font-size: 12px;
+    text-align: center;
+    box-shadow: var(--gg-shadow-md);
+}
+
+.gg-toast-enter-active, .gg-toast-leave-active { transition: opacity 0.22s, transform 0.22s var(--gg-ease); }
+.gg-toast-enter-from, .gg-toast-leave-to { opacity: 0; transform: translate(-50%, 8px); }
+
+/* ============================================================
+   开局引导
+   ============================================================ */
+
+.app-shell[data-app-id="galgame"] .gg-launcher {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(30% + var(--app-safe-bottom, env(safe-area-inset-bottom, 0px)));
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 0 26px;
+    text-align: center;
+    pointer-events: none;
+}
+.app-shell[data-app-id="galgame"] .gg-launcher > * { pointer-events: auto; }
+.app-shell[data-app-id="galgame"] .gg-launcher-title {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: var(--gg-dialogue-bg);
+    text-shadow: 0 2px 10px var(--gg-shadow);
+}
+.app-shell[data-app-id="galgame"] .gg-launcher-sub {
+    margin: 0 0 6px;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--gg-dialogue-bg);
+    opacity: 0.8;
+    text-shadow: 0 1px 6px var(--gg-shadow);
+}

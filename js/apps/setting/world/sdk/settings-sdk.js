@@ -42,14 +42,18 @@ import { createStoryArchivesApi } from './story-archives.js';
 import { createChatFavoritesApi } from './chat-favorites.js';
 import { createNookPromptsApi } from '../../nook/sdk/prompts.js';
 import { createReplyPromptsApi } from './reply-prompts.js'; // ★ v0.50 chat-app 回复提示词 SDK
+import { createGroupReplyPromptsApi } from './group-reply-prompts.js'; // ★ v0.82 chat-app 群聊回复提示词 SDK(公共池)
 import { createPromptLibraryApi } from './prompt-library.js'; // ★ v0.58 chat-app 拉取 prompt 库 SDK
 import { createChatArchiveApi } from './chat-archive.js'; // ★ v0.61 chat-app 消息归档 SDK
 import { createCalendarSummariesApi } from './calendar-summaries.js'; // ★ v0.61.3 chat-app 日历概要 SDK
 import { createStorySummariesApi } from './story-summaries.js'; // ★ v0.61.3 chat-app 故事概要 SDK
-import { createRollingSummariesApi } from './rolling-summaries.js'; // ★ v0.61.3 chat-app 滚动摘要 K 链 SDK
+import { createChatWindowConfigApi } from './chat-window-config.js'; // ★ v0.61.3+ chat-app 上下文长度 SDK(原 K 链 SDK 精简版)
+import { createKChainApi } from './k-chain.js'; // ★ v0.88 K 链记忆(第二版,只管存)
 import { createMemorySummariesApi } from './memory-summaries.js'; // ★ v0.65 chat-app 分级记忆系统 SDK
 import { createAppPromptsApi } from './app-prompts.js'; // ★ v0.61.5 第三方 App Prompt 注册 SDK
 import { createAssetFlowApi } from './asset-flow.js'; // ★ v0.67 资金流水 SDK(红包/转账/钱包)
+import { createMomentsApi } from './moments.js';
+import { createGroupMemorySyncApi } from './group-memory-sync.js'; // ★ v0.87 群聊记忆互通 SDK(私聊→回复提示词注入群聊记忆) // ★ v0.79 chat-app 朋友圈 SDK(AI 发朋友圈 + 概要)
 import {
     computePersonaBalance,
     settlePersona,
@@ -393,15 +397,18 @@ export function createSettingsSdk({ toolkit }) {
         //   - 占位生成:buildPlaceholderFromMessages 拼接故事会话消息
         sdk.storySummaries = createStorySummariesApi(sdk);
 
-        // ★ v0.61.3 chat-app 「滚动摘要 K 链」SDK
-        //   数据挂在 aiPerson.socialProfiles.chat.rollingSummaries[] +
-        //   rollingConfig 顶层字段
-        //   - compressIfNeeded(aiPersonId, mode, messages, options) 自动判断+压缩
-        //   - buildKChainContext(aiPersonId) 拼成可注入的文本
-        //   - 用户配置(contextRounds/kMergeSize/maxChainLength/style/enabled)
-        //     走 setRollingConfig 持久化
-        //   - 占位版:K 链节点的 content = 前 N 个回合文本 + [滚动摘要占位 - 待 AI 接入]
-        sdk.rollingSummaries = createRollingSummariesApi(sdk);
+// ★ v0.61.3+ chat-app 上下文长度 SDK(原 K 链 SDK 精简版)
+//   字段名沿用 rollingConfig(contextRounds)避免迁移老数据;
+//   实际只暴露 getRollingConfig / setRollingConfig(写入 contextRounds)
+//   K 链相关 API(compressIfNeeded / buildKChainContext / add / clearAll ...)已全部移除
+sdk.rollingSummaries = createChatWindowConfigApi(sdk);
+
+        // ★ v0.88 K 链记忆(第二版)—— 滑动窗口 + 迭代式增量压缩
+        //   配置(enabled/windowSize/keepVersions)与状态(current/history/lastAt)分开存,
+        //   状态再按 mode 分槽,日历和故事互不污染。
+        //   本 SDK 只管存;数回合和拼 prompt 在 chat-app 的 services/k-chain-service.js
+        //   (那两件事依赖 chat-app 的「回合」口径,放这里就成了跨层依赖)。
+        sdk.kChain = createKChainApi(sdk);
 
         // ★ v0.65 chat-app 「分级记忆系统」SDK
         //   数据挂在 aiPerson.socialProfiles.chat.memoryConfig + memorySummaries 顶层
@@ -429,6 +436,17 @@ export function createSettingsSdk({ toolkit }) {
         //   - 写入后通过 aiPersons.update 自动派发 events('aiPersons','update')
         //   后期接 AI SDK 时直接调 listActive(aiPersonId) 拿已启用的 prompt 列表
         sdk.replyPrompts = createReplyPromptsApi(sdk);
+
+        // ★ v0.82 chat-app 群聊回复提示词 SDK(公共池模型)
+        //   数据挂在 chatGroup.prompts[] 顶层(跟 aiPerson.replyPrompts 平行)
+        //   - 区别:私聊 replyPrompts 挂在 AI 人设上(只有 1 个 AI);
+        //     群聊 prompts 挂在群聊上(N 个 AI 共享同一份 pool)
+        //   - 接口:list(user, groupId, mode) / listActive / get / add / update / remove
+        //     / toggleActive / setOrder(都带 user / groupId / mode 三参数)
+        //   - 写入后通过 chatGroups.update 自动派发 events('chatGroups','update')
+        //   - 用户场景:群聊设置 → 回复提示词 → 加「群氛围 / 角色扮演 / 副本设定」
+        //     一类的公告式 prompt,所有群成员 AI 都会看到
+        sdk.groupReplyPrompts = createGroupReplyPromptsApi(sdk);
         sdk.nookSdk = { prompts: createNookPromptsApi(sdk) };
 
         // ★ v0.67 chat-app 资金流水 SDK
@@ -436,6 +454,21 @@ export function createSettingsSdk({ toolkit }) {
         //   - 写一条流水 = 同步调 persona.asset.adjust 改余额(真实资金流动)
         //   - 钱包页 + 私聊红包/转账都走这条 SDK
         sdk.assetFlow = createAssetFlowApi(sdk);
+
+        // ★ v0.79 chat-app 朋友圈 SDK
+        //   - 数据挂在 aiPerson.moments[] 顶层(跟 replyPrompts 平行的数组)
+        //   - 每条朋友圈带 content(完整原文) + summary(概要,prompt 注入用)
+        //   - buildMomentsContext(aiPersonId, { readCount }) 给 prompt-builder 拼 systemPrompt
+        //   - 跟 prompt-builder §v0.79 接入,跟 replyFormatInject 同款注入开关
+        sdk.moments = createMomentsApi(sdk);
+
+        // ★ v0.87 群聊记忆互通 SDK(私聊 → 回复提示词注入群聊记忆)
+        //   - 数据双层:user.groupMemorySync(总开关 + aiIds 名单) +
+        //     aiPerson.groupMemorySyncConfig(单 AI 配置:enabled / contextRounds / summaryReadCount)
+        //   - 总开关 + 单 AI 都开启 → 该 AI 私聊 prompt 注入「群聊记忆」段
+        //   - listEnabledAiIds(user) → prompt-builder 拿名单 + getAiConfig 拿配置
+        //   - 跟 replyPrompts / moments / memorySummaries 完全平行,都是 aiPerson 顶层字段
+        sdk.groupMemorySync = createGroupMemorySyncApi(sdk);
 
         // ★ v0.58 chat-app 拉取 prompt 库 SDK
         //   - 数据源是 settings app 的 Prompt 工程模块(prompt_db 独立库)

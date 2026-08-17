@@ -5,13 +5,13 @@
  * {
  *   showStatusBar: boolean,            // 整体显示状态栏开关（不影响灵动岛）
  *   statusBarTimeColor: string,        // 时间颜色（空字符串 = 跟随 activeApp.statusBarColor）
- *   statusBarSignalColor: string,      // 信号颜色（空 = 跟随）
  *   statusBarFiveGColor: string,       // 5G 颜色（空 = 跟随）
  *   statusBarFiveGLabel: string,       // 5G 文本替换（默认 '5G'）
  * }
  *
  * 注意：之前还有 showStatusBarTime / Signal / FiveG 用于单独控制时间 / 信号 / 5G 显隐，
  *       现已删除 —— 状态栏元素整体显示/隐藏由 `showStatusBar` 一个开关决定。
+ *       信号格本身也在 2026-08-13 整体移除，statusBarSignalColor 字段随之删除。
  *
  * 提供：
  * - getState() / setState() - 读写状态
@@ -26,7 +26,6 @@
 export const DEFAULT_STATUS_BAR_STATE = Object.freeze({
     showStatusBar: true,
     statusBarTimeColor: '',
-    statusBarSignalColor: '',
     statusBarFiveGColor: '',
     statusBarFiveGLabel: '5G',
 });
@@ -87,7 +86,6 @@ export function serialize(state) {
     return {
         showStatusBar: normalizeBool(s.showStatusBar, true),
         statusBarTimeColor: typeof s.statusBarTimeColor === 'string' ? s.statusBarTimeColor : '',
-        statusBarSignalColor: typeof s.statusBarSignalColor === 'string' ? s.statusBarSignalColor : '',
         statusBarFiveGColor: typeof s.statusBarFiveGColor === 'string' ? s.statusBarFiveGColor : '',
         statusBarFiveGLabel: (typeof s.statusBarFiveGLabel === 'string' && s.statusBarFiveGLabel)
             ? s.statusBarFiveGLabel
@@ -101,7 +99,6 @@ export function deserialize(raw) {
     return {
         showStatusBar: raw.showStatusBar !== false,
         statusBarTimeColor: typeof raw.statusBarTimeColor === 'string' ? raw.statusBarTimeColor : '',
-        statusBarSignalColor: typeof raw.statusBarSignalColor === 'string' ? raw.statusBarSignalColor : '',
         statusBarFiveGColor: typeof raw.statusBarFiveGColor === 'string' ? raw.statusBarFiveGColor : '',
         statusBarFiveGLabel: (typeof raw.statusBarFiveGLabel === 'string' && raw.statusBarFiveGLabel)
             ? raw.statusBarFiveGLabel

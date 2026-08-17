@@ -1,0 +1,2984 @@
+/* 灯塔 · 样式入口
+ *
+ * 分片的判据是「改一次动几个文件」：
+ *   _theme     颜色的唯一真相（两套内置主题）
+ *   _base      和框架容器的接线 + 根布局 + 顶栏 + 底栏 + 子页外壳
+ *   _ui        通用控件（按钮 / 输入 / 分区 / 金额 / 骨架 / 加载）
+ *   _sheet     弹层（自己的一套，不是 AcModal）
+ *   _onboard   首次配置
+ *   _feed      招聘板与职位卡
+ *   _detail    职位详情
+ *   _talk      面试列表与对话
+ *   _work      在职列表 + 工作详情 + 工作日期表
+ *   _theater   小剧场
+ *   _me        我的 / 流水 / 提示词管理 / 配色
+ *
+ * ★ 全部选择器都挂在 .app-shell[data-app-id="job"] 下面。
+ *   全局裸 class 会污染所有 App —— 这是项目里的硬要求。
+ *
+ * ★ 全 App 不用渐变、不用 emoji。层次靠「底色 + 毛玻璃 + 一条描边」，
+ *   这样任何一个 token 被用户换掉时整体关系仍然成立。
+ */
+
+/* 灯塔 · 主题 token
+ *
+ * ── 这个文件是颜色的唯一真相 ──────────────────────────────────────
+ *
+ * JS 里一个 hex 都没有。`theme.js` 只维护「有哪些 token、分别叫什么、归在哪一类」,
+ * 具体色值运行时从这里读（`readPresetColors` 造一个隐藏探针再 getComputedStyle）。
+ *
+ * 梦境编织那轮的教训：原型定义了一套变量、同时又散着 694 处硬编码 hex,
+ * 换主题时那 694 处纹丝不动。所以这里的约束是物理性的 ——
+ * 只要 JS 里没有 hex,就不可能出现「换了个寂寞」。
+ *
+ * ── 用户改色的两条路 ──────────────────────────────────────────────
+ *   1. 单个改：色板里点一格 → 写 inline style 到根节点
+ *   2. 整套覆盖：粘一段 `--jb-bg: #xxx;` → 解析后批量写
+ * 两条路都只是往根节点写 inline 变量,内置主题本身不会被改坏。
+ *
+ * ── 关于渐变 ──────────────────────────────────────────────────────
+ * 全 App 不使用渐变。所有层次靠「底色 + 毛玻璃 + 一条描边」拉开,
+ * 这样任何一个 token 被用户换掉时,整体关系仍然成立 ——
+ * 渐变要两个色一起换,用户改一个就会脏。
+ */
+
+/* ── 晨班（浅色，默认）─────────────────────────────────────────────
+   偏冷的米白底，主色是压低饱和度的钢蓝（招聘板、公文、制服的调子），
+   强调色取灯塔那束光的暖黄。两者明度接近，并排放不会互相压过去。 */
+.app-shell[data-app-id="job"],
+.app-shell[data-app-id="job"] [data-jb-theme="dayshift"] {
+    --jb-bg: #F4F6F8;
+    --jb-bg-soft: #FFFFFF;
+    --jb-surface: #FFFFFF;
+    --jb-surface-2: #EDF0F4;
+    --jb-elevated: #FFFFFF;
+
+    --jb-glass: rgba(255, 255, 255, 0.66);
+    --jb-glass-strong: rgba(255, 255, 255, 0.88);
+    --jb-glass-line: rgba(255, 255, 255, 0.72);
+
+    --jb-primary: #3E5C86;
+    --jb-primary-soft: #E4EAF3;
+    --jb-primary-strong: #2C4568;
+    --jb-on-primary: #FFFFFF;
+
+    --jb-accent: #C4864A;
+    --jb-accent-soft: #F6EBDD;
+    --jb-on-accent: #FFFFFF;
+
+    --jb-pay: #2C4568;
+    --jb-coin: #B0762F;
+    --jb-income: #3F7D5C;
+    --jb-expense: #B4564E;
+
+    --jb-text: #1E242C;
+    --jb-text-2: #5C6673;
+    --jb-text-3: #97A1AE;
+    --jb-text-inverse: #FFFFFF;
+
+    --jb-line: #E2E7ED;
+    --jb-line-soft: #EDF0F4;
+    --jb-line-strong: #CDD5DF;
+
+    --jb-card: #FFFFFF;
+    --jb-card-hover: #F7F9FB;
+    --jb-shadow: rgba(30, 36, 44, 0.07);
+
+    --jb-success: #3F7D5C;
+    --jb-warning: #B0762F;
+    --jb-danger: #B4564E;
+    --jb-info: #4A6E8F;
+
+    --jb-input-bg: #F1F4F7;
+    --jb-input-line: #DDE3EA;
+    --jb-input-focus: rgba(62, 92, 134, 0.26);
+
+    --jb-tag-bg: #EEF1F5;
+    --jb-tag-text: #5C6673;
+    --jb-tag-line: #DFE4EB;
+
+    /* 工作日和休息日的底色必须一眼分得开。第一版取的是 #E4EAF3 / #F4F6F8，
+       两者都落在毛玻璃卡的白底附近，扫一眼整个月是一片灰 —— 而这张日历的
+       全部意义就是「哪几天要上班」。现在蓝的更蓝、灰的更灰。 */
+    --jb-day-work: #CFDDF0;
+    --jb-day-work-text: #24395A;
+    --jb-day-rest: #E9ECF0;
+    --jb-day-rest-text: #A3ACB8;
+    --jb-day-today: #C4864A;
+    --jb-day-done: #3F7D5C;
+
+    --jb-bubble-me: #3E5C86;
+    --jb-bubble-me-text: #FFFFFF;
+    --jb-bubble-hr: #FFFFFF;
+    --jb-bubble-hr-text: #1E242C;
+
+    --jb-nav-bg: rgba(255, 255, 255, 0.82);
+    --jb-nav-line: #E4E9EF;
+    --jb-nav-icon: #9AA4B1;
+    --jb-nav-active: #2C4568;
+
+    --jb-overlay: rgba(24, 30, 38, 0.36);
+    --jb-scrim: rgba(255, 255, 255, 0.72);
+    --jb-skeleton: #E8ECF1;
+    --jb-skeleton-shine: rgba(255, 255, 255, 0.9);
+}
+
+/* ── 夜班（深色）───────────────────────────────────────────────────
+   不是把浅色反过来。深底上钢蓝会糊成一片，所以主色提亮往青偏；
+   暖黄压暗一点，否则在深底上会跳得刺眼。 */
+.app-shell[data-app-id="job"] [data-jb-theme="nightshift"],
+.app-shell[data-app-id="job"][data-jb-theme="nightshift"] {
+    --jb-bg: #161A20;
+    --jb-bg-soft: #1D222A;
+    --jb-surface: #1F252E;
+    --jb-surface-2: #262D37;
+    --jb-elevated: #242B35;
+
+    --jb-glass: rgba(36, 43, 53, 0.62);
+    --jb-glass-strong: rgba(31, 37, 46, 0.88);
+    --jb-glass-line: rgba(255, 255, 255, 0.07);
+
+    --jb-primary: #8AA9D6;
+    --jb-primary-soft: #29323F;
+    --jb-primary-strong: #A9C3E8;
+    --jb-on-primary: #141A22;
+
+    --jb-accent: #D9A46C;
+    --jb-accent-soft: #362C22;
+    --jb-on-accent: #221A11;
+
+    --jb-pay: #A9C3E8;
+    --jb-coin: #D9B87A;
+    --jb-income: #79BE9A;
+    --jb-expense: #DE8C84;
+
+    --jb-text: #E6EBF1;
+    --jb-text-2: #A3ADBA;
+    --jb-text-3: #6F7885;
+    --jb-text-inverse: #161A20;
+
+    --jb-line: #2D343E;
+    --jb-line-soft: #252B34;
+    --jb-line-strong: #3D4550;
+
+    --jb-card: #1F252E;
+    --jb-card-hover: #262D37;
+    --jb-shadow: rgba(0, 0, 0, 0.4);
+
+    --jb-success: #79BE9A;
+    --jb-warning: #D9B87A;
+    --jb-danger: #DE8C84;
+    --jb-info: #8FB2CE;
+
+    --jb-input-bg: #242B35;
+    --jb-input-line: #353D48;
+    --jb-input-focus: rgba(138, 169, 214, 0.3);
+
+    --jb-tag-bg: #262D37;
+    --jb-tag-text: #A3ADBA;
+    --jb-tag-line: #353D48;
+
+    --jb-day-work: #33445C;
+    --jb-day-work-text: #BDD4F2;
+    --jb-day-rest: #1B2027;
+    --jb-day-rest-text: #5D6672;
+    --jb-day-today: #D9A46C;
+    --jb-day-done: #79BE9A;
+
+    --jb-bubble-me: #3E5C86;
+    --jb-bubble-me-text: #F2F6FB;
+    --jb-bubble-hr: #262D37;
+    --jb-bubble-hr-text: #E6EBF1;
+
+    --jb-nav-bg: rgba(22, 26, 32, 0.86);
+    --jb-nav-line: #2A313A;
+    --jb-nav-icon: #6F7885;
+    --jb-nav-active: #A9C3E8;
+
+    --jb-overlay: rgba(0, 0, 0, 0.58);
+    --jb-scrim: rgba(22, 26, 32, 0.74);
+    --jb-skeleton: #262D37;
+    --jb-skeleton-shine: rgba(255, 255, 255, 0.05);
+}
+
+/* 灯塔 · 框架接线 + 根布局 */
+
+/* ============================================================
+   和框架容器的接线（四条必须一起改）
+   ------------------------------------------------------------
+   框架默认给了两层内边距（.app-content 14 + .app-screen-panel 14），
+   自绘内容再加 16，左右一共被吃掉 44px。
+
+   更麻烦的是高度：框架的滚动容器是 .app-page，而 .app-screen-panel
+   只有 min-height:100%，**没有 height**。CSS 里百分比高度需要父级有
+   确定高度，min-height 不算 —— 所以 .jb-root 写 height:100% 会静默
+   退化成 auto，被内容整个撑长，自绘的底栏跟着掉到文档流最底下，
+   表现是「要把整页滑到最底才看得见 tab 栏」。
+   ============================================================ */
+
+.app-shell[data-app-id="job"] .app-content { padding: 0; }
+.app-shell[data-app-id="job"] .app-page-stack { border-radius: 0; }
+.app-shell[data-app-id="job"] .app-page { overflow: hidden; }
+.app-shell[data-app-id="job"] .app-screen-panel {
+    position: relative;
+    height: 100%;
+    min-height: 100%;
+    padding: 0;
+}
+
+/* 滚动条一律不显示。这个 App 里能滚的地方有七八处，露出一条灰条就很脏 */
+.app-shell[data-app-id="job"] * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.app-shell[data-app-id="job"] *::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
+/* 内联 SVG 不带 width/height 时浏览器按 300×150 画，整张卡会被撑爆。
+   两层 :where() 把特异性压到 (0,0,1)，任何具名规则都能盖过它 ——
+   只用一层的话 svg:not([width]) 本身是 (0,2,1)，会反过来盖掉
+   .jb-xxx svg 这种 (0,1,1) 的规则 */
+:where(.app-shell[data-app-id="job"]) svg:where(:not([width]):not([height])) {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+/* ============================================================
+   根布局
+   ============================================================ */
+
+.app-shell[data-app-id="job"] .jb-root {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--jb-bg);
+    color: var(--jb-text);
+    font-size: 14px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+}
+
+.app-shell[data-app-id="job"] .jb-root * { box-sizing: border-box; }
+
+/* 顶栏。状态栏画在整个手机屏最上层，不在 App 的文档流里，
+   自绘内容必须自己让出 54px，而且那一块得是**实色** ——
+   内容从底下滚过去时透出来会和时间叠在一起。
+   所以这里不用毛玻璃：毛玻璃是半透的，滚动内容会从字底下穿过去。 */
+.app-shell[data-app-id="job"] .jb-top {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 58px 18px 11px;
+    background: var(--jb-bg);
+    border-bottom: 1px solid var(--jb-line-soft);
+}
+
+.app-shell[data-app-id="job"] .jb-top__main {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="job"] .jb-top__mark {
+    display: inline-flex;
+    color: var(--jb-accent);
+}
+
+.app-shell[data-app-id="job"] .jb-top__text { min-width: 0; }
+
+.app-shell[data-app-id="job"] .jb-top__title {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 620;
+    letter-spacing: 0.2px;
+    color: var(--jb-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="job"] .jb-top__sub {
+    margin: 1px 0 0;
+    font-size: 11px;
+    color: var(--jb-text-3);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 顶栏右边那颗余额丸 */
+.app-shell[data-app-id="job"] .jb-top__coin {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 11px 4px 8px;
+    border: 1px solid var(--jb-line);
+    border-radius: 14px;
+    background: var(--jb-glass);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: var(--jb-coin);
+    font-size: 12px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="job"] .jb-top__coin span { color: var(--jb-text-3); font-weight: 400; }
+
+/* 内容区：只有它滚 */
+.app-shell[data-app-id="job"] .jb-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="job"] .jb-page,
+.app-shell[data-app-id="job"] .jb-panel__body {
+    height: 100%;
+    overflow-y: auto;
+    /* overflow-y:auto 会把 overflow-x 一起算成 auto —— 桌面看不出来，
+       手机上整页能左右拖。容器层一次性关掉，别逐个追溢出源 */
+    overflow-x: hidden;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+    padding: 14px 16px 20px;
+}
+
+.app-shell[data-app-id="job"] .jb-blocked {
+    height: 100%;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+}
+
+/* ============================================================
+   子页面板（详情 / 面试 / 工作 / 小剧场 / 配色 / 提示词）
+   ============================================================ */
+
+.app-shell[data-app-id="job"] .jb-panel {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--jb-bg);
+}
+
+.app-shell[data-app-id="job"] .jb-panel__bar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px 10px 6px;
+    border-bottom: 1px solid var(--jb-line-soft);
+    background: var(--jb-glass-strong);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+}
+
+.app-shell[data-app-id="job"] .jb-panel__title {
+    flex: 1;
+    min-width: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--jb-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="job"] .jb-panel__bar-right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.app-shell[data-app-id="job"] .jb-panel__desc {
+    margin: 0 0 12px;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-panel__note {
+    margin: 8px 0 0;
+    font-size: 11.5px;
+    line-height: 1.65;
+    color: var(--jb-text-3);
+}
+
+/* ============================================================
+   底栏
+   ============================================================ */
+
+.app-shell[data-app-id="job"] .jb-tabbar {
+    flex: 0 0 auto;
+    display: flex;
+    background: var(--jb-nav-bg);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border-top: 1px solid var(--jb-nav-line);
+    /* fullscreen 之后 .app-bottom 浮在最上层，底栏得自己让开那 40px。
+       var() 的兜底是 0，所以非全屏时写了也没副作用 */
+    padding-bottom: var(--app-safe-bottom, 0px);
+}
+
+.app-shell[data-app-id="job"] .jb-tabbar__item {
+    flex: 1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 8px 0 7px;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    color: var(--jb-nav-icon);
+    transition: color 0.18s ease;
+}
+
+.app-shell[data-app-id="job"] .jb-tabbar__item.is-on { color: var(--jb-nav-active); }
+
+.app-shell[data-app-id="job"] .jb-tabbar__icon {
+    display: inline-flex;
+    transition: transform 0.22s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+.app-shell[data-app-id="job"] .jb-tabbar__item.is-on .jb-tabbar__icon {
+    transform: translateY(-1px);
+}
+
+.app-shell[data-app-id="job"] .jb-tabbar__label {
+    font-size: 10px;
+    letter-spacing: 0.3px;
+}
+
+.app-shell[data-app-id="job"] .jb-tabbar__item.is-on .jb-tabbar__label { font-weight: 560; }
+
+.app-shell[data-app-id="job"] .jb-tabbar__badge {
+    position: absolute;
+    top: 4px;
+    left: 50%;
+    margin-left: 6px;
+    min-width: 15px;
+    height: 15px;
+    padding: 0 4px;
+    border-radius: 8px;
+    background: var(--jb-accent);
+    color: var(--jb-on-accent);
+    font-size: 9px;
+    font-style: normal;
+    font-weight: 600;
+    line-height: 15px;
+    text-align: center;
+}
+
+.app-shell[data-app-id="job"] .jb-tabbar__dot {
+    position: absolute;
+    top: 7px;
+    left: 50%;
+    margin-left: 8px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--jb-accent);
+}
+
+/* ============================================================
+   toast
+   ============================================================ */
+
+.app-shell[data-app-id="job"] .jb-toast {
+    position: absolute;
+    left: 50%;
+    bottom: calc(78px + var(--app-safe-bottom, 0px));
+    transform: translateX(-50%);
+    max-width: 80%;
+    padding: 9px 16px;
+    border-radius: 18px;
+    background: var(--jb-text);
+    color: var(--jb-text-inverse);
+    font-size: 12.5px;
+    text-align: center;
+    z-index: 60;
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="job"] .jb-toast-enter-active,
+.app-shell[data-app-id="job"] .jb-toast-leave-active {
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.app-shell[data-app-id="job"] .jb-toast-enter-from,
+.app-shell[data-app-id="job"] .jb-toast-leave-to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(6px);
+}
+
+/* 灯塔 · 通用控件
+ *
+ * 全部只认 `--jb-*` 变量，这里不出现任何色值。
+ * 毛玻璃是这个 App 的基调：卡片是「一层浮在底色上的玻璃 + 一条描边」，
+ * 不用渐变、不用彩色阴影。
+ */
+
+/* ── 按钮 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 15px;
+    height: 38px;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    background: transparent;
+    color: var(--jb-text);
+    font-size: 13.5px;
+    font-weight: 520;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.16s ease, border-color 0.16s ease, opacity 0.16s ease, transform 0.12s ease;
+}
+
+.app-shell[data-app-id="job"] .jb-btn:active:not(:disabled) { transform: scale(0.975); }
+.app-shell[data-app-id="job"] .jb-btn:disabled { opacity: 0.42; cursor: not-allowed; }
+.app-shell[data-app-id="job"] .jb-btn.is-block { flex: 1; }
+
+.app-shell[data-app-id="job"] .jb-btn--primary {
+    background: var(--jb-primary);
+    color: var(--jb-on-primary);
+}
+.app-shell[data-app-id="job"] .jb-btn--primary:active:not(:disabled) { background: var(--jb-primary-strong); }
+
+.app-shell[data-app-id="job"] .jb-btn--accent {
+    background: var(--jb-accent);
+    color: var(--jb-on-accent);
+}
+
+.app-shell[data-app-id="job"] .jb-btn--soft {
+    background: var(--jb-primary-soft);
+    color: var(--jb-primary-strong);
+}
+
+.app-shell[data-app-id="job"] .jb-btn--line {
+    border-color: var(--jb-line-strong);
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-btn--ghost { color: var(--jb-text-2); padding: 0 10px; }
+.app-shell[data-app-id="job"] .jb-btn--ghost:active:not(:disabled) { background: var(--jb-surface-2); }
+
+.app-shell[data-app-id="job"] .jb-btn--danger {
+    background: var(--jb-danger);
+    color: var(--jb-text-inverse);
+}
+
+.app-shell[data-app-id="job"] .jb-btn--sm { height: 30px; padding: 0 11px; font-size: 12px; border-radius: 9px; }
+.app-shell[data-app-id="job"] .jb-btn--lg { height: 46px; font-size: 15px; border-radius: 13px; }
+
+.app-shell[data-app-id="job"] .jb-btn__spin {
+    width: 13px;
+    height: 13px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: jbSpin 0.7s linear infinite;
+}
+
+@keyframes jbSpin { to { transform: rotate(360deg); } }
+
+.app-shell[data-app-id="job"] .jb-iconbtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--jb-text-2);
+    cursor: pointer;
+}
+.app-shell[data-app-id="job"] .jb-iconbtn:active { background: var(--jb-surface-2); }
+.app-shell[data-app-id="job"] .jb-iconbtn.is-on { color: var(--jb-accent); }
+.app-shell[data-app-id="job"] .jb-iconbtn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.app-shell[data-app-id="job"] .jb-linkbtn {
+    border: 0;
+    background: none;
+    padding: 0 4px;
+    color: var(--jb-primary-strong);
+    font: inherit;
+    font-size: 12.5px;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* ── chip / tag ───────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+.app-shell[data-app-id="job"] .jb-chips--scroll {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    margin: 0 -16px;
+    padding-left: 16px;
+    padding-right: 16px;
+}
+
+.app-shell[data-app-id="job"] .jb-chip {
+    flex: 0 0 auto;
+    padding: 5px 12px;
+    border: 1px solid var(--jb-line);
+    border-radius: 15px;
+    background: var(--jb-surface);
+    color: var(--jb-text-2);
+    font-size: 12.5px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.app-shell[data-app-id="job"] .jb-chip.is-active {
+    background: var(--jb-primary-soft);
+    border-color: var(--jb-primary);
+    color: var(--jb-primary-strong);
+    font-weight: 560;
+}
+
+.app-shell[data-app-id="job"] .jb-chip--rival.is-active {
+    background: var(--jb-accent-soft);
+    border-color: var(--jb-accent);
+    color: var(--jb-accent);
+}
+
+.app-shell[data-app-id="job"] .jb-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border: 1px solid var(--jb-tag-line);
+    border-radius: 6px;
+    background: var(--jb-tag-bg);
+    color: var(--jb-tag-text);
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.app-shell[data-app-id="job"] .jb-tag--accent {
+    border-color: var(--jb-accent);
+    background: var(--jb-accent-soft);
+    color: var(--jb-accent);
+}
+
+.app-shell[data-app-id="job"] .jb-tag--ok {
+    border-color: var(--jb-success);
+    background: transparent;
+    color: var(--jb-success);
+}
+
+.app-shell[data-app-id="job"] .jb-tag--bad {
+    border-color: var(--jb-danger);
+    background: transparent;
+    color: var(--jb-danger);
+}
+
+/* ── 表单 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-field { margin-bottom: 14px; }
+
+.app-shell[data-app-id="job"] .jb-field__head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.app-shell[data-app-id="job"] .jb-field__label {
+    font-size: 12.5px;
+    font-weight: 560;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-field__hint {
+    margin: 5px 0 0;
+    font-size: 11.5px;
+    line-height: 1.6;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-input,
+.app-shell[data-app-id="job"] .jb-textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--jb-input-line);
+    border-radius: 11px;
+    background: var(--jb-input-bg);
+    color: var(--jb-text);
+    font-size: 13.5px;
+    font-family: inherit;
+    line-height: 1.6;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.app-shell[data-app-id="job"] .jb-input:focus,
+.app-shell[data-app-id="job"] .jb-textarea:focus {
+    border-color: var(--jb-primary);
+    box-shadow: 0 0 0 3px var(--jb-input-focus);
+}
+
+.app-shell[data-app-id="job"] .jb-textarea { resize: vertical; min-height: 64px; }
+
+.app-shell[data-app-id="job"] .jb-input::placeholder,
+.app-shell[data-app-id="job"] .jb-textarea::placeholder { color: var(--jb-text-3); }
+
+.app-shell[data-app-id="job"] .jb-switch {
+    position: relative;
+    width: 42px;
+    height: 24px;
+    flex: 0 0 auto;
+    border: 1px solid var(--jb-line-strong);
+    border-radius: 12px;
+    background: var(--jb-surface-2);
+    cursor: pointer;
+    transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.app-shell[data-app-id="job"] .jb-switch.is-on {
+    background: var(--jb-primary);
+    border-color: var(--jb-primary);
+}
+
+.app-shell[data-app-id="job"] .jb-switch__dot {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--jb-surface);
+    box-shadow: 0 1px 3px var(--jb-shadow);
+    transition: transform 0.18s cubic-bezier(0.34, 1.3, 0.64, 1);
+}
+
+.app-shell[data-app-id="job"] .jb-switch.is-on .jb-switch__dot { transform: translateX(18px); }
+
+/* ── 卡片 / 分区 ──────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-section { margin-bottom: 20px; }
+
+.app-shell[data-app-id="job"] .jb-section__head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 9px;
+}
+
+.app-shell[data-app-id="job"] .jb-section__title {
+    margin: 0;
+    font-size: 13.5px;
+    font-weight: 620;
+    letter-spacing: 0.2px;
+    color: var(--jb-text);
+}
+
+.app-shell[data-app-id="job"] .jb-section__sub {
+    font-size: 11.5px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-section__head > :last-child { margin-left: auto; }
+
+/* 毛玻璃卡：这个 App 的基本单元 */
+.app-shell[data-app-id="job"] .jb-card {
+    border: 1px solid var(--jb-line);
+    border-radius: 15px;
+    background: var(--jb-glass);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 1px 2px var(--jb-shadow);
+}
+
+.app-shell[data-app-id="job"] .jb-card--solid {
+    background: var(--jb-card);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+.app-shell[data-app-id="job"] .jb-card--pad { padding: 14px 15px; }
+
+.app-shell[data-app-id="job"] button.jb-card {
+    display: block;
+    width: 100%;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.12s ease;
+}
+
+.app-shell[data-app-id="job"] button.jb-card:active { transform: scale(0.99); }
+
+/* ── 一行「标签 → 值」 ────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-kv {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--jb-line-soft);
+}
+
+.app-shell[data-app-id="job"] .jb-kv:last-child { border-bottom: 0; }
+
+.app-shell[data-app-id="job"] .jb-kv__k {
+    flex: 0 0 auto;
+    font-size: 12.5px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-kv__v {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    color: var(--jb-text);
+    text-align: right;
+    word-break: break-word;
+}
+
+.app-shell[data-app-id="job"] .jb-kv.is-strong .jb-kv__v { font-weight: 600; }
+
+/* ── 金额 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-money {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 3px;
+    font-variant-numeric: tabular-nums;
+    color: var(--jb-pay);
+}
+
+.app-shell[data-app-id="job"] .jb-money__num { font-size: 16px; font-weight: 640; }
+.app-shell[data-app-id="job"] .jb-money__unit { font-size: 11px; color: var(--jb-text-3); }
+.app-shell[data-app-id="job"] .jb-money--sm .jb-money__num { font-size: 13.5px; font-weight: 600; }
+.app-shell[data-app-id="job"] .jb-money--lg .jb-money__num { font-size: 24px; font-weight: 660; }
+.app-shell[data-app-id="job"] .jb-money--in { color: var(--jb-income); }
+.app-shell[data-app-id="job"] .jb-money--out { color: var(--jb-expense); }
+.app-shell[data-app-id="job"] .jb-money--coin { color: var(--jb-coin); }
+
+/* ── 空状态 ───────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 38px 20px;
+    text-align: center;
+}
+
+.app-shell[data-app-id="job"] .jb-empty__mark {
+    display: inline-flex;
+    color: var(--jb-text-3);
+    opacity: 0.6;
+}
+
+.app-shell[data-app-id="job"] .jb-empty__title {
+    margin: 0;
+    font-size: 13.5px;
+    font-weight: 560;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-empty__desc {
+    margin: 0;
+    max-width: 260px;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-empty__slot { margin-top: 6px; }
+
+/* ── 骨架 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="job"] .jb-skeleton__item {
+    height: 78px;
+    border-radius: 15px;
+    background: var(--jb-skeleton);
+    position: relative;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="job"] .jb-skeleton--line .jb-skeleton__item { height: 15px; border-radius: 7px; }
+
+.app-shell[data-app-id="job"] .jb-skeleton__item::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--jb-skeleton-shine);
+    opacity: 0;
+    animation: jbShine 1.4s ease-in-out infinite;
+}
+
+.app-shell[data-app-id="job"] .jb-skeleton__item:nth-child(2)::after { animation-delay: 0.12s; }
+.app-shell[data-app-id="job"] .jb-skeleton__item:nth-child(3)::after { animation-delay: 0.24s; }
+.app-shell[data-app-id="job"] .jb-skeleton__item:nth-child(4)::after { animation-delay: 0.36s; }
+.app-shell[data-app-id="job"] .jb-skeleton__item:nth-child(5)::after { animation-delay: 0.48s; }
+
+@keyframes jbShine {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 0.55; }
+}
+
+/* ── 加载动画 ─────────────────────────────────────────────────────
+   详情 / HR / 小剧场生成期间**不用骨架屏**：那时候连有几条内容都不知道，
+   画一堆假条目再整个换掉，跳变比等待更难受。
+   这个动画要能表达「过了多久」—— 灯塔的光一圈圈扫（一圈 1.6 秒，
+   用户能数圈），文案每 2.4 秒换一句，超过 12 秒承认「有点慢」。 */
+
+.app-shell[data-app-id="job"] .jb-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    padding: 46px 20px;
+    text-align: center;
+}
+
+.app-shell[data-app-id="job"] .jb-loading__beam {
+    position: relative;
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    border: 1px solid var(--jb-line);
+    display: grid;
+    place-items: center;
+    color: var(--jb-accent);
+}
+
+.app-shell[data-app-id="job"] .jb-loading__beam::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    border-top-color: var(--jb-accent);
+    animation: jbSpin 1.6s linear infinite;
+}
+
+.app-shell[data-app-id="job"] .jb-loading__line {
+    margin: 0;
+    font-size: 13px;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-loading__slow {
+    margin: 0;
+    font-size: 11.5px;
+    color: var(--jb-text-3);
+}
+
+/* ── 错误条 ───────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-error {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--jb-danger);
+    border-radius: 11px;
+    color: var(--jb-danger);
+    font-size: 12.5px;
+    line-height: 1.6;
+}
+
+.app-shell[data-app-id="job"] .jb-error__close {
+    margin-left: auto;
+    border: 0;
+    background: none;
+    padding: 0;
+    color: inherit;
+    cursor: pointer;
+}
+
+/* ── 分段选择 ─────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-seg {
+    display: flex;
+    gap: 3px;
+    padding: 3px;
+    border: 1px solid var(--jb-line);
+    border-radius: 11px;
+    background: var(--jb-surface-2);
+}
+
+.app-shell[data-app-id="job"] .jb-seg__btn {
+    flex: 1;
+    padding: 7px 6px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--jb-text-2);
+    font: inherit;
+    font-size: 12.5px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.app-shell[data-app-id="job"] .jb-seg__btn.is-on {
+    background: var(--jb-surface);
+    color: var(--jb-text);
+    font-weight: 560;
+    box-shadow: 0 1px 2px var(--jb-shadow);
+}
+
+/* 灯塔 · 弹层
+ *
+ * 自己的一套，不用 AcModal —— 那套是动森风 squircle + 右上角凹陷叉，
+ * 和这里的调子不搭。这里是从底部升起、圆角只在上面两个角、点遮罩关闭、没有叉。
+ *
+ * ⚠️ 高度上限用 `100%` 而不是 `80vh`。vh 是**浏览器视口**，
+ *    而这是个手机模拟器，弹层活在 `.app-shell` 里 ——
+ *    桌面上 80vh 往往比手机屏还高，弹层会顶出屏幕。
+ */
+
+.app-shell[data-app-id="job"] .jb-sheet-mask {
+    position: absolute;
+    inset: 0;
+    z-index: 80;
+    display: flex;
+    align-items: flex-end;
+    background: var(--jb-overlay);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    animation: jbFade 0.18s ease;
+}
+
+@keyframes jbFade { from { opacity: 0; } }
+
+.app-shell[data-app-id="job"] .jb-sheet {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-height: 100%;
+    padding: 0 18px calc(16px + var(--app-safe-bottom, 0px));
+    border-radius: 20px 20px 0 0;
+    border-top: 1px solid var(--jb-glass-line);
+    background: var(--jb-glass-strong);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    animation: jbRise 0.24s cubic-bezier(0.22, 0.9, 0.3, 1);
+}
+
+@keyframes jbRise { from { transform: translateY(14px); opacity: 0.6; } }
+
+.app-shell[data-app-id="job"] .jb-sheet--sm { max-height: 46%; }
+.app-shell[data-app-id="job"] .jb-sheet--md { max-height: 66%; }
+.app-shell[data-app-id="job"] .jb-sheet--lg { max-height: 86%; }
+.app-shell[data-app-id="job"] .jb-sheet--full { max-height: 100%; height: 100%; }
+
+.app-shell[data-app-id="job"] .jb-sheet__grip {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 4px;
+    margin: 8px auto 4px;
+    border-radius: 2px;
+    background: var(--jb-line-strong);
+}
+
+.app-shell[data-app-id="job"] .jb-sheet__head {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 6px 0 10px;
+}
+
+.app-shell[data-app-id="job"] .jb-sheet__title {
+    margin: 0;
+    font-size: 15.5px;
+    font-weight: 620;
+    color: var(--jb-text);
+}
+
+.app-shell[data-app-id="job"] .jb-sheet__desc {
+    margin: 3px 0 0;
+    font-size: 11.5px;
+    line-height: 1.6;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-sheet__head > :last-child { margin-left: auto; }
+
+.app-shell[data-app-id="job"] .jb-sheet__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    touch-action: pan-y;
+    padding-bottom: 6px;
+}
+
+.app-shell[data-app-id="job"] .jb-sheet__foot {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid var(--jb-line-soft);
+}
+
+/* 「选人」网格 —— 同事 / 敌对 / 分享给谁都用它 */
+.app-shell[data-app-id="job"] .jb-picks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+.app-shell[data-app-id="job"] .jb-pick {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid var(--jb-line);
+    border-radius: 13px;
+    background: var(--jb-surface);
+    color: var(--jb-text-2);
+    font: inherit;
+    font-size: 12.5px;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.app-shell[data-app-id="job"] .jb-pick.is-on {
+    background: var(--jb-primary-soft);
+    border-color: var(--jb-primary);
+    color: var(--jb-primary-strong);
+    font-weight: 560;
+}
+
+.app-shell[data-app-id="job"] .jb-pick.is-rival {
+    background: var(--jb-accent-soft);
+    border-color: var(--jb-accent);
+    color: var(--jb-accent);
+    font-weight: 560;
+}
+
+.app-shell[data-app-id="job"] .jb-pick__role {
+    font-size: 10.5px;
+    color: var(--jb-text-3);
+}
+
+/* 灯塔 · 首次配置 */
+
+.app-shell[data-app-id="job"] .jb-ob {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-shell[data-app-id="job"] .jb-ob__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    touch-action: pan-y;
+    padding: 22px 20px 16px;
+}
+
+.app-shell[data-app-id="job"] .jb-ob__kicker {
+    margin: 0 0 4px;
+    font-size: 11.5px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--jb-accent);
+}
+
+.app-shell[data-app-id="job"] .jb-ob__title {
+    margin: 0 0 10px;
+    font-size: 25px;
+    font-weight: 660;
+    line-height: 1.35;
+    letter-spacing: 0.2px;
+    color: var(--jb-text);
+}
+
+.app-shell[data-app-id="job"] .jb-ob__lead {
+    margin: 0 0 18px;
+    font-size: 13.5px;
+    line-height: 1.8;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-ob__list {
+    margin: 0 0 18px;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+}
+
+.app-shell[data-app-id="job"] .jb-ob__list li {
+    position: relative;
+    padding-left: 15px;
+    font-size: 13px;
+    line-height: 1.75;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-ob__list li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 9px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--jb-accent);
+}
+
+.app-shell[data-app-id="job"] .jb-ob__list b { color: var(--jb-text); font-weight: 600; }
+
+.app-shell[data-app-id="job"] .jb-ob__note {
+    margin: 0;
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-ob__blank {
+    padding: 14px;
+    border: 1px dashed var(--jb-line-strong);
+    border-radius: 12px;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-ob__picks {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="job"] .jb-ob__pick {
+    display: block;
+    width: 100%;
+    padding: 11px 13px;
+    border: 1px solid var(--jb-line);
+    border-radius: 13px;
+    background: var(--jb-surface);
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.app-shell[data-app-id="job"] .jb-ob__pick.is-on {
+    border-color: var(--jb-primary);
+    background: var(--jb-primary-soft);
+}
+
+.app-shell[data-app-id="job"] .jb-ob__pick b {
+    display: block;
+    font-size: 13px;
+    font-weight: 580;
+    color: var(--jb-text);
+}
+
+.app-shell[data-app-id="job"] .jb-ob__pick span {
+    display: block;
+    margin-top: 2px;
+    font-size: 11.5px;
+    line-height: 1.55;
+    color: var(--jb-text-3);
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.app-shell[data-app-id="job"] .jb-ob__failed {
+    margin-top: 14px;
+    padding: 11px 13px;
+    border: 1px solid var(--jb-danger);
+    border-radius: 12px;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--jb-danger);
+}
+
+.app-shell[data-app-id="job"] .jb-ob__foot {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px calc(14px + var(--app-safe-bottom, 0px));
+    border-top: 1px solid var(--jb-line-soft);
+    background: var(--jb-glass-strong);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+}
+
+/* 灯塔 · 招聘板与职位卡 */
+
+.app-shell[data-app-id="job"] .jb-feed__banner {
+    margin-bottom: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--jb-accent);
+    border-radius: 12px;
+    background: var(--jb-accent-soft);
+    color: var(--jb-accent);
+    font-size: 12px;
+    line-height: 1.65;
+}
+
+.app-shell[data-app-id="job"] .jb-feed__cats { margin-bottom: 14px; }
+
+.app-shell[data-app-id="job"] .jb-feed__list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* ── 职位卡 ────────────────────────────────────────────────────
+   不留图位：职位图 AI 生成不出来，灰色占位符会让整个列表看着像坏了。
+   识别度交给左边那条 3px 竖线 + 排版。 */
+
+.app-shell[data-app-id="job"] .jb-job {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    border: 1px solid var(--jb-line);
+    border-left: 3px solid var(--jb-line-strong);
+    border-radius: 14px;
+    background: var(--jb-glass);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 1px 2px var(--jb-shadow);
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="job"] .jb-job.is-special { border-left-color: var(--jb-accent); }
+.app-shell[data-app-id="job"] .jb-job.is-saved { border-left-color: var(--jb-primary); }
+
+.app-shell[data-app-id="job"] .jb-job__main {
+    flex: 1;
+    min-width: 0;
+    padding: 13px 6px 12px 14px;
+    border: 0;
+    background: none;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="job"] .jb-job__main:active { background: var(--jb-card-hover); }
+
+.app-shell[data-app-id="job"] .jb-job__head {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 3px;
+}
+
+.app-shell[data-app-id="job"] .jb-job__title {
+    margin: 0;
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--jb-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="job"] .jb-job__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 6px;
+    font-size: 11.5px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-job__meta span + span::before {
+    content: '·';
+    margin-right: 8px;
+    color: var(--jb-line-strong);
+}
+
+.app-shell[data-app-id="job"] .jb-job__blurb {
+    margin: 0 0 9px;
+    font-size: 12.5px;
+    line-height: 1.65;
+    color: var(--jb-text-2);
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.app-shell[data-app-id="job"] .jb-job__foot {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.app-shell[data-app-id="job"] .jb-job__pay {
+    font-size: 13px;
+    font-weight: 620;
+    color: var(--jb-pay);
+    font-variant-numeric: tabular-nums;
+    margin-right: 2px;
+}
+
+.app-shell[data-app-id="job"] .jb-job__pay i {
+    font-style: normal;
+    font-size: 10.5px;
+    font-weight: 400;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-job__save {
+    flex: 0 0 auto;
+    align-self: flex-start;
+    margin: 9px 8px 0 0;
+    width: 30px;
+    height: 30px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-job__save.is-on { color: var(--jb-primary); }
+
+/* ── 换一批 ─────────────────────────────────────────────────────
+   说明必须**单独一行**放在按钮下面。和按钮并排的话它只剩半屏宽，
+   折成两行还被挤扁 —— 而它是这个有代价的操作唯一的预告。 */
+
+.app-shell[data-app-id="job"] .jb-feed__more { margin-top: 16px; }
+
+.app-shell[data-app-id="job"] .jb-feed__more-note {
+    margin: 8px 0 0;
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: var(--jb-text-3);
+    text-align: center;
+}
+
+/* 灯塔 · 职位详情 */
+
+.app-shell[data-app-id="job"] .jb-detail__hero { margin-bottom: 18px; }
+
+.app-shell[data-app-id="job"] .jb-detail__hero-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 5px;
+}
+
+.app-shell[data-app-id="job"] .jb-detail__title {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 650;
+    line-height: 1.35;
+    color: var(--jb-text);
+}
+
+.app-shell[data-app-id="job"] .jb-detail__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 10px;
+    font-size: 11.5px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-detail__meta span + span::before {
+    content: '·';
+    margin-right: 8px;
+    color: var(--jb-line-strong);
+}
+
+.app-shell[data-app-id="job"] .jb-detail__pay {
+    margin: 0 0 10px;
+    font-size: 17px;
+    font-weight: 640;
+    color: var(--jb-pay);
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="job"] .jb-detail__blurb {
+    margin: 0 0 6px;
+    font-size: 13px;
+    line-height: 1.75;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-detail__ask {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-detail__tags { margin-top: 10px; }
+
+/* 正文 */
+
+.app-shell[data-app-id="job"] .jb-prose p {
+    margin: 0 0 9px;
+    font-size: 13px;
+    line-height: 1.85;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-prose p:last-child { margin-bottom: 0; }
+
+.app-shell[data-app-id="job"] .jb-detail__ul {
+    margin: 0;
+    padding: 14px 15px 14px 30px;
+    list-style: none;
+}
+
+.app-shell[data-app-id="job"] .jb-detail__ul li {
+    position: relative;
+    margin-bottom: 8px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-detail__ul li:last-child { margin-bottom: 0; }
+
+.app-shell[data-app-id="job"] .jb-detail__ul li::before {
+    content: '';
+    position: absolute;
+    left: -15px;
+    top: 9px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--jb-primary);
+}
+
+.app-shell[data-app-id="job"] .jb-detail__steps {
+    margin: 0;
+    padding: 14px 15px 14px 32px;
+    counter-reset: jbstep;
+    list-style: none;
+}
+
+.app-shell[data-app-id="job"] .jb-detail__steps li {
+    position: relative;
+    margin-bottom: 9px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--jb-text-2);
+    counter-increment: jbstep;
+}
+
+.app-shell[data-app-id="job"] .jb-detail__steps li:last-child { margin-bottom: 0; }
+
+.app-shell[data-app-id="job"] .jb-detail__steps li::before {
+    content: counter(jbstep);
+    position: absolute;
+    left: -20px;
+    top: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--jb-primary-soft);
+    color: var(--jb-primary-strong);
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 16px;
+    text-align: center;
+}
+
+/* 听人说 */
+
+.app-shell[data-app-id="job"] .jb-detail__voices {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="job"] .jb-voice__who {
+    margin: 0 0 4px;
+    font-size: 12px;
+    font-weight: 580;
+    color: var(--jb-text);
+}
+
+.app-shell[data-app-id="job"] .jb-voice__who i {
+    margin-left: 6px;
+    font-style: normal;
+    font-weight: 400;
+    font-size: 11px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-voice__text {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-detail__reroll {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 12px;
+}
+
+/* 底部行动条 */
+
+.app-shell[data-app-id="job"] .jb-detail__cta {
+    margin-top: 8px;
+    padding-top: 14px;
+    border-top: 1px solid var(--jb-line-soft);
+}
+
+.app-shell[data-app-id="job"] .jb-detail__cta-note {
+    margin: 8px 0 0;
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: var(--jb-text-3);
+    text-align: center;
+}
+
+.app-shell[data-app-id="job"] .jb-detail__cta-note:first-child {
+    margin: 0 0 10px;
+    color: var(--jb-accent);
+}
+
+/* 灯塔 · 面试列表与对话 */
+
+/* ── 列表 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-talks {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="job"] .jb-talkitem {
+    display: block;
+    width: 100%;
+    padding: 13px 14px;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="job"] .jb-talkitem:active { background: var(--jb-card-hover); }
+
+.app-shell[data-app-id="job"] .jb-talkitem__head {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 3px;
+}
+
+.app-shell[data-app-id="job"] .jb-talkitem__name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--jb-text);
+}
+
+.app-shell[data-app-id="job"] .jb-talkitem__title {
+    font-size: 11.5px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-talkitem__head > :last-child { margin-left: auto; }
+
+.app-shell[data-app-id="job"] .jb-talkitem__job {
+    margin: 0 0 6px;
+    font-size: 12px;
+    color: var(--jb-primary-strong);
+}
+
+.app-shell[data-app-id="job"] .jb-talkitem__job i {
+    font-style: normal;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-talkitem__last {
+    margin: 0 0 4px;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--jb-text-2);
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.app-shell[data-app-id="job"] .jb-talkitem__when {
+    margin: 0;
+    font-size: 10.5px;
+    color: var(--jb-text-3);
+}
+
+/* ── 对话 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-who__name {
+    margin: 0 0 8px;
+    font-size: 15px;
+    font-weight: 620;
+    color: var(--jb-text);
+}
+
+.app-shell[data-app-id="job"] .jb-who__name i {
+    margin-left: 7px;
+    font-style: normal;
+    font-size: 11.5px;
+    font-weight: 400;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-talk__job {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 9px;
+    margin-bottom: 14px;
+    font-size: 12px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-talk__job b {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--jb-text);
+}
+
+.app-shell[data-app-id="job"] .jb-talk__flow {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-bottom: 8px;
+}
+
+.app-shell[data-app-id="job"] .jb-bubble {
+    position: relative;
+    max-width: 80%;
+    padding: 9px 13px;
+    border-radius: 15px;
+}
+
+.app-shell[data-app-id="job"] .jb-bubble--hr {
+    align-self: flex-start;
+    border: 1px solid var(--jb-line);
+    border-bottom-left-radius: 5px;
+    background: var(--jb-bubble-hr);
+    color: var(--jb-bubble-hr-text);
+}
+
+.app-shell[data-app-id="job"] .jb-bubble--user {
+    align-self: flex-end;
+    border-bottom-right-radius: 5px;
+    background: var(--jb-bubble-me);
+    color: var(--jb-bubble-me-text);
+}
+
+/* 系统提示（比如「你已经三份工作了」）不是谁说的话，
+   所以既不靠左也不靠右，也没有气泡形状 */
+.app-shell[data-app-id="job"] .jb-bubble--system {
+    align-self: center;
+    max-width: 92%;
+    padding: 7px 12px;
+    border: 1px dashed var(--jb-line-strong);
+    border-radius: 11px;
+    background: transparent;
+    color: var(--jb-text-3);
+    font-size: 11.5px;
+    text-align: center;
+}
+
+.app-shell[data-app-id="job"] .jb-bubble__text {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.app-shell[data-app-id="job"] .jb-bubble__time {
+    display: block;
+    margin-top: 3px;
+    font-size: 10px;
+    opacity: 0.55;
+}
+
+.app-shell[data-app-id="job"] .jb-bubble--typing {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 13px;
+}
+
+.app-shell[data-app-id="job"] .jb-bubble__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--jb-text-3);
+    animation: jbDot 1.1s ease-in-out infinite;
+}
+
+.app-shell[data-app-id="job"] .jb-bubble__dot:nth-child(2) { animation-delay: 0.16s; }
+.app-shell[data-app-id="job"] .jb-bubble__dot:nth-child(3) { animation-delay: 0.32s; }
+
+@keyframes jbDot {
+    0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+    30% { opacity: 1; transform: translateY(-3px); }
+}
+
+/* 结果：长在消息流里，不是弹窗 —— 弹窗会盖住刚说完那句话，
+   而那句话恰恰是「为什么」 */
+.app-shell[data-app-id="job"] .jb-talk__verdict {
+    align-self: stretch;
+    margin-top: 6px;
+    padding: 14px;
+    border: 1px solid var(--jb-line);
+    border-radius: 14px;
+    text-align: center;
+}
+
+.app-shell[data-app-id="job"] .jb-talk__verdict.is-ok {
+    border-color: var(--jb-success);
+    color: var(--jb-success);
+}
+
+.app-shell[data-app-id="job"] .jb-talk__verdict.is-bad {
+    border-color: var(--jb-danger);
+    color: var(--jb-danger);
+}
+
+.app-shell[data-app-id="job"] .jb-talk__verdict b {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 14.5px;
+    font-weight: 640;
+}
+
+.app-shell[data-app-id="job"] .jb-talk__verdict p {
+    margin: 0 0 10px;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--jb-text-2);
+}
+
+/* 输入区。它坐在 panel 的滚动区里最下面，
+   ⚠️ 不要再加一次 --app-safe-bottom —— 底栏已经让过一次了 */
+.app-shell[data-app-id="job"] .jb-talk__input {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--jb-line-soft);
+}
+
+.app-shell[data-app-id="job"] .jb-talk__input .jb-textarea { flex: 1; min-height: 46px; }
+
+.app-shell[data-app-id="job"] .jb-talk__input--done { display: block; }
+
+/* 灯塔 · 在职列表 + 工作详情 + 日历 */
+
+/* ── 在职列表 ─────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-work__today {
+    margin: 0 0 12px;
+    font-size: 12px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-post {
+    display: block;
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 14px 15px;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="job"] .jb-post:active { background: var(--jb-card-hover); }
+
+.app-shell[data-app-id="job"] .jb-post__head {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 3px;
+}
+
+.app-shell[data-app-id="job"] .jb-post__title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 620;
+    color: var(--jb-text);
+}
+
+.app-shell[data-app-id="job"] .jb-post__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 9px;
+    font-size: 11.5px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-post__meta span + span::before {
+    content: '·';
+    margin-right: 8px;
+    color: var(--jb-line-strong);
+}
+
+.app-shell[data-app-id="job"] .jb-post__rows {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-bottom: 10px;
+}
+
+.app-shell[data-app-id="job"] .jb-post__row {
+    font-size: 12.5px;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-post__row--pay { color: var(--jb-coin); }
+
+.app-shell[data-app-id="job"] .jb-post__foot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 9px;
+    border-top: 1px solid var(--jb-line-soft);
+}
+
+.app-shell[data-app-id="job"] .jb-post__state {
+    font-size: 12px;
+    font-weight: 560;
+}
+
+.app-shell[data-app-id="job"] .jb-post__state.is-ok { color: var(--jb-success); }
+.app-shell[data-app-id="job"] .jb-post__state.is-done { color: var(--jb-text-3); }
+.app-shell[data-app-id="job"] .jb-post__state.is-rest { color: var(--jb-text-3); }
+
+.app-shell[data-app-id="job"] .jb-work__empty-btns {
+    display: flex;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="job"] .jb-work__add { margin-top: 6px; }
+
+/* ── 工作详情 ─────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-post__tabs { margin-bottom: 16px; }
+
+.app-shell[data-app-id="job"] .jb-sum { margin-bottom: 18px; }
+
+.app-shell[data-app-id="job"] .jb-sum__row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.app-shell[data-app-id="job"] .jb-sum__right { text-align: right; }
+
+.app-shell[data-app-id="job"] .jb-sum__k {
+    margin: 0 0 3px;
+    font-size: 11.5px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-sum__pay {
+    margin: 11px 0 0;
+    padding-top: 10px;
+    border-top: 1px solid var(--jb-line-soft);
+    font-size: 12.5px;
+    color: var(--jb-coin);
+}
+
+.app-shell[data-app-id="job"] .jb-sum__note {
+    margin: 5px 0 0;
+    font-size: 11.5px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-today__day {
+    margin: 0 0 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--jb-text);
+}
+
+.app-shell[data-app-id="job"] .jb-today__done {
+    margin: 0 0 10px;
+    font-size: 13px;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-today__done b {
+    margin-left: 6px;
+    color: var(--jb-income);
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="job"] .jb-today__blocked {
+    margin: 0 0 4px;
+    font-size: 13px;
+    color: var(--jb-text-3);
+}
+
+/* 记录条目 */
+
+.app-shell[data-app-id="job"] .jb-logitem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    margin-bottom: 8px;
+    padding: 11px 13px;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="job"] .jb-logitem:active { background: var(--jb-card-hover); }
+
+.app-shell[data-app-id="job"] .jb-logitem__day {
+    flex: 0 0 auto;
+    min-width: 38px;
+    font-size: 11.5px;
+    color: var(--jb-text-3);
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="job"] .jb-logitem__title {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    color: var(--jb-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="job"] .jb-logitem__lv {
+    flex: 0 0 auto;
+    font-size: 11px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-logitem__pay {
+    flex: 0 0 auto;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--jb-income);
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="job"] .jb-digests { display: flex; flex-direction: column; gap: 9px; }
+
+.app-shell[data-app-id="job"] .jb-digest {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.75;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-digest b {
+    margin-right: 7px;
+    color: var(--jb-text-3);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+}
+
+/* 薪资预览 */
+
+.app-shell[data-app-id="job"] .jb-paypreview {
+    display: flex;
+    gap: 6px;
+    margin: 10px 0 0;
+}
+
+.app-shell[data-app-id="job"] .jb-paypreview__cell {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 7px 2px;
+    border: 1px solid var(--jb-line);
+    border-radius: 9px;
+    background: var(--jb-surface-2);
+}
+
+.app-shell[data-app-id="job"] .jb-paypreview__cell i {
+    font-style: normal;
+    font-size: 10px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-paypreview__cell b {
+    font-size: 13px;
+    color: var(--jb-pay);
+    font-variant-numeric: tabular-nums;
+}
+
+/* 周几选择 */
+
+.app-shell[data-app-id="job"] .jb-weekpick {
+    display: flex;
+    gap: 5px;
+    margin-top: 10px;
+}
+
+.app-shell[data-app-id="job"] .jb-weekpick__btn {
+    flex: 1;
+    padding: 9px 0;
+    border: 1px solid var(--jb-line);
+    border-radius: 10px;
+    background: var(--jb-surface);
+    color: var(--jb-text-3);
+    font: inherit;
+    font-size: 12.5px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.app-shell[data-app-id="job"] .jb-weekpick__btn.is-on {
+    background: var(--jb-day-work);
+    border-color: var(--jb-primary);
+    color: var(--jb-day-work-text);
+    font-weight: 600;
+}
+
+.app-shell[data-app-id="job"] .jb-prompt__btns,
+.app-shell[data-app-id="job"] .jb-post__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.app-shell[data-app-id="job"] .jb-prompt__btns > :last-child { margin-left: auto; }
+
+.app-shell[data-app-id="job"] .jb-post__actions {
+    flex-direction: column;
+    margin-top: 20px;
+}
+
+/* ── 日历 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-cal {
+    margin-bottom: 16px;
+    padding: 12px;
+    border: 1px solid var(--jb-line);
+    border-radius: 15px;
+    background: var(--jb-glass);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+
+.app-shell[data-app-id="job"] .jb-cal__bar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.app-shell[data-app-id="job"] .jb-cal__month {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--jb-text);
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="job"] .jb-cal__stats {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-cal__week,
+.app-shell[data-app-id="job"] .jb-cal__grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+
+.app-shell[data-app-id="job"] .jb-cal__week {
+    margin-bottom: 5px;
+    font-size: 10.5px;
+    color: var(--jb-text-3);
+    text-align: center;
+}
+
+.app-shell[data-app-id="job"] .jb-cal__cell {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    display: grid;
+    place-items: center;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    background: var(--jb-day-rest);
+    color: var(--jb-day-rest-text);
+    font: inherit;
+    font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    transition: transform 0.12s ease;
+}
+
+.app-shell[data-app-id="job"] .jb-cal__cell:active:not(:disabled) { transform: scale(0.94); }
+
+.app-shell[data-app-id="job"] .jb-cal__cell.is-blank {
+    background: transparent;
+    cursor: default;
+}
+
+.app-shell[data-app-id="job"] .jb-cal__cell.is-work {
+    background: var(--jb-day-work);
+    color: var(--jb-day-work-text);
+    font-weight: 560;
+}
+
+/* 请假：在「按周排」下才有意义 —— 本来该上班，被划掉了 */
+.app-shell[data-app-id="job"] .jb-cal__cell.is-off .jb-cal__num {
+    text-decoration: line-through;
+    opacity: 0.7;
+}
+
+.app-shell[data-app-id="job"] .jb-cal__cell.is-future { opacity: 0.5; }
+
+.app-shell[data-app-id="job"] .jb-cal__cell.is-today {
+    border-color: var(--jb-day-today);
+}
+
+.app-shell[data-app-id="job"] .jb-cal__cell.is-picked {
+    border-color: var(--jb-primary);
+    box-shadow: 0 0 0 2px var(--jb-input-focus);
+}
+
+.app-shell[data-app-id="job"] .jb-cal__dot {
+    position: absolute;
+    right: 4px;
+    bottom: 4px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--jb-day-done);
+}
+
+.app-shell[data-app-id="job"] .jb-cal__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 10px;
+    padding-top: 9px;
+    border-top: 1px solid var(--jb-line-soft);
+    font-size: 10.5px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-cal__legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.app-shell[data-app-id="job"] .jb-cal__legend-item::before {
+    content: '';
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    border: 1px solid transparent;
+}
+
+.app-shell[data-app-id="job"] .jb-cal__legend-item.is-work::before { background: var(--jb-day-work); }
+.app-shell[data-app-id="job"] .jb-cal__legend-item.is-rest::before { background: var(--jb-day-rest); border-color: var(--jb-line); }
+.app-shell[data-app-id="job"] .jb-cal__legend-item.is-played::before { background: var(--jb-day-done); border-radius: 50%; width: 7px; height: 7px; }
+.app-shell[data-app-id="job"] .jb-cal__legend-item.is-today::before { background: transparent; border-color: var(--jb-day-today); }
+
+/* 选中那天的操作盒 */
+
+.app-shell[data-app-id="job"] .jb-daybox__day {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--jb-text);
+}
+
+.app-shell[data-app-id="job"] .jb-daybox__done {
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    border-radius: 11px;
+    background: var(--jb-surface-2);
+}
+
+.app-shell[data-app-id="job"] .jb-daybox__done p {
+    margin: 0 0 8px;
+    font-size: 12.5px;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-daybox__btns {
+    display: flex;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="job"] .jb-daybox__btns > * { flex: 1; }
+
+/* 灯塔 · 小剧场 */
+
+.app-shell[data-app-id="job"] .jb-th__hero { margin-bottom: 18px; }
+
+.app-shell[data-app-id="job"] .jb-th__title {
+    margin: 0 0 5px;
+    font-size: 19px;
+    font-weight: 650;
+    line-height: 1.35;
+    color: var(--jb-text);
+}
+
+.app-shell[data-app-id="job"] .jb-th__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 10px;
+    font-size: 11.5px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-th__meta span + span::before {
+    content: '·';
+    margin-right: 8px;
+    color: var(--jb-line-strong);
+}
+
+.app-shell[data-app-id="job"] .jb-th__score {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--jb-line-soft);
+}
+
+.app-shell[data-app-id="job"] .jb-th__lv {
+    padding: 3px 10px;
+    border: 1px solid var(--jb-primary);
+    border-radius: 11px;
+    background: var(--jb-primary-soft);
+    color: var(--jb-primary-strong);
+    font-size: 12px;
+    font-weight: 580;
+}
+
+.app-shell[data-app-id="job"] .jb-th__nopay {
+    font-size: 11.5px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-th__note {
+    margin: 8px 0 0;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--jb-text-2);
+}
+
+/* 正文：每一场一块，旁白和台词的层次靠缩进和颜色拉开，不靠框 */
+
+.app-shell[data-app-id="job"] .jb-th__scene {
+    margin-bottom: 22px;
+    padding-left: 12px;
+    border-left: 2px solid var(--jb-line);
+}
+
+.app-shell[data-app-id="job"] .jb-th__place {
+    margin: 0 0 9px;
+    font-size: 11.5px;
+    letter-spacing: 1.5px;
+    color: var(--jb-accent);
+}
+
+.app-shell[data-app-id="job"] .jb-th__narration {
+    margin: 0 0 13px;
+    font-size: 12.5px;
+    line-height: 1.9;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-th__line { margin-bottom: 12px; }
+
+.app-shell[data-app-id="job"] .jb-th__who {
+    display: block;
+    margin-bottom: 3px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--jb-primary-strong);
+}
+
+.app-shell[data-app-id="job"] .jb-th__text {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.85;
+    color: var(--jb-text);
+    white-space: pre-wrap;
+}
+
+.app-shell[data-app-id="job"] .jb-th__closing {
+    margin: 0 0 20px;
+    padding: 13px 15px;
+    border-radius: 13px;
+    background: var(--jb-surface-2);
+    font-size: 13px;
+    line-height: 1.85;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-th__digest {
+    margin: 0 0 10px;
+    font-size: 12.5px;
+    line-height: 1.8;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-th__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--jb-line-soft);
+}
+
+/* 灯塔 · 我的 / 流水 / 提示词 / 配色 */
+
+/* ── 我的 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-wallet { margin-bottom: 14px; }
+
+.app-shell[data-app-id="job"] .jb-wallet__k {
+    margin: 0 0 2px;
+    font-size: 11.5px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-wallet__grid {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--jb-line-soft);
+}
+
+.app-shell[data-app-id="job"] .jb-wallet__cell {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.app-shell[data-app-id="job"] .jb-wallet__cell span {
+    font-size: 10.5px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-wallet__cell b {
+    font-size: 14px;
+    font-weight: 620;
+    color: var(--jb-text);
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="job"] .jb-wallet__note {
+    margin: 12px 0 0;
+    font-size: 11px;
+    line-height: 1.65;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-me__who { margin-bottom: 16px; }
+
+.app-shell[data-app-id="job"] .jb-me__entries {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="job"] .jb-entry {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 13px 14px;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="job"] .jb-entry:active { background: var(--jb-card-hover); }
+
+.app-shell[data-app-id="job"] .jb-entry__icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+    background: var(--jb-primary-soft);
+    color: var(--jb-primary-strong);
+}
+
+.app-shell[data-app-id="job"] .jb-entry__main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.app-shell[data-app-id="job"] .jb-entry__main b {
+    font-size: 13.5px;
+    font-weight: 580;
+    color: var(--jb-text);
+}
+
+.app-shell[data-app-id="job"] .jb-entry__main i {
+    font-style: normal;
+    font-size: 11.5px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-entry__go {
+    flex: 0 0 auto;
+    display: inline-flex;
+    color: var(--jb-text-3);
+}
+
+/* ── 流水 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-flow__sum {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.app-shell[data-app-id="job"] .jb-flow__sum span {
+    font-size: 12px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-flow__list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="job"] .jb-flowrow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 13px;
+}
+
+.app-shell[data-app-id="job"] .jb-flowrow__main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.app-shell[data-app-id="job"] .jb-flowrow__main b {
+    font-size: 12.5px;
+    font-weight: 540;
+    color: var(--jb-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="job"] .jb-flowrow__main i {
+    font-style: normal;
+    font-size: 10.5px;
+    color: var(--jb-text-3);
+}
+
+/* ── 提示词管理 ───────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-pm__stat {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 14px;
+    font-size: 11.5px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-pm__group { margin-bottom: 10px; }
+
+.app-shell[data-app-id="job"] .jb-pm__group-head {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    padding: 11px 13px;
+    border: 1px solid var(--jb-line);
+    border-radius: 13px;
+    background: var(--jb-surface);
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="job"] .jb-pm__group-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--jb-text);
+}
+
+.app-shell[data-app-id="job"] .jb-pm__group-desc {
+    flex: 1;
+    min-width: 0;
+    font-size: 11px;
+    color: var(--jb-text-3);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="job"] .jb-pm__group-count {
+    flex: 0 0 auto;
+    min-width: 20px;
+    padding: 1px 6px;
+    border-radius: 7px;
+    background: var(--jb-surface-2);
+    color: var(--jb-text-3);
+    font-size: 10.5px;
+    text-align: center;
+}
+
+.app-shell[data-app-id="job"] .jb-pm__cards {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+    padding-left: 10px;
+}
+
+.app-shell[data-app-id="job"] .jb-pmcard { padding: 13px 14px; }
+.app-shell[data-app-id="job"] .jb-pmcard.is-off { opacity: 0.52; }
+
+.app-shell[data-app-id="job"] .jb-pmcard__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 5px;
+}
+
+.app-shell[data-app-id="job"] .jb-pmcard__title {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--jb-text);
+}
+
+.app-shell[data-app-id="job"] .jb-pmcard__title i { font-style: normal; }
+
+.app-shell[data-app-id="job"] .jb-pmcard__desc {
+    margin: 0 0 4px;
+    font-size: 11.5px;
+    line-height: 1.65;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-pmcard__scenes {
+    margin: 0 0 9px;
+    font-size: 10.5px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-pmcard__body {
+    margin: 0 0 10px;
+    padding: 10px 12px;
+    max-height: 160px;
+    overflow-y: auto;
+    border-radius: 10px;
+    background: var(--jb-surface-2);
+    color: var(--jb-text-2);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    line-height: 1.75;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.app-shell[data-app-id="job"] .jb-pmcard__btns {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.app-shell[data-app-id="job"] .jb-pmcard__btns > :last-child { margin-left: auto; }
+
+.app-shell[data-app-id="job"] .jb-pm__preview-stat {
+    margin: 0 0 8px;
+    font-size: 11px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-pm__preview-body {
+    margin: 0;
+    padding: 12px;
+    max-height: 320px;
+    overflow-y: auto;
+    border-radius: 11px;
+    background: var(--jb-surface-2);
+    color: var(--jb-text-2);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10.5px;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* ── 配色 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-theme__picks {
+    display: flex;
+    gap: 9px;
+}
+
+.app-shell[data-app-id="job"] .jb-theme__pick {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 11px;
+    border: 1px solid var(--jb-line);
+    border-radius: 14px;
+    background: var(--jb-bg);
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+}
+
+.app-shell[data-app-id="job"] .jb-theme__pick.is-on {
+    border-color: var(--jb-primary);
+    box-shadow: 0 0 0 2px var(--jb-input-focus);
+}
+
+/* 小预览：三条色块，用的是那套主题自己的变量（按钮上挂了 data-jb-theme） */
+.app-shell[data-app-id="job"] .jb-theme__mini {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 26px;
+    margin-bottom: 3px;
+    padding: 5px;
+    border-radius: 8px;
+    background: var(--jb-surface);
+}
+
+.app-shell[data-app-id="job"] .jb-theme__bar {
+    width: 22px;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--jb-primary);
+}
+
+.app-shell[data-app-id="job"] .jb-theme__card {
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--jb-line);
+}
+
+.app-shell[data-app-id="job"] .jb-theme__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--jb-accent);
+}
+
+.app-shell[data-app-id="job"] .jb-theme__name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--jb-text);
+}
+
+.app-shell[data-app-id="job"] .jb-theme__desc {
+    font-size: 10.5px;
+    line-height: 1.5;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-swatch-group { margin-bottom: 8px; }
+
+.app-shell[data-app-id="job"] .jb-swatch-group__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 10px 13px;
+    border: 1px solid var(--jb-line);
+    border-radius: 12px;
+    background: var(--jb-surface);
+    text-align: left;
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 560;
+    color: var(--jb-text);
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="job"] .jb-swatch-group__count {
+    padding: 1px 7px;
+    border-radius: 7px;
+    background: var(--jb-surface-2);
+    color: var(--jb-text-3);
+    font-size: 10.5px;
+    font-weight: 400;
+}
+
+.app-shell[data-app-id="job"] .jb-swatch-group__body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+    padding-left: 8px;
+}
+
+.app-shell[data-app-id="job"] .jb-swatch {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="job"] .jb-swatch__chip {
+    position: relative;
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--jb-line-strong);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="job"] .jb-swatch__picker {
+    position: absolute;
+    inset: -4px;
+    width: calc(100% + 8px);
+    height: calc(100% + 8px);
+    padding: 0;
+    border: 0;
+    background: none;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="job"] .jb-swatch__main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.app-shell[data-app-id="job"] .jb-swatch__label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-swatch__changed {
+    padding: 0 6px;
+    border-radius: 6px;
+    background: var(--jb-accent-soft);
+    color: var(--jb-accent);
+    font-style: normal;
+    font-size: 10px;
+}
+
+.app-shell[data-app-id="job"] .jb-swatch__value {
+    width: 100%;
+    padding: 4px 8px;
+    border: 1px solid var(--jb-input-line);
+    border-radius: 8px;
+    background: var(--jb-input-bg);
+    color: var(--jb-text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    outline: none;
+}
+
+.app-shell[data-app-id="job"] .jb-swatch__token {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-swatch__reset {
+    flex: 0 0 auto;
+    padding: 4px 9px;
+    border: 1px solid var(--jb-line);
+    border-radius: 8px;
+    background: none;
+    color: var(--jb-text-3);
+    font: inherit;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="job"] .jb-batch__actions {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+}
+

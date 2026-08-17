@@ -11,25 +11,15 @@
  */
 
 import { escapeHtml } from '@/src/core/escape.js';
-import { getImageSrcByCode } from '../../setting/gallery/gallery-db.js';
 import { loadSnapshot as loadChatSnapshot } from '../../setting/world/sdk/chat-snapshot.js';
+import { resolveAiAvatar, resolveAiAvatarAsync } from '../aiMeta.js';
+import { SNAIL_EMPTY_SVG } from '../snail-icon.js';
 
 // 兜底联系人（SDK 完全空时）
-export const DEMO_CONTACTS = [
-    { id: 'ai-demo-1', name: '示例角色', type: 'ai', status: 'online', boundWorldId: '' },
-];
+// ★ v0.80:移除占位示例角色 — 真实联系人全部走 SDK,没数据就空。
+export const DEMO_CONTACTS = [];
 
-/**
- * 头像背景色（按 id 散列）
- */
-export function getAvatarColor(id) {
-    const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F8B500', '#6C5CE7', '#A29BFE'];
-    let index = 0;
-    for (let i = 0; i < id.length; i++) {
-        index += id.charCodeAt(i);
-    }
-    return colors[index % colors.length];
-}
+// ★ v0.71 头像背景色已统一到 aiMeta.resolveAiAvatar,删除本地 getAvatarColor 重复实现
 
 /**
  * 当前世界观下的 AI 人设列表（带头像 URL）
@@ -74,12 +64,9 @@ export async function getWorldAiPersons() {
         const currentMode = window.__pendingRecordMode || 'calendar';
 
         const personsWithAvatars = await Promise.all(allAiPersons.map(async (person) => {
+            // ★ v0.71 走 aiMeta 统一入口(支持 avatarCode 图床解码)
+            const av = await resolveAiAvatarAsync(person.id);
             const chatProfile = person.socialProfiles?.chat || {};
-            let avatarUrl = '';
-            if (chatProfile.avatarCode) {
-                try { avatarUrl = await getImageSrcByCode(chatProfile.avatarCode) || ''; } catch (_) {}
-            }
-            if (!avatarUrl && chatProfile.avatar) avatarUrl = chatProfile.avatar;
 
             // ★ v0.27 检查 user 字段下的两个 list
             const addedInMode = sdk.chatFriends?.has?.(defaultUser, person.id, currentMode) || false;
@@ -89,8 +76,8 @@ export async function getWorldAiPersons() {
             return {
                 id: person.id,
                 name: chatProfile.nickname || person.name || 'AI',
-                avatar: avatarUrl,
-                avatarBg: chatProfile.avatarBg || '',
+                avatar: av.url,
+                avatarBg: av.bg,
                 boundWorldId: person.boundWorldId || '',
                 boundWorldName: currentWorld.name || currentWorld.id,
                 status: 'online',
@@ -125,8 +112,10 @@ if (typeof window !== 'undefined') {
  *   - 都没加 → 正常
  */
 export function renderContactItem(contact) {
-    const avatarBg = contact.avatarBg || getAvatarColor(contact.id);
-    const statusDot = contact.status === 'online' ? '<div class="contact-online-dot"></div>' : '';
+    // ★ v0.71 头像背景:contact.avatarBg (实时) → resolveAiAvatar 默认
+    const avatarBg = contact.avatarBg || resolveAiAvatar(contact.id).bg;
+    // ★ 已删除:contact-online-dot(在线状态绿点),chat-app 不再展示
+    const statusDot = '';
     const avatarContent = contact.avatar
         ? `<img src="${escapeHtml(contact.avatar)}" alt="" class="contact-avatar-img">`
         : escapeHtml((contact.name || '?').charAt(0));
@@ -224,19 +213,16 @@ export async function renderNewChatPageAsync(app) {
             </div>
 
             <div class="new-chat-content">
-                <div class="new-chat-search">
-                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="11" cy="11" r="8"/>
-                        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                    </svg>
-                    <input type="text" id="newChatSearchInput" placeholder="搜索联系人" class="search-input" />
-                </div>
-
                 <button type="button" class="new-chat-create-group-btn" id="createGroupBtn"
                     data-app-action='{"action":"appMethod","appId":"chat","method":"openNewGroup"}'>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
-                    </svg>
+                    <span class="new-chat-create-group-btn__icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                            <circle cx="9" cy="7" r="4"/>
+                            <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                        </svg>
+                    </span>
                     <span>发起群聊</span>
                 </button>
 
@@ -278,7 +264,7 @@ export function renderNewChatPage(app) {
         contactsTitleText = '当前默认用户卡未绑定世界观';
         contactsListHtml = `
             <div class="new-chat-empty-state" data-app-action='${escapeHtml(gotoSettings)}' style="cursor: pointer;">
-                <div class="new-chat-empty-icon">🌐</div>
+                <div class="new-chat-empty-icon">${SNAIL_EMPTY_SVG}</div>
                 <div class="new-chat-empty-text">「${escapeHtml(snapWorld.name || snapWorld.id)}」下还没有 AI 人设</div>
                 <div class="new-chat-empty-hint">
                     前往「设置 → AI 人设」创建新 AI,并将其绑定到「${escapeHtml(snapWorld.name || snapWorld.id)}」。<br/>
@@ -318,19 +304,16 @@ export function renderNewChatPage(app) {
                 ${chipHtml}
             </div>
             <div class="new-chat-content">
-                <div class="new-chat-search">
-                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="11" cy="11" r="8"/>
-                        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                    </svg>
-                    <input type="text" id="newChatSearchInput" placeholder="搜索联系人" class="search-input" />
-                </div>
-
                 <button type="button" class="new-chat-create-group-btn" id="createGroupBtn"
                     data-app-action='{"action":"appMethod","appId":"chat","method":"openNewGroup"}'>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
-                    </svg>
+                    <span class="new-chat-create-group-btn__icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                            <circle cx="9" cy="7" r="4"/>
+                            <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                        </svg>
+                    </span>
                     <span>发起群聊</span>
                 </button>
 

@@ -54,10 +54,6 @@ import {
     REAL_CITIES,
     TIMELINE_CATEGORIES,
 } from './defaults.js';
-import {
-    ACCESS_FREQUENCIES,
-} from './geo/geo-constants.js';
-
 // ============================================
 // 共享工具（被 reader / renderer 复用）
 // ============================================
@@ -207,7 +203,12 @@ export const PLACE_FORM_SCHEMA = {
             title: '基本信息',
             fields: [
                 { key: 'name', label: '名称', type: 'text', placeholder: '地点名称（如：A城）', labelPosition: 'top' },
-                { key: 'icon', label: '图标', type: 'text', placeholder: '如：🏰', labelPosition: 'top' },
+                { key: 'icon', label: '地标', type: 'landmark-icon', labelPosition: 'top' },
+                { type: 'group', label: '地标配色', inline: true, fields: [
+                    { key: 'pinBg', label: '底色', type: 'color', defaultValue: '#E8F1FF', inline: true, inlineLayout: true },
+                    // 描边色与图标色是同一个值（规范：SVG 色 = 描边色 ≠ 底色）
+                    { key: 'pinStroke', label: '图标与描边', type: 'color', defaultValue: '#0A84FF', inline: true, inlineLayout: true },
+                ]},
                 { key: 'summary', label: '描述', type: 'textarea', rows: 3, placeholder: '简要描述这个地点...', labelPosition: 'top' },
             ]
         },
@@ -274,7 +275,11 @@ export const LOCATION_FORM_SCHEMA = {
             title: '基本信息',
             fields: [
                 { key: 'name', label: '名称', type: 'text', placeholder: '场所名称', labelPosition: 'top' },
-                { key: 'icon', label: '图标', type: 'text', placeholder: '如：☕', labelPosition: 'top' },
+                { key: 'icon', label: '地标', type: 'landmark-icon', labelPosition: 'top' },
+                { type: 'group', label: '地标配色', inline: true, fields: [
+                    { key: 'pinBg', label: '底色', type: 'color', defaultValue: '#E8F1FF', inline: true, inlineLayout: true },
+                    { key: 'pinStroke', label: '图标与描边', type: 'color', defaultValue: '#0A84FF', inline: true, inlineLayout: true },
+                ]},
                 { key: 'summary', label: '描述', type: 'textarea', rows: 3, placeholder: '简要描述这个场所...', labelPosition: 'top' },
             ]
         },
@@ -330,6 +335,20 @@ export const WORLD_FORM_SCHEMA = {
             title: '基础设定',
             fields: [
                 { key: 'name', label: '名称 *', type: 'text', placeholder: '给这个世界观起个名字', inline: true },
+                {
+                    key: 'experienceMode',
+                    label: '专属体验',
+                    type: 'select',
+                    defaultValue: 'general',
+                    options: [
+                        { value: 'general', label: '通用世界' },
+                        { value: 'cultivation', label: '修仙' },
+                        { value: 'apocalypse', label: '末日' },
+                        { value: 'esports', label: '电竞' },
+                        { value: 'actor', label: '演员' },
+                        { value: 'idol', label: '爱豆' },
+                    ],
+                },
                 { key: 'summary', label: '一句话主旨 *', type: 'textarea', rows: 2,
                     placeholder: '用一句话概括世界观的核心氛围' },
                 { key: 'notes', label: '详细说明', type: 'textarea', rows: 4,
@@ -392,6 +411,37 @@ export const WORLD_FORM_SCHEMA = {
                     transformRead: (raw) => raw?.hourLabel ?? '时',
                     transformReadHours: (raw) => raw?.customHours ?? [],
                     transformReadRatio: (raw) => raw?.ratio ?? { base: 1, real: 1 } },
+            ],
+        },
+        {
+            // ── 时差系统 ────────────────────────────────────────────
+            // 和上面的「纪时系统」是**两套并行**的，不是一个东西的两半：
+            //   · 纪时映射：用户和 AI 在两个世界，时间单位都不一样（12:33 → 辰时）
+            //   · 时差    ：用户和 AI 在同一个世界的不同地区，单位一样只差钟点
+            // 两个都开时先算时差、再套纪时（时差决定「几点」，纪时决定「叫什么」）。
+            title: '时差（同世界不同地区）',
+            fields: [
+                { key: 'chronologyTimeOffsetEnabled', label: '启用时差', type: 'checkbox', inlineLabel: true,
+                    bind: 'chronologySettings.timeOffsetEnabled',
+                    transformWrite: (model) => !!model.chronologySettings?.timeOffsetEnabled },
+                { key: 'chronologyUserRegionName', label: '用户所在地', type: 'text', inline: true,
+                    placeholder: '如：东都 / 北境 …', defaultValue: '',
+                    bind: 'chronologySettings.userRegionName',
+                    transformWrite: (model) => model.chronologySettings?.userRegionName ?? '' },
+                { key: 'chronologyUserOffsetHours', label: '用户时差（小时）', type: 'number', inline: true,
+                    placeholder: '0', defaultValue: 0,
+                    bind: 'chronologySettings.userOffsetHours',
+                    transformWrite: (model) => model.chronologySettings?.userOffsetHours ?? 0,
+                    transformRead: (raw) => Number(raw) || 0 },
+                { key: 'chronologyAiRegionName', label: 'AI 所在地', type: 'text', inline: true,
+                    placeholder: '如：西陆 / 南港 …', defaultValue: '',
+                    bind: 'chronologySettings.aiRegionName',
+                    transformWrite: (model) => model.chronologySettings?.aiRegionName ?? '' },
+                { key: 'chronologyAiOffsetHours', label: 'AI 时差（小时）', type: 'number', inline: true,
+                    placeholder: '0', defaultValue: 0,
+                    bind: 'chronologySettings.aiOffsetHours',
+                    transformWrite: (model) => model.chronologySettings?.aiOffsetHours ?? 0,
+                    transformRead: (raw) => Number(raw) || 0 },
             ],
         },
     ],

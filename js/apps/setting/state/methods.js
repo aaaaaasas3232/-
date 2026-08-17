@@ -9,7 +9,7 @@
  * this 上下文由 app-registry 注入 { app, toolkit, methods, services, ... }。
  */
 
-import { DEFAULT_API_PARAMS, PROVIDER_OPTIONS } from '../defaults.js';
+import { DEFAULT_API_PARAMS } from '../defaults.js';
 
 function notify(toolkit, kind, title, message) {
     toolkit.island.notify(kind, title, message);

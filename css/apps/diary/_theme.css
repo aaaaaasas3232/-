@@ -1,0 +1,295 @@
+/**
+ * 日记 · 主题 token
+ *
+ * ★ 这个文件是整个 App 的**颜色唯一真相**。
+ *   组件 CSS 只允许写 `var(--dy-*)`，JS 里一个 hex 都不许出现
+ *   （唯一例外是桌面图标 —— 它画在 app-shell 之外，CSS 变量够不着）。
+ *
+ * ★ 配色取向：莫兰迪。
+ *   低饱和、带灰调、明度接近。**禁止渐变** —— 产品要求，也是这套配色的前提：
+ *   莫兰迪色之所以耐看靠的是色块之间的微弱色差，加了渐变就全糊了。
+ *
+ * ★ 主题怎么切
+ *   `data-diary-theme` 挂在**根容器**上（不是 app-shell）——
+ *   因为每个日记本可以有自己的颜色，切换日记本时换的是这个属性。
+ *   AI 自己布置的日记本就是通过写这个属性生效的。
+ *
+ * ★ 每套主题写了**两个**选择器：根容器自身，以及任意带这个属性的后代。
+ *   后一个不是冗余 —— 主题选择器里那几张迷你预览卡靠「塞一个带 data-diary-theme
+ *   的探针 div 再 getComputedStyle」来拿到「另一套主题长什么样」。
+ *   只写自身的话探针永远匹配不上，几张预览卡会全部显示成当前主题
+ *   （dream-weaver 踩过，AGENTS2 §18）。
+ *
+ * ★ 派生规则
+ *   `-soft` / `-dim` 后缀都是同色系的低透明度版本。
+ *   新增颜色前先问一句「能不能从已有 token 派生」，能就别加新 token。
+ */
+
+/* ============================================================
+   非颜色 token —— 挂在 app-shell 上，不随主题变
+   ============================================================ */
+.app-shell[data-app-id="diary"] {
+    --dy-radius: 10px;
+    --dy-radius-sm: 6px;
+    --dy-radius-lg: 16px;
+    --dy-gap: 12px;
+    --dy-pad: 18px;
+    --dy-hair: 1px;
+    --dy-ease: cubic-bezier(0.4, 0, 0.2, 1);
+    --dy-dur: 220ms;
+
+    /* 无印良品风：字号小、字重轻、行距松 */
+    --dy-fs-xs: 11px;
+    --dy-fs-sm: 12px;
+    --dy-fs-md: 13px;
+    --dy-fs-lg: 15px;
+    --dy-fs-xl: 19px;
+    --dy-lh: 1.85;
+    --dy-track: 0.02em;
+}
+
+/* ============================================================
+   燕麦 —— 暖白与浅灰褐（默认）
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-root,
+.app-shell[data-app-id="diary"] [data-diary-theme="oat"] {
+    --dy-bg: #F4F1EB;
+    --dy-bg-alt: #EBE7DF;
+    --dy-surface: #FBF9F5;
+    --dy-surface-alt: #F2EEE7;
+    --dy-surface-dim: #E4DFD5;
+
+    --dy-primary: #8C7B6B;
+    --dy-primary-soft: rgba(140, 123, 107, 0.12);
+    --dy-primary-dim: rgba(140, 123, 107, 0.26);
+    --dy-on-primary: #FBF9F5;
+
+    --dy-text: #3D372F;
+    --dy-text-2: #6E665B;
+    --dy-text-3: #A29889;
+
+    --dy-border: rgba(61, 55, 47, 0.14);
+    --dy-border-soft: rgba(61, 55, 47, 0.07);
+    --dy-divider: rgba(61, 55, 47, 0.09);
+
+    --dy-danger: #A86A5E;
+    --dy-warn: #B29655;
+    --dy-ok: #7B8C6B;
+
+    --dy-cycle-period: #B08379;
+    --dy-cycle-predicted: rgba(176, 131, 121, 0.32);
+    --dy-cycle-fertile: rgba(140, 155, 138, 0.30);
+    --dy-cycle-none: rgba(110, 102, 91, 0.22);
+
+    --dy-status-bar: #3D372F;
+    --dy-home-indicator: rgba(61, 55, 47, 0.3);
+}
+
+/* ============================================================
+   陶土 —— 褪色的砖红
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-root[data-diary-theme="clay"],
+.app-shell[data-app-id="diary"] [data-diary-theme="clay"] {
+    --dy-bg: #F2EBE7;
+    --dy-bg-alt: #E8DED8;
+    --dy-surface: #FBF6F3;
+    --dy-surface-alt: #F1E7E1;
+    --dy-surface-dim: #E0D2CA;
+
+    --dy-primary: #A4705F;
+    --dy-primary-soft: rgba(164, 112, 95, 0.13);
+    --dy-primary-dim: rgba(164, 112, 95, 0.28);
+    --dy-on-primary: #FBF6F3;
+
+    --dy-text: #423630;
+    --dy-text-2: #74625A;
+    --dy-text-3: #A8948B;
+
+    --dy-border: rgba(66, 54, 48, 0.14);
+    --dy-border-soft: rgba(66, 54, 48, 0.07);
+    --dy-divider: rgba(66, 54, 48, 0.09);
+
+    --dy-danger: #A0584C;
+    --dy-warn: #B08B52;
+    --dy-ok: #7C8A6D;
+
+    --dy-cycle-period: #A4705F;
+    --dy-cycle-predicted: rgba(164, 112, 95, 0.30);
+    --dy-cycle-fertile: rgba(139, 152, 133, 0.28);
+    --dy-cycle-none: rgba(116, 98, 90, 0.22);
+
+    --dy-status-bar: #423630;
+    --dy-home-indicator: rgba(66, 54, 48, 0.3);
+}
+
+/* ============================================================
+   鼠尾草 —— 灰调的绿
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-root[data-diary-theme="sage"],
+.app-shell[data-app-id="diary"] [data-diary-theme="sage"] {
+    --dy-bg: #EDF0EA;
+    --dy-bg-alt: #E2E7DE;
+    --dy-surface: #F7F9F5;
+    --dy-surface-alt: #EBEFE7;
+    --dy-surface-dim: #D8DFD2;
+
+    --dy-primary: #78876C;
+    --dy-primary-soft: rgba(120, 135, 108, 0.13);
+    --dy-primary-dim: rgba(120, 135, 108, 0.28);
+    --dy-on-primary: #F7F9F5;
+
+    --dy-text: #333A2F;
+    --dy-text-2: #5F6A57;
+    --dy-text-3: #949C8B;
+
+    --dy-border: rgba(51, 58, 47, 0.14);
+    --dy-border-soft: rgba(51, 58, 47, 0.07);
+    --dy-divider: rgba(51, 58, 47, 0.09);
+
+    --dy-danger: #9C6656;
+    --dy-warn: #A99253;
+    --dy-ok: #6E8461;
+
+    --dy-cycle-period: #A0736A;
+    --dy-cycle-predicted: rgba(160, 115, 106, 0.28);
+    --dy-cycle-fertile: rgba(120, 135, 108, 0.32);
+    --dy-cycle-none: rgba(95, 106, 87, 0.22);
+
+    --dy-status-bar: #333A2F;
+    --dy-home-indicator: rgba(51, 58, 47, 0.3);
+}
+
+/* ============================================================
+   雾蓝 —— 阴天的窗
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-root[data-diary-theme="mist"],
+.app-shell[data-app-id="diary"] [data-diary-theme="mist"] {
+    --dy-bg: #ECEEF1;
+    --dy-bg-alt: #E1E5EA;
+    --dy-surface: #F6F8FA;
+    --dy-surface-alt: #EAEDF1;
+    --dy-surface-dim: #D6DBE2;
+
+    --dy-primary: #6F7E8C;
+    --dy-primary-soft: rgba(111, 126, 140, 0.13);
+    --dy-primary-dim: rgba(111, 126, 140, 0.28);
+    --dy-on-primary: #F6F8FA;
+
+    --dy-text: #2F363D;
+    --dy-text-2: #596571;
+    --dy-text-3: #8D97A2;
+
+    --dy-border: rgba(47, 54, 61, 0.14);
+    --dy-border-soft: rgba(47, 54, 61, 0.07);
+    --dy-divider: rgba(47, 54, 61, 0.09);
+
+    --dy-danger: #96635B;
+    --dy-warn: #A38E58;
+    --dy-ok: #6D8474;
+
+    --dy-cycle-period: #9B6F72;
+    --dy-cycle-predicted: rgba(155, 111, 114, 0.28);
+    --dy-cycle-fertile: rgba(111, 126, 140, 0.30);
+    --dy-cycle-none: rgba(89, 101, 113, 0.22);
+
+    --dy-status-bar: #2F363D;
+    --dy-home-indicator: rgba(47, 54, 61, 0.3);
+}
+
+/* ============================================================
+   藕荷 —— 很淡的紫灰
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-root[data-diary-theme="lilac"],
+.app-shell[data-app-id="diary"] [data-diary-theme="lilac"] {
+    --dy-bg: #EFEBEF;
+    --dy-bg-alt: #E6E0E7;
+    --dy-surface: #F9F6F9;
+    --dy-surface-alt: #EEE9EF;
+    --dy-surface-dim: #DCD4DE;
+
+    --dy-primary: #85748A;
+    --dy-primary-soft: rgba(133, 116, 138, 0.13);
+    --dy-primary-dim: rgba(133, 116, 138, 0.28);
+    --dy-on-primary: #F9F6F9;
+
+    --dy-text: #392F3C;
+    --dy-text-2: #665A6B;
+    --dy-text-3: #9B8FA0;
+
+    --dy-border: rgba(57, 47, 60, 0.14);
+    --dy-border-soft: rgba(57, 47, 60, 0.07);
+    --dy-divider: rgba(57, 47, 60, 0.09);
+
+    --dy-danger: #9E6169;
+    --dy-warn: #A78E5C;
+    --dy-ok: #75856F;
+
+    --dy-cycle-period: #A16E7C;
+    --dy-cycle-predicted: rgba(161, 110, 124, 0.28);
+    --dy-cycle-fertile: rgba(126, 140, 124, 0.28);
+    --dy-cycle-none: rgba(102, 90, 107, 0.22);
+
+    --dy-status-bar: #392F3C;
+    --dy-home-indicator: rgba(57, 47, 60, 0.3);
+}
+
+/* ============================================================
+   墨 —— 深色，夜里写字用
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-root[data-diary-theme="ink"],
+.app-shell[data-app-id="diary"] [data-diary-theme="ink"] {
+    --dy-bg: #22211F;
+    --dy-bg-alt: #1B1A19;
+    --dy-surface: #2B2A28;
+    --dy-surface-alt: #322F2D;
+    --dy-surface-dim: #3B3835;
+
+    --dy-primary: #B5A796;
+    --dy-primary-soft: rgba(181, 167, 150, 0.14);
+    --dy-primary-dim: rgba(181, 167, 150, 0.3);
+    --dy-on-primary: #22211F;
+
+    --dy-text: #E3DED6;
+    --dy-text-2: #A8A196;
+    --dy-text-3: #756F66;
+
+    --dy-border: rgba(227, 222, 214, 0.15);
+    --dy-border-soft: rgba(227, 222, 214, 0.08);
+    --dy-divider: rgba(227, 222, 214, 0.1);
+
+    --dy-danger: #C08A7E;
+    --dy-warn: #C4A96D;
+    --dy-ok: #96A986;
+
+    --dy-cycle-period: #BC8781;
+    --dy-cycle-predicted: rgba(188, 135, 129, 0.32);
+    --dy-cycle-fertile: rgba(150, 169, 134, 0.30);
+    --dy-cycle-none: rgba(168, 161, 150, 0.24);
+
+    --dy-status-bar: #E3DED6;
+    --dy-home-indicator: rgba(227, 222, 214, 0.35);
+}
+
+/* ============================================================
+   心情色 —— 独立一组，不随主题变
+   ------------------------------------------------------------
+   心情是跨日记本的语义（「平静」在哪个本子里都是平静），
+   跟着主题变会让归档页的心情色块每翻一个本子就换一套。
+   ============================================================ */
+.app-shell[data-app-id="diary"] {
+    --dy-mood-calm: #8FA3A8;
+    --dy-mood-glad: #C0A96B;
+    --dy-mood-tender: #C09BA0;
+    --dy-mood-tired: #9A9188;
+    --dy-mood-low: #7C8697;
+    --dy-mood-anxious: #B08670;
+    --dy-mood-blank: rgba(150, 145, 138, 0.5);
+}
+
+.app-shell[data-app-id="diary"] [data-mood="calm"] { --dy-mood: var(--dy-mood-calm); }
+.app-shell[data-app-id="diary"] [data-mood="glad"] { --dy-mood: var(--dy-mood-glad); }
+.app-shell[data-app-id="diary"] [data-mood="tender"] { --dy-mood: var(--dy-mood-tender); }
+.app-shell[data-app-id="diary"] [data-mood="tired"] { --dy-mood: var(--dy-mood-tired); }
+.app-shell[data-app-id="diary"] [data-mood="low"] { --dy-mood: var(--dy-mood-low); }
+.app-shell[data-app-id="diary"] [data-mood="anxious"] { --dy-mood: var(--dy-mood-anxious); }
+.app-shell[data-app-id="diary"] [data-mood="blank"] { --dy-mood: var(--dy-mood-blank); }

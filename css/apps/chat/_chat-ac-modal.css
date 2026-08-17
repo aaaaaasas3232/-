@@ -1,0 +1,529 @@
+/**
+ * chat-app / 通用弹窗 (Animal Crossing 风格) 样式
+ *
+ * ★ 设计来源:animal-crossing-modal-demo.html
+ *   - squircle 形状:60% 24% 60% 60% / 50% 22% 50% 50%
+ *   - 圆角 999px 按钮 + 凸起阴影
+ *   - 入场 bounceIn,出场 bounceOut
+ *
+ * 使用方法:在 chat-modal-components.js 里 import { AcModal },Vue 直接渲染
+ *
+ * 提供 3 套主题(通过 .ac-tone-* 切换):
+ *   - cool(默认) 粉蓝 #5b8ec9 / #a8c8ed
+ *   - warm        暖橙 #e8a87c / #f4c89a
+ *   - mint        薄荷 #6cb9a8 / #a8d6cb
+ *
+ * CSS 变量(便于业务组件覆盖):
+ *   --ac-color-primary         主色
+ *   --ac-color-primary-dark    主色按钮按下色
+ *   --ac-color-primary-soft    主色按钮 hover/light
+ *   --ac-shadow-primary        主按钮凸起阴影
+ *   --ac-shadow-secondary      次按钮凸起阴影
+ */
+
+.app-shell[data-app-id="chat"] .ac-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(91, 142, 201, 0.18);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    box-sizing: border-box;
+    animation: acOverlayIn 0.25s ease;
+}
+
+.app-shell[data-app-id="chat"] .ac-overlay--closing {
+    animation: acOverlayOut 0.25s ease forwards;
+}
+
+/* ============================
+   弹窗主体 (squircle)
+   ============================ */
+.app-shell[data-app-id="chat"] .ac-modal {
+    --ac-color-primary: #5b8ec9;
+    --ac-color-primary-dark: #7aa8d6;
+    --ac-color-primary-soft: #a8c8ed;
+    --ac-shadow-primary: #7aa8d6;
+    --ac-shadow-secondary: #d6ecf7;
+
+    position: relative;
+    width: 100%;
+    max-width: 320px;
+    /* ★ v0.69+ 弹窗最大高度限制,超过时内部 body 滚动(隐藏滚动条) */
+    max-height: 80vh;
+    background: #ffffff;
+    padding: 36px 28px 28px;
+    text-align: center;
+    box-sizing: border-box;
+    box-shadow: 0 20px 50px rgba(91, 142, 201, 0.18);
+    animation: acBounceIn 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    /* ★ v0.69+ 内容超长时内部 body 滚动,弹窗本身不滚动
+       ★ 注意:这里故意不加 overflow:hidden,
+         否则 .ac-close(top: -10px,负值在弹窗外面)会被裁掉。
+         squircle 的裁切靠 border-radius 本身就够了。 */
+    display: flex;
+    flex-direction: column;
+
+    /* squircle 形状:
+       - 4 个角都不规则(右下最圆,左上最尖)
+       - 水平/垂直半径独立,让 4 个角有微妙差异 */
+    border-radius: 37% 77% 52% 48% / 32% 25% 25% 48%;
+}
+
+.app-shell[data-app-id="chat"] .ac-modal--closing {
+    animation: acBounceOut 0.28s ease forwards;
+}
+
+/* 主题色:warm */
+.app-shell[data-app-id="chat"] .ac-tone-warm.ac-modal {
+    --ac-color-primary: #c98a5b;
+    --ac-color-primary-dark: #d6a87a;
+    --ac-color-primary-soft: #edc8a8;
+    --ac-shadow-primary: #d6a87a;
+    --ac-shadow-secondary: #f7e6d6;
+}
+
+/* 主题色:mint */
+.app-shell[data-app-id="chat"] .ac-tone-mint.ac-modal {
+    --ac-color-primary: #6cb9a8;
+    --ac-color-primary-dark: #7ac8b4;
+    --ac-color-primary-soft: #a8d6cb;
+    --ac-shadow-primary: #7ac8b4;
+    --ac-shadow-secondary: #d6efe7;
+}
+
+/* ============================
+   关闭按钮
+   ============================ */
+.app-shell[data-app-id="chat"] .ac-close {
+    /* ★ 关闭按钮单独覆盖:粉色调,不影响主按钮/次按钮
+       (主按钮仍用 --ac-color-primary-* 默认的粉蓝色) */
+    --ac-color-primary: #e88aa5;       /* hover 时文字色 → 粉 */
+    --ac-color-primary-soft: #f4b5c8;  /* 默认文字色 ✕ → 浅粉 */
+    --ac-shadow-secondary: #fcd4dd;    /* 底部投影 → 浅粉 */
+
+    position: absolute;
+    top: -10px;
+    right: 10px;
+    width: 34px;
+    height: 34px;
+    border: none;
+    background: #ffffff;
+    color: var(--ac-color-primary-soft);
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    border-radius:100% 49% 47% 100% / 46% 100% 43% 100%;
+    box-shadow: 0 3px 0 var(--ac-shadow-secondary);
+    transition: transform 0.2s, color 0.2s, box-shadow 0.15s;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    line-height: 1;
+    font-family: inherit;
+}
+
+.app-shell[data-app-id="chat"] .ac-close:hover {
+    transform: rotate(85deg) scale(1.08);
+    color: var(--ac-color-primary);
+}
+
+.app-shell[data-app-id="chat"] .ac-close:active {
+    transform: translateY(2px) rotate(90deg);
+    box-shadow: 0 1px 0 var(--ac-shadow-secondary);
+}
+
+/* ============================
+   Header / Title / Subtitle
+   ============================ */
+.app-shell[data-app-id="chat"] .ac-modal-header {
+    margin-bottom: 16px;
+    position: relative;
+    z-index: 2;
+    /* ★ v0.69+ header 不收缩,固定在顶部(配合 body 滚动) */
+    flex: 0 0 auto;
+}
+
+.app-shell[data-app-id="chat"] .ac-modal-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--ac-color-primary);
+    margin: 0 0 4px;
+    letter-spacing: 0.5px;
+    line-height: 1.3;
+}
+
+.app-shell[data-app-id="chat"] .ac-modal-subtitle {
+    font-size: 12px;
+    color: #b8cce0;
+    margin: 0;
+    line-height: 1.4;
+}
+
+/* ============================
+   Body (默认 slot 容器)
+   ============================ */
+.app-shell[data-app-id="chat"] .ac-modal-body {
+    position: relative;
+    z-index: 2;
+    color: #6e8aa9;
+    line-height: 1.6;
+    font-size: 13px;
+    /* ★ v0.69+ 内容超长时 body 滚动,弹窗本身不滚 */
+    overflow-y: auto;
+    overflow-x: hidden;
+    /* flex 子项收缩(配合 .ac-modal 的 flex column) */
+    flex: 1 1 auto;
+    min-height: 0;
+    /* 隐藏滚动条但保留滚动功能(Firefox + IE/Edge) */
+    scrollbar-width: none;       /* Firefox */
+    -ms-overflow-style: none;     /* IE/Edge */
+}
+
+/* WebKit 浏览器隐藏滚动条 */
+.app-shell[data-app-id="chat"] .ac-modal-body::-webkit-scrollbar {
+    display: none;
+}
+
+/* ============================
+   Footer (footer slot 容器)
+   ============================ */
+.app-shell[data-app-id="chat"] .ac-modal-footer {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 20px;
+    position: relative;
+    z-index: 2;
+    flex: 0 0 auto;
+}
+
+/* ============================
+   按钮 (ac-btn-* 系列)
+   ============================ */
+.app-shell[data-app-id="chat"] .ac-btn {
+    padding: 11px 22px;
+    border: none;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+    border-radius: 999px;
+    letter-spacing: 0.5px;
+    font-family: inherit;
+    line-height: 1;
+}
+
+.app-shell[data-app-id="chat"] .ac-btn-primary {
+    background: var(--ac-color-primary-soft);
+    color: #ffffff;
+    box-shadow: 0 3px 0 var(--ac-shadow-primary);
+}
+
+.app-shell[data-app-id="chat"] .ac-btn-primary:hover {
+    transform: translateY(-2px);
+}
+
+.app-shell[data-app-id="chat"] .ac-btn-primary:active {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 var(--ac-shadow-primary);
+}
+
+.app-shell[data-app-id="chat"] .ac-btn-primary:disabled {
+    background: #cccccc;
+    box-shadow: 0 3px 0 #aaaaaa;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.app-shell[data-app-id="chat"] .ac-btn-primary:disabled:hover,
+.app-shell[data-app-id="chat"] .ac-btn-primary:disabled:active {
+    transform: none;
+}
+
+.app-shell[data-app-id="chat"] .ac-btn-secondary {
+    background: #ffffff;
+    color: var(--ac-color-primary);
+    box-shadow: 0 3px 0 var(--ac-shadow-secondary);
+}
+
+.app-shell[data-app-id="chat"] .ac-btn-secondary:hover {
+    transform: translateY(-2px);
+}
+
+.app-shell[data-app-id="chat"] .ac-btn-secondary:active {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 var(--ac-shadow-secondary);
+}
+
+.app-shell[data-app-id="chat"] .ac-btn-secondary:disabled {
+    background: #CCCCCC;
+    color: #888888;
+    box-shadow: 0 3px 0 #B0B0B0;
+    cursor: not-allowed;
+}
+
+.app-shell[data-app-id="chat"] .ac-btn-secondary:disabled:hover,
+.app-shell[data-app-id="chat"] .ac-btn-secondary:disabled:active {
+    transform: none;
+}
+
+/* ============================
+   危险按钮(删除等)
+   ============================ */
+/* ★ v0.85 修复:危险按钮使用红色主题,跟普通按钮区分 */
+.app-shell[data-app-id="chat"] .ac-btn-danger {
+    background: #fee2e2;
+    color: #dc2626;
+    box-shadow: 0 3px 0 #fca5a5;
+}
+
+.app-shell[data-app-id="chat"] .ac-btn-danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 0 #fca5a5;
+    background: #fecaca;
+}
+
+.app-shell[data-app-id="chat"] .ac-btn-danger:active {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 #fca5a5;
+}
+
+/* ============================
+   消息删除确认弹窗(v0.85)
+   ============================ */
+.app-shell[data-app-id="chat"] .message-delete-confirm-modal .message-delete-confirm-icon-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 0 12px;
+}
+
+.app-shell[data-app-id="chat"] .message-delete-confirm-modal .message-delete-confirm-icon-wrap svg {
+    width: 48px;
+    height: 48px;
+    display: block;
+}
+
+.app-shell[data-app-id="chat"] .message-delete-confirm-modal .message-delete-confirm-text {
+    text-align: center;
+    color: #64748b;
+    font-size: 14px;
+    margin-top: 8px;
+    line-height: 1.5;
+}
+
+/* ============================
+   清空聊天记录确认弹窗(v0.85)
+   ============================ */
+.app-shell[data-app-id="chat"] .clear-chat-confirm-modal .clear-chat-confirm-icon-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 0 12px;
+}
+
+.app-shell[data-app-id="chat"] .clear-chat-confirm-modal .clear-chat-confirm-icon-wrap svg {
+    width: 48px;
+    height: 48px;
+    display: block;
+}
+
+.app-shell[data-app-id="chat"] .clear-chat-confirm-modal .clear-chat-confirm-target {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: #f9fafb;
+    border-radius: 8px;
+    margin-top: 8px;
+}
+
+.app-shell[data-app-id="chat"] .clear-chat-confirm-modal .clear-chat-confirm-label {
+    color: #6b7280;
+    font-size: 13px;
+}
+
+.app-shell[data-app-id="chat"] .clear-chat-confirm-modal .clear-chat-confirm-name {
+    color: #374151;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* ============================
+   退出群聊确认弹窗(v0.85)
+   ============================ */
+.app-shell[data-app-id="chat"] .exit-group-confirm-modal .exit-group-confirm-icon-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 0 12px;
+}
+
+.app-shell[data-app-id="chat"] .exit-group-confirm-modal .exit-group-confirm-icon-wrap svg {
+    width: 48px;
+    height: 48px;
+    display: block;
+}
+
+.app-shell[data-app-id="chat"] .exit-group-confirm-modal .exit-group-confirm-target {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: #f9fafb;
+    border-radius: 8px;
+    margin-top: 8px;
+}
+
+.app-shell[data-app-id="chat"] .exit-group-confirm-modal .exit-group-confirm-label {
+    color: #6b7280;
+    font-size: 13px;
+}
+
+.app-shell[data-app-id="chat"] .exit-group-confirm-modal .exit-group-confirm-name {
+    color: #374151;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* ============================
+   取消收藏确认弹窗(v0.85)
+   ============================ */
+.app-shell[data-app-id="chat"] .unfavorite-confirm-modal .unfavorite-confirm-icon-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 0 12px;
+}
+
+.app-shell[data-app-id="chat"] .unfavorite-confirm-modal .unfavorite-confirm-icon-wrap svg {
+    width: 48px;
+    height: 48px;
+    display: block;
+}
+
+.app-shell[data-app-id="chat"] .unfavorite-confirm-modal .unfavorite-confirm-preview {
+    background: #f9fafb;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 8px;
+    text-align: left;
+}
+
+.app-shell[data-app-id="chat"] .unfavorite-confirm-modal .unfavorite-confirm-preview-text {
+    font-size: 13px;
+    color: #6b7280;
+    line-height: 1.5;
+    max-height: 60px;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+}
+
+/* ============================
+   删除层级确认弹窗(v0.75)
+   ============================ */
+.app-shell[data-app-id="chat"] .remove-level-confirm-icon-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 0 12px;
+    color: var(--ac-color-primary);
+}
+
+.app-shell[data-app-id="chat"] .remove-level-confirm-icon-wrap svg {
+    width: 40px;
+    height: 40px;
+    display: block;
+}
+
+.app-shell[data-app-id="chat"] .remove-level-confirm-hint {
+    text-align: center;
+    color: #64748b;
+    font-size: 13px;
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+/* ============================
+   修改周期确认弹窗(v0.75)
+   ============================ */
+.app-shell[data-app-id="chat"] .update-level-cycle-compare {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 12px 0 8px;
+}
+
+.app-shell[data-app-id="chat"] .update-level-cycle-side {
+    text-align: center;
+    min-width: 70px;
+}
+
+.app-shell[data-app-id="chat"] .update-level-cycle-label {
+    font-size: 11px;
+    color: #94a3b8;
+    margin-bottom: 4px;
+}
+
+.app-shell[data-app-id="chat"] .update-level-cycle-value {
+    font-size: 20px;
+    font-weight: 600;
+    color: #64748b;
+}
+
+.app-shell[data-app-id="chat"] .update-level-cycle-value--new {
+    color: var(--ac-color-primary);
+}
+
+.app-shell[data-app-id="chat"] .update-level-cycle-unit {
+    font-size: 12px;
+    font-weight: 400;
+    margin-left: 2px;
+}
+
+.app-shell[data-app-id="chat"] .update-level-cycle-arrow {
+    color: #94a3b8;
+    font-size: 16px;
+}
+
+.app-shell[data-app-id="chat"] .update-level-cycle-level-name {
+    text-align: center;
+    color: #64748b;
+    font-size: 13px;
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+/* ============================
+   动画
+   ============================ */
+/* ★ acOverlayIn / acOverlayOut / acBounceIn / acBounceOut 已上移到
+   `css/core/80-ac-modal.css`(框架级唯一定义处,由 css/main.css 引入)。
+   keyframes 是全局作用域,这里重复定义只会互相覆盖,所以删掉。 */
+
+/* ============================
+   小屏适配
+   ============================ */
+@media (max-width: 360px) {
+    .app-shell[data-app-id="chat"] .ac-modal {
+        padding: 32px 22px 24px;
+    }
+    .app-shell[data-app-id="chat"] .ac-modal-title {
+        font-size: 16px;
+    }
+    .app-shell[data-app-id="chat"] .ac-btn {
+        padding: 10px 18px;
+        font-size: 12px;
+    }
+}

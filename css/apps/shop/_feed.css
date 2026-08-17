@@ -1,0 +1,227 @@
+/* 四叶草 · 列表与卡片
+ *
+ * ── 为什么没有图 ──────────────────────────────────────────────────
+ * 商品图是 AI 生成不出来的。灰色占位符会让整个列表看着像坏了，
+ * 随机图片又会和世界观对不上。所以这里用排版承担识别度：
+ * 名字大、卖点一行、标签小字、价格右下。一屏能看五六件，
+ * 信息密度比带图的列表高得多。
+ */
+
+.app-shell[data-app-id="shop"] .sp-feed { display: block; }
+
+.app-shell[data-app-id="shop"] .sp-feed__filters { margin-bottom: 12px; }
+
+.app-shell[data-app-id="shop"] .sp-serve {
+    display: inline-flex;
+    padding: 3px;
+    margin-bottom: 10px;
+    border-radius: 11px;
+    background: var(--sp-surface-2);
+}
+
+.app-shell[data-app-id="shop"] .sp-serve__btn {
+    padding: 6px 18px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--sp-text-3);
+    font-size: 12.5px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.16s ease;
+}
+
+.app-shell[data-app-id="shop"] .sp-serve__btn.is-on {
+    background: var(--sp-surface);
+    color: var(--sp-text);
+    font-weight: 580;
+    box-shadow: 0 1px 3px var(--sp-shadow);
+}
+
+/* 「换一批」是有代价的操作，所以说明一直挂在旁边，
+   不是等用户按完发现东西没了才解释。
+   ★ 说明另起一行而不是和按钮并排：并排时它只剩半屏宽，
+     会折成两行还被挤扁，反而没人看。 */
+.app-shell[data-app-id="shop"] .sp-feed__bar {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+    margin-bottom: 14px;
+    border-radius: 12px;
+    background: var(--sp-surface-2);
+}
+
+.app-shell[data-app-id="shop"] .sp-feed__note {
+    margin: 0;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--sp-text-3);
+}
+.app-shell[data-app-id="shop"] .sp-feed__note b { color: var(--sp-text-2); font-weight: 560; }
+
+.app-shell[data-app-id="shop"] .sp-feed__bar-actions {
+    display: flex;
+    gap: 6px;
+}
+.app-shell[data-app-id="shop"] .sp-feed__bar-actions .sp-btn { flex: 1; }
+
+.app-shell[data-app-id="shop"] .sp-feed__group { margin-bottom: 20px; }
+
+.app-shell[data-app-id="shop"] .sp-feed__group-title {
+    margin: 0 0 9px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    color: var(--sp-text-3);
+}
+
+.app-shell[data-app-id="shop"] .sp-grid { display: grid; gap: 10px; }
+
+.app-shell[data-app-id="shop"] .sp-feed__error {
+    margin: 10px 0 0;
+    padding: 10px 13px;
+    border-radius: 10px;
+    background: var(--sp-surface-2);
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--sp-danger);
+}
+
+/* ── 卡片 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding: 14px 15px;
+    border: 1px solid var(--sp-line);
+    border-radius: 14px;
+    background: var(--sp-card);
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+}
+
+.app-shell[data-app-id="shop"] .sp-card:active {
+    background: var(--sp-card-hover);
+    transform: scale(0.993);
+}
+
+.app-shell[data-app-id="shop"] .sp-card__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="shop"] .sp-card__title-wrap { min-width: 0; }
+
+.app-shell[data-app-id="shop"] .sp-card__title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--sp-text);
+}
+
+.app-shell[data-app-id="shop"] .sp-card__brand {
+    margin: 2px 0 0;
+    font-size: 11.5px;
+    color: var(--sp-text-3);
+}
+
+.app-shell[data-app-id="shop"] .sp-card__blurb {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--sp-text-2);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="shop"] .sp-card__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.app-shell[data-app-id="shop"] .sp-card__meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11.5px;
+    color: var(--sp-text-3);
+}
+
+.app-shell[data-app-id="shop"] .sp-rate {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    color: var(--sp-coin);
+    font-weight: 560;
+}
+.app-shell[data-app-id="shop"] .sp-rate svg { width: 13px; height: 13px; fill: currentColor; }
+
+.app-shell[data-app-id="shop"] .sp-card__sign { color: var(--sp-text-3); }
+
+.app-shell[data-app-id="shop"] .sp-card__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 1px;
+}
+
+.app-shell[data-app-id="shop"] .sp-card__serve { font-size: 11.5px; color: var(--sp-text-3); }
+
+.app-shell[data-app-id="shop"] .sp-card__cart {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--sp-line-strong);
+    border-radius: 9px;
+    background: var(--sp-surface);
+    color: var(--sp-text-2);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.app-shell[data-app-id="shop"] .sp-card__cart:active {
+    background: var(--sp-primary);
+    border-color: var(--sp-primary);
+    color: var(--sp-on-primary);
+}
+
+.app-shell[data-app-id="shop"] .sp-card__mine {
+    position: absolute;
+    top: -1px;
+    right: 44px;
+    padding: 1px 7px 2px;
+    border-radius: 0 0 6px 6px;
+    background: var(--sp-accent-soft);
+    color: var(--sp-accent);
+    font-size: 10px;
+}
+
+.app-shell[data-app-id="shop"] .sp-fav {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--sp-text-3);
+    cursor: pointer;
+    transition: color 0.16s ease, transform 0.16s ease;
+}
+
+.app-shell[data-app-id="shop"] .sp-fav.is-on { color: var(--sp-accent); }
+.app-shell[data-app-id="shop"] .sp-fav.is-on svg { fill: currentColor; }
+.app-shell[data-app-id="shop"] .sp-fav:active { transform: scale(0.88); }

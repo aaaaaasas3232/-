@@ -1,0 +1,241 @@
+/* 四叶草 · 首次配置
+ *
+ * 借新设备激活那套语言：一屏一件事、大字、大量留白、底部一个继续键。
+ * 目的是让用户意识到「这是开始，不是又一个设置页」——
+ * 因为这一步真的决定了整个 App 里所有内容长什么样。
+ */
+
+.app-shell[data-app-id="shop"] .sp-ob {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: var(--sp-bg);
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__stage {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    touch-action: pan-y;
+    padding: 20px 26px 12px;
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__hero {
+    display: grid;
+    place-items: center;
+    padding: 22px 0 20px;
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__mark {
+    display: inline-flex;
+    color: var(--sp-primary);
+    animation: spCloverIn 0.7s cubic-bezier(0.34, 1.3, 0.64, 1) both;
+}
+
+@keyframes spCloverIn {
+    from { transform: scale(0.6) rotate(-24deg); opacity: 0; }
+    to { transform: none; opacity: 1; }
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__title {
+    margin: 0 0 7px;
+    font-size: 25px;
+    font-weight: 640;
+    letter-spacing: -0.2px;
+    line-height: 1.3;
+    color: var(--sp-text);
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__desc {
+    margin: 0 0 22px;
+    font-size: 13.5px;
+    line-height: 1.7;
+    color: var(--sp-text-2);
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__panel { display: grid; gap: 9px; }
+
+/* ── 第 0 屏：世界观 + 货币，只确认不可关 ─────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-ob__pill {
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+    padding: 12px 15px;
+    border-radius: 13px;
+    background: var(--sp-surface);
+    border: 1px solid var(--sp-line);
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__pill-k { font-size: 12px; color: var(--sp-text-3); flex: 0 0 auto; }
+.app-shell[data-app-id="shop"] .sp-ob__pill-v { font-size: 15px; font-weight: 600; color: var(--sp-text); }
+.app-shell[data-app-id="shop"] .sp-ob__pill-v--coin { color: var(--sp-coin); }
+.app-shell[data-app-id="shop"] .sp-ob__pill-note { font-size: 11px; color: var(--sp-text-3); margin-left: auto; }
+
+.app-shell[data-app-id="shop"] .sp-ob__summary {
+    padding: 14px 15px;
+    border-radius: 13px;
+    background: var(--sp-surface-2);
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__summary-text {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.75;
+    color: var(--sp-text-2);
+    white-space: pre-wrap;
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__summary-empty {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--sp-text-3);
+}
+
+/* ── 第 1/2 屏：可选卡 ────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-ob__none {
+    padding: 18px 16px;
+    border-radius: 13px;
+    background: var(--sp-surface-2);
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--sp-text-3);
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__card {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    width: 100%;
+    padding: 13px 15px;
+    border: 1px solid var(--sp-line);
+    border-radius: 13px;
+    background: var(--sp-surface);
+    text-align: left;
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__card.is-on {
+    border-color: var(--sp-primary);
+    background: var(--sp-primary-soft);
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__card-tick {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    border: 1.6px solid var(--sp-line-strong);
+    border-radius: 6px;
+    position: relative;
+    transition: all 0.16s ease;
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__card.is-on .sp-ob__card-tick {
+    border-color: var(--sp-primary);
+    background: var(--sp-primary);
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__card.is-on .sp-ob__card-tick::after {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 1.5px;
+    width: 4px;
+    height: 8px;
+    border: solid var(--sp-on-primary);
+    border-width: 0 1.8px 1.8px 0;
+    transform: rotate(42deg);
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__card-main {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__card-title {
+    font-size: 13.5px;
+    font-weight: 560;
+    color: var(--sp-text);
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__card-path {
+    font-size: 10.5px;
+    color: var(--sp-primary-strong);
+    opacity: 0.85;
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__card-sub {
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--sp-text-3);
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__taste { margin-top: 8px; }
+
+.app-shell[data-app-id="shop"] .sp-ob__taste-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 12.5px;
+    font-weight: 560;
+    color: var(--sp-text-2);
+}
+
+/* ── 底部 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-ob__foot {
+    flex: 0 0 auto;
+    padding: 12px 26px 18px;
+    padding-bottom: calc(18px + var(--app-safe-bottom, 0px));
+    border-top: 1px solid var(--sp-line-soft);
+    background: var(--sp-bg);
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__dots {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--sp-line-strong);
+    transition: all 0.22s ease;
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__dot.is-on { width: 18px; background: var(--sp-primary); }
+
+.app-shell[data-app-id="shop"] .sp-ob__actions { display: flex; align-items: center; gap: 9px; }
+
+/* ── 生成中 ───────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="shop"] .sp-ob--busy {
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    padding: 30px;
+    text-align: center;
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__busy-title {
+    margin: 16px 0 0;
+    font-size: 15px;
+    font-weight: 580;
+    color: var(--sp-text);
+}
+
+.app-shell[data-app-id="shop"] .sp-ob__busy-desc {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--sp-text-3);
+}

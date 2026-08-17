@@ -43,6 +43,89 @@ const WIDGET_SIZE_FOOTPRINT = {
 };
 const WIDGET_FALLBACK_FOOTPRINT = { cols: 1, rows: 1, cssClass: '' };
 
+// === 桌面布局水合门闸 ===
+// 启动时桌面布局由两批互相独立的异步数据拼成：
+//   1. apps —— 等 js/apps/index.js 把所有 app 注册完（phone:apps-registered）
+//   2. widgetBoard —— 等 desktop-config 就绪后 core-shim 从 localStorage 读出来
+// 两批到齐之前 boardItems 只是半成品（可能只有 app 没有 widget，也可能反过来）。
+// 这个中间态一旦被写回 desktop-config，就会把用户上次保存的布局覆盖成半成品
+// —— 表现就是刷新后图标顺序错乱、小组件位置漂移甚至整个消失。
+// 所以：水合完成前一律不落盘，完成后再把内存里的完整布局对齐写回一次。
+const HYDRATION_TIMEOUT_MS = 5000;
+
+export const desktopHydration = {
+    appsReady: false,
+    widgetsReady: false,
+    readyCallbacks: [],
+    get ready() {
+        return this.appsReady && this.widgetsReady;
+    },
+    markAppsReady() {
+        this.mark('appsReady');
+    },
+    markWidgetsReady() {
+        this.mark('widgetsReady');
+    },
+    mark(key) {
+        if (this[key]) return;
+        this[key] = true;
+        if (!this.ready) return;
+        console.log('[desktop-hydration] 桌面布局水合完成，开始允许落盘');
+        const callbacks = this.readyCallbacks.splice(0);
+        for (const callback of callbacks) {
+            try {
+                callback();
+            } catch (err) {
+                console.error('[desktop-hydration] onReady 回调失败', err);
+            }
+        }
+    },
+    onReady(callback) {
+        if (this.ready) {
+            callback();
+            return;
+        }
+        this.readyCallbacks.push(callback);
+    },
+};
+
+// 兜底开闸：某一批数据始终没到（app 注册异常、或页面上压根没有 widget 通道）时，
+// 不能让门闸永久关着，否则用户之后的所有拖拽都保存不了。
+if (typeof window !== 'undefined') {
+    setTimeout(() => {
+        if (!desktopHydration.ready) {
+            console.warn(
+                '[desktop-hydration] 水合超时，强制开闸',
+                `(apps=${desktopHydration.appsReady}, widgets=${desktopHydration.widgetsReady})`
+            );
+            desktopHydration.markAppsReady();
+            desktopHydration.markWidgetsReady();
+        }
+    }, HYDRATION_TIMEOUT_MS);
+}
+
+// widget 的 boardIndex 记的是「在 app+widget 混排列表里的最终下标」。
+function readWidgetBoardIndex(item) {
+    const raw = item?.widget?.boardIndex;
+    return typeof raw === 'number' && Number.isFinite(raw) ? raw : Number.MAX_SAFE_INTEGER;
+}
+
+// 把 widget items 按各自的 boardIndex 插回一串 app items，还原成混排 boardItems。
+// 必须按 boardIndex 升序依次插入：每插入一个，后面 widget 的目标下标才和当前列表长度对得上
+// （boardIndex 是插入完成后的下标，不是插入前的）。
+function mergeWidgetsIntoAppOrder(appItems, widgetItems) {
+    const merged = [...appItems];
+    const ordered = [...widgetItems].sort((a, b) => readWidgetBoardIndex(a) - readWidgetBoardIndex(b));
+    for (const item of ordered) {
+        const boardIndex = readWidgetBoardIndex(item);
+        const target = boardIndex === Number.MAX_SAFE_INTEGER
+            ? merged.length
+            : Math.max(0, Math.min(boardIndex, merged.length));
+        merged.splice(target, 0, item);
+    }
+    return merged;
+}
+
 // 把 widget 注册项 + size + orientation 规范化成"含 footprint 的 board item"
 function resolveWidgetFootprint(widget) {
     const size = widget?.size || 'S';
@@ -173,14 +256,30 @@ export function useDesktopEdit({
 
     const boardItems = Vue.ref([]);
     let suppressAppSync = false;
+    let hasRestoredOrder = false; // ★ 标记：是否已从 desktop-config 恢复过顺序
+
+    // 「上次保存的 app 顺序」快照：appId -> 名次。
+    // 取启动那一刻的快照，之后不再刷新：水合完成后我们会把当前布局写回存储，
+    // 若改成现读，名次表就会跟着变，后面再有 app 到达就定位错了。
+    const savedAppRank = new Map((loadDesktopAppOrder() || []).map((id, index) => [id, index]));
+    function getSavedAppRank() {
+        return savedAppRank;
+    }
+
     function initBoardItemsFromApps() {
+        // ★ 修复：如果 apps.value 为空（app 还未注册完成），跳过初始化
+        // 顺序恢复会在 syncFromApps 的首次调用时进行
+        if (!apps.value || apps.value.length === 0) {
+            console.log('[use-desktop-edit] apps 为空，跳过初始化，等待首次 sync');
+            return;
+        }
         // ★ 修复：先尝试从 desktop-config 恢复顺序，并同步回写 apps.value（让外部 ref 也按正确顺序）
         const savedOrder = loadDesktopAppOrder();
         if (savedOrder && savedOrder.length > 0) {
             console.log('[use-desktop-edit] 从 desktop-config 恢复 App 顺序:', savedOrder.length, '个');
             const appById = new Map(apps.value.map(a => [a.id, a]));
             const reorderedApps = [];
-            
+
             // 按保存的顺序重建 boardItems 和 apps
             for (const appId of savedOrder) {
                 const app = appById.get(appId);
@@ -195,11 +294,12 @@ export function useDesktopEdit({
                 boardItems.value.push({ kind: 'app', id: `app::${app.id}`, app });
                 reorderedApps.push(app);
             }
-            
+
             // ★ 关键：回写 apps.value，让外部 ref 也按正确顺序排列
             // 这样 syncRegisteredApps 里的 preserved 就能保持用户拖拽后的顺序
             suppressAppSync = true; // 防止触发 syncFromApps 反向同步
             apps.value = reorderedApps;
+            hasRestoredOrder = true; // 标记已恢复
             Vue.nextTick(() => { suppressAppSync = false; });
         } else {
             // 没有保存的顺序，用当前 apps 顺序初始化
@@ -207,7 +307,9 @@ export function useDesktopEdit({
             for (const app of apps.value) {
                 boardItems.value.push({ kind: 'app', id: `app::${app.id}`, app });
             }
+            hasRestoredOrder = true;
         }
+        desktopHydration.markAppsReady();
     }
     initBoardItemsFromApps();
 
@@ -217,7 +319,47 @@ export function useDesktopEdit({
         const externalAppsById = new Map();
         for (const a of apps.value) externalAppsById.set(a.id, a);
         let mutated = false;
-        
+
+        // ★ 首次同步时：如果之前因为 apps 为空而跳过了初始化，现在从 desktop-config 恢复顺序
+        if (!hasRestoredOrder && apps.value.length > 0) {
+            const savedOrder = loadDesktopAppOrder();
+            if (savedOrder && savedOrder.length > 0) {
+                console.log('[use-desktop-edit] syncFromApps 首次同步：从 desktop-config 恢复顺序');
+                const appById = new Map(apps.value.map(a => [a.id, a]));
+                const reorderedApps = [];
+
+                for (const appId of savedOrder) {
+                    const app = appById.get(appId);
+                    if (app) {
+                        reorderedApps.push(app);
+                        appById.delete(appId);
+                    }
+                }
+                for (const app of appById.values()) {
+                    reorderedApps.push(app);
+                }
+
+                // 更新 apps.value 和 boardItems
+                suppressAppSync = true;
+                apps.value = reorderedApps;
+                // ★ 关键：widget 通常先于 app 注册完成就被加载进 boardItems 了
+                // （core-shim 的 widget fallback 是 100ms，而 app 注册要等一串 IndexedDB 升级）。
+                // 直接用 app 列表重建 boardItems 会把这些 widget 全丢掉，
+                // 接着反向同步就会把 widgetBoard 置空并写回存储 —— 小组件永久消失。
+                // 这里保留已有 widget，按各自 boardIndex 插回混排位置。
+                boardItems.value = mergeWidgetsIntoAppOrder(
+                    reorderedApps.map(app => ({ kind: 'app', id: `app::${app.id}`, app })),
+                    boardItems.value.filter(item => item.kind === 'widget')
+                );
+                hasRestoredOrder = true;
+                desktopHydration.markAppsReady();
+                Vue.nextTick(() => { suppressAppSync = false; });
+                return;
+            }
+            hasRestoredOrder = true;
+            desktopHydration.markAppsReady();
+        }
+
         // 1. 删除已经不在 apps.value 里的 app items（卸载的 app）
         for (let i = boardItems.value.length - 1; i >= 0; i--) {
             const item = boardItems.value[i];
@@ -226,7 +368,7 @@ export function useDesktopEdit({
                 mutated = true;
             }
         }
-        
+
         // 2. 更新已有 app 的引用（app 对象可能被重新创建了）
         for (const item of boardItems.value) {
             if (item.kind === 'app') {
@@ -238,18 +380,39 @@ export function useDesktopEdit({
                 }
             }
         }
-        
-        // 3. 添加新 app（新安装的）
+
+        // 3. 添加还没上桌的 app —— 按「上次保存的顺序」定位，存储里没有的才追加到末尾。
+        //
+        // 这一步不能只看 apps.value 的先后：app 是分批注册的（weather-app / appstore /
+        // music 等声明了 stores，要 await IndexedDB 升级才注册完），首批到达时
+        // hasRestoredOrder 就被置成 true 了，后到的那批只能走这里。
+        // 如果这里按到达顺序追加，用户保存的图标顺序就整个失效 —— 桌面看起来就是注册顺序。
         const existingAppIds = new Set(
             boardItems.value.filter(b => b.kind === 'app').map(b => b.app.id)
         );
+        const savedRank = getSavedAppRank();
+        const rankOf = appId => (savedRank.has(appId) ? savedRank.get(appId) : Number.MAX_SAFE_INTEGER);
+
         for (const a of apps.value) {
-            if (!existingAppIds.has(a.id)) {
-                boardItems.value.push({ kind: 'app', id: `app::${a.id}`, app: a });
-                mutated = true;
+            if (existingAppIds.has(a.id)) continue;
+            const rank = rankOf(a.id);
+            let insertIndex = boardItems.value.length;
+            if (rank !== Number.MAX_SAFE_INTEGER) {
+                // 插到第一个「保存顺序排在它后面」的 app 之前
+                for (let i = 0; i < boardItems.value.length; i += 1) {
+                    const item = boardItems.value[i];
+                    if (item.kind !== 'app') continue;
+                    if (rankOf(item.app.id) > rank) {
+                        insertIndex = i;
+                        break;
+                    }
+                }
             }
+            boardItems.value.splice(insertIndex, 0, { kind: 'app', id: `app::${a.id}`, app: a });
+            existingAppIds.add(a.id);
+            mutated = true;
         }
-        
+
         if (mutated) {
             boardItems.value = [...boardItems.value];
         }
@@ -290,34 +453,29 @@ export function useDesktopEdit({
             }
         }
         
-        // 3. 添加新 widget：按 widget.boardIndex 插入（如果有），否则加到末尾
+        // 3. 添加新 widget：按 widget.boardIndex 插回混排位置（没有 boardIndex 的追加到末尾）
         const existingInstIds = new Set(
             boardItems.value.filter(b => b.kind === 'widget').map(b => b.widget.instanceId)
         );
-        
+
+        const incomingWidgetItems = [];
         for (const w of widgetBoard.value) {
-            if (!existingInstIds.has(w.instanceId)) {
-                const footprint = resolveWidgetFootprint(w);
-                const newItem = {
-                    kind: 'widget',
-                    id: `widget::${w.qualifiedId}::${w.instanceId}`,
-                    widget: w,
-                    footprint,
-                };
-                
-                // 如果 widget 带有 boardIndex（从持久化加载），插入到指定位置
-                if (typeof w.boardIndex === 'number') {
-                    const targetIndex = Math.max(0, Math.min(w.boardIndex, boardItems.value.length));
-                    boardItems.value.splice(targetIndex, 0, newItem);
-                } else {
-                    // 否则追加到末尾
-                    boardItems.value.push(newItem);
-                }
-                mutated = true;
-            }
+            if (existingInstIds.has(w.instanceId)) continue;
+            incomingWidgetItems.push({
+                kind: 'widget',
+                id: `widget::${w.qualifiedId}::${w.instanceId}`,
+                widget: w,
+                footprint: resolveWidgetFootprint(w),
+            });
         }
-        
-        if (mutated) {
+
+        if (incomingWidgetItems.length) {
+            // 统一走 mergeWidgetsIntoAppOrder：它保证按 boardIndex 升序插入。
+            // 逐个 splice 的写法依赖 widgetBoard 数组恰好是升序的，一旦不是（比如
+            // 存储里顺序被别处改过），后面的 widget 就会落到错误的格子上。
+            boardItems.value = mergeWidgetsIntoAppOrder(boardItems.value, incomingWidgetItems);
+            mutated = true;
+        } else if (mutated) {
             boardItems.value = [...boardItems.value];
         }
     }
@@ -330,30 +488,34 @@ export function useDesktopEdit({
             if (item.kind === 'app') newApps.push(item.app);
             else newWidgets.push(item.widget);
         }
+        // ★ 给每个 widget 标记它在 boardItems 里的真实位置（boardIndex）
+        // 这样 saveWidgetBoard() 保存的 boardIndex 才是"widget 在混排桌面中的正确位置"
+        // 而不是"widget 在 widgetBoard 数组里的序号"
+        const widgetsWithPosition = newWidgets.map(w => {
+            const boardIdx = boardItems.value.findIndex(
+                item => item.kind === 'widget' && item.widget === w
+            );
+            return boardIdx >= 0 && w.boardIndex !== boardIdx ? { ...w, boardIndex: boardIdx } : w;
+        });
+
         // 仅在内容真正变化时赋值，让外部 watcher 不必要的触发被省掉；
         // suppress 阻断反向 sync。
+        // widget 这边比 instanceId + boardIndex 而不是对象引用：位置变了就要落盘，
+        // 位置没变就别重建对象（否则每次拖 app 都会连带重写一遍 widget 存储）。
         const sameApps = apps.value.length === newApps.length
             && apps.value.every((a, i) => a === newApps[i]);
-        const sameWidgets = widgetBoard.value.length === newWidgets.length
-            && widgetBoard.value.every((w, i) => w === newWidgets[i]);
+        const sameWidgets = widgetBoard.value.length === widgetsWithPosition.length
+            && widgetBoard.value.every((w, i) => w.instanceId === widgetsWithPosition[i].instanceId
+                && w.boardIndex === widgetsWithPosition[i].boardIndex);
         if (sameApps && sameWidgets) return;
         suppressAppSync = true;
         suppressWidgetSync = true;
         if (!sameApps) {
             apps.value = newApps;
-            // ★ 新增：持久化桌面 App 顺序到 desktop-config
+            // ★ 持久化桌面 App 顺序到 desktop-config
             saveDesktopAppOrder(newApps);
         }
         if (!sameWidgets) {
-            // ★ 修复：给每个 widget 标记它在 boardItems 里的真实位置（boardIndex）
-            // 这样 saveWidgetBoard() 保存的 boardIndex 才是"widget 在混排桌面中的正确位置"
-            // 而不是"widget 在 widgetBoard 数组里的序号"
-            const widgetsWithPosition = newWidgets.map(w => {
-                const boardIdx = boardItems.value.findIndex(
-                    item => item.kind === 'widget' && item.widget === w
-                );
-                return boardIdx >= 0 ? { ...w, boardIndex: boardIdx } : w;
-            });
             widgetBoard.value = widgetsWithPosition;
         }
         Vue.nextTick(() => {
@@ -365,19 +527,31 @@ export function useDesktopEdit({
     // 保存桌面 App 顺序（只保存 app.id 列表）
     // 正确方法名是 update，不是 updateDesktopConfig（window.__desktopConfig 挂载见 desktop-config.js）
     function saveDesktopAppOrder(appsList) {
-        const appOrder = appsList.map(app => app.id);
-        if (typeof window !== 'undefined' && typeof window.__desktopConfig?.update === 'function') {
-            window.__desktopConfig.update({
-                pages: [{
-                    id: 'home',
-                    label: '主屏',
-                    apps: appOrder,
-                }],
-            });
-            console.log('[use-desktop-edit] 保存 App 顺序:', appOrder.length, '个');
-        } else {
-            console.warn('[use-desktop-edit] desktop-config API 未就绪，无法保存 App 顺序');
+        // 水合未完成时 boardItems 还是半成品，写回会把上次保存的顺序覆盖掉。
+        // 水合完成后 flushBoardLayout() 会补上这一次落盘。
+        if (!desktopHydration.ready) {
+            return;
         }
+        if (typeof window === 'undefined' || typeof window.__desktopConfig?.update !== 'function') {
+            console.warn('[use-desktop-edit] desktop-config API 未就绪，无法保存 App 顺序');
+            return;
+        }
+        const appOrder = appsList.map(app => app.id);
+        // 桌面永远至少有 settings / appstore 这类不可卸载的系统 App，
+        // 所以「一个 app 都没有」只可能是 app 注册失败或还没跑完，不可能是用户意图。
+        // 这种时候写回去等于把用户保存的图标顺序抹掉，宁可保持原样。
+        if (appOrder.length === 0 && (loadDesktopAppOrder() || []).length > 0) {
+            console.warn('[use-desktop-edit] App 列表为空，拒绝覆盖已保存的顺序');
+            return;
+        }
+        window.__desktopConfig.update({
+            pages: [{
+                id: 'home',
+                label: '主屏',
+                apps: appOrder,
+            }],
+        });
+        console.log('[use-desktop-edit] 保存 App 顺序:', appOrder.length, '个');
     }
 
     // 启动时从 desktop-config 恢复 App 顺序
@@ -389,6 +563,39 @@ export function useDesktopEdit({
         // 只取第一页的 apps 列表（当前版本只支持单页）
         return pages[0]?.apps || null;
     }
+
+    // 水合完成：此刻 boardItems 才是「上次保存的布局 + 本次新增/卸载的 app」的完整结果。
+    // 水合期间被门闸挡下的落盘在这里补一次，之后的拖拽就走正常的 watch 保存路径。
+    function flushBoardLayout() {
+        // 极端情况（app 注册失败、水合超时强制开闸）下 boardItems 可能还是空的，
+        // 这时候落盘等于把用户的桌面清空，宁可不存。
+        if (!boardItems.value.length) return;
+        const appList = [];
+        const widgetList = [];
+        boardItems.value.forEach((item, index) => {
+            if (item.kind === 'app') {
+                appList.push(item.app);
+            } else if (item.widget) {
+                widgetList.push(
+                    item.widget.boardIndex === index ? item.widget : { ...item.widget, boardIndex: index }
+                );
+            }
+        });
+
+        saveDesktopAppOrder(appList);
+
+        const sameWidgets = widgetBoard.value.length === widgetList.length
+            && widgetBoard.value.every((w, i) => w.instanceId === widgetList[i].instanceId
+                && w.boardIndex === widgetList[i].boardIndex);
+        if (!sameWidgets) {
+            suppressWidgetSync = true;
+            widgetBoard.value = widgetList;
+            Vue.nextTick(() => { suppressWidgetSync = false; });
+        }
+    }
+    // 开闸那一刻往往还在某个 watch 回调里（比如 syncFromApps 刚 markAppsReady），
+    // 此时 boardItems 只跑完了一半的同步。等 nextTick 让整个 flush 队列跑干净再落盘。
+    desktopHydration.onReady(() => Vue.nextTick(flushBoardLayout));
 
     Vue.watch(apps, syncFromApps);
     Vue.watch(widgetBoard, syncFromWidgets);
@@ -1597,13 +1804,18 @@ export function useDesktopEdit({
     }
 
     // 把当前已注册到全局的 widgets 拍成 list（widget picker 用）。
+    // ★ v0.87 过滤掉用户在「灵动岛与小组件」里关掉的那些 —— 关掉的含义就是
+    //   「我不想在桌面上放它」，那它就不该继续出现在选择器里占位置。
     function listAvailableWidgets() {
         const registry = window.APP_WIDGETS || {};
         const onBoard = new Set(widgetBoard.value.map(w => w.qualifiedId));
-        return Object.values(registry).map(widget => ({
-            ...widget,
-            alreadyAdded: onBoard.has(widget.qualifiedId),
-        }));
+        const isEnabled = window.__appPresence?.isWidgetEnabled;
+        return Object.values(registry)
+            .filter(w => (typeof isEnabled === 'function' ? isEnabled(w.appId, w.widgetId) : true))
+            .map(widget => ({
+                ...widget,
+                alreadyAdded: onBoard.has(widget.qualifiedId),
+            }));
     }
 
     // 把 widget picker 拉起的灵动岛态切换。

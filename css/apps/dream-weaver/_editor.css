@@ -1,0 +1,1285 @@
+/**
+ * 梦境编织 · 编辑器(顶栏 / 消息流 / 输入区 / 抽屉)
+ */
+
+.app-shell[data-app-id="dream-weaver"] .dw-editor {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--dw-bg);
+}
+
+/* ============================================================
+   顶部工具栏 —— 1:1 复原原版 .dw-enhanced-toolbar
+   数值全部照抄 injectStyles(L2694-2883 / L3261-3308),没有改动。
+   ============================================================ */
+
+.app-shell[data-app-id="dream-weaver"] .dw-enhanced-toolbar {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.25s ease;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+
+    /* 原版是 `margin-top:40px` 给状态栏让位。这里用 padding-top ——
+       margin 会在工具栏背景之上留一条透出底色的缝,padding 让背景一直铺到顶。 */
+    padding-top: 40px;
+    background: var(--dw-surface);
+    border-bottom: 1px solid var(--dw-outline);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-toolbar-main {
+    min-height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-toolbar-center {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+    justify-content: flex-end;
+}
+
+/* ── 工具栏按钮 ────────────────────────
+   原版把 background / color / border 写成 inline style,这里换成变量,
+   视觉一致但能跟着主题变(原版换主题时这些按钮纹丝不动)。 */
+
+.app-shell[data-app-id="dream-weaver"] .dw-toolbar-btn-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    background: var(--dw-card-bg);
+    color: var(--dw-text);
+    border: 1px solid var(--dw-outline);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-toolbar-btn-icon:hover {
+    transform: scale(1.05);
+    opacity: 0.9;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-toolbar-btn-icon:active {
+    transform: scale(0.95);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-toolbar-btn-icon.dw-btn-active {
+    box-shadow: inset 0 2px 2px rgba(0, 0, 0, 0.1);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-toolbar-btn-icon .dw-icon,
+.app-shell[data-app-id="dream-weaver"] .dw-toolbar-btn-icon .dw-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* 三个彩色按钮:流式 / 分支 用次色,灵感夹子用警示黄 —— 和原版一致 */
+.app-shell[data-app-id="dream-weaver"] .dw-btn-stream,
+.app-shell[data-app-id="dream-weaver"] .dw-btn-branch { color: var(--dw-secondary); }
+.app-shell[data-app-id="dream-weaver"] .dw-btn-clip { color: var(--dw-warning); }
+.app-shell[data-app-id="dream-weaver"] .dw-btn-stream:not(.dw-btn-active) { opacity: 0.8; }
+
+/* ============================================================
+   齿轮选择器(章节 / 故事时间)
+   ============================================================ */
+
+.app-shell[data-app-id="dream-weaver"] .dw-chapter-selector,
+.app-shell[data-app-id="dream-weaver"] .dw-timeline-selector {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+    -webkit-user-select: none;
+    border: 1px solid transparent;
+    color: var(--dw-text);
+
+    /* 原版写的是 `pan-y`,那表示「把纵向手势让给浏览器滚动」——
+       一旦浏览器接管,后面的 preventDefault 就失效,齿轮手感时灵时不灵。
+       这个控件的纵向手势 100% 是自己的,声明 none 才能每次都跟手。 */
+    touch-action: none;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-chapter-selector:active,
+.app-shell[data-app-id="dream-weaver"] .dw-timeline-selector:active {
+    transform: scale(0.96);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-chapter-selector.focused {
+    border-color: var(--dw-primary);
+    background: var(--dw-primary-hover);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-timeline-selector.focused {
+    border-color: var(--dw-secondary);
+    background: var(--dw-hover-overlay);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-chapter-volume,
+.app-shell[data-app-id="dream-weaver"] .dw-timeline-label {
+    font-size: 10px;
+    opacity: 0.6;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-chapter-volume { letter-spacing: 0.5px; }
+
+.app-shell[data-app-id="dream-weaver"] .dw-chapter-number,
+.app-shell[data-app-id="dream-weaver"] .dw-timeline-date-display {
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* ── 滑动 / 齿轮效果 ──────────────────── */
+
+.app-shell[data-app-id="dream-weaver"] .dw-selector-swipe {
+    position: relative;
+    overflow: hidden;
+}
+
+/* 掠过的高光(原版靠 .swiping 触发,但 JS 从来没加过这个类;保留结构) */
+.app-shell[data-app-id="dream-weaver"] .dw-selector-swipe::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, var(--dw-glass-highlight), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-selector-swipe.swiping::after {
+    transform: translateX(100%);
+}
+
+/* 拖动时显示的中央刻度线 —— 这一条是「齿轮感」的视觉锚点 */
+.app-shell[data-app-id="dream-weaver"] .dw-selector-swipe::before {
+    content: '';
+    position: absolute;
+    left: 2px;
+    right: 2px;
+    top: 50%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--dw-outline), transparent);
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-selector-swipe.scrolling::before {
+    opacity: 0.5;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-selector-swipe .dw-selector-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* 拖动中关掉 transition,让位移严格跟手 */
+.app-shell[data-app-id="dream-weaver"] .dw-selector-swipe.scrolling .dw-selector-content {
+    transition: none;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-selector-swipe.tick-up .dw-selector-content {
+    animation: dwTickerUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-selector-swipe.tick-down .dw-selector-content {
+    animation: dwTickerDown 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* 过冲再回弹 —— 这两条曲线就是「咔哒」的来源 */
+@keyframes dwTickerUp {
+    0% { transform: translateY(0); }
+    30% { transform: translateY(-12px); }
+    60% { transform: translateY(3px); }
+    100% { transform: translateY(0); }
+}
+
+@keyframes dwTickerDown {
+    0% { transform: translateY(0); }
+    30% { transform: translateY(12px); }
+    60% { transform: translateY(-3px); }
+    100% { transform: translateY(0); }
+}
+
+/* ============================================================
+   快捷设置面板(人称 / 方向 / 字数)
+   ============================================================ */
+
+.app-shell[data-app-id="dream-weaver"] .dw-quick-settings-panel {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    padding: 0 10px;
+    transition: max-height 0.25s ease, opacity 0.2s ease, padding 0.25s ease;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    background: var(--dw-glass-bg);
+    border-bottom: 1px solid transparent;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-quick-settings-panel.visible {
+    max-height: 50px;
+    opacity: 1;
+    padding: 8px 10px;
+    border-bottom-color: var(--dw-border);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-quick-settings-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-quick-setting-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-quick-setting-label {
+    font-size: 12px;
+    font-weight: 500;
+    opacity: 0.7;
+    color: var(--dw-text-secondary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-quick-setting-select {
+    padding: 3px 8px;
+    border-radius: 5px;
+    border: 1px solid var(--dw-outline);
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.15s ease;
+    background: var(--dw-card-bg);
+    color: var(--dw-text);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-quick-setting-select:hover { filter: brightness(1.05); }
+.app-shell[data-app-id="dream-weaver"] .dw-quick-setting-select:focus { border-color: var(--dw-primary); }
+
+/* ============================================================
+   消息流 —— 1:1 复原 .dw-chat-container / .dw-bubble-*
+   ============================================================ */
+
+.app-shell[data-app-id="dream-weaver"] .dw-chat-container {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 10px 12px 24px;
+    position: relative;
+    color: var(--dw-text);
+
+    /* 聊天背景 —— 变量由根组件按「本书 → 全局」优先级算好写进来 */
+    background: var(--dw-chat-bg, transparent);
+    background-size: cover;
+    background-position: center;
+    backdrop-filter: blur(var(--dw-chat-blur, 0px));
+    -webkit-backdrop-filter: blur(var(--dw-chat-blur, 0px));
+
+    /* 阅读区排版 —— 变量由根组件按显示设置写入 */
+    font-family: var(--dw-reader-font);
+    font-size: var(--dw-reader-size);
+    line-height: var(--dw-reader-line);
+    letter-spacing: var(--dw-reader-letter);
+}
+
+/* ── 空态 ─────────────────────────── */
+
+.app-shell[data-app-id="dream-weaver"] .dw-chat-welcome {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 40px;
+    letter-spacing: 0;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-chat-welcome .dw-icon {
+    margin-bottom: 20px;
+    opacity: 0.5;
+    color: var(--dw-primary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-chat-welcome .dw-icon svg { width: 48px; height: 48px; }
+
+.app-shell[data-app-id="dream-weaver"] .dw-chat-welcome h3 {
+    margin: 0 0 8px;
+    font-size: 18px;
+    font-weight: 500;
+    opacity: 0.8;
+    line-height: 1.4;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-chat-welcome p {
+    margin: 0;
+    font-size: 13px;
+    opacity: 0.5;
+    line-height: 1.6;
+}
+
+/* ── 气泡容器 ─────────────────────── */
+
+.app-shell[data-app-id="dream-weaver"] .dw-bubble-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* 工具条是绝对定位浮在下面的,展开时要给它留出空间,否则会盖住下一条 */
+    margin-bottom: 0;
+    transition: margin-bottom 0.25s var(--dw-ease);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-bubble-container.is-active { margin-bottom: 44px; }
+
+/**
+ * 气泡本体。
+ *
+ * ★ 88% 宽、居中 —— 不是聊天软件那种左右分列。
+ *   这是小说编辑器,正文要占满宽度才好读;区分作者/AI 靠的是
+ *   那个 4px 尖角在左还是在右,加上左上角的小色块。
+ */
+.app-shell[data-app-id="dream-weaver"] .dw-message-bubble {
+    position: relative;
+    width: 88%;
+    padding: 14px 18px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    background: var(--dw-bubble-received);
+    color: var(--dw-text);
+    animation: dwMsgIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-message-bubble:active { transform: scale(0.98); }
+
+/* 「我」写的:右上角是尖的 */
+.app-shell[data-app-id="dream-weaver"] .dw-message-bubble.user {
+    border-radius: 20px 4px 20px 20px;
+    background: var(--dw-bubble-sent);
+    color: var(--dw-white);
+}
+
+/* AI 写的正文:左上角是尖的 */
+.app-shell[data-app-id="dream-weaver"] .dw-message-bubble.ai {
+    border-radius: 4px 20px 20px 20px;
+    background: var(--dw-bubble-received);
+    color: var(--dw-white);
+}
+
+/* 只记录:虚线框,不算正文 */
+.app-shell[data-app-id="dream-weaver"] .dw-message-bubble.note {
+    border-radius: 12px;
+    background: var(--dw-surface-tint);
+    border: 1px dashed var(--dw-border);
+    color: var(--dw-text-secondary);
+}
+
+/* 左上/右上那个 8px 小色块 */
+.app-shell[data-app-id="dream-weaver"] .dw-message-bubble::before {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-message-bubble.user::before {
+    top: -4px;
+    right: -4px;
+    background: var(--dw-warning);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-message-bubble.ai::before {
+    top: -4px;
+    left: -4px;
+    background: var(--dw-primary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-message-bubble.note::before { display: none; }
+
+@keyframes dwMsgIn {
+    from { opacity: 0; transform: translateY(20px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── 气泡头部 ─────────────────────── */
+
+.app-shell[data-app-id="dream-weaver"] .dw-bubble-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+    letter-spacing: 0;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-bubble-role {
+    font-size: 10px;
+    font-weight: 500;
+    opacity: 0.7;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-bubble-time {
+    font-size: 10px;
+    opacity: 0.5;
+    margin-left: auto;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-bubble-content {
+    font-size: inherit;
+    line-height: inherit;
+    word-wrap: break-word;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-bubble-foot {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 6px;
+    letter-spacing: 0;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-message-tokens {
+    font-size: 10px;
+    opacity: 0.6;
+}
+
+/* ── 浮出的工具条 ─────────────────── */
+
+.app-shell[data-app-id="dream-weaver"] .dw-bubble-actions {
+    position: absolute;
+    bottom: 4px;
+    left: 50%;
+    z-index: 50;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 3px;
+    max-width: 300px;
+    padding: 4px 6px;
+    border-radius: 20px;
+    background: var(--dw-card-bg);
+    border: 1px solid var(--dw-outline);
+    box-shadow: var(--dw-shadow-md);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateX(-50%) translateY(100%);
+    transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-bubble-actions.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(calc(100% + 8px));
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-bubble-action-btn {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    opacity: 0.8;
+    background: var(--dw-surface-container);
+    color: var(--dw-text);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-bubble-action-btn:hover { opacity: 1; transform: scale(1.1); }
+.app-shell[data-app-id="dream-weaver"] .dw-bubble-action-btn:active { transform: scale(0.9); }
+.app-shell[data-app-id="dream-weaver"] .dw-bubble-action-btn .dw-icon svg { width: 13px; height: 13px; }
+
+/* 按钮配色 —— 照抄原版给每个动作分配的色 */
+.app-shell[data-app-id="dream-weaver"] .dw-bubble-action-btn.tone-warn { color: var(--dw-warning); background: var(--dw-warning-container); }
+.app-shell[data-app-id="dream-weaver"] .dw-bubble-action-btn.tone-info { color: var(--dw-info); background: var(--dw-info-container); }
+.app-shell[data-app-id="dream-weaver"] .dw-bubble-action-btn.tone-primary { color: var(--dw-primary-light); background: var(--dw-primary-hover); }
+.app-shell[data-app-id="dream-weaver"] .dw-bubble-action-btn.tone-danger { color: var(--dw-primary-light); background: var(--dw-primary-hover); }
+.app-shell[data-app-id="dream-weaver"] .dw-bubble-action-btn.is-on { color: var(--dw-accent); }
+
+/* 「更多」展开出来的那几个,进场带个小动画 */
+.app-shell[data-app-id="dream-weaver"] .dw-bubble-action-btn.dw-hidden-action {
+    animation: dwSmoothIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes dwSmoothIn {
+    0% { transform: scale(0) translateY(8px); opacity: 0; }
+    60% { transform: scale(1.08) translateY(-2px); opacity: 0.9; }
+    80% { transform: scale(0.96) translateY(1px); }
+    100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-chapter-head {
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--dw-border-light);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-chapter-title {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-chapter-sub {
+    margin: 4px 0 0;
+    font-size: 11px;
+    line-height: 1.5;
+    letter-spacing: 0;
+    color: var(--dw-text-tertiary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-msg-p {
+    margin: 0 0 0.72em;
+    text-indent: var(--dw-reader-indent);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-msg-p:last-child { margin-bottom: 0; }
+
+/* 我写的指令和备注不缩进 —— 那不是小说正文 */
+.app-shell[data-app-id="dream-weaver"] .dw-message-bubble.user .dw-msg-p,
+.app-shell[data-app-id="dream-weaver"] .dw-message-bubble.note .dw-msg-p {
+    text-indent: 0;
+}
+
+/* 正文片段 */
+.app-shell[data-app-id="dream-weaver"] .dw-seg--dialogue { color: var(--dw-bubble-received); }
+.app-shell[data-app-id="dream-weaver"] .dw-seg--inner { color: var(--dw-text-secondary); font-style: italic; }
+.app-shell[data-app-id="dream-weaver"] .dw-seg--aside { color: var(--dw-text-tertiary); }
+
+/* 规则画出来的东西。不定颜色不定尺寸 —— 那些都写在规则的 HTML 里，
+   这里只保证它在文字流里对齐得住。 */
+.app-shell[data-app-id="dream-weaver"] .dw-seg--html {
+    display: inline;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-seg--html svg {
+    display: inline-block;
+    vertical-align: -0.15em;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-mark {
+    cursor: pointer;
+    border-radius: 3px;
+    padding: 0 2px;
+    transition: background 0.16s var(--dw-ease);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-mark--char {
+    background: var(--dw-highlight-char-bg);
+    color: var(--dw-highlight-char-text);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-mark--loc {
+    background: var(--dw-highlight-loc-bg);
+    color: var(--dw-highlight-loc-text);
+}
+
+/* 指定了标记色的角色/地点覆盖默认高亮色 */
+.app-shell[data-app-id="dream-weaver"] .dw-mark[data-tone] {
+    background: color-mix(in srgb, var(--dw-tone-color) 18%, transparent);
+    color: var(--dw-tone-color);
+}
+
+/* 流式生成时的光标 */
+.app-shell[data-app-id="dream-weaver"] .dw-msg-caret {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    vertical-align: text-bottom;
+    margin-left: 2px;
+    background: var(--dw-primary-light);
+    animation: dwBlink 1s step-end infinite;
+}
+
+@keyframes dwBlink { 50% { opacity: 0; } }
+
+.app-shell[data-app-id="dream-weaver"] .dw-msg-error {
+    margin: 6px 0 0;
+    padding: 7px 10px;
+    border-radius: var(--dw-radius-sm);
+    background: var(--dw-error-container);
+    color: var(--dw-error);
+    font-size: 11px;
+    line-height: 1.6;
+    letter-spacing: 0;
+    text-indent: 0;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-msg-branch {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 1px 4px;
+    border-radius: var(--dw-radius-pill);
+    background: var(--dw-surface-container);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-msg-branch-btn {
+    display: inline-flex;
+    border: none;
+    background: none;
+    color: var(--dw-text-secondary);
+    cursor: pointer;
+    padding: 1px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-msg-branch-btn:disabled { opacity: 0.3; cursor: default; }
+.app-shell[data-app-id="dream-weaver"] .dw-msg-branch-btn svg { width: 12px; height: 12px; }
+
+.app-shell[data-app-id="dream-weaver"] .dw-msg-branch-count { font-variant-numeric: tabular-nums; }
+
+/* ============================================================
+   选区工具条
+   ============================================================ */
+
+.app-shell[data-app-id="dream-weaver"] .dw-selection-bar {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: calc(var(--dw-composer-min-h) + 78px);
+    z-index: var(--dw-z-popover);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 10px;
+    border-radius: var(--dw-radius-pill);
+    background: var(--dw-surface-alt);
+    border: 1px solid var(--dw-border);
+    box-shadow: var(--dw-shadow-md);
+    overflow-x: auto;
+    animation: dwFadeIn 0.18s var(--dw-ease);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-selection-text {
+    flex-shrink: 0;
+    font-size: 11px;
+    color: var(--dw-text-tertiary);
+    max-width: 90px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-selection-btn {
+    flex-shrink: 0;
+    border: none;
+    background: none;
+    color: var(--dw-primary-light);
+    font-family: inherit;
+    font-size: 12px;
+    padding: 3px 7px;
+    border-radius: var(--dw-radius-sm);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-selection-btn:hover { background: var(--dw-primary-hover); }
+.app-shell[data-app-id="dream-weaver"] .dw-selection-btn--close { color: var(--dw-text-tertiary); font-size: 15px; }
+
+/* ============================================================
+   输入面板 —— 1:1 复原 .dw-input-panel
+   原版这套样式在 injectStyles 和 injectMoreStyles 里各写了一份、后者覆盖前者,
+   这里直接落成合并后的**最终生效值**,不重复两遍。
+   ============================================================ */
+
+.app-shell[data-app-id="dream-weaver"] .dw-input-panel {
+    flex-shrink: 0;
+    padding: 10px 15px calc(10px + env(safe-area-inset-bottom, 0px));
+    background: var(--dw-glass-bg);
+    border-top: 1px solid var(--dw-outline-variant);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+/* ── 模式标签行 ────────────────────────
+   注意这一行是 flex,叙事按钮靠 margin-left:auto 顶到右边,
+   展开按钮再跟在它后面 —— 原版就是这个顺序。 */
+
+.app-shell[data-app-id="dream-weaver"] .dw-input-mode-tabs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 10px;
+    /* 一行放不下时横向滚,不要换行 —— 换行会把「模式 / 叙事 / 展开」三段的对齐关系打乱 */
+    overflow-x: auto;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-input-mode-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    /* ★ 这两条缺一不可:窄屏上没有它们,「剧情」会被压成上下两个字 */
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding: 6px 11px;
+    border: none;
+    border-radius: 15px;
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--dw-card-bg);
+    color: var(--dw-text-secondary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-input-mode-tab:hover { filter: brightness(1.1); }
+
+.app-shell[data-app-id="dream-weaver"] .dw-input-mode-tab.active {
+    background: var(--dw-primary);
+    color: var(--dw-on-primary);
+    font-weight: 600;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-input-mode-tab .dw-icon,
+.app-shell[data-app-id="dream-weaver"] .dw-input-mode-tab .dw-icon svg {
+    width: 12px;
+    height: 12px;
+}
+
+/* ── 叙事设置折叠按钮(原版全靠 inline style,这里落成 class)── */
+
+.app-shell[data-app-id="dream-weaver"] .dw-narrative-toggle-btn {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding: 4px 8px;
+    font-family: inherit;
+    font-size: 11px;
+    border-radius: 6px;
+    border: 1px solid var(--dw-outline);
+    background: var(--dw-card-bg);
+    color: var(--dw-text);
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-narrative-toggle-btn.expanded {
+    background: var(--dw-primary-container);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-narrative-toggle-btn .dw-icon,
+.app-shell[data-app-id="dream-weaver"] .dw-narrative-toggle-btn .dw-icon svg {
+    width: 12px;
+    height: 12px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-narrative-label {
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-narrative-arrow {
+    transition: transform 0.2s;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-narrative-toggle-btn.expanded .dw-narrative-arrow {
+    transform: rotate(180deg);
+}
+
+/* ── 展开/收起输入框按钮 ──────────────── */
+
+.app-shell[data-app-id="dream-weaver"] .dw-expand-btn {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    border: 2px solid var(--dw-primary);
+    background: var(--dw-bg);
+    color: var(--dw-primary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-expand-btn:hover {
+    background: var(--dw-primary-hover);
+    transform: scale(1.05);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-expand-btn .dw-icon,
+.app-shell[data-app-id="dream-weaver"] .dw-expand-btn .dw-icon svg {
+    width: 14px;
+    height: 14px;
+    transition: transform 0.25s ease;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-expand-btn.expanded .dw-icon {
+    transform: rotate(180deg);
+}
+
+/* ── 叙事设置折叠区 ──────────────────── */
+
+.app-shell[data-app-id="dream-weaver"] .dw-narrative-settings-panel {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.25s ease, opacity 0.2s ease;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-narrative-settings-panel.open {
+    max-height: 60px;
+    opacity: 1;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-narrative-settings-row {
+    display: flex;
+    gap: 8px;
+    padding: 6px 0;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-narrative-select-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-narrative-select-label {
+    font-size: 11px;
+    color: var(--dw-text-secondary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-narrative-select {
+    padding: 3px 6px;
+    font-size: 11px;
+    font-family: inherit;
+    border-radius: 6px;
+    border: 1px solid var(--dw-outline);
+    background: var(--dw-card-bg);
+    color: var(--dw-text);
+    cursor: pointer;
+    outline: none;
+    transition: all 0.15s ease;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-narrative-select:hover { filter: brightness(1.1); }
+.app-shell[data-app-id="dream-weaver"] .dw-narrative-select:focus { border-color: var(--dw-primary); }
+
+/* ── 输入行 ───────────────────────────
+   收起态 24px 单行、展开态 120px —— 这是原版的招牌行为,别改成 auto-grow。 */
+
+.app-shell[data-app-id="dream-weaver"] .dw-input-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-input-textarea {
+    flex: 1;
+    padding: 10px 15px;
+    border-radius: 20px;
+    border: 1px solid var(--dw-outline);
+    background: var(--dw-input-bg);
+    color: var(--dw-text);
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.4;
+    resize: none;
+    outline: none;
+    min-height: 40px;
+    height: 40px;
+    max-height: 40px;
+    overflow: hidden;
+    transition: all 0.25s ease;
+    box-sizing: border-box;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-input-textarea.expanded {
+    min-height: 120px;
+    height: 120px;
+    max-height: 200px;
+    overflow: auto;
+    resize: vertical;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-input-textarea::placeholder {
+    color: var(--dw-text-tertiary);
+    opacity: 0.6;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-send-btn {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border: none;
+    border-radius: 50%;
+    background: var(--dw-primary);
+    color: var(--dw-accent);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-send-btn:hover:not(:disabled) { transform: scale(1.05); }
+.app-shell[data-app-id="dream-weaver"] .dw-send-btn:active:not(:disabled) { transform: scale(0.95); }
+
+.app-shell[data-app-id="dream-weaver"] .dw-send-btn:disabled {
+    background: var(--dw-disabled-bg);
+    color: var(--dw-disabled-text);
+    cursor: not-allowed;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-send-btn .dw-icon,
+.app-shell[data-app-id="dream-weaver"] .dw-send-btn .dw-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* 生成中:同一个按钮原地变成停止,不换位置 */
+.app-shell[data-app-id="dream-weaver"] .dw-send-btn.is-stop {
+    background: var(--dw-error);
+    animation: dwPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes dwPulse {
+    0%, 100% { box-shadow: 0 0 0 0 var(--dw-error-container); }
+    50% { box-shadow: 0 0 0 7px transparent; }
+}
+
+/* ============================================================
+   抽屉
+   ============================================================ */
+
+.app-shell[data-app-id="dream-weaver"] .dw-drawer-scrim {
+    position: absolute;
+    inset: 0;
+    z-index: var(--dw-z-drawer);
+    background: var(--dw-scrim);
+    animation: dwFadeIn 0.2s var(--dw-ease);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-drawer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: calc(var(--dw-z-drawer) + 1);
+    width: min(86%, 330px);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 44px 14px calc(18px + env(safe-area-inset-bottom, 0px));
+    background: var(--dw-surface-container);
+    border-left: 1px solid var(--dw-border);
+    box-shadow: var(--dw-shadow-lg);
+    animation: dwDrawerIn 0.24s var(--dw-ease);
+}
+
+@keyframes dwDrawerIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
+.app-shell[data-app-id="dream-weaver"] .dw-panel-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: var(--dw-gap);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-panel-title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-panel-sub {
+    margin: 3px 0 0;
+    font-size: 11px;
+    color: var(--dw-text-tertiary);
+    line-height: 1.5;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-panel-note {
+    margin: 0 0 var(--dw-gap);
+    padding: 8px 10px;
+    border-radius: var(--dw-radius-sm);
+    background: var(--dw-warning-container);
+    color: var(--dw-warning);
+    font-size: 11px;
+    line-height: 1.6;
+}
+
+/* ── 目录 ────────────────────────────── */
+
+.app-shell[data-app-id="dream-weaver"] .dw-nav-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: var(--dw-gap);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-nav-title { margin: 0; font-size: 15px; font-weight: 600; }
+.app-shell[data-app-id="dream-weaver"] .dw-nav-sub { margin: 2px 0 0; font-size: 11px; color: var(--dw-text-tertiary); }
+
+.app-shell[data-app-id="dream-weaver"] .dw-nav-volume { margin-bottom: var(--dw-gap); }
+
+.app-shell[data-app-id="dream-weaver"] .dw-nav-volume-head {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-nav-volume-toggle {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    border: none;
+    background: none;
+    color: var(--dw-text-secondary);
+    font-family: inherit;
+    font-size: 12px;
+    text-align: left;
+    padding: 5px 2px;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-nav-volume-toggle svg { width: 13px; height: 13px; }
+
+.app-shell[data-app-id="dream-weaver"] .dw-nav-volume-name {
+    flex: 1 1 auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-nav-volume-count {
+    font-size: 10px;
+    color: var(--dw-text-tertiary);
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-nav-icon-btn {
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: var(--dw-radius-sm);
+    background: transparent;
+    color: var(--dw-text-tertiary);
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-nav-icon-btn:hover { background: var(--dw-hover-overlay); color: var(--dw-text-secondary); }
+.app-shell[data-app-id="dream-weaver"] .dw-nav-icon-btn.is-on { color: var(--dw-primary-light); }
+.app-shell[data-app-id="dream-weaver"] .dw-nav-icon-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.app-shell[data-app-id="dream-weaver"] .dw-nav-icon-btn svg { width: 14px; height: 14px; }
+
+.app-shell[data-app-id="dream-weaver"] .dw-nav-chapters {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0 6px;
+    border-left: 1px solid var(--dw-border-light);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-nav-chapter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 6px;
+    border-radius: var(--dw-radius-sm);
+    cursor: pointer;
+    transition: background 0.16s var(--dw-ease);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-nav-chapter:hover { background: var(--dw-hover-overlay); }
+.app-shell[data-app-id="dream-weaver"] .dw-nav-chapter.is-open { background: var(--dw-primary-hover); }
+.app-shell[data-app-id="dream-weaver"] .dw-nav-chapter.is-dragging { opacity: 0.4; }
+
+.app-shell[data-app-id="dream-weaver"] .dw-nav-chapter-index {
+    width: 20px;
+    flex-shrink: 0;
+    text-align: center;
+    font-size: 10px;
+    color: var(--dw-text-tertiary);
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-nav-chapter-main { flex: 1 1 auto; min-width: 0; }
+
+.app-shell[data-app-id="dream-weaver"] .dw-nav-chapter-title {
+    margin: 0;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-nav-chapter.is-open .dw-nav-chapter-title { color: var(--dw-primary-light); }
+
+.app-shell[data-app-id="dream-weaver"] .dw-nav-chapter-sub {
+    margin: 1px 0 0;
+    font-size: 10px;
+    color: var(--dw-text-tertiary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-nav-drop-tail { padding: 2px 0; }
+
+.app-shell[data-app-id="dream-weaver"] .dw-nav-add {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    border: 1px dashed var(--dw-border-light);
+    border-radius: var(--dw-radius-sm);
+    background: none;
+    color: var(--dw-text-tertiary);
+    font-family: inherit;
+    font-size: 11px;
+    padding: 7px 8px;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-nav-add:hover { border-color: var(--dw-border); color: var(--dw-text-secondary); }
+.app-shell[data-app-id="dream-weaver"] .dw-nav-add svg { width: 12px; height: 12px; }
+
+/* ── 上下文面板 ──────────────────────── */
+
+.app-shell[data-app-id="dream-weaver"] .dw-context-userturn {
+    margin: 8px 0 0;
+    padding: 10px;
+    border-radius: var(--dw-radius-sm);
+    background: var(--dw-surface-tint);
+    border: 1px solid var(--dw-border-light);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--dw-text-secondary);
+}
+
+/* ── 时间线 ──────────────────────────── */
+
+.app-shell[data-app-id="dream-weaver"] .dw-timeline {
+    list-style: none;
+    margin: var(--dw-gap) 0 0;
+    padding: 0 0 0 4px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-timeline-item {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 0 0 16px 12px;
+    border-left: 1px solid var(--dw-border-light);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-timeline-item:last-child { border-left-color: transparent; padding-bottom: 4px; }
+.app-shell[data-app-id="dream-weaver"] .dw-timeline-item.is-muted { opacity: 0.45; }
+
+.app-shell[data-app-id="dream-weaver"] .dw-timeline-dot {
+    position: absolute;
+    left: -4px;
+    top: 4px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--dw-primary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-timeline-body { flex: 1 1 auto; min-width: 0; }
+
+.app-shell[data-app-id="dream-weaver"] .dw-timeline-time {
+    margin: 0;
+    font-size: 10px;
+    color: var(--dw-accent);
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-timeline-title { margin: 2px 0 0; font-size: 12px; }
+
+.app-shell[data-app-id="dream-weaver"] .dw-timeline-desc {
+    margin: 3px 0 0;
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--dw-text-secondary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-timeline-bind {
+    margin: 3px 0 0;
+    font-size: 10px;
+    color: var(--dw-text-tertiary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-timeline-actions { display: flex; flex-shrink: 0; gap: 1px; }
+
+.app-shell[data-app-id="dream-weaver"] .dw-age-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-age-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 6px 9px;
+    border-radius: var(--dw-radius-sm);
+    background: var(--dw-surface-tint);
+    font-size: 11px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-age-name { color: var(--dw-text-secondary); }
+.app-shell[data-app-id="dream-weaver"] .dw-age-value { color: var(--dw-accent); font-variant-numeric: tabular-nums; }

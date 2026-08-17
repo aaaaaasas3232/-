@@ -5,8 +5,10 @@
  *   - methods 接收 payload,内部用 this.app.state / this.toolkit / sdk 协同。
  */
 
-import { _invalidateGalleryTree, _loadPromptTree, _invalidatePromptTree } from './resources-section.js';
+import { _invalidateGalleryTree, _loadPromptTree } from './resources-section.js';
 import { getApiSdk, waitApiSdkReady } from '@/js/apps/setting/api-manager/api-manager-section.js';
+import { getWorldModeSpec, resolveWorldMode } from '@/src/core/world-profile.js';
+import { getPersonaGroups, parseFieldValue } from '../world/sdk/profile-schema.js';
 
 async function ensureApiSdk() {
     if (typeof window === 'undefined') return null;
@@ -78,23 +80,62 @@ function getActiveId(sdk, entityType) {
 function collectFieldsFromDom(entityType) {
     const prefix = `${entityType}|`;
     const fields = document.querySelectorAll(`[data-persona-field^="${entityType}|"]`);
+    const schemaByPath = new Map();
+    for (const group of getPersonaGroups(entityType)) {
+        for (const field of group.fields || []) {
+            const path = group.key === 'base' ? field.key : `${group.key}|${field.key}`;
+            schemaByPath.set(path, field);
+        }
+    }
     const patch = {};
     fields.forEach(el => {
         const attr = el.getAttribute('data-persona-field');
         if (!attr || !attr.startsWith(prefix)) return;
         const parts = attr.slice(prefix.length).split('|');
         const raw = (el.value ?? '').toString();
+        const field = schemaByPath.get(parts.join('|'));
+        const value = field ? parseFieldValue(field, raw) : raw;
         // 模块字段（如 preferences|hobbies）需要合并到父对象
         if (parts.length >= 2) {
             // parts[0] = groupKey (如 preferences), parts[1] = fieldKey (如 hobbies)
             const [groupKey, fieldKey] = parts;
             patch[groupKey] = patch[groupKey] || {};
-            patch[groupKey][fieldKey] = raw;
+            patch[groupKey][fieldKey] = value;
         } else {
             // base / meta 顶层字段直接写到 patch[fieldKey]
-            patch[parts[0]] = raw;
+            patch[parts[0]] = value;
         }
     });
+    return patch;
+}
+
+function applyWorldModeDefaults(sdk, entityType, active, patch) {
+    if (entityType !== 'user' || !active) return patch;
+    const worldId = String(patch.boundWorldId ?? active.boundWorldId ?? '').trim();
+    const world = worldId ? sdk.worlds?.get?.(worldId) : null;
+    const mode = resolveWorldMode(world);
+    const spec = getWorldModeSpec(mode);
+    const marker = active.worldModeDefaults || null;
+    const previousOccupation = String(active.currentOccupation || '').trim();
+    const submittedOccupation = String(patch.currentOccupation ?? previousOccupation).trim();
+    const wasManaged = Boolean(
+        marker?.occupation
+        && marker.occupation === previousOccupation
+        && submittedOccupation === previousOccupation,
+    );
+    const switchedWorld = marker?.worldId !== worldId;
+    let managedOccupation = false;
+
+    if (spec.defaultOccupation && (!submittedOccupation || wasManaged || switchedWorld)) {
+        patch.currentOccupation = spec.defaultOccupation;
+        managedOccupation = true;
+    } else if (!spec.defaultOccupation && wasManaged) {
+        patch.currentOccupation = '';
+    }
+
+    patch.worldModeDefaults = managedOccupation
+        ? { worldId, mode, occupation: spec.defaultOccupation }
+        : null;
     return patch;
 }
 
@@ -231,11 +272,9 @@ export function buildPersonaMethods() {
 
         async personaSave(payload = {}) {
             const sdk = window.settingsSdk;
-            console.log('[personaSave] called', { payload, hasSdk: !!sdk });
             if (!sdk) { console.warn('[personaSave] no sdk'); return null; }
             const entityType = payload.entityType || 'ai';
             const id = getActiveId(sdk, entityType);
-            console.log('[personaSave] resolved', { entityType, activeId: id });
             if (!id) {
                 console.warn('[personaSave] no active id for entityType=', entityType);
                 this.toolkit?.island?.notify?.('error', '保存失败：未选中人设');
@@ -243,34 +282,10 @@ export function buildPersonaMethods() {
             }
             const api = sdk[apiKey(entityType)];
             const active = api.get(id);
-            console.log('[personaSave] before', {
-                id,
-                name: active?.name,
-                updatedAt: active?.updatedAt,
-                preferences: active?.preferences,
-                memory: active?.memory,
-            });
             const patch = collectFieldsFromDom(entityType);
-            console.log('[personaSave] patch collected', JSON.parse(JSON.stringify(patch)));
-            const fieldCount = document.querySelectorAll(`[data-persona-field^="${entityType}|"]`).length;
-            console.log('[personaSave] DOM field count =', fieldCount, '(collected keys=', Object.keys(patch).length, ')');
+            applyWorldModeDefaults(sdk, entityType, active, patch);
             // 同步切换 profile level
             const next = await api.update(id, patch);
-            console.log('[personaSave] api.update returned', {
-                id: next?.id,
-                name: next?.name,
-                updatedAt: next?.updatedAt,
-                preferences: next?.preferences,
-                memory: next?.memory,
-            });
-            const after = api.get(id);
-            console.log('[personaSave] api.get after', {
-                id: after?.id,
-                name: after?.name,
-                updatedAt: after?.updatedAt,
-                preferences: after?.preferences,
-                memory: after?.memory,
-            });
             this.toolkit?.island?.notify?.('success', '已保存', next.name || id);
             refresh();
             return next;
@@ -467,8 +482,9 @@ export function buildPersonaMethods() {
                 key = apisdk.apiKeySdk.get(preferredRef.refId);
             } else {
                 const group = apisdk.apiGroupSdk.get(preferredRef.refId);
-                const firstId = group?.apiKeyIds?.find(id => apisdk.apiKeySdk.get(id));
-                key = firstId ? apisdk.apiKeySdk.get(firstId) : null;
+                key = (group?.apiKeyIds || [])
+                    .map(id => apisdk.apiKeySdk.get(id))
+                    .find(item => item && item.enabled !== false) || null;
             }
             console.log('[persona-ai] picked key =', key && { id: key.id, label: key.label, baseUrl: key.baseUrl, hasApiKey: !!key.apiKey, model: key.model });
             if (!key || !key.baseUrl || !key.apiKey || !key.model) {
@@ -553,49 +569,37 @@ export function buildPersonaMethods() {
                 variantType,
             });
 
-            const finalUrl = (key.proxyUrl ? key.proxyUrl.replace(/\/$/, '') : key.baseUrl.replace(/\/$/, '')) + '/chat/completions';
-            const sanitizeHeaderValue = (v) => {
-                try {
-                    if (!v) return v;
-                    if (/^[\x00-\x7f]*$/.test(v)) return v;
-                    return '=?UTF-8?B?' + btoa(unescape(encodeURIComponent(v))) + '?=';
-                } catch (_) {
-                    return v;
-                }
-            };
-            const headers = { 'Content-Type': 'application/json' };
-            if (key.authHeader && key.authHeader.trim()) {
-                headers[key.authHeader.trim()] = sanitizeHeaderValue(key.apiKey);
-            } else {
-                headers['Authorization'] = 'Bearer ' + sanitizeHeaderValue(key.apiKey);
-            }
-            const body = JSON.stringify({
-                model: key.model,
-                messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: userPrompt },
-                ],
-                temperature: 0.7,
-                max_tokens: 1500,
-            });
-
             this.toolkit?.island?.notify?.('info', 'AI 生成中…', preferredRef.name || preferredRef.refId);
             try {
-                const resp = await fetch(finalUrl, {
+                const apiResult = await apisdk.executeApiRequest({
+                    apiKeyId: preferredRef.refType === 'key' ? preferredRef.refId : undefined,
+                    groupId: preferredRef.refType === 'group' ? preferredRef.refId : undefined,
+                    endpoint: 'chat/completions',
                     method: 'POST',
-                    headers,
-                    body,
-                    signal: AbortSignal.timeout((key.timeout || 60) * 1000),
+                    body: {
+                        messages: [
+                            { role: 'system', content: systemPrompt },
+                            { role: 'user', content: userPrompt },
+                        ],
+                        temperature: 0.7,
+                        max_tokens: 1500,
+                    },
+                    timeout: (key.timeout || 60) * 1000,
+                    source: 'settings',
+                    note: '人设变体生成',
                 });
-                const latency = Date.now();
-                if (!resp.ok) {
-                    const txt = await resp.text().catch(() => '');
-                    console.error('[persona-ai] HTTP ERROR', resp.status, txt.slice(0, 500));
-                    this.toolkit?.island?.notify?.('warning', `AI 生成失败 HTTP ${resp.status}`);
+                if (!apiResult?.success) {
+                    console.error('[persona-ai] API ERROR', apiResult);
+                    const status = apiResult?.statusCode ? ` HTTP ${apiResult.statusCode}` : '';
+                    this.toolkit?.island?.notify?.('warning', `AI 生成失败${status}`, apiResult?.error || '');
                     return null;
                 }
-                const data = await resp.json().catch(() => null);
-                const rawText = data?.choices?.[0]?.message?.content || data?.choices?.[0]?.text || '';
+                const data = apiResult.data;
+                const rawText = data?.choices?.[0]?.message?.content
+                    || data?.choices?.[0]?.text
+                    || data?.content?.[0]?.text
+                    || data?.candidates?.[0]?.content?.parts?.[0]?.text
+                    || '';
                 console.log('[persona-ai] RAW RESPONSE =>', rawText);
                 if (!rawText) {
                     this.toolkit?.island?.notify?.('warning', 'AI 返回为空');

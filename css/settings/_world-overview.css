@@ -287,10 +287,10 @@
     transition: background 0.15s ease;
 }
 
-.settings-app .wv-panel__entry:hover { background: rgba(99, 102, 241, 0.08); }
+.settings-app .wv-panel__entry:hover { background: rgba(10, 132, 255, 0.08); }
 
 .settings-app .wv-panel__entry.is-active {
-    background: rgba(99, 102, 241, 0.16);
+    background: rgba(10, 132, 255, 0.16);
     font-weight: 600;
 }
 
@@ -316,11 +316,12 @@
     gap: 12px;
 }
 
-/* ---- 纪时设置面板 ---- */
+/* ---- 纪时设置面板：人设页同款白卡 ---- */
 .settings-app .wv-chronology-settings {
-    background: rgba(255, 255, 255, 0.85);
-    border-radius: 12px;
-    border: 1px solid rgba(99, 102, 241, 0.15);
+    background: #FFFFFF;
+    border-radius: 14px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     overflow: hidden;
     margin-bottom: 12px;
 }
@@ -335,7 +336,7 @@
 }
 
 .settings-app .wv-chronology-settings__header:hover {
-    background: rgba(99, 102, 241, 0.06);
+    background: rgba(10, 132, 255, 0.06);
 }
 
 .settings-app .wv-chronology-settings__title {
@@ -370,9 +371,9 @@
     padding: 2px 8px;
     border-radius: 10px;
     font-size: 11px;
-    background: rgba(99, 102, 241, 0.15);
-    color: #4f46e5;
-    border: 1px solid rgba(99, 102, 241, 0.3);
+    background: rgba(10, 132, 255, 0.15);
+    color: #0A84FF;
+    border: 1px solid rgba(10, 132, 255, 0.3);
 }
 
 .settings-app .wv-cycle-tag--large { background: rgba(239, 68, 68, 0.15); color: #dc2626; border-color: rgba(239, 68, 68, 0.3); }
@@ -391,7 +392,7 @@
     background: rgba(255, 255, 255, 0.5);
     padding: 8px;
     border-radius: 8px;
-    border: 1px dashed rgba(99, 102, 241, 0.3);
+    border: 1px dashed rgba(10, 132, 255, 0.3);
 }
 
 .settings-app .wv-quick-edit-row {
@@ -410,7 +411,7 @@
 }
 
 .settings-app .wv-quick-input {
-    border: 1px solid rgba(99, 102, 241, 0.2);
+    border: 1px solid rgba(10, 132, 255, 0.2);
     border-radius: 4px;
     padding: 4px 8px;
     font-size: 12px;
@@ -420,8 +421,8 @@
 
 .settings-app .wv-quick-input:focus {
     outline: none;
-    border-color: #6366f1;
-    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+    border-color: #0A84FF;
+    box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.15);
 }
 
 .settings-app .wv-chronology-settings__ratio-row {
@@ -430,7 +431,7 @@
     gap: 4px;
     font-size: 12px;
     padding: 6px 8px;
-    background: rgba(99, 102, 241, 0.06);
+    background: rgba(10, 132, 255, 0.06);
     border-radius: 6px;
 }
 
@@ -488,10 +489,11 @@
 }
 
 .settings-app .wv-chronicle__bucket {
-    background: rgba(255, 255, 255, 0.7);
-    border-radius: 12px;
+    background: #FFFFFF;
+    border-radius: 14px;
     padding: 10px 12px;
-    border: 1px solid rgba(99, 102, 241, 0.12);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .settings-app .wv-chronicle__bucket-head {
@@ -499,7 +501,7 @@
     align-items: center;
     justify-content: space-between;
     padding-bottom: 6px;
-    border-bottom: 1px dashed rgba(99, 102, 241, 0.18);
+    border-bottom: 1px dashed rgba(10, 132, 255, 0.18);
     margin-bottom: 8px;
 }
 
@@ -516,7 +518,7 @@
 
 .settings-app .wv-chronicle__event {
     padding: 8px 0;
-    border-bottom: 1px dashed rgba(99, 102, 241, 0.08);
+    border-bottom: 1px dashed rgba(10, 132, 255, 0.08);
 }
 
 .settings-app .wv-chronicle__event:last-child { border-bottom: none; }
@@ -532,7 +534,7 @@
     font-size: 12px;
     font-weight: 600;
     color: var(--settings-color-label);
-    background: rgba(99, 102, 241, 0.12);
+    background: rgba(10, 132, 255, 0.12);
     padding: 1px 6px;
     border-radius: 4px;
 }
@@ -553,7 +555,7 @@
     color: var(--settings-color-secondary);
     margin-top: 4px;
     padding-left: 6px;
-    border-left: 2px solid rgba(99, 102, 241, 0.18);
+    border-left: 2px solid rgba(10, 132, 255, 0.18);
 }
 
 .settings-app .wv-chronicle__event-actions {
@@ -563,7 +565,7 @@
     justify-content: flex-end;
 }
 
-.settings-app .wv-chronicle__event.is-editing { background: rgba(99, 102, 241, 0.06); padding: 8px; border-radius: 8px; }
+.settings-app .wv-chronicle__event.is-editing { background: rgba(10, 132, 255, 0.06); padding: 8px; border-radius: 8px; }
 
 /* ============================================
  * v0.14 维度切换 tab / 时间轴 / 时间表（周度）
@@ -610,19 +612,22 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
-/* 时间轴：左竖线 + 事件点 + 右侧详情卡片 */
+/* 时间轴：左竖线（凹陷槽拟态，用户认可保留）+ 事件点 + 右侧白卡 */
 .settings-app .wv-timeline {
     position: relative;
-    padding: 4px 0 4px 22px;
+    padding: 4px 0 4px 24px;
 }
 .settings-app .wv-timeline__rail {
     position: absolute;
-    left: 8px;
+    left: 6px;
     top: 6px;
     bottom: 6px;
-    width: 2px;
-    background: #c7c7cc;
-    border-radius: 1px;
+    width: 6px;
+    background: #eceef2;
+    border-radius: 3px;
+    box-shadow:
+        inset 0 1px 3px rgba(0, 0, 0, 0.14),
+        inset 0 -1px 2px rgba(255, 255, 255, 0.75);
 }
 .settings-app .wv-timeline__node {
     position: relative;
@@ -630,21 +635,23 @@
 }
 .settings-app .wv-timeline__dot {
     position: absolute;
-    left: -19px;
+    left: -21px;
     top: 12px;
     width: 12px;
     height: 12px;
     border-radius: 999px;
     background: #fff;
-    border: 1.5px solid #c7c7cc;
+    border: 2px solid #0A84FF;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.10);
 }
 .settings-app .wv-timeline__node.is-editing .wv-timeline__dot {
-    border-color: #8e8e93;
+    background: #0A84FF;
 }
 .settings-app .wv-timeline__card {
-    background: rgba(255, 255, 255, 0.78);
-    border-radius: 10px;
-    border: 1px solid rgba(99, 102, 241, 0.12);
+    background: #FFFFFF;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     padding: 8px 10px;
     cursor: grab;
     touch-action: none;
@@ -665,7 +672,7 @@
 .settings-app .wv-timeline__card.is-dragging {
     cursor: grabbing;
     opacity: 0.6;
-    box-shadow: 0 8px 22px rgba(99, 102, 241, 0.35);
+    box-shadow: 0 8px 22px rgba(10, 132, 255, 0.35);
     transform: scale(1.02);
 }
 .settings-app body.wv-timeline-dragging,
@@ -688,7 +695,7 @@ body.wv-timeline-dragging {
     padding: 6px 10px;
     background: var(--settings-color-fill-secondary, rgba(120,120,128,0.10));
     border-radius: 10px;
-    border: 1px solid rgba(99, 102, 241, 0.10);
+    border: 1px solid rgba(10, 132, 255, 0.10);
 }
 .settings-app .wv-schedule__pager .wv-btn[disabled] {
     opacity: 0.4;
@@ -721,9 +728,10 @@ body.wv-timeline-dragging {
     color: var(--settings-color-tertiary);
 }
 .settings-app .wv-schedule__board {
-    background: rgba(255, 255, 255, 0.78);
-    border-radius: 12px;
-    border: 1px solid rgba(99, 102, 241, 0.12);
+    background: #FFFFFF;
+    border-radius: 14px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     overflow: hidden;
 }
 .settings-app .wv-schedule__head,
@@ -733,8 +741,8 @@ body.wv-timeline-dragging {
 }
 .settings-app .wv-schedule__cell {
     padding: 8px;
-    border-right: 1px dashed rgba(99, 102, 241, 0.12);
-    border-bottom: 1px dashed rgba(99, 102, 241, 0.08);
+    border-right: 1px dashed rgba(10, 132, 255, 0.12);
+    border-bottom: 1px dashed rgba(10, 132, 255, 0.08);
     min-height: 56px;
     font-size: 12px;
     color: var(--settings-color-secondary);
@@ -742,18 +750,18 @@ body.wv-timeline-dragging {
 .settings-app .wv-schedule__cell--head {
     font-weight: 700;
     color: var(--settings-color-label);
-    background: rgba(99, 102, 241, 0.06);
+    background: rgba(10, 132, 255, 0.06);
     min-height: 0;
     text-align: center;
 }
 .settings-app .wv-schedule__cell.is-active {
-    background: rgba(99, 102, 241, 0.10);
-    border-left: 2px solid rgba(99, 102, 241, 0.85);
-    border-right: 1px dashed rgba(99, 102, 241, 0.12);
+    background: rgba(10, 132, 255, 0.10);
+    border-left: 2px solid rgba(10, 132, 255, 0.85);
+    border-right: 1px dashed rgba(10, 132, 255, 0.12);
 }
 .settings-app .wv-schedule__cell--head.is-active {
-    background: rgba(99, 102, 241, 0.18);
-    color: var(--wv-blue, #5a67ff);
+    background: rgba(10, 132, 255, 0.18);
+    color: var(--wv-blue, #0A84FF);
 }
 .settings-app .wv-schedule__slot-empty {
     color: var(--settings-color-tertiary);
@@ -776,8 +784,8 @@ body.wv-timeline-dragging {
     display: flex;
     flex-direction: column;
     min-height: 96px;
-    border-right: 1px solid rgba(99, 102, 241, 0.10);
-    border-bottom: 1px solid rgba(99, 102, 241, 0.08);
+    border-right: 1px solid rgba(10, 132, 255, 0.10);
+    border-bottom: 1px solid rgba(10, 132, 255, 0.08);
     background: #FFFFFF;
 }
 
@@ -787,8 +795,8 @@ body.wv-timeline-dragging {
 
 .settings-app .wv-schedule__day-header {
     padding: 6px 8px;
-    background: rgba(99, 102, 241, 0.06);
-    border-bottom: 1px solid rgba(99, 102, 241, 0.10);
+    background: rgba(10, 132, 255, 0.06);
+    border-bottom: 1px solid rgba(10, 132, 255, 0.10);
     display: flex;
     flex-direction: column;
     gap: 2px;

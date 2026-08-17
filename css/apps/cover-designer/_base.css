@@ -1,0 +1,2131 @@
+/* ============================================
+ * cover-designer / _base.css
+ * 完全 1:1 还原封面7.html 的样式 + 响应式 + 动画
+ *
+ * 关键约束(迁移指南 §18):
+ *  - 顶层守卫:.app-shell[data-app-id="cover-designer"]
+ *  - 原始 class 名(不被替换),以保证 1:1 还原
+ *  - 全局 * { margin:0; padding:0; ... } 不写到顶层,只在本 app 内
+ * ============================================ */
+
+.app-shell[data-app-id="cover-designer"] .cd-root,
+.app-shell[data-app-id="cover-designer"] .cd-main-container,
+.app-shell[data-app-id="cover-designer"] .cd-card-wrapper,
+.app-shell[data-app-id="cover-designer"] .cd-card,
+.app-shell[data-app-id="cover-designer"] .cd-card-content,
+.app-shell[data-app-id="cover-designer"] .cd-time-stamp,
+.app-shell[data-app-id="cover-designer"] .cd-text-element,
+.app-shell[data-app-id="cover-designer"] .cd-diary-text,
+.app-shell[data-app-id="cover-designer"] .cd-blog-text,
+.app-shell[data-app-id="cover-designer"] .cd-blog-header,
+.app-shell[data-app-id="cover-designer"] .cd-blog-avatar,
+.app-shell[data-app-id="cover-designer"] .cd-blog-info,
+.app-shell[data-app-id="cover-designer"] .cd-blog-author,
+.app-shell[data-app-id="cover-designer"] .cd-blog-location,
+.app-shell[data-app-id="cover-designer"] .cd-blog-img-preview,
+.app-shell[data-app-id="cover-designer"] .cd-blog-actions,
+.app-shell[data-app-id="cover-designer"] .cd-blog-action,
+.app-shell[data-app-id="cover-designer"] .cd-image-card,
+.app-shell[data-app-id="cover-designer"] .cd-image-overlay,
+.app-shell[data-app-id="cover-designer"] .cd-image-caption,
+.app-shell[data-app-id="cover-designer"] .cd-chat-bubble,
+.app-shell[data-app-id="cover-designer"] .cd-chat-left,
+.app-shell[data-app-id="cover-designer"] .cd-chat-right,
+.app-shell[data-app-id="cover-designer"] .cd-clear,
+.app-shell[data-app-id="cover-designer"] .cd-controls,
+.app-shell[data-app-id="cover-designer"] .cd-control-group,
+.app-shell[data-app-id="cover-designer"] .cd-control-label,
+.app-shell[data-app-id="cover-designer"] .cd-btn-group,
+.app-shell[data-app-id="cover-designer"] .cd-btn,
+.app-shell[data-app-id="cover-designer"] .cd-action-btn,
+.app-shell[data-app-id="cover-designer"] .cd-save-btn,
+.app-shell[data-app-id="cover-designer"] .cd-change-bg-btn,
+.app-shell[data-app-id="cover-designer"] .cd-color-picker,
+.app-shell[data-app-id="cover-designer"] .cd-color-dot,
+.app-shell[data-app-id="cover-designer"] .cd-color-input-group,
+.app-shell[data-app-id="cover-designer"] .cd-color-input,
+.app-shell[data-app-id="cover-designer"] .cd-color-preview,
+.app-shell[data-app-id="cover-designer"] .cd-slider-container,
+.app-shell[data-app-id="cover-designer"] .cd-value-display,
+.app-shell[data-app-id="cover-designer"] .cd-text-styles,
+.app-shell[data-app-id="cover-designer"] .cd-style-btn,
+.app-shell[data-app-id="cover-designer"] .cd-text-effects,
+.app-shell[data-app-id="cover-designer"] .cd-effect-btn,
+.app-shell[data-app-id="cover-designer"] .cd-blur-effect-1,
+.app-shell[data-app-id="cover-designer"] .cd-blur-effect-2,
+.app-shell[data-app-id="cover-designer"] .cd-blur-effect-3,
+.app-shell[data-app-id="cover-designer"] .cd-shadow-effect,
+.app-shell[data-app-id="cover-designer"] .cd-glow-effect,
+.app-shell[data-app-id="cover-designer"] .cd-toggle-switch,
+.app-shell[data-app-id="cover-designer"] .cd-toggle-label,
+.app-shell[data-app-id="cover-designer"] .cd-switch,
+.app-shell[data-app-id="cover-designer"] .cd-slider,
+.app-shell[data-app-id="cover-designer"] .cd-floating-controls,
+.app-shell[data-app-id="cover-designer"] .cd-floating-control-btn,
+.app-shell[data-app-id="cover-designer"] .cd-edit-mode-toggle,
+.app-shell[data-app-id="cover-designer"] .cd-floating-add-btn,
+.app-shell[data-app-id="cover-designer"] .cd-bg-preview,
+.app-shell[data-app-id="cover-designer"] .cd-bg-option,
+.app-shell[data-app-id="cover-designer"] .cd-spacing-control,
+.app-shell[data-app-id="cover-designer"] .cd-transparent-bg,
+.app-shell[data-app-id="cover-designer"] .cd-control-header,
+.app-shell[data-app-id="cover-designer"] .cd-control-content,
+.app-shell[data-app-id="cover-designer"] .cd-toggle-icon,
+.app-shell[data-app-id="cover-designer"] .cd-bubble-style-preview,
+.app-shell[data-app-id="cover-designer"] .cd-icon-selector,
+.app-shell[data-app-id="cover-designer"] .cd-icon-option,
+.app-shell[data-app-id="cover-designer"] .cd-card-style-control,
+.app-shell[data-app-id="cover-designer"] .cd-card-preview,
+.app-shell[data-app-id="cover-designer"] .cd-avatar-options,
+.app-shell[data-app-id="cover-designer"] .cd-avatar-option,
+.app-shell[data-app-id="cover-designer"] .cd-avatar-option-label,
+.app-shell[data-app-id="cover-designer"] .cd-avatar-preview,
+.app-shell[data-app-id="cover-designer"] .cd-avatar-color-picker,
+.app-shell[data-app-id="cover-designer"] .cd-avatar-color,
+.app-shell[data-app-id="cover-designer"] .cd-text-selection-controls,
+.app-shell[data-app-id="cover-designer"] .cd-selection-styles,
+.app-shell[data-app-id="cover-designer"] .cd-selection-style-btn,
+.app-shell[data-app-id="cover-designer"] .cd-selection-bg-colors,
+.app-shell[data-app-id="cover-designer"] .cd-selection-color-dot,
+.app-shell[data-app-id="cover-designer"] .cd-font-selector,
+.app-shell[data-app-id="cover-designer"] .cd-font-option,
+.app-shell[data-app-id="cover-designer"] .cd-font-preview,
+.app-shell[data-app-id="cover-designer"] .cd-font-name,
+.app-shell[data-app-id="cover-designer"] .cd-custom-font-input,
+.app-shell[data-app-id="cover-designer"] .cd-paragraph-spacing-control,
+.app-shell[data-app-id="cover-designer"] .cd-fade-in,
+.app-shell[data-app-id="cover-designer"] .cd-context-menu,
+.app-shell[data-app-id="cover-designer"] .cd-context-menu-item,
+.app-shell[data-app-id="cover-designer"] .cd-image-description-input,
+.app-shell[data-app-id="cover-designer"] .cd-text-align-controls,
+.app-shell[data-app-id="cover-designer"] .cd-text-align-btn,
+.app-shell[data-app-id="cover-designer"] .cd-position-control,
+.app-shell[data-app-id="cover-designer"] .cd-apply-all-btn {
+    /* 占位,实际样式通过 @scope 写在下文 */
+}
+
+/* ============================================
+ * 下面是 1:1 还原的原始 CSS(全部加上 .cd- 前缀避免冲突)
+ * ============================================ */
+
+/* 全局重置(只在 app 内部) */
+.app-shell[data-app-id="cover-designer"] .cd-root,
+.app-shell[data-app-id="cover-designer"] .cd-root * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    user-select: none;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-root {
+    font-family: "Huiwen-mincho", sans-serif;
+    font-weight: normal;
+    /* 2026-08-12:去掉 .cd-root 的 #f7f6f4 底色,
+     * 保留 app-shell / app-background-layer 的原背景即可,
+     * 避免在 app 内出现「一层米色色块」的视觉断层。*/
+    background: transparent;
+    min-height: 100%;
+    width: 100%;
+    padding: 15px;
+    color: #454545;
+    box-sizing: border-box;
+}
+
+/* ★ 2026-08-12 修复：封面设计器需要 .cd-root 左右占满屏宽，
+ * 但 .app-content(padding: 0 14px)和 .app-screen-panel(padding: 16px 14px 18px)
+ * 全局各缩进 14px,合计 28px,把根 div 向内挤导致左右出现空隙。
+ * 此处仅针对 cover-designer app 取消这两层的左右 padding,
+ * 不影响其他 app(其他 app 仍保持默认 14px 缩进)。*/
+.app-shell[data-app-id="cover-designer"] .app-content {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.app-shell[data-app-id="cover-designer"] .app-screen-panel {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+/* ★ 强制所有按钮 / 输入 / 选择等控件继承 Huiwen-mincho 字体 */
+.app-shell[data-app-id="cover-designer"] .cd-root,
+.app-shell[data-app-id="cover-designer"] .cd-root * {
+    font-family: "Huiwen-mincho", "Songti SC", "STSong", "宋体", serif;
+}
+
+/* 输入框和按钮需要特殊设置(浏览器默认会覆盖) */
+.app-shell[data-app-id="cover-designer"] .cd-root button,
+.app-shell[data-app-id="cover-designer"] .cd-root input,
+.app-shell[data-app-id="cover-designer"] .cd-root textarea,
+.app-shell[data-app-id="cover-designer"] .cd-root select,
+.app-shell[data-app-id="cover-designer"] .cd-root span,
+.app-shell[data-app-id="cover-designer"] .cd-root div {
+    font-family: "Huiwen-mincho", "Songti SC", "STSong", "宋体", serif;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-main-container {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-card-wrapper {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto 20px;
+    position: relative;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-card {
+    width: 100%;
+    max-width: 100%;
+    aspect-ratio: 3/4;
+    background: url('https://s1.imagehub.cc/images/2025/05/31/97811b2386f57f4b3dd84d7c16fe67de.jpeg') center/cover;
+    border-radius: 18px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.06);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-card-content {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    padding: 25px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-card-content::-webkit-scrollbar {
+    width: 4px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-card-content::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-card-content::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.3);
+    border-radius: 2px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-blur-control {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: rgba(255,255,255,0.9);
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 13px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    margin-top: 8px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-blur-control input {
+    flex: 1;
+    max-width: 200px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-time-stamp {
+    font-size: 13px;
+    color: #6b6b6b;
+    margin: 0 auto 20px;
+    text-align: center;
+    background: rgba(255,255,255,0.35);
+    backdrop-filter: blur(8px);
+    padding: 8px 20px;
+    border-radius: 22px;
+    display: inline-block;
+    width: 100%;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    letter-spacing: 0.5px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-time-stamp:hover {
+    background: rgba(255,255,255,0.5);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-text-element {
+    margin: 12px 0;
+    cursor: move;
+    transition: all 0.3s ease;
+    position: relative;
+    line-height: 1.8;
+    word-wrap: break-word;
+    border-radius: 12px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-text-element.cd-selected {
+    box-shadow: 0 0 0 2px rgba(149,165,166,0.5);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-text-element.cd-edit-mode-off {
+    user-select: text;
+    cursor: text;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-diary-text {
+    font-size: 15px;
+    color: #5a5a5a;
+    padding: 12px 16px;
+    background: rgba(255,255,255,0.2);
+    backdrop-filter: blur(8px);
+    border-radius: 16px;
+    letter-spacing: 0.3px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-blog-text {
+    font-size: 17px;
+    color: #454545;
+    font-weight: 500;
+    letter-spacing: 1.2px;
+    padding: 16px;
+    background: rgba(255,255,255,0.12);
+    backdrop-filter: blur(6px);
+    border-radius: 16px;
+    line-height: 1.7;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-blog-img-preview {
+    width: 100%;
+    height: 140px;
+    background: rgba(230,230,230,0.15);
+    border-radius: 12px;
+    margin: 10px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(200,200,200,0.3);
+    overflow: hidden;
+    position: relative;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-blog-img-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-blog-img-preview svg {
+    color: #bbb;
+    width: 32px;
+    height: 32px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-blog-img-preview .cd-img-description {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(100,100,100,0.3);
+    color: #fff;
+    padding: 5px 10px;
+    font-size: 12px;
+    text-align: center;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-image-card {
+    width: 100%;
+    margin: 15px 0;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    background: rgba(230,230,230,0.15);
+    backdrop-filter: blur(6px);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-image-card img {
+    width: 100%;
+    display: block;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-image-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(150,150,150,0.2);
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-image-caption {
+    padding: 10px 15px;
+    font-size: 13px;
+    color: #666;
+    background: rgba(255,255,255,0.3);
+    backdrop-filter: blur(5px);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-blog-actions {
+    display: flex;
+    margin-top: 12px;
+    gap: 36px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-blog-action {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #7a7a7a;
+    font-size: 13px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-blog-action svg {
+    width: 16px;
+    height: 16px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-chat-bubble {
+    max-width: 75%;
+    padding: 10px 16px;
+    border-radius: 18px;
+    margin: 10px 0;
+    position: relative;
+    clear: both;
+    font-size: 14px;
+    line-height: 1.6;
+    cursor: move;
+    transition: transform 0.3s ease;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-chat-left {
+    float: left;
+    background: rgba(223,230,233,0.3);
+    backdrop-filter: blur(8px);
+    color: #4a4a4a;
+    border-bottom-left-radius: 6px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-chat-right {
+    float: right;
+    background: rgba(189,195,199,0.25);
+    backdrop-filter: blur(8px);
+    color: #3a3a3a;
+    border-bottom-right-radius: 6px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-clear {
+    clear: both;
+}
+
+/* ============================================================
+   顶部悬浮快捷工具栏(挂在 framework topbar 下方,
+   相对 .cd-root 绝对定位,不占文档流高度)
+   ============================================================ */
+.app-shell[data-app-id="cover-designer"] .cd-root {
+    /* 让 .cd-quick-toolbar 能相对 .cd-root 定位 */
+    position: relative;
+}
+
+/* 工具栏按钮现在复用 cd-floating-control-btn (36×36, 中性灰背景, 纯图标+title) */
+.app-shell[data-app-id="cover-designer"] .cd-quick-toolbar {
+    position: absolute;
+    top: -15px;
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 4px;
+    padding: 8px 10px;
+    margin: 0;
+    background: transparent;
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    z-index: 20;
+    pointer-events: auto;
+    /* 11 buttons × 36px + 10 gaps × 4px + 20px padding = 446px < 393 phone ≈ 能滚动，但给足空间 */
+    justify-content: flex-start;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-quick-toolbar::-webkit-scrollbar {
+    height: 3px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-quick-toolbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-quick-toolbar::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 2px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-quick-toolbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.25);
+}
+
+/* 隐藏滚动条 */
+.app-shell[data-app-id="cover-designer"] .cd-quick-toolbar {
+    scrollbar-width: none; /* Firefox */
+}
+.app-shell[data-app-id="cover-designer"] .cd-quick-toolbar::-webkit-scrollbar {
+    display: none; /* Chrome Safari */
+}
+
+/* main-container 顶部留出 toolbar 高度 + 一点间距,避免内容被遮 */
+.app-shell[data-app-id="cover-designer"] .cd-main-container {
+    margin-top: 56px;
+}
+
+/* toolbar 按钮复用 cd-floating-control-btn，active 状态用粉色调 */
+.app-shell[data-app-id="cover-designer"] .cd-quick-toolbar .cd-floating-control-btn {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-quick-toolbar .cd-floating-control-btn--active,
+.app-shell[data-app-id="cover-designer"] .cd-quick-toolbar .cd-floating-control-btn[data-active="true"] {
+    background: #b86f6f;
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgba(184, 111, 111, 0.28);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-quick-toolbar .cd-floating-control-btn--active:hover,
+.app-shell[data-app-id="cover-designer"] .cd-quick-toolbar .cd-floating-control-btn[data-active="true"]:hover {
+    background: #a45d5d;
+    color: #ffffff;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-controls {
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(10px);
+    border-radius: 18px;
+    padding: 18px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* ★ v0.89:面板默认完全隐藏 — 顶部 toolbar 点哪个按钮才渲染对应模块的工具 */
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel {
+    display: none;
+    margin-top: 10px;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(10px);
+    border-radius: 18px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+    margin-bottom: 20px;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-y: auto;
+    max-height: 600px;
+    /* 隐藏滚动条 */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel::-webkit-scrollbar {
+    display: none; /* Chrome/Safari/Opera */
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel.cd-panel-open {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* 模块面板内:group 内容正常显示(不再依赖 cd-expanded class) */
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-control-group {
+    display: block;
+    margin-bottom: 16px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-control-group {
+    margin-bottom: 16px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-control-label {
+    font-size: 13px;
+    color: #7a7a7a;
+    margin-bottom: 10px;
+    display: block;
+    letter-spacing: 0.5px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-btn-group {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-btn-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-control-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-control-row > span {
+    font-size: 12px;
+    color: #666;
+    min-width: 50px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-control-row input[type="range"] {
+    flex: 1;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-btn {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 14px;
+    background: #f1efeb;
+    color: #5a5a5a;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: "Huiwen-mincho", sans-serif;
+    letter-spacing: 0.3px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-btn:hover {
+    background: #e6e3dd;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-btn:active {
+    transform: translateY(0);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-action-btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    margin-top: 15px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-save-btn {
+    background: #cbc5bb;
+    color: #ffffff;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-save-btn:hover {
+    background: #b9b2a6;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-change-bg-btn {
+    background: #e9e6e0;
+    color: #6c6861;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-change-bg-btn:hover {
+    background: #dbd7cf;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-color-picker {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-color-dot {
+    aspect-ratio: 1;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-color-dot:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-color-dot.cd-selected {
+    border-color: #9b958b;
+    transform: scale(1.05);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-color-input-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-color-input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #e8e5e1;
+    border-radius: 10px;
+    font-size: 13px;
+    background: #f9f8f6;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-color-preview {
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    border: 1px solid #e8e5e1;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-slider-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-slider-container input[type="range"] {
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    background: #e8e5e1;
+    outline: none;
+    -webkit-appearance: none;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-slider-container input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #b5aea5;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-slider-container input[type="range"]::-webkit-slider-thumb:hover {
+    background: #9b958b;
+    transform: scale(1.1);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-value-display {
+    min-width: 45px;
+    text-align: center;
+    font-size: 13px;
+    color: #6a6a6a;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-text-styles {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-style-btn {
+    padding: 10px 5px;
+    border-radius: 12px;
+    background: #f1efeb;
+    color: #6a6a6a;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-style-btn:hover {
+    background: #e6e3dd;
+    transform: translateY(-1px);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-style-btn.cd-active {
+    background: #d8d3cb;
+    color: #4a4a4a;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-text-effects {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-effect-btn {
+    padding: 10px 5px;
+    border-radius: 12px;
+    background: #f1efeb;
+    color: #6a6a6a;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-effect-btn:hover {
+    background: #e6e3dd;
+    transform: translateY(-1px);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-effect-btn.cd-active {
+    background: #d8d3cb;
+    color: #4a4a4a;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-blur-effect-1 { filter: blur(0.5px); }
+.app-shell[data-app-id="cover-designer"] .cd-blur-effect-2 { filter: blur(1px); }
+.app-shell[data-app-id="cover-designer"] .cd-blur-effect-3 { filter: blur(2px); }
+
+.app-shell[data-app-id="cover-designer"] .cd-shadow-effect {
+    text-shadow: 2px 2px 5px rgba(0,0,0,0.12);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-glow-effect {
+    text-shadow: 0 0 6px rgba(255,255,255,0.7);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-toggle-switch {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-toggle-label {
+    font-size: 13px;
+    color: #7a7a7a;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-switch {
+    position: relative;
+    width: 40px;
+    height: 20px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-switch .cd-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #e8e5e1;
+    transition: 0.3s;
+    border-radius: 20px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-switch .cd-slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 3px;
+    bottom: 2px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-switch input:checked + .cd-slider {
+    background-color: #b5aea5;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-switch input:checked + .cd-slider:before {
+    transform: translateX(18px);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-floating-controls {
+    position: absolute;
+    top: -50px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 14px;
+    padding: 6px 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+    z-index: 100;
+    opacity: 0;
+    transition: all 0.3s ease;
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-floating-controls.cd-visible {
+    opacity: 1;
+    top: -40px;
+    pointer-events: auto;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-floating-control-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: none;
+    background: #f1efeb;
+    color: #6a6a6a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-floating-control-btn:hover {
+    background: #e6e3dd;
+    transform: translateY(-1px);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-floating-control-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-edit-mode-toggle {
+    width: 100%;
+    padding: 12px;
+    margin-top: 15px;
+    border: none;
+    border-radius: 14px;
+    background: #e9e6e0;
+    color: #6c6861;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.25s ease;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-edit-mode-toggle:hover {
+    background: #dbd7cf;
+    transform: translateY(-1px);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-edit-mode-toggle svg {
+    width: 16px;
+    height: 16px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-blog-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-blog-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(200,200,200,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9b958b;
+    font-size: 16px;
+    font-weight: bold;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-blog-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-blog-info {
+    flex: 1;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-blog-author {
+    font-size: 14px;
+    font-weight: 500;
+    color: #454545;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-blog-location {
+    font-size: 12px;
+    color: #7a7a7a;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-blog-location svg {
+    width: 12px;
+    height: 12px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-floating-add-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 56px;
+    height: 56px;
+    background: #b5aea5;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+    transition: all 0.3s ease;
+    z-index: 100;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-floating-add-btn:hover {
+    background: #9b958b;
+    transform: scale(1.05);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-bg-preview {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 5px 0;
+    margin-bottom: 10px;
+    scrollbar-width: thin;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-bg-preview::-webkit-scrollbar {
+    height: 4px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-bg-preview::-webkit-scrollbar-thumb {
+    background: #cbc5bb;
+    border-radius: 2px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-bg-option {
+    width: 60px;
+    height: 80px;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-bg-option:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-bg-option.cd-selected {
+    border: 2px solid #b5aea5;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-bg-option img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* 背景面板专用样式 */
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-bg-preview {
+    display: flex !important;
+    gap: 10px !important;
+    overflow-x: auto !important;
+    padding: 5px 0 !important;
+    margin-bottom: 10px !important;
+    scrollbar-width: thin !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-bg-options {
+    display: flex !important;
+    gap: 10px !important;
+    overflow-x: auto !important;
+    padding: 5px 0 !important;
+    scrollbar-width: thin !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-bg-option {
+    width: 60px !important;
+    height: 80px !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
+    cursor: pointer !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08) !important;
+    transition: all 0.2s ease !important;
+    flex-shrink: 0 !important;
+    border: 2px solid transparent !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-bg-option:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12) !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-bg-option.cd-selected {
+    border: 2px solid #b5aea5 !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-bg-option img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-change-bg-btn {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    width: 100% !important;
+    padding: 10px 16px !important;
+    border: none !important;
+    border-radius: 14px !important;
+    background: #f1efeb !important;
+    color: #5a5a5a !important;
+    font-size: 13px !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-change-bg-btn:hover {
+    background: #dbd7cf !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06) !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-color-picker {
+    display: grid !important;
+    grid-template-columns: repeat(5, 1fr) !important;
+    gap: 10px !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-color-dot {
+    aspect-ratio: 1 !important;
+    border-radius: 10px !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    border: 2px solid transparent !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06) !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-color-dot:hover {
+    transform: scale(1.1) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-color-dot.cd-selected {
+    border-color: #9b958b !important;
+    transform: scale(1.05) !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-color-input-group {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    margin-top: 12px !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-color-input-group .cd-color-input {
+    flex: 1 !important;
+    padding: 8px 12px !important;
+    border: 1px solid #e8e5e1 !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+    background: white !important;
+    color: #454545 !important;
+    outline: none !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-color-preview {
+    width: 28px !important;
+    height: 28px !important;
+    border-radius: 6px !important;
+    border: 1px solid #e8e5e1 !important;
+    flex-shrink: 0 !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-slider-container {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    margin-top: 10px !important;
+    margin-bottom: 0 !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-slider-container input[type="range"] {
+    flex: 1 !important;
+    height: 6px !important;
+    border-radius: 3px !important;
+    background: #e8e5e1 !important;
+    outline: none !important;
+    -webkit-appearance: none !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-slider-container input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none !important;
+    width: 18px !important;
+    height: 18px !important;
+    border-radius: 50% !important;
+    background: #b5aea5 !important;
+    cursor: pointer !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1) !important;
+    transition: all 0.2s ease !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-slider-container .cd-value-display {
+    min-width: 45px !important;
+    text-align: center !important;
+    font-size: 13px !important;
+    color: #6a6a6a !important;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-spacing-control {
+    margin-top: 15px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-transparent-bg {
+    background-image: linear-gradient(45deg, #f0f0f0 25%, transparent 25%),
+                       linear-gradient(-45deg, #f0f0f0 25%, transparent 25%),
+                       linear-gradient(45deg, transparent 75%, #f0f0f0 75%),
+                       linear-gradient(-45deg, transparent 75%, #f0f0f0 75%);
+    background-size: 10px 10px;
+    background-position: 0 0, 0 5px, 5px -5px, -5px 0px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-control-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    padding: 12px 0;
+    border-bottom: 1px solid #edebe7;
+    margin-bottom: 12px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-control-header:hover {
+    opacity: 0.9;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-control-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-control-content.cd-expanded {
+    max-height: 500px;
+    margin-bottom: 14px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-toggle-icon {
+    width: 20px;
+    height: 20px;
+    transition: transform 0.3s ease;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-toggle-icon.cd-rotated {
+    transform: rotate(180deg);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-bubble-style-preview {
+    height: 60px;
+    margin: 10px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
+    padding: 12px;
+    font-size: 14px;
+    box-shadow: none;
+    transition: all 0.3s ease;
+    background: rgba(223,230,233,0.3);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-icon-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 10px 0;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-icon-option {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid #e8e5e1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-icon-option:hover {
+    background: #f1efeb;
+    transform: translateY(-1px);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-icon-option.cd-selected {
+    border-color: #b5aea5;
+    background: #e6e3dd;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-icon-option svg {
+    width: 18px;
+    height: 18px;
+    color: #7a7a7a;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-card-style-control {
+    margin-top: 15px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-card-preview {
+    height: 80px;
+    border-radius: 16px;
+    margin: 10px 0;
+    background: rgba(255,255,255,0.2);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: #6a6a6a;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-avatar-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-avatar-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-avatar-option-label {
+    flex: 1;
+    font-size: 13px;
+    color: #7a7a7a;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-avatar-preview {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 500;
+    color: #454545;
+    background: rgba(200,200,200,0.3);
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-avatar-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-avatar-color-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-avatar-color {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-avatar-color.cd-selected {
+    border-color: #9b958b;
+    transform: scale(1.1);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-text-selection-controls {
+    margin-top: 15px;
+    padding: 15px;
+    background: #f9f8f6;
+    border-radius: 14px;
+    border: 1px solid #e8e5e1;
+    display: none;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-text-selection-controls.cd-visible {
+    display: block;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-selection-styles {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-selection-style-btn {
+    padding: 8px 5px;
+    border-radius: 10px;
+    background: #f1efeb;
+    color: #6a6a6a;
+    font-size: 12px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-selection-style-btn:hover {
+    background: #e6e3dd;
+    transform: translateY(-1px);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-selection-bg-colors {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-selection-color-dot {
+    aspect-ratio: 1;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-selection-color-dot:hover {
+    transform: scale(1.1);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-font-selector {
+    margin-top: 15px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-font-option {
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 10px;
+    background: #f1efeb;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-font-option:hover {
+    background: #e6e3dd;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-font-option.cd-selected {
+    background: #d8d3cb;
+    border: 1px solid #b5aea5;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-font-preview {
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-font-name {
+    font-size: 12px;
+    color: #7a7a7a;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-custom-font-input {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 10px;
+    border: 1px solid #e8e5e1;
+    font-size: 13px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-paragraph-spacing-control {
+    margin-top: 15px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-fade-in {
+    animation: cd-fadeIn 0.3s ease forwards;
+}
+
+@keyframes cd-fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-context-menu {
+    position: fixed;
+    background: white;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    border-radius: 12px;
+    padding: 8px 0;
+    z-index: 1000;
+    min-width: 150px;
+    display: none;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-context-menu-item {
+    padding: 10px 15px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-context-menu-item:hover {
+    background: #f5f5f5;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-image-description-input {
+    width: 100%;
+    padding: 8px;
+    margin-top: 5px;
+    border-radius: 8px;
+    border: 1px solid #e8e5e1;
+    font-size: 13px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-text-align-controls {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-text-align-btn {
+    flex: 1;
+    padding: 8px;
+    border-radius: 8px;
+    background: #f1efeb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-text-align-btn:hover {
+    background: #e6e3dd;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-text-align-btn.cd-active {
+    background: #d8d3cb;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-text-align-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-position-control {
+    margin-top: 15px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-apply-all-btn {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    background: #e9e6e0;
+    color: #6c6861;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 13px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-apply-all-btn:hover {
+    background: #dbd7cf;
+}
+
+/* 响应式适配 */
+@media (max-width: 480px) {
+    .app-shell[data-app-id="cover-designer"] .cd-root {
+        padding: 10px;
+    }
+
+    .app-shell[data-app-id="cover-designer"] .cd-card {
+        border-radius: 16px;
+    }
+
+    .app-shell[data-app-id="cover-designer"] .cd-controls {
+        border-radius: 16px;
+        padding: 15px;
+    }
+
+    .app-shell[data-app-id="cover-designer"] .cd-btn-group {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .app-shell[data-app-id="cover-designer"] .cd-floating-add-btn {
+        bottom: 20px;
+        right: 20px;
+        width: 48px;
+        height: 48px;
+    }
+
+    .app-shell[data-app-id="cover-designer"] .cd-text-styles,
+    .app-shell[data-app-id="cover-designer"] .cd-text-effects {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .app-shell[data-app-id="cover-designer"] .cd-selection-styles {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* 隐藏类(导出 PNG 时用) */
+.app-shell[data-app-id="cover-designer"] .cd-hidden {
+    display: none !important;
+}
+
+/* 操作按钮组(底部 3 个大按钮) */
+.app-shell[data-app-id="cover-designer"] .cd-action-buttons {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-action-buttons .cd-btn {
+    font-weight: 600;
+    padding: 12px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-export-btn {
+    background: #b86f6f;
+    color: white;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-export-btn:hover {
+    background: #a05d5d;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-new-btn {
+    background: #69a0a4;
+    color: white;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-new-btn:hover {
+    background: #588e92;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-history-btn {
+    background: #d4a373;
+    color: white;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-history-btn:hover {
+    background: #c2935f;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-block-btn {
+    display: block;
+    width: 100%;
+    margin-top: 8px;
+}
+
+/* ============================================
+   开关切换容器 (用于博客设置等面板)
+   ============================================ */
+
+/* 开关切换容器 */
+.app-shell[data-app-id="cover-designer"] .cd-toggle-switch {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-toggle-label {
+    font-size: 13px;
+    color: #7a7a7a;
+    margin: 0;
+    display: block;
+}
+
+/* 开关组件 */
+.app-shell[data-app-id="cover-designer"] .cd-switch {
+    position: relative;
+    width: 40px;
+    height: 20px;
+    flex-shrink: 0;
+    display: inline-block;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #e8e5e1;
+    transition: 0.3s;
+    border-radius: 20px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-slider:before {
+    content: "";
+    position: absolute;
+    height: 16px;
+    width: 16px;
+    left: 3px;
+    bottom: 2px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-switch input:checked + .cd-slider {
+    background-color: #b5aea5;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-switch input:checked + .cd-slider:before {
+    transform: translateX(18px);
+}
+
+/* 面板内控制组样式 */
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-control-group {
+    margin-bottom: 16px !important;
+    padding: 0 !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-control-label {
+    font-size: 13px !important;
+    color: #7a7a7a !important;
+    margin-bottom: 0 !important;
+    margin-top: 12px !important;
+    display: block !important;
+    letter-spacing: 0.5px !important;
+    line-height: 1.4 !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-control-label:first-child {
+    margin-top: 0 !important;
+}
+
+/* 博客设置面板专用样式 */
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-toggle-switch {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    margin-top: 12px !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-toggle-label {
+    font-size: 13px !important;
+    color: #7a7a7a !important;
+    margin: 0 !important;
+    display: block !important;
+    line-height: 1.4 !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-input {
+    width: 100% !important;
+    padding: 10px 12px !important;
+    border: 1px solid #e8e5e1 !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+    background: white !important;
+    color: #454545 !important;
+    outline: none !important;
+    transition: border-color 0.2s !important;
+    box-sizing: border-box !important;
+    display: block !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-input:focus {
+    border-color: #b5aea5 !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-input::placeholder {
+    color: #aaa !important;
+}
+
+/* 头像选项容器 */
+.app-shell[data-app-id="cover-designer"] .cd-avatar-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-avatar-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-avatar-option-label {
+    flex: 1;
+    font-size: 13px;
+    color: #7a7a7a;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-avatar-option-label input[type="radio"] {
+    accent-color: #b5aea5;
+    margin: 0;
+}
+
+/* 头像预览 */
+.app-shell[data-app-id="cover-designer"] .cd-avatar-preview {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 500;
+    color: #454545;
+    background: rgba(200, 200, 200, 0.3);
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-avatar-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-avatar-preview svg {
+    width: 18px;
+    height: 18px;
+    color: #aaa;
+}
+
+/* 头像颜色选择器 */
+.app-shell[data-app-id="cover-designer"] .cd-avatar-color-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-avatar-color {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-avatar-color:hover {
+    transform: scale(1.1);
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-avatar-color.cd-selected {
+    border-color: #9b958b;
+    transform: scale(1.1);
+}
+
+/* 颜色输入行 */
+.app-shell[data-app-id="cover-designer"] .cd-color-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-color-preview-inline {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: 1px solid #e8e5e1;
+    flex-shrink: 0;
+    background: #cbc5bb;
+}
+
+/* 颜色输入框 */
+.app-shell[data-app-id="cover-designer"] .cd-color-input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #e8e5e1;
+    border-radius: 8px;
+    font-size: 13px;
+    background: white;
+    color: #454545;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-color-input:focus {
+    border-color: #b5aea5;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-color-input::placeholder {
+    color: #aaa;
+}
+
+/* 应用到所有按钮 */
+.app-shell[data-app-id="cover-designer"] .cd-apply-all-btn {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    background: #e9e6e0;
+    color: #6c6861;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 13px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-apply-all-btn:hover {
+    background: #dbd7cf;
+}
+
+/* 头像类型单选按钮行 */
+.app-shell[data-app-id="cover-designer"] .cd-avatar-radio-row {
+    display: flex;
+    gap: 16px;
+    margin-top: 8px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-radio-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #7a7a7a;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-radio-label input[type="radio"] {
+    accent-color: #b5aea5;
+    margin: 0;
+}
+
+/* ============================================
+   字体面板和文字颜色面板专用样式
+   ============================================ */
+
+/* 字体选择器 */
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-font-selector {
+    margin-top: 8px;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-font-option {
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 10px;
+    background: #f1efeb;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-font-option:hover {
+    background: #e6e3dd;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-font-option.cd-selected {
+    background: #d8d3cb;
+    border: 1px solid #b5aea5;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-font-preview {
+    font-size: 14px;
+    margin-bottom: 5px;
+    color: #454545;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-font-name {
+    font-size: 12px;
+    color: #7a7a7a;
+}
+
+/* 自定义字体输入框 */
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-custom-font-input {
+    width: 100%;
+    padding: 10px;
+    margin-top: 8px;
+    border-radius: 10px;
+    border: 1px solid #e8e5e1;
+    font-size: 13px;
+    background: white;
+    color: #454545;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-custom-font-input:focus {
+    border-color: #b5aea5;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-custom-font-input::placeholder {
+    color: #aaa;
+}
+
+/* 字体示例代码 */
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-font-example-code {
+    font-size: 12px;
+    color: #777;
+    background: #f9f8f6;
+    padding: 10px;
+    border-radius: 8px;
+    margin-top: 5px;
+    line-height: 1.6;
+    font-family: monospace;
+}
+
+/* 文字颜色面板专用 */
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-color-picker {
+    display: grid !important;
+    grid-template-columns: repeat(5, 1fr) !important;
+    gap: 10px !important;
+    margin-top: 8px;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-color-dot {
+    aspect-ratio: 1 !important;
+    border-radius: 10px !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    border: 2px solid transparent !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06) !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-color-dot:hover {
+    transform: scale(1.1) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-color-dot.cd-selected {
+    border-color: #9b958b !important;
+    transform: scale(1.05) !important;
+}
+
+/* 文字颜色输入组 */
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-color-input-group {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    margin-top: 12px !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-color-input-group .cd-color-input {
+    flex: 1 !important;
+    padding: 8px 12px !important;
+    border: 1px solid #e8e5e1 !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+    background: white !important;
+    color: #454545 !important;
+    outline: none !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-color-input-group .cd-color-input:focus {
+    border-color: #b5aea5 !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-color-input-group .cd-color-input::placeholder {
+    color: #aaa !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-color-input-group .cd-color-preview {
+    width: 28px !important;
+    height: 28px !important;
+    border-radius: 6px !important;
+    border: 1px solid #e8e5e1 !important;
+    flex-shrink: 0 !important;
+    background: #454545 !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-color-input-group .cd-btn {
+    min-width: 80px !important;
+    padding: 8px 12px !important;
+    border: none !important;
+    border-radius: 8px !important;
+    background: #f1efeb !important;
+    color: #5a5a5a !important;
+    font-size: 13px !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-color-input-group .cd-btn:hover {
+    background: #e6e3dd !important;
+}
+
+/* ============================================
+   文字底色面板（组件背景色）专用样式
+   ============================================ */
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-control-group[data-control-id="text-bg"] .cd-color-picker {
+    display: grid !important;
+    grid-template-columns: repeat(5, 1fr) !important;
+    gap: 10px !important;
+    margin-top: 8px;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-control-group[data-control-id="text-bg"] .cd-color-dot {
+    aspect-ratio: 1 !important;
+    border-radius: 10px !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    border: 2px solid transparent !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06) !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-control-group[data-control-id="text-bg"] .cd-color-dot:hover {
+    transform: scale(1.1) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+}
+
+.app-shell[data-app-id="cover-designer"] #cdControlsPanel .cd-control-group[data-control-id="text-bg"] .cd-color-dot.cd-selected {
+    border-color: #9b958b !important;
+    transform: scale(1.05) !important;
+}

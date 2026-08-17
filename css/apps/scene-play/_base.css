@@ -1,0 +1,688 @@
+/**
+ * 情景剧场 · 根布局 + 通用控件
+ *
+ * 全部选择器挂 `.app-shell[data-app-id="scene-play"]` 下 —— 不污染其他 App。
+ * **这里一个 hex 都没有**,颜色走 `var(--sp-*)`(定义在 `_theme.css`)。
+ *
+ * ── 和框架容器的接线(四条,少一条就会出问题)──────────────────────
+ *
+ *   `.app-content`      默认 `padding: 0 14px`,左右各吃掉 14px
+ *   `.app-screen-panel` 默认 `padding: 16px 14px 18px`,再各吃 14px
+ *   `.app-screen-panel` 只有 `min-height`,**没有 height** ——
+ *                       子元素的 `height:100%` 无处可依,静默退化成 auto,
+ *                       自绘的输入区会掉到文档流最底下
+ *   `.app-page`         默认 `overflow-y: auto`,和 App 内部的滚动容器抢手势
+ */
+
+/* ============================================================
+   尺寸 / 动效常量(非配色,不进色板)
+   ============================================================ */
+.app-shell[data-app-id="scene-play"] {
+    --sp-r-sm: 10px;
+    --sp-r: 16px;
+    --sp-r-lg: 22px;
+    --sp-r-xl: 28px;
+    --sp-r-pill: 999px;
+    --sp-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --sp-bounce: cubic-bezier(0.34, 1.4, 0.64, 1);
+    /* 状态栏浮在 shell 之上,自绘内容要让开 */
+    --sp-top-safe: 54px;
+    --sp-z-drawer: 60;
+    --sp-z-toast: 90;
+
+    background: var(--sp-bg);
+    color: var(--sp-text);
+}
+
+.app-shell[data-app-id="scene-play"] .app-content,
+.app-shell[data-app-id="scene-play"] .app-screen-panel {
+    padding: 0;
+}
+.app-shell[data-app-id="scene-play"] .app-page {
+    overflow: hidden;
+}
+.app-shell[data-app-id="scene-play"] .app-screen-panel {
+    position: relative;
+    height: 100%;
+}
+.app-shell[data-app-id="scene-play"] .app-page-stack {
+    border-radius: 0;
+}
+
+.app-shell[data-app-id="scene-play"] .sp-root {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--sp-bg);
+    color: var(--sp-text);
+    font-size: 13px;
+    line-height: 1.65;
+}
+
+/* ============================================================
+   滚动条 + SVG 兜底
+   ============================================================ */
+.app-shell[data-app-id="scene-play"] *::-webkit-scrollbar { width: 4px; height: 4px; }
+.app-shell[data-app-id="scene-play"] *::-webkit-scrollbar-thumb {
+    background: var(--sp-scrollbar);
+    border-radius: var(--sp-r-pill);
+}
+.app-shell[data-app-id="scene-play"] *::-webkit-scrollbar-track { background: transparent; }
+.app-shell[data-app-id="scene-play"] * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--sp-scrollbar) transparent;
+}
+
+/*
+ * SVG 没有 width/height 又没配对 CSS 时,浏览器按规范画成 300×150,整张卡直接撑爆。
+ * 两层 `:where()` 把特异性压到 (0,0,1),任何具名规则都能盖过它 ——
+ * 只写一层的话 `svg:not([width]):not([height])` 本身是 (0,2,1),会反过来盖掉
+ * `.sp-icon svg` 这种 (0,1,1) 的规则。
+ */
+:where(.app-shell[data-app-id="scene-play"]) svg:where(:not([width]):not([height])) {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="scene-play"] .sp-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.app-shell[data-app-id="scene-play"] .sp-icon svg {
+    width: var(--sp-icon-size, 16px);
+    height: var(--sp-icon-size, 16px);
+}
+
+/* ============================================================
+   按钮
+   ============================================================ */
+.app-shell[data-app-id="scene-play"] .sp-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border: 1px solid var(--sp-btn-border);
+    border-radius: var(--sp-r-pill);
+    background: var(--sp-btn-bg);
+    color: var(--sp-btn-text);
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.2;
+    cursor: pointer;
+    /* 硬边落影 = 动森那种「按下去会弹」的手感来源,不用渐变 */
+    box-shadow: 0 2px 0 var(--sp-btn-shadow);
+    transition: transform 0.16s var(--sp-bounce), box-shadow 0.16s var(--sp-ease), background 0.16s var(--sp-ease);
+}
+.app-shell[data-app-id="scene-play"] .sp-btn:active:not(:disabled) {
+    transform: translateY(2px);
+    box-shadow: 0 0 0 var(--sp-btn-shadow);
+}
+.app-shell[data-app-id="scene-play"] .sp-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+.app-shell[data-app-id="scene-play"] .sp-btn--primary {
+    background: var(--sp-primary);
+    border-color: var(--sp-primary);
+    color: var(--sp-on-primary);
+}
+.app-shell[data-app-id="scene-play"] .sp-btn--ghost {
+    background: var(--sp-primary-soft);
+    border-color: var(--sp-primary);
+    color: var(--sp-primary-strong);
+}
+.app-shell[data-app-id="scene-play"] .sp-btn--line {
+    background: transparent;
+    border-style: dashed;
+    box-shadow: none;
+}
+.app-shell[data-app-id="scene-play"] .sp-btn--danger {
+    background: var(--sp-surface);
+    border-color: var(--sp-danger);
+    color: var(--sp-danger);
+}
+.app-shell[data-app-id="scene-play"] .sp-btn--sm { padding: 6px 11px; font-size: 11.5px; }
+.app-shell[data-app-id="scene-play"] .sp-btn--lg { padding: 11px 20px; font-size: 14px; }
+.app-shell[data-app-id="scene-play"] .sp-btn.is-block { width: 100%; }
+.app-shell[data-app-id="scene-play"] .sp-btn.is-icon-only { padding: 8px; width: 34px; }
+
+.app-shell[data-app-id="scene-play"] .sp-mini {
+    padding: 4px 9px;
+    border: 1px solid var(--sp-border);
+    border-radius: var(--sp-r-sm);
+    background: var(--sp-surface);
+    color: var(--sp-text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.16s var(--sp-bounce);
+}
+.app-shell[data-app-id="scene-play"] .sp-mini:active { transform: scale(0.92); }
+.app-shell[data-app-id="scene-play"] .sp-mini:disabled { opacity: 0.4; cursor: not-allowed; }
+.app-shell[data-app-id="scene-play"] .sp-mini.is-on {
+    background: var(--sp-primary-soft);
+    border-color: var(--sp-primary);
+    color: var(--sp-primary-strong);
+}
+.app-shell[data-app-id="scene-play"] .sp-mini.is-danger { color: var(--sp-danger); border-color: var(--sp-danger); }
+
+/* ============================================================
+   表单
+   ============================================================ */
+.app-shell[data-app-id="scene-play"] .sp-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.app-shell[data-app-id="scene-play"] .sp-field-label {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--sp-text-secondary);
+}
+.app-shell[data-app-id="scene-play"] .sp-field-hint {
+    font-size: 10.5px;
+    line-height: 1.55;
+    color: var(--sp-text-tertiary);
+}
+
+.app-shell[data-app-id="scene-play"] .sp-input,
+.app-shell[data-app-id="scene-play"] .sp-textarea,
+.app-shell[data-app-id="scene-play"] .sp-select {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--sp-input-border);
+    border-radius: var(--sp-r);
+    background: var(--sp-input-bg);
+    color: var(--sp-text);
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.16s var(--sp-ease), box-shadow 0.16s var(--sp-ease);
+}
+.app-shell[data-app-id="scene-play"] .sp-input:focus,
+.app-shell[data-app-id="scene-play"] .sp-textarea:focus,
+.app-shell[data-app-id="scene-play"] .sp-select:focus {
+    border-color: var(--sp-primary);
+    box-shadow: 0 0 0 3px var(--sp-input-focus);
+}
+.app-shell[data-app-id="scene-play"] .sp-input::placeholder,
+.app-shell[data-app-id="scene-play"] .sp-textarea::placeholder {
+    color: var(--sp-placeholder);
+}
+.app-shell[data-app-id="scene-play"] .sp-textarea { resize: vertical; line-height: 1.6; }
+.app-shell[data-app-id="scene-play"] .sp-input.is-mono,
+.app-shell[data-app-id="scene-play"] .sp-textarea.is-mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+}
+
+.app-shell[data-app-id="scene-play"] .sp-seg {
+    display: inline-flex;
+    gap: 3px;
+    padding: 3px;
+    border-radius: var(--sp-r-pill);
+    background: var(--sp-sunken);
+}
+.app-shell[data-app-id="scene-play"] .sp-seg.is-block { display: flex; width: 100%; }
+.app-shell[data-app-id="scene-play"] .sp-seg-item {
+    flex: 1 1 0;
+    padding: 6px 10px;
+    border: none;
+    border-radius: var(--sp-r-pill);
+    background: transparent;
+    color: var(--sp-text-secondary);
+    font-size: 11.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.16s var(--sp-ease), color 0.16s var(--sp-ease);
+}
+.app-shell[data-app-id="scene-play"] .sp-seg-item.is-active {
+    background: var(--sp-surface);
+    color: var(--sp-text);
+    box-shadow: 0 1px 3px var(--sp-shadow);
+}
+
+.app-shell[data-app-id="scene-play"] .sp-switch {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+.app-shell[data-app-id="scene-play"] .sp-switch-text {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+.app-shell[data-app-id="scene-play"] .sp-switch-label { font-size: 12.5px; font-weight: 600; }
+.app-shell[data-app-id="scene-play"] .sp-switch-hint {
+    font-size: 10.5px;
+    line-height: 1.5;
+    color: var(--sp-text-tertiary);
+}
+.app-shell[data-app-id="scene-play"] .sp-switch-input { position: absolute; opacity: 0; width: 0; height: 0; }
+.app-shell[data-app-id="scene-play"] .sp-switch-track {
+    flex: 0 0 auto;
+    position: relative;
+    width: 42px;
+    height: 24px;
+    border-radius: var(--sp-r-pill);
+    background: var(--sp-switch-off);
+    transition: background 0.2s var(--sp-ease);
+}
+.app-shell[data-app-id="scene-play"] .sp-switch-thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--sp-surface);
+    box-shadow: 0 1px 3px var(--sp-shadow);
+    transition: transform 0.22s var(--sp-bounce);
+}
+.app-shell[data-app-id="scene-play"] .sp-switch-input:checked ~ .sp-switch-track { background: var(--sp-switch-on); }
+.app-shell[data-app-id="scene-play"] .sp-switch-input:checked ~ .sp-switch-track .sp-switch-thumb { transform: translateX(18px); }
+.app-shell[data-app-id="scene-play"] .sp-switch.is-disabled { opacity: 0.5; pointer-events: none; }
+
+.app-shell[data-app-id="scene-play"] .sp-slider { display: flex; flex-direction: column; gap: 4px; }
+.app-shell[data-app-id="scene-play"] .sp-slider-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.app-shell[data-app-id="scene-play"] .sp-slider-label { font-size: 11.5px; font-weight: 600; color: var(--sp-text-secondary); }
+.app-shell[data-app-id="scene-play"] .sp-slider-value {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 1px;
+    font-size: 11px;
+    color: var(--sp-text-tertiary);
+}
+.app-shell[data-app-id="scene-play"] .sp-slider-num {
+    width: 48px;
+    padding: 2px 4px;
+    border: 1px solid transparent;
+    border-radius: var(--sp-r-sm);
+    background: var(--sp-sunken);
+    color: var(--sp-text);
+    font-size: 11px;
+    font-weight: 600;
+    text-align: right;
+    font-family: inherit;
+    outline: none;
+    -moz-appearance: textfield;
+}
+.app-shell[data-app-id="scene-play"] .sp-slider-num::-webkit-outer-spin-button,
+.app-shell[data-app-id="scene-play"] .sp-slider-num::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.app-shell[data-app-id="scene-play"] .sp-slider-input {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 5px;
+    border-radius: var(--sp-r-pill);
+    background: var(--sp-track);
+    outline: none;
+}
+.app-shell[data-app-id="scene-play"] .sp-slider-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 17px;
+    height: 17px;
+    border: 2px solid var(--sp-surface);
+    border-radius: 50%;
+    background: var(--sp-thumb);
+    box-shadow: 0 1px 3px var(--sp-shadow);
+    cursor: pointer;
+}
+.app-shell[data-app-id="scene-play"] .sp-slider-input::-moz-range-thumb {
+    width: 15px;
+    height: 15px;
+    border: 2px solid var(--sp-surface);
+    border-radius: 50%;
+    background: var(--sp-thumb);
+    cursor: pointer;
+}
+
+/* 一行颜色 */
+.app-shell[data-app-id="scene-play"] .sp-color-row { display: flex; align-items: center; gap: 8px; }
+.app-shell[data-app-id="scene-play"] .sp-color-meta {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+.app-shell[data-app-id="scene-play"] .sp-color-label { font-size: 11.5px; font-weight: 600; color: var(--sp-text-secondary); }
+.app-shell[data-app-id="scene-play"] .sp-color-flag {
+    margin-left: 5px;
+    padding: 0 5px;
+    border-radius: var(--sp-r-pill);
+    background: var(--sp-tag-bg);
+    color: var(--sp-tag-text);
+    font-size: 9px;
+    font-style: normal;
+}
+.app-shell[data-app-id="scene-play"] .sp-color-token {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 9.5px;
+    color: var(--sp-text-tertiary);
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.app-shell[data-app-id="scene-play"] .sp-color-swatch {
+    flex: 0 0 auto;
+    width: 30px;
+    height: 26px;
+    padding: 2px;
+    border: 1px solid var(--sp-input-border);
+    border-radius: var(--sp-r-sm);
+    background: var(--sp-input-bg);
+    cursor: pointer;
+}
+.app-shell[data-app-id="scene-play"] .sp-color-hex {
+    flex: 0 0 auto;
+    width: 96px;
+    padding: 5px 8px;
+    border: 1px solid var(--sp-input-border);
+    border-radius: var(--sp-r-sm);
+    background: var(--sp-input-bg);
+    color: var(--sp-text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 10.5px;
+    outline: none;
+}
+.app-shell[data-app-id="scene-play"] .sp-color-reset {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: var(--sp-r-sm);
+    background: transparent;
+    color: var(--sp-text-tertiary);
+    cursor: pointer;
+}
+
+/* 上传按钮 —— 原生 file input 太丑,包一层 label */
+.app-shell[data-app-id="scene-play"] .sp-upload {
+    display: block;
+    cursor: pointer;
+}
+.app-shell[data-app-id="scene-play"] .sp-upload input { display: none; }
+.app-shell[data-app-id="scene-play"] .sp-upload span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 12px;
+    border: 1px dashed var(--sp-border);
+    border-radius: var(--sp-r);
+    background: var(--sp-sunken);
+    color: var(--sp-text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* ============================================================
+   结构
+   ============================================================ */
+.app-shell[data-app-id="scene-play"] .sp-section {
+    border: 1px solid var(--sp-border);
+    border-radius: var(--sp-r-lg);
+    background: var(--sp-surface);
+    overflow: hidden;
+}
+.app-shell[data-app-id="scene-play"] .sp-section-head {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 11px 14px;
+    font-size: 13px;
+    font-weight: 700;
+}
+.app-shell[data-app-id="scene-play"] .sp-section-head.is-clickable { cursor: pointer; }
+.app-shell[data-app-id="scene-play"] .sp-section-title { flex: 0 0 auto; }
+.app-shell[data-app-id="scene-play"] .sp-section-hint {
+    flex: 1 1 auto;
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--sp-text-tertiary);
+    text-align: right;
+}
+.app-shell[data-app-id="scene-play"] .sp-section-caret { color: var(--sp-text-tertiary); }
+.app-shell[data-app-id="scene-play"] .sp-section-body {
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    padding: 0 14px 14px;
+}
+
+.app-shell[data-app-id="scene-play"] .sp-note {
+    margin: 0;
+    font-size: 10.5px;
+    line-height: 1.7;
+    color: var(--sp-text-tertiary);
+}
+.app-shell[data-app-id="scene-play"] .sp-note.is-danger { color: var(--sp-danger); }
+.app-shell[data-app-id="scene-play"] .sp-note code {
+    padding: 1px 4px;
+    border-radius: 4px;
+    background: var(--sp-sunken);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 10px;
+}
+
+.app-shell[data-app-id="scene-play"] .sp-banner {
+    margin: 8px 14px 0;
+    padding: 9px 12px;
+    border-radius: var(--sp-r);
+    font-size: 11.5px;
+}
+.app-shell[data-app-id="scene-play"] .sp-banner.is-danger {
+    background: var(--sp-primary-soft);
+    color: var(--sp-danger);
+}
+
+.app-shell[data-app-id="scene-play"] .sp-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 28px 16px;
+    text-align: center;
+}
+.app-shell[data-app-id="scene-play"] .sp-empty-icon { color: var(--sp-text-tertiary); --sp-icon-size: 28px; }
+.app-shell[data-app-id="scene-play"] .sp-empty-text { margin: 0; font-size: 13px; font-weight: 600; color: var(--sp-text-secondary); }
+.app-shell[data-app-id="scene-play"] .sp-empty-hint { margin: 0; max-width: 24em; font-size: 10.5px; line-height: 1.7; color: var(--sp-text-tertiary); }
+.app-shell[data-app-id="scene-play"] .sp-empty-action { margin-top: 8px; }
+
+.app-shell[data-app-id="scene-play"] .sp-spinner {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 28px;
+}
+.app-shell[data-app-id="scene-play"] .sp-spinner-ring {
+    width: 26px;
+    height: 26px;
+    border: 3px solid var(--sp-track);
+    border-top-color: var(--sp-primary);
+    border-radius: 50%;
+    animation: sp-spin 0.8s linear infinite;
+}
+.app-shell[data-app-id="scene-play"] .sp-spinner-label { font-size: 11.5px; color: var(--sp-text-tertiary); }
+@keyframes sp-spin { to { transform: rotate(360deg); } }
+
+.app-shell[data-app-id="scene-play"] .sp-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: var(--sp-r-pill);
+    background: var(--sp-tag-bg);
+    color: var(--sp-tag-text);
+    font-size: 10px;
+    font-weight: 600;
+}
+.app-shell[data-app-id="scene-play"] .sp-tag[data-tone="on"] {
+    background: var(--sp-accent-soft);
+    color: var(--sp-accent);
+}
+
+/* 芯片(选人 / 选主题 / 快捷短语) */
+.app-shell[data-app-id="scene-play"] .sp-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.app-shell[data-app-id="scene-play"] .sp-chip {
+    padding: 5px 11px;
+    border: 1px solid var(--sp-border);
+    border-radius: var(--sp-r-pill);
+    background: var(--sp-surface);
+    color: var(--sp-text-secondary);
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.16s var(--sp-bounce);
+}
+.app-shell[data-app-id="scene-play"] .sp-chip:active { transform: scale(0.94); }
+.app-shell[data-app-id="scene-play"] .sp-chip.is-active {
+    background: var(--sp-primary);
+    border-color: var(--sp-primary);
+    color: var(--sp-on-primary);
+}
+.app-shell[data-app-id="scene-play"] .sp-chip-pair {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--sp-border);
+    border-radius: var(--sp-r-pill);
+    background: var(--sp-surface);
+    overflow: hidden;
+}
+.app-shell[data-app-id="scene-play"] .sp-chip-pair.is-active {
+    border-color: var(--sp-primary);
+    background: var(--sp-primary-soft);
+}
+.app-shell[data-app-id="scene-play"] .sp-chip-main {
+    padding: 5px 10px;
+    border: none;
+    background: transparent;
+    color: var(--sp-text);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.app-shell[data-app-id="scene-play"] .sp-chip-del {
+    padding: 5px 9px 5px 4px;
+    border: none;
+    background: transparent;
+    color: var(--sp-text-tertiary);
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="scene-play"] .sp-row-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+/* 列表行 */
+.app-shell[data-app-id="scene-play"] .sp-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 12px;
+    border: 1px solid var(--sp-border);
+    border-radius: var(--sp-r);
+    background: var(--sp-surface);
+    transition: border-color 0.16s var(--sp-ease);
+}
+.app-shell[data-app-id="scene-play"] .sp-row.is-active {
+    border-color: var(--sp-primary);
+    box-shadow: 0 0 0 3px var(--sp-primary-soft);
+}
+.app-shell[data-app-id="scene-play"] .sp-row-main {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--sp-text);
+    text-align: left;
+    cursor: pointer;
+    min-width: 0;
+}
+.app-shell[data-app-id="scene-play"] .sp-row-title {
+    font-size: 12.5px;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.app-shell[data-app-id="scene-play"] .sp-row-badge {
+    margin-left: 6px;
+    padding: 0 6px;
+    border-radius: var(--sp-r-pill);
+    background: var(--sp-tag-bg);
+    color: var(--sp-tag-text);
+    font-size: 9px;
+    font-style: normal;
+}
+.app-shell[data-app-id="scene-play"] .sp-row-sub {
+    font-size: 10.5px;
+    color: var(--sp-text-tertiary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.app-shell[data-app-id="scene-play"] .sp-row-acts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+/* ============================================================
+   提示条
+   ============================================================ */
+.app-shell[data-app-id="scene-play"] .sp-toast {
+    position: absolute;
+    left: 50%;
+    bottom: calc(84px + var(--app-safe-bottom, 0px));
+    transform: translateX(-50%);
+    z-index: var(--sp-z-toast);
+    margin: 0;
+    max-width: 84%;
+    padding: 9px 16px;
+    border-radius: var(--sp-r-pill);
+    background: var(--sp-text);
+    color: var(--sp-bg);
+    font-size: 11.5px;
+    font-weight: 600;
+    text-align: center;
+    box-shadow: 0 6px 20px var(--sp-shadow);
+}
+.sp-toast-enter-active, .sp-toast-leave-active { transition: opacity 0.24s ease, transform 0.24s var(--sp-bounce); }
+.sp-toast-enter-from, .sp-toast-leave-to { opacity: 0; transform: translate(-50%, 10px); }

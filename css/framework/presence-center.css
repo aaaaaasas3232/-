@@ -1,0 +1,686 @@
+/* ============================================
+   灵动岛与小组件总览（框架层，全 App 共用）
+   js/framework/presence-center.js
+   ============================================ */
+
+.pc-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 900;
+    display: flex;
+    opacity: 0;
+    transition: opacity 0.18s ease;
+    background: rgba(18, 22, 30, 0.28);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+}
+
+.pc-overlay.is-open { opacity: 1; }
+
+.pc-panel {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: linear-gradient(180deg, #eef3fb 0%, #f8f9fc 42%, #fff 100%);
+    transform: translateY(14px);
+    transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.pc-overlay.is-open .pc-panel { transform: translateY(0); }
+
+/* ─── 顶栏 ─────────────────────────────── */
+
+.pc-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    padding: 50px 14px 10px;
+    background: rgba(240, 244, 251, 0.82);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(140, 160, 190, 0.14);
+}
+
+.pc-topbar__title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 650;
+    color: #2f3a4a;
+}
+
+.pc-topbar__back,
+.pc-topbar__spacer {
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+}
+
+.pc-topbar__back {
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: #4a6fa5;
+    cursor: pointer;
+}
+
+.pc-topbar__back svg { width: 20px; height: 20px; }
+
+/* ─── 滚动区 ─────────────────────────────── */
+
+.pc-body { flex: 1; min-height: 0; overflow: hidden; }
+
+.pc-scroll {
+    height: 100%;
+    overflow-y: auto;
+    padding: 16px 14px 40px;
+    scrollbar-width: none;
+}
+
+.pc-scroll::-webkit-scrollbar { display: none; }
+
+.pc-intro { margin-bottom: 18px; }
+
+.pc-intro__title {
+    margin: 0 0 6px;
+    font-size: 17px;
+    font-weight: 650;
+    color: #2f3a4a;
+}
+
+.pc-intro__desc {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.65;
+    color: #7e8b9c;
+}
+
+.pc-section-title {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 22px 2px 10px;
+    font-size: 12px;
+    font-weight: 650;
+    letter-spacing: 0.04em;
+    color: #64748b;
+}
+
+.pc-section-title svg { width: 15px; height: 15px; }
+
+.pc-section-title em {
+    margin-left: auto;
+    font-style: normal;
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+    padding: 2px 8px;
+    border-radius: 9px;
+    background: rgba(100, 116, 139, 0.1);
+}
+
+/* ─── 卡片 ─────────────────────────────── */
+
+.pc-card {
+    margin-bottom: 14px;
+    padding: 14px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(150, 175, 210, 0.2);
+    box-shadow: 0 6px 20px rgba(74, 111, 165, 0.07);
+    transition: opacity 0.2s ease;
+}
+
+.pc-card.is-off { opacity: 0.55; }
+
+.pc-card__head {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+}
+
+.pc-card__icon {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 11px;
+    background: linear-gradient(135deg, #e3edfb, #f2e8fb);
+    color: #5b7ba8;
+}
+
+.pc-card__icon svg { width: 18px; height: 18px; }
+
+.pc-card__meta { flex: 1; min-width: 0; }
+
+.pc-card__title {
+    margin: 0 0 3px;
+    font-size: 14px;
+    font-weight: 640;
+    color: #2f3a4a;
+}
+
+.pc-card__desc {
+    margin: 0;
+    font-size: 11.5px;
+    line-height: 1.6;
+    color: #8593a5;
+}
+
+/* ─── 开关 ─────────────────────────────── */
+
+.pc-toggle {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+}
+
+.pc-toggle.is-locked { cursor: default; }
+
+.pc-toggle__track {
+    position: relative;
+    display: block;
+    width: 40px;
+    height: 23px;
+    border-radius: 12px;
+    background: #cfd8e3;
+    transition: background 0.2s ease;
+}
+
+.pc-toggle.is-on .pc-toggle__track { background: linear-gradient(135deg, #4a6fa5, #6b8cbe); }
+.pc-toggle.is-locked .pc-toggle__track { background: #b7c4d4; }
+
+.pc-toggle__knob {
+    position: absolute;
+    top: 2.5px;
+    left: 2.5px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.pc-toggle.is-on .pc-toggle__knob { transform: translateX(17px); }
+
+.pc-toggle__label {
+    font-size: 9.5px;
+    color: #94a3b8;
+    white-space: nowrap;
+}
+
+/* ─── 出现时机 ─────────────────────────────── */
+
+.pc-when {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 9px 11px;
+    border-radius: 11px;
+    background: rgba(232, 242, 255, 0.6);
+    color: #4a6fa5;
+}
+
+.pc-when svg { width: 15px; height: 15px; margin-top: 1px; flex-shrink: 0; }
+
+.pc-when__label {
+    display: block;
+    font-size: 10px;
+    font-weight: 640;
+    letter-spacing: 0.03em;
+    opacity: 0.72;
+}
+
+.pc-when__text {
+    display: block;
+    margin-top: 2px;
+    font-size: 12px;
+    line-height: 1.55;
+    color: #3f5876;
+}
+
+/* ─── 尺寸切换 ─────────────────────────────── */
+
+.pc-size-tabs {
+    display: flex;
+    gap: 6px;
+    margin-top: 12px;
+}
+
+.pc-size-tab {
+    padding: 5px 12px;
+    border: 1px solid rgba(150, 175, 210, 0.3);
+    border-radius: 14px;
+    background: #fff;
+    color: #6b7c93;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.16s ease;
+}
+
+.pc-size-tab.is-active {
+    background: linear-gradient(135deg, #4a6fa5, #6b8cbe);
+    border-color: transparent;
+    color: #fff;
+}
+
+/* ─── 灵动岛预览舞台 ───────────────────────── */
+
+.pc-island-stage {
+    margin-top: 12px;
+    padding: 18px 12px 14px;
+    border-radius: 14px;
+    /* 深色底才看得出真机上的灵动岛效果 —— 岛本身是黑底白字 */
+    background:
+        radial-gradient(120% 80% at 50% 0%, rgba(90, 120, 170, 0.35), transparent 70%),
+        linear-gradient(180deg, #20262f, #171b22);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    box-sizing: border-box;
+}
+
+/* 紧凑型（mini/compact）岛本身很矮，把舞台上下留白也压一下，
+   否则一个 36px 的岛被 18+14=32px padding 包着显得很空 */
+.pc-island-stage:has(.pc-island-shell[data-size="mini"]),
+.pc-island-stage:has(.pc-island-shell[data-size="compact"]) {
+    padding: 10px 12px 10px;
+    gap: 8px;
+}
+
+/* 大型岛很高（320px），手机可视区滚一屏只看到一部分是预期行为；
+   这里只确保 stage 在面板里能完整滚动，外面没有 max-height 截断。 */
+.pc-island-stage:has(.pc-island-shell[data-size="large"]) {
+    padding: 18px 12px 14px;
+}
+
+.pc-island-shell {
+    position: relative;
+    overflow: hidden;
+    border-radius: 22px;
+    background: #000;
+    box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);
+    color: #fff;
+    /* 防止模板里 100% 高度的子元素把壳子撑大 */
+    max-width: 100%;
+}
+
+.pc-island-shell[data-size="mini"],
+.pc-island-shell[data-size="compact"] { border-radius: 18px; }
+
+.pc-island-stage__caption {
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.44);
+}
+
+.pc-island-generic {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    height: 100%;
+    padding: 0 14px;
+    box-sizing: border-box;
+}
+
+.pc-island-generic__dot {
+    width: 8px;
+    height: 8px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: #4ade80;
+}
+
+.pc-island-generic__orb {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.pc-island-generic__orb svg {
+    display: block;
+    width: 12px;
+    height: 12px;
+}
+
+/*
+ * App 图标位 —— fallback 时若 App 自己声明了 svg 图标,
+ * 就用它替代默认绿点。限定 svg 自身尺寸,防止 App 的 svg
+ * 自带 width/height 把胶囊撑大。
+ */
+.pc-island-generic__appicon {
+    display: inline-flex;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.08);
+}
+.pc-island-generic__appicon svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.pc-island-generic__text { min-width: 0; }
+
+.pc-island-generic__title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pc-island-generic__msg {
+    font-size: 10.5px;
+    color: rgba(255, 255, 255, 0.6);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/*
+ * compact(通知尺寸,38px 高):标题和消息排在一行,用 · 分隔,
+ * 跟真机通知胶囊的视觉一致。medium/large 则保留上下两行的老布局。
+ */
+.pc-island-generic[data-density="compact"] {
+    gap: 7px;
+    padding: 0 12px;
+}
+.pc-island-generic[data-density="compact"] .pc-island-generic__text {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 0;
+}
+.pc-island-generic[data-density="compact"] .pc-island-generic__title {
+    flex-shrink: 0;
+}
+.pc-island-generic[data-density="compact"] .pc-island-generic__msg {
+    min-width: 0;
+    flex: 1;
+}
+.pc-island-generic[data-density="compact"] .pc-island-generic__msg::before {
+    content: '·';
+    margin-right: 6px;
+    color: rgba(255, 255, 255, 0.35);
+}
+.pc-island-generic[data-density="compact"] .pc-island-generic__msg:empty {
+    display: none;
+}
+
+/* ─── 小组件预览 ─────────────────────────── */
+
+.pc-widget-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 12px;
+    padding: 16px 10px;
+    border-radius: 14px;
+    /* L 号是 284px 宽，窄屏放不下时让它横着滚，而不是被裁一半 */
+    overflow-x: auto;
+    /* 模拟桌面壁纸，小组件是半透明卡，纯白底下看不出层次 */
+    background:
+        linear-gradient(135deg, rgba(122, 155, 205, 0.28), rgba(196, 168, 220, 0.28)),
+        repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.16) 0 8px, transparent 8px 16px);
+}
+
+.pc-widget-row::-webkit-scrollbar { height: 4px; }
+.pc-widget-row::-webkit-scrollbar-thumb {
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.pc-widget-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+/* 尺寸由 JS 按 `.widgetMini` 的真实尺寸写在 style 上（见 WIDGET_SIZE_META），
+   这里不再写死 —— 写死过一版，M/L 高度只有真机的一半，内容全被裁掉。 */
+.pc-widget-shell {
+    position: relative;
+    overflow: hidden;
+    border-radius: 18px;
+    box-shadow: 0 6px 18px rgba(30, 45, 70, 0.22);
+    box-sizing: border-box;
+}
+
+/* 预览壳本身就是 .widgetMini 的替身，把 App 模板依赖的布局补上 */
+.pc-widget-shell.widgetSize-M,
+.pc-widget-shell.widgetSize-L {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.pc-widget-shell > * {
+    max-width: 100%;
+}
+
+.pc-widget-stage__caption {
+    font-size: 10px;
+    color: rgba(40, 55, 80, 0.6);
+}
+
+.pc-widget-fallback {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    color: #64748b;
+    font-size: 11px;
+}
+
+/* ─── 通知提示预览 ─────────────────────────── */
+
+.pc-notify-preview {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 38px;
+    max-width: 100%;
+    padding: 0 14px;
+    border-radius: 19px;
+    font-size: 12px;
+    color: #fff;
+    box-sizing: border-box;
+}
+
+.pc-notify-preview__dot {
+    width: 8px;
+    height: 8px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: #60a5fa;
+}
+
+.pc-notify-preview__orb {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.pc-notify-preview__orb svg {
+    display: block;
+    width: 12px;
+    height: 12px;
+}
+
+.pc-notify-preview--success .pc-notify-preview__dot { background: #4ade80; }
+.pc-notify-preview--warning .pc-notify-preview__dot { background: #fbbf24; }
+.pc-notify-preview--error .pc-notify-preview__dot { background: #f87171; }
+.pc-notify-preview--system .pc-notify-preview__dot { background: #8e8e93; }
+.pc-notify-preview--call .pc-notify-preview__dot { background: #4ade80; }
+
+.pc-notify-preview__title {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.pc-notify-preview__msg {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: rgba(255, 255, 255, 0.62);
+}
+
+.pc-card__foot {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+}
+
+/* ─── 样式自定义 ─────────────────────────── */
+
+.pc-style { margin-top: 12px; }
+
+.pc-style__summary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 11px;
+    border-radius: 11px;
+    background: rgba(100, 116, 139, 0.07);
+    color: #5b6b80;
+    font-size: 11.5px;
+    cursor: pointer;
+    list-style: none;
+}
+
+.pc-style__summary::-webkit-details-marker { display: none; }
+.pc-style__summary svg { width: 14px; height: 14px; }
+
+.pc-style__dirty {
+    margin-left: auto;
+    padding: 1px 7px;
+    border-radius: 8px;
+    background: rgba(74, 111, 165, 0.14);
+    color: #4a6fa5;
+    font-size: 10px;
+}
+
+.pc-style__body { padding: 10px 2px 0; }
+
+.pc-style__hint {
+    margin: 0 0 8px;
+    font-size: 11px;
+    line-height: 1.6;
+    color: #94a3b8;
+}
+
+.pc-style__input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 11px;
+    border: 1px solid rgba(150, 175, 210, 0.3);
+    border-radius: 10px;
+    background: #fbfcfe;
+    color: #3f4a5a;
+    font-family: 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
+    font-size: 11px;
+    line-height: 1.6;
+    resize: vertical;
+    outline: none;
+}
+
+.pc-style__input:focus { border-color: rgba(74, 111, 165, 0.55); }
+
+.pc-style__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 9px;
+}
+
+.pc-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 13px;
+    border: 0;
+    border-radius: 11px;
+    font-size: 11.5px;
+    cursor: pointer;
+}
+
+.pc-btn svg { width: 14px; height: 14px; }
+
+.pc-btn--ghost {
+    background: rgba(100, 116, 139, 0.1);
+    color: #64748b;
+}
+
+.pc-btn--primary {
+    background: linear-gradient(135deg, #4a6fa5, #6b8cbe);
+    color: #fff;
+}
+
+.pc-btn:active { transform: scale(0.97); }
+
+/* ─── 空态 / 脚注 ─────────────────────────── */
+
+.pc-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 30px 20px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px dashed rgba(150, 175, 210, 0.4);
+}
+
+.pc-empty__icon { color: #b6c3d4; }
+.pc-empty__icon svg { width: 30px; height: 30px; }
+.pc-empty__text { font-size: 12.5px; color: #7e8b9c; }
+.pc-empty__hint { font-size: 11px; color: #a8b4c4; }
+
+.pc-footnote {
+    margin-top: 22px;
+    padding: 0 4px;
+    font-size: 11px;
+    line-height: 1.7;
+    color: #a0acbb;
+    text-align: center;
+}

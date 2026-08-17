@@ -1,5 +1,5 @@
 /**
- * chat-app / 概要编辑/确认弹窗 (v0.61.3 → v0.66)
+ * chat-app / 概要编辑/确认弹窗 (v0.61.3 → v0.66 · v0.69+ AcModal)
  *
  *   用途:用户选完日期范围 / 故事会话后,弹这个弹窗让 AI 生成并确认概要。
  *
@@ -16,6 +16,11 @@
  *     - 新增「人设信息」可折叠区,展示 AI 和用户的具体人设数据
  *     - props: aiPersonaSummary / userPersonaSummary
  *     - max-height 从 86vh → 60vh
+ *
+ *   v0.69+ 迁移到 AcModal:
+ *     - 外壳(背景、圆角、宽度、阴影、动画)由 AcModal 提供
+ *     - 关闭按钮 ✕ 由 AcModal 提供
+ *     - 底部按钮由 .ac-btn / .ac-btn-primary / .ac-btn-secondary 提供
  *
  *   props:
  *     mode              'calendar' | 'story'
@@ -49,8 +54,12 @@ function _getCurrentSummaryEditInstance() {
     return window.__currentSummaryEditModal || null;
 }
 
+// ★ v0.69+ AcModal 通用弹窗组件
+import { AcModal } from './ac-modal.js';
+
 const SummaryEditModal = {
     name: 'SummaryEditModal',
+    components: { AcModal },
     props: {
         mode: { type: String, default: 'calendar' },
         initialTitle: { type: String, default: '聊天概要' },
@@ -111,6 +120,12 @@ const SummaryEditModal = {
                 }
                 return r.start || r.end || '';
             },
+            // ★ v0.69+ 副标题:日期范围 + 消息数
+            modalSubtitle() {
+                const range = this.dateRangeText;
+                const count = `${this.messageCount} 条消息`;
+                return range ? `${range} · ${count}` : count;
+            },
         },
     methods: {
         onSave() {
@@ -169,104 +184,97 @@ const SummaryEditModal = {
         },
     },
     template: `
-        <div class="summary-edit-modal-overlay" @click.self="onCancel">
-            <div class="summary-edit-modal">
-                <div class="summary-edit-modal-header">
-                    <div class="summary-edit-modal-title">{{ modalTitle }}</div>
-                    <div class="summary-edit-modal-subtitle" v-if="dateRangeText">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                            <line x1="16" y1="2" x2="16" y2="6"></line>
-                            <line x1="8" y1="2" x2="8" y2="6"></line>
-                            <line x1="3" y1="10" x2="21" y2="10"></line>
-                        </svg>
-                        <span>{{ dateRangeText }} · {{ messageCount }} 条消息</span>
-                    </div>
-                    <button class="summary-edit-modal-close" aria-label="关闭" @click="onCancel">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="18" y1="6" x2="6" y2="18"/>
-                            <line x1="6" y1="6" x2="18" y2="18"/>
-                        </svg>
-                    </button>
-                </div>
+        <AcModal
+            class="summary-edit-modal"
+            :title="modalTitle"
+            :subtitle="modalSubtitle"
+            :show-close="true"
+            :close-on-backdrop="true"
+            :max-width="'440px'"
+            @close="$emit('close')"
+        >
+            <!-- 主体内容(slot) -->
 
-                <div class="summary-edit-modal-hint">
+            <!-- ★ v0.66 错误提示 -->
+            <div class="summary-edit-error" v-if="errorMsg">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <span>{{ errorMsg }}</span>
+            </div>
+
+            <!-- 提示 -->
+            <div class="summary-edit-modal-hint">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <span>{{ hasContent ? '请确认或修改 AI 生成的概要内容,然后保存。' : '点击「生成概要」让 AI 根据人设和对话内容生成概要。下方可折叠区域展示了双方人设供参考。' }}</span>
+            </div>
+
+            <!-- ★ v0.66 人设信息折叠区 -->
+            <div class="summary-edit-persona-section" v-if="aiPersonaSummary || userPersonaSummary">
+                <button type="button" class="summary-edit-persona-toggle" @click="personaOpen = !personaOpen">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <line x1="12" y1="16" x2="12" y2="12"></line>
-                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        <circle cx="12" cy="8" r="4"/>
+                        <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
                     </svg>
-                    <span>{{ hasContent ? '请确认或修改 AI 生成的概要内容,然后保存。' : '点击「生成概要」让 AI 根据人设和对话内容生成概要。下方可折叠区域展示了双方人设供参考。' }}</span>
-                </div>
-
-                <!-- ★ v0.66 错误提示 -->
-                <div class="summary-edit-error" v-if="errorMsg">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"/>
-                        <line x1="12" y1="8" x2="12" y2="12"/>
-                        <line x1="12" y1="16" x2="12.01" y2="16"/>
+                    <span>人设信息</span>
+                    <svg class="summary-edit-persona-chevron" :class="{ open: personaOpen }"
+                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"/>
                     </svg>
-                    <span>{{ errorMsg }}</span>
-                </div>
-
-                <!-- ★ v0.66 人设信息折叠区 -->
-                <div class="summary-edit-persona-section" v-if="aiPersonaSummary || userPersonaSummary">
-                    <button type="button" class="summary-edit-persona-toggle" @click="personaOpen = !personaOpen">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="8" r="4"/>
-                            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
-                        </svg>
-                        <span>人设信息</span>
-                        <svg class="summary-edit-persona-chevron" :class="{ open: personaOpen }"
-                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="6 9 12 15 18 9"/>
-                        </svg>
-                    </button>
-                    <div class="summary-edit-persona-body" v-show="personaOpen">
-                        <div class="summary-edit-persona-row" v-if="aiPersonaSummary">
-                            <div class="summary-edit-persona-label">🤖 AI 人设</div>
-                            <div class="summary-edit-persona-content">{{ aiPersonaSummary }}</div>
-                        </div>
-                        <div class="summary-edit-persona-row" v-if="userPersonaSummary">
-                            <div class="summary-edit-persona-label">👤 用户人设</div>
-                            <div class="summary-edit-persona-content">{{ userPersonaSummary }}</div>
-                        </div>
+                </button>
+                <div class="summary-edit-persona-body" v-show="personaOpen">
+                    <div class="summary-edit-persona-row" v-if="aiPersonaSummary">
+                        <div class="summary-edit-persona-label">🤖 AI 人设</div>
+                        <div class="summary-edit-persona-content">{{ aiPersonaSummary }}</div>
+                    </div>
+                    <div class="summary-edit-persona-row" v-if="userPersonaSummary">
+                        <div class="summary-edit-persona-label">👤 用户人设</div>
+                        <div class="summary-edit-persona-content">{{ userPersonaSummary }}</div>
                     </div>
                 </div>
+            </div>
 
-                <div class="summary-edit-modal-field">
-                    <label class="summary-edit-modal-label">标题 <span class="summary-edit-modal-required">*</span></label>
-                    <input type="text" class="summary-edit-modal-input" v-model="title"
-                        :maxlength="titleMax" placeholder="例如:本周情感变化概要"/>
-                    <div class="summary-edit-modal-counter">{{ titleCount }} / {{ titleMax }}</div>
+            <div class="summary-edit-modal-field">
+                <label class="summary-edit-modal-label">标题 <span class="summary-edit-modal-required">*</span></label>
+                <input type="text" class="summary-edit-modal-input" v-model="title"
+                    :maxlength="titleMax" placeholder="例如:本周情感变化概要"/>
+                <div class="summary-edit-modal-counter">{{ titleCount }} / {{ titleMax }}</div>
+            </div>
+
+            <div class="summary-edit-modal-field">
+                <label class="summary-edit-modal-label">概要内容</label>
+                <textarea class="summary-edit-modal-textarea" v-model="content"
+                    :maxlength="contentMax"
+                    :placeholder="placeholder"
+                    rows="5"></textarea>
+                <div class="summary-edit-modal-counter">{{ contentCount }} / {{ contentMax }}</div>
+            </div>
+
+            <div class="summary-edit-modal-toggle-row">
+                <div class="summary-edit-modal-toggle-text">
+                    <div class="summary-edit-modal-toggle-title">保存为回复提示词</div>
+                    <div class="summary-edit-modal-toggle-desc">启用后会注入到 AI 的 system prompt</div>
                 </div>
+                <button type="button" class="summary-edit-modal-toggle"
+                    :class="{ 'on': asPrompt }"
+                    :aria-pressed="asPrompt"
+                    @click="asPrompt = !asPrompt">
+                    <span class="summary-edit-modal-toggle-track">
+                        <span class="summary-edit-modal-toggle-thumb"></span>
+                    </span>
+                </button>
+            </div>
 
-                <div class="summary-edit-modal-field">
-                    <label class="summary-edit-modal-label">概要内容</label>
-                    <textarea class="summary-edit-modal-textarea" v-model="content"
-                        :maxlength="contentMax"
-                        :placeholder="placeholder"
-                        rows="5"></textarea>
-                    <div class="summary-edit-modal-counter">{{ contentCount }} / {{ contentMax }}</div>
-                </div>
-
-                <div class="summary-edit-modal-toggle-row">
-                    <div class="summary-edit-modal-toggle-text">
-                        <div class="summary-edit-modal-toggle-title">保存为回复提示词</div>
-                        <div class="summary-edit-modal-toggle-desc">启用后会注入到 AI 的 system prompt</div>
-                    </div>
-                    <button type="button" class="summary-edit-modal-toggle"
-                        :class="{ 'on': asPrompt }"
-                        :aria-pressed="asPrompt"
-                        @click="asPrompt = !asPrompt">
-                        <span class="summary-edit-modal-toggle-track">
-                            <span class="summary-edit-modal-toggle-thumb"></span>
-                        </span>
-                    </button>
-                </div>
-
-                <div class="summary-edit-modal-actions">
-                    <button type="button" class="summary-edit-btn summary-edit-btn-reroll"
+            <!-- 底部按钮:重新生成(左) + 取消/保存(右) -->
+            <template #footer>
+                <div class="summary-edit-footer-wrap">
+                    <button type="button" class="ac-btn ac-btn-secondary summary-edit-btn-reroll"
                         :disabled="isGenerating || isSaving"
                         @click="onReroll">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -276,9 +284,9 @@ const SummaryEditModal = {
                         </svg>
                         <span>重新生成</span>
                     </button>
-                    <div class="summary-edit-modal-actions-right">
-                        <button type="button" class="summary-edit-btn summary-edit-btn-cancel" @click="onCancel">取消</button>
-                        <button type="button" class="summary-edit-btn summary-edit-btn-save"
+                    <div class="summary-edit-footer-right">
+                        <button type="button" class="ac-btn ac-btn-secondary" @click="$emit('close')">取消</button>
+                        <button type="button" class="ac-btn ac-btn-primary summary-edit-btn-save"
                             :class="{ saving: isSaving, generating: isGenerating }"
                             :disabled="!canSave"
                             @click="onSave">
@@ -296,8 +304,8 @@ const SummaryEditModal = {
                         </button>
                     </div>
                 </div>
-            </div>
-        </div>
+            </template>
+        </AcModal>
     `,
 };
 

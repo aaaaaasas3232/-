@@ -2,6 +2,20 @@
    chat-app / 收藏详情页样式
    ============================================ */
 
+/* ─── SVG 尺寸兜底（★ v0.87）──────────────────────
+   收藏页的图标常量（ICON_STAR 等）都不带 width/height 属性，
+   完全靠下面那一堆 `.xxx svg { width: …px }` 规则撑尺寸。
+   只要新增一个位置忘了配对的 CSS，浏览器就按 SVG 默认的 300×150 画，
+   整张卡直接被撑爆 —— 这是「收藏页大小错乱」最常见的来源。
+
+   用 :where() 把选择器特异性压到 0，保证下面任何一条具名规则都能覆盖它，
+   同时给没被覆盖到的新图标一个不会出事的默认值。 */
+:where(.app-shell[data-app-id="chat"] .chat-favorites) svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
 /* ─── 基础布局 ──────────────────────────────────── */
 
 .app-shell[data-app-id="chat"] .chat-favorites {
@@ -45,10 +59,17 @@
     cursor: pointer;
 }
 
-.app-shell[data-app-id="chat"] .chat-favorites .chat-back-btn svg,
-.app-shell[data-app-id="chat"] .chat-favorites-topbar-spacer {
+.app-shell[data-app-id="chat"] .chat-favorites .chat-back-btn svg {
     width: 20px;
     height: 20px;
+}
+
+/* 占位块要和返回按钮**等宽**，标题才会真的居中。
+   之前写成 20px（跟图标一样宽），标题永远偏右 5px。 */
+.app-shell[data-app-id="chat"] .chat-favorites-topbar-spacer {
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
 }
 
 .app-shell[data-app-id="chat"] .chat-favorites-scroll {
@@ -293,6 +314,30 @@
     border-bottom: none;
 }
 
+/* ─── 左滑露出「分享 / 编辑 / 删除」──────────────────────
+   结构和手势来自框架层（src/core/components/swipe-actions.js +
+   css/core/86-swipe-actions.css），这里只上颜色和宽度。 */
+
+.app-shell[data-app-id="chat"] .fav-swipe-row {
+    --swipe-action-w: 198px;
+}
+
+/* 正文原本是半透明卡片的一部分，滑动时必须不透明，
+   否则会看见下面的按钮从字缝里透出来 */
+.app-shell[data-app-id="chat"] .fav-swipe-row .swipe-row__content {
+    background: #FFFFFF;
+}
+
+/* 行与行之间的分隔线原本画在 .chat-favorite-item 上，
+   包了一层之后最后一行的线要由外壳来去掉 */
+.app-shell[data-app-id="chat"] .fav-swipe-row:last-child .chat-favorite-item {
+    border-bottom: none;
+}
+
+.app-shell[data-app-id="chat"] .fav-swipe-action--share  { background: #4A6FA5; }
+.app-shell[data-app-id="chat"] .fav-swipe-action--edit   { background: #F4A6CD; }
+.app-shell[data-app-id="chat"] .fav-swipe-action--delete { background: #FF3B30; }
+
 .app-shell[data-app-id="chat"] .chat-favorite-item:active {
     background: rgba(74, 111, 165, 0.05);
 }
@@ -367,11 +412,15 @@
     align-items: center;
     gap: 3px;
     margin-left: auto;
-    padding: 2px 7px;
+    padding: 3px 8px;
     border-radius: 10px;
     background: rgba(74, 111, 165, 0.1);
     color: #4a6fa5;
-    font-size: 9px;
+    /* 9px 在手机上基本读不出来，抬到 10px 并给徽标留最小高度 */
+    font-size: 10px;
+    line-height: 1.4;
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .app-shell[data-app-id="chat"] .fav-type-icon {
@@ -394,10 +443,13 @@
     color: #647282;
     font-size: 12px;
     line-height: 1.65;
+    /* 2 行太吝啬，收藏的多是几句话，截到只剩半句反而要点进去才知道收了什么 */
     display: -webkit-box;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 4;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 
 /* 图片预览 */
@@ -528,6 +580,40 @@
     overflow: hidden;
 }
 
+/* 朋友圈预览（★ v0.87 收藏页新增的 moments 分类） */
+.app-shell[data-app-id="chat"] .fav-moment-preview {
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(232, 242, 255, 0.45);
+}
+
+.app-shell[data-app-id="chat"] .fav-moment-text {
+    color: #47566a;
+    font-size: 12px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="chat"] .fav-moment-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.app-shell[data-app-id="chat"] .fav-moment-meta span {
+    padding: 2px 7px;
+    border-radius: 8px;
+    background: rgba(74, 111, 165, 0.1);
+    color: #4a6fa5;
+    font-size: 10px;
+}
+
 /* 游戏预览 */
 .app-shell[data-app-id="chat"] .fav-game-preview {
     display: flex;
@@ -650,7 +736,8 @@
 
 .app-shell[data-app-id="chat"] .fav-ctx-content {
     color: #344b68;
-    word-break: break-all;
+    word-break: break-word;
+    overflow-wrap: anywhere;
 }
 
 .app-shell[data-app-id="chat"] .fav-ctx-more {
@@ -811,7 +898,9 @@
     font-size: 12px;
     line-height: 1.5;
     color: #344b68;
-    word-break: break-all;
+    /* break-all 会把英文单词/链接从中间劈开，中文场景用 break-word 就够 */
+    word-break: break-word;
+    overflow-wrap: anywhere;
 }
 
 .app-shell[data-app-id="chat"] .conv-msg-content--text {
@@ -893,11 +982,14 @@
     animation: favItemFadeIn 0.25s ease forwards;
 }
 
-.app-shell[data-app-id="chat"] .chat-favorite-item:nth-child(1) { animation-delay: 0ms; }
-.app-shell[data-app-id="chat"] .chat-favorite-item:nth-child(2) { animation-delay: 50ms; }
-.app-shell[data-app-id="chat"] .chat-favorite-item:nth-child(3) { animation-delay: 100ms; }
-.app-shell[data-app-id="chat"] .chat-favorite-item:nth-child(4) { animation-delay: 150ms; }
-.app-shell[data-app-id="chat"] .chat-favorite-item:nth-child(5) { animation-delay: 200ms; }
+/* 错峰延迟挂在**外壳**上：包了 swipe-row 之后，每个
+   .chat-favorite-item 都是自己那层的独生子，nth-child 全都命中第 1 个，
+   五条会一起淡入、错峰效果消失。 */
+.app-shell[data-app-id="chat"] .fav-swipe-row:nth-child(1) .chat-favorite-item { animation-delay: 0ms; }
+.app-shell[data-app-id="chat"] .fav-swipe-row:nth-child(2) .chat-favorite-item { animation-delay: 50ms; }
+.app-shell[data-app-id="chat"] .fav-swipe-row:nth-child(3) .chat-favorite-item { animation-delay: 100ms; }
+.app-shell[data-app-id="chat"] .fav-swipe-row:nth-child(4) .chat-favorite-item { animation-delay: 150ms; }
+.app-shell[data-app-id="chat"] .fav-swipe-row:nth-child(5) .chat-favorite-item { animation-delay: 200ms; }
 
 /* ─── 响应式调整 ──────────────────────────────────── */
 

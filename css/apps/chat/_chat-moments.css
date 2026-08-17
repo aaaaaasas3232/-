@@ -16,7 +16,7 @@
 .app-shell[data-app-id="chat"] .moments-page {
     min-height: 100%;
     padding-bottom: 20px;
-    background: linear-gradient(180deg, #E8F2FF 0%, #FFF5F7 50%, #FFFFFF 100%);
+    background: linear-gradient(180deg, #E8F2FF 0%, #F0F5FF 50%, #FFFFFF 100%);
 }
 
 .app-shell[data-app-id="chat"] .app-content {
@@ -29,14 +29,15 @@
 
 /* ---- 韩风博主信息区 ---- */
 .app-shell[data-app-id="chat"] .moments-profile-section {
-    height: 180px;
+    position: relative;
+    height: 200px;
     text-align: center;
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    margin-bottom: 50px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-    border-radius: 0 0 24px 24px;
-    background: transparent;
+    margin-bottom: 60px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+    border-radius: 0 0 28px 28px;
+    background: linear-gradient(180deg, rgba(232, 242, 255, 0.9) 0%, rgba(240, 245, 255, 0.7) 100%);
 }
 
 .app-shell[data-app-id="chat"] .moments-profile-avatar {
@@ -46,41 +47,39 @@
 }
 
 .app-shell[data-app-id="chat"] .moments-profile-avatar {
-    width: 80px;
-    height: 80px;
-    border-radius: 20px;
-    box-shadow: 0 0 3px #a0a3e7cc;
+    width: 88px;
+    height: 88px;
+    border-radius: 22px;
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.25);
     overflow: hidden;
     margin: 0 auto;
-    transform: translate(18vh, 20vh);
+    right: -28%;
+    bottom: -80%;
+    border: 3px solid white;
 }
 
-/* ★ v0.31 AI 朋友圈 detail 页 topbar(自己接管,framework 的被全局隐藏) */
-.app-shell[data-app-id="chat"] .moments-topbar {
-    display: flex;
-    align-items: center;
-    height: 44px;
-    padding: 0 12px;
-    background: rgba(255, 255, 255, 0.95);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    position: relative;
-    z-index: 2;
-}
-
+/* ★ v0.31+ AI 朋友圈 detail 页:返回按钮 absolute 定位覆盖在 .moments-profile-section 上,
+   不再渲染独立的 .moments-topbar 白条,也不显示「xx 的朋友圈」标题 */
 .app-shell[data-app-id="chat"] .moments-back-btn {
+    position: absolute;
+    top: calc(env(safe-area-inset-top, 0px) + 8px);
+    top: calc(constant(safe-area-inset-top, 0px) + 8px);
+    left: 12px;
+    top: 54px;
     width: 32px;
     height: 32px;
     border-radius: 50%;
     border: none;
-    background: rgba(0, 0, 0, 0.04);
+    background: rgba(255, 255, 255, 0.6);
     color: #4A6FA5;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     padding: 0;
+    z-index: 3;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 
 .app-shell[data-app-id="chat"] .moments-back-btn svg {
@@ -89,18 +88,7 @@
 }
 
 .app-shell[data-app-id="chat"] .moments-back-btn:active {
-    background: rgba(0, 0, 0, 0.1);
-}
-
-.app-shell[data-app-id="chat"] .moments-topbar-title {
-    margin-left: 12px;
-    font-size: 16px;
-    font-weight: 600;
-    color: #1f2937;
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    background: rgba(255, 255, 255, 0.85);
 }
 
 .app-shell[data-app-id="chat"] .profile-avatar-placeholder {
@@ -127,37 +115,37 @@
 /* ---- 发布新动态按钮 ---- */
 .app-shell[data-app-id="chat"] .moments-post-btn {
     background: white;
-    border-radius: 12px;
-    margin: 0 12px 14px;
-    padding: 14px;
-    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.05);
-    border: 1px solid #F0F0F0;
+    border-radius: 16px;
+    margin: 0 14px 16px;
+    padding: 16px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(0, 0, 0, 0.04);
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     display: flex;
     align-items: center;
-    gap: 12px;
-    width: calc(100% - 24px);
+    gap: 14px;
+    width: calc(100% - 28px);
     text-align: left;
     font-family: inherit;
     color: inherit;
 }
 
 .app-shell[data-app-id="chat"] .moments-post-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.15);
+    border-color: rgba(99, 102, 241, 0.2);
 }
 
 .app-shell[data-app-id="chat"] .moments-post-btn:active {
     transform: translateY(0);
-    opacity: 0.9;
 }
 
 .app-shell[data-app-id="chat"] .moments-post-avatar {
-    width: 40px;
-    height: 40px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
-    background: #FFEEF2;
+    background: linear-gradient(135deg, #EEF2FF, #E0E7FF);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -165,9 +153,9 @@
 }
 
 .app-shell[data-app-id="chat"] .moments-post-avatar svg {
-    width: 20px;
-    height: 20px;
-    fill: #FFB1C1;
+    width: 22px;
+    height: 22px;
+    fill: #FFFFFF;
 }
 
 .app-shell[data-app-id="chat"] .moments-post-info {
@@ -175,37 +163,44 @@
 }
 
 .app-shell[data-app-id="chat"] .moments-post-title {
-    font-size: 14px;
-    color: #262626;
-    font-weight: 500;
+    font-size: 15px;
+    color: #1f2937;
+    font-weight: 600;
 }
 
 .app-shell[data-app-id="chat"] .moments-post-hint {
-    font-size: 12px;
-    color: #8E8E8E;
+    font-size: 13px;
+    color: #9ca3af;
+    margin-top: 2px;
 }
 
 .app-shell[data-app-id="chat"] .moments-post-arrow svg {
-    width: 16px;
-    height: 16px;
-    fill: #ccc;
+    width: 18px;
+    height: 18px;
+    fill: #d1d5db;
 }
 
 /* ---- 动态列表 ---- */
 .app-shell[data-app-id="chat"] .moments-list {
-    padding: 0 12px;
+    padding: 0 14px;
 }
 
 /* ---- 动态卡片 ---- */
 .app-shell[data-app-id="chat"] .moments-card {
     background: white;
-    border-radius: 12px;
-    margin-bottom: 10px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-    border: 1px solid #EAEAEA;
+    border-radius: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(0, 0, 0, 0.04);
     overflow: hidden;
     animation: fadeInUp 0.35s ease;
     animation-fill-mode: backwards;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.app-shell[data-app-id="chat"] .moments-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
 /* 动画延迟 */
@@ -220,26 +215,24 @@
 .app-shell[data-app-id="chat"] .moments-card-header {
     display: flex;
     align-items: center;
-    padding: 12px 12px 8px;
-    gap: 10px;
+    padding: 14px 14px 10px;
+    gap: 12px;
 }
 
 .app-shell[data-app-id="chat"] .post-avatar {
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     overflow: hidden;
     flex-shrink: 0;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     cursor: pointer;
-}
-
-.app-shell[data-app-id="chat"] .post-avatar {
-    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
 }
 
 .app-shell[data-app-id="chat"] .post-avatar:hover {
     transform: scale(1.08);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .app-shell[data-app-id="chat"] .post-avatar-inner {
@@ -249,7 +242,7 @@
     align-items: center;
     justify-content: center;
     color: white;
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 600;
 }
 
@@ -260,16 +253,16 @@
 }
 
 /* 动态头像背景色 */
-.app-shell[data-app-id="chat"] .post-avatar-inner[data-color="#FF6B6B"] { background: #FF6B6B; }
-.app-shell[data-app-id="chat"] .post-avatar-inner[data-color="#4ECDC4"] { background: #4ECDC4; }
-.app-shell[data-app-id="chat"] .post-avatar-inner[data-color="#45B7D1"] { background: #45B7D1; }
-.app-shell[data-app-id="chat"] .post-avatar-inner[data-color="#96CEB4"] { background: #96CEB4; }
-.app-shell[data-app-id="chat"] .post-avatar-inner[data-color="#FFEAA7"] { background: #FFEAA7; color: #333; }
-.app-shell[data-app-id="chat"] .post-avatar-inner[data-color="#DDA0DD"] { background: #DDA0DD; }
-.app-shell[data-app-id="chat"] .post-avatar-inner[data-color="#98D8C8"] { background: #98D8C8; }
-.app-shell[data-app-id="chat"] .post-avatar-inner[data-color="#F8B500"] { background: #F8B500; color: #333; }
-.app-shell[data-app-id="chat"] .post-avatar-inner[data-color="#6C5CE7"] { background: #6C5CE7; }
-.app-shell[data-app-id="chat"] .post-avatar-inner[data-color="#A29BFE"] { background: #A29BFE; }
+.app-shell[data-app-id="chat"] .post-avatar-inner[data-color="#FF6B6B"] { background: linear-gradient(135deg, #FF6B6B, #ee5a5a); }
+.app-shell[data-app-id="chat"] .post-avatar-inner[data-color="#4ECDC4"] { background: linear-gradient(135deg, #4ECDC4, #3dbdb5); }
+.app-shell[data-app-id="chat"] .post-avatar-inner[data-color="#45B7D1"] { background: linear-gradient(135deg, #45B7D1, #3aa7c1); }
+.app-shell[data-app-id="chat"] .post-avatar-inner[data-color="#96CEB4"] { background: linear-gradient(135deg, #96CEB4, #86bea4); }
+.app-shell[data-app-id="chat"] .post-avatar-inner[data-color="#FFEAA7"] { background: linear-gradient(135deg, #FFEAA7, #f5e097); color: #333; }
+.app-shell[data-app-id="chat"] .post-avatar-inner[data-color="#DDA0DD"] { background: linear-gradient(135deg, #DDA0DD, #cd90cd); }
+.app-shell[data-app-id="chat"] .post-avatar-inner[data-color="#98D8C8"] { background: linear-gradient(135deg, #98D8C8, #88c8b8); }
+.app-shell[data-app-id="chat"] .post-avatar-inner[data-color="#F8B500"] { background: linear-gradient(135deg, #F8B500, #e8a500); color: #333; }
+.app-shell[data-app-id="chat"] .post-avatar-inner[data-color="#6C5CE7"] { background: linear-gradient(135deg, #6C5CE7, #5c4cd7); }
+.app-shell[data-app-id="chat"] .post-avatar-inner[data-color="#A29BFE"] { background: linear-gradient(135deg, #A29BFE, #928bee); }
 
 .app-shell[data-app-id="chat"] .moments-author-info {
     flex: 1;
@@ -277,68 +270,74 @@
 }
 
 .app-shell[data-app-id="chat"] .moments-author-name {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
-    color: #333;
+    color: #1f2937;
 }
 
 .app-shell[data-app-id="chat"] .moments-user-badge {
-    font-size: 10px;
+    font-size: 11px;
     color: #A8C8EC;
-    font-weight: normal;
-    margin-left: 4px;
+    font-weight: 500;
+    margin-left: 6px;
 }
 
 .app-shell[data-app-id="chat"] .moments-author-time {
-    font-size: 11px;
-    color: #8E8E8E;
-    margin-top: 1px;
+    font-size: 12px;
+    color: #9ca3af;
+    margin-top: 2px;
 }
 
 /* ---- 文字内容 ---- */
 .app-shell[data-app-id="chat"] .moments-card-content {
-    padding: 2px 12px 8px;
-    font-size: 13px;
-    color: #262626;
-    line-height: 1.6;
+    padding: 4px 14px 10px;
+    font-size: 14px;
+    color: #374151;
+    line-height: 1.65;
     white-space: pre-wrap;
 }
 
 /* ---- 图片区域 ---- */
-.app-shell[data-app-id="chat"] .post-images {
-    margin-bottom: 8px;
+.appshell[data-app-id="chat"] .post-images {
+    margin-bottom: 10px;
     cursor: pointer;
 }
 
 .app-shell[data-app-id="chat"] .post-images--single {
-    padding: 0 12px;
+    padding: 0 14px;
 }
 
 .app-shell[data-app-id="chat"] .post-image--single {
     width: 100%;
-    max-height: 210px;
+    max-height: 250px;
     overflow: hidden;
-    border-radius: 8px;
+    border-radius: 12px;
     display: block;
     object-fit: cover;
+    transition: transform 0.2s ease;
+}
+
+.app-shell[data-app-id="chat"] .post-image--single:hover {
+    transform: scale(1.02);
 }
 
 .app-shell[data-app-id="chat"] .post-image-placeholder {
     width: 100%;
-    height: 210px;
-    background: #FFEEF2;
+    height: 200px;
+    background: linear-gradient(135deg, #FFEEF2, #FFF0F5);
     display: flex;
     align-items: center;
     justify-content: center;
+    border-radius: 12px;
 }
 
 .app-shell[data-app-id="chat"] .post-images-grid {
     display: grid;
-    gap: 2px;
-    max-height: 280px;
+    gap: 3px;
+    max-height: 320px;
     overflow: hidden;
-    border-radius: 8px;
-    padding: 0 12px;
+    border-radius: 12px;
+    padding: 0 14px;
 }
 
 .app-shell[data-app-id="chat"] .post-images-grid[data-cols="2"] { grid-template-columns: repeat(2, 1fr); }
@@ -348,15 +347,21 @@
     position: relative;
     overflow: hidden;
     background: #F5F5F5;
+    border-radius: 8px;
 }
 
-.app-shell[data-app-id="chat"] .post-images-grid[data-cols="2"] .post-image-wrap { height: 135px; }
-.app-shell[data-app-id="chat"] .post-images-grid[data-cols="3"] .post-image-wrap { height: 90px; }
+.app-shell[data-app-id="chat"] .post-images-grid[data-cols="2"] .post-image-wrap { height: 150px; }
+.app-shell[data-app-id="chat"] .post-images-grid[data-cols="3"] .post-image-wrap { height: 100px; }
 
 .app-shell[data-app-id="chat"] .post-image {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    transition: transform 0.2s ease;
+}
+
+.app-shell[data-app-id="chat"] .post-image-wrap:hover .post-image {
+    transform: scale(1.05);
 }
 
 .app-shell[data-app-id="chat"] .post-image-overlay {
@@ -370,32 +375,35 @@
     align-items: center;
     justify-content: center;
     color: white;
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 600;
+    backdrop-filter: blur(2px);
 }
 
 /* ---- 位置卡片 ---- */
 .app-shell[data-app-id="chat"] .location-preview {
-    background: linear-gradient(135deg, #F9F9F9, #FFF5F7);
-    border-radius: 10px;
-    margin: 0 12px 10px;
-    padding: 10px 12px;
+    background: linear-gradient(135deg, #F8FAFC, #F0F9FF);
+    border-radius: 12px;
+    margin: 0 14px 12px;
+    padding: 12px 14px;
     display: flex;
     align-items: center;
-    gap: 10px;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    gap: 12px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    border: 1px solid rgba(0, 0, 0, 0.04);
 }
 
 .app-shell[data-app-id="chat"] .location-preview:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    background: linear-gradient(135deg, #F0F9FF, #E8F5FF);
 }
 
 .app-shell[data-app-id="chat"] .location-icon {
-    width: 32px;
-    height: 32px;
-    background: linear-gradient(135deg, #FFEEF2, #FFE0E8);
-    border-radius: 8px;
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, #EEF2FF, #E0E7FF);
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -403,50 +411,218 @@
 }
 
 .app-shell[data-app-id="chat"] .location-icon svg {
-    width: 14px;
-    height: 14px;
-    fill: #FF96A8;
+    width: 16px;
+    height: 16px;
+    fill: #6366F1;
 }
 
 .app-shell[data-app-id="chat"] .location-name {
-    font-size: 13px;
-    color: #262626;
+    font-size: 14px;
+    color: #4F46E5;
     font-weight: 500;
 }
 
 /* ---- 互动按钮 ---- */
 .app-shell[data-app-id="chat"] .moments-card-actions {
     display: flex;
-    padding: 6px 12px 10px;
-    gap: 8px;
+    justify-content: flex-end;
+    padding: 8px 14px 14px;
+    gap: 16px;
 }
 
 .app-shell[data-app-id="chat"] .moments-card-actions button {
     display: flex;
     align-items: center;
-    gap: 5px;
-    padding: 6px 12px;
-    background: rgba(142, 142, 142, 0.06);
+    gap: 0;
+    padding: 8px;
+    background: transparent;
     border: none;
-    border-radius: 18px;
+    border-radius: 50%;
     cursor: pointer;
-    transition: all 0.3s;
-    font-size: 12px;
-    color: #8E8E8E;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    color: #9ca3af;
 }
 
 .app-shell[data-app-id="chat"] .moments-card-actions button svg {
-    width: 16px;
-    height: 16px;
+    width: 22px;
+    height: 22px;
+    transition: transform 0.2s ease;
 }
 
 .app-shell[data-app-id="chat"] .moments-card-actions button:hover {
-    background: rgba(142, 142, 142, 0.12);
-    color: #5E8AAE;
+    background: rgba(99, 102, 241, 0.08);
+    color: #6366F1;
+}
+
+.app-shell[data-app-id="chat"] .moments-card-actions button:hover svg {
+    transform: scale(1.15);
+}
+
+.app-shell[data-app-id="chat"] .moments-card-actions button:active {
+    transform: scale(0.9);
 }
 
 .app-shell[data-app-id="chat"] .moment-like-btn.liked {
     color: #FF6B9D;
+}
+
+.app-shell[data-app-id="chat"] .moment-like-btn.liked svg {
+    fill: #FF6B9D;
+}
+
+/* ★ v0.85 删除按钮样式 */
+.app-shell[data-app-id="chat"] .moment-delete-btn {
+    color: #9ca3af;
+}
+
+.app-shell[data-app-id="chat"] .moment-delete-btn:hover {
+    color: #EF4444;
+    background: rgba(239, 68, 68, 0.08);
+}
+
+/* ★ v0.87 每张卡从 2~3 个按钮涨到 4 个（收藏/编辑/转发/删除），
+   16px 的间距在窄屏上会把最后一个挤出卡片。改成自适应。 */
+.app-shell[data-app-id="chat"] .moments-card-actions {
+    gap: clamp(4px, 3vw, 16px);
+}
+
+.app-shell[data-app-id="chat"] .moment-edit-btn:hover {
+    color: #6366F1;
+    background: rgba(99, 102, 241, 0.08);
+}
+
+/* ============================
+   朋友圈左滑操作(v0.88)
+   ============================ */
+
+/* 朋友圈滑动行容器：圆角卡片，overflow 裁切左滑露出区 */
+.app-shell[data-app-id="chat"] .moments-swipe-row.swipe-row,
+.app-shell[data-app-id="chat"] .moments-swipe-row {
+    --swipe-action-w: 44px;
+    margin-bottom: 12px;
+    border-radius: 16px;
+    overflow: hidden;
+    background: transparent;
+}
+
+/* 朋友圈卡片内容（被滑动的部分） */
+.app-shell[data-app-id="chat"] .moments-swipe-row .swipe-row__content {
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+/* 朋友圈固定按钮区（收藏按钮） */
+.app-shell[data-app-id="chat"] .moments-card-actions--fixed {
+    padding: 6px 12px 10px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* 朋友圈滑动按钮区：竖排小圆钮，只露图标
+   基线 .swipe-row__action { flex:1 } 会把两钮拉成横排撑满，这里必须压掉 */
+.app-shell[data-app-id="chat"] .moments-swipe-row > .swipe-row__actions {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0;
+    width: 44px !important;
+    padding: 0 !important;
+}
+
+.app-shell[data-app-id="chat"] .moments-swipe-row .moment-swipe-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 100%;
+    width: 32px;
+}
+
+.app-shell[data-app-id="chat"] .moments-swipe-row .swipe-row__action,
+.app-shell[data-app-id="chat"] .moments-swipe-row .moment-swipe-action--edit,
+.app-shell[data-app-id="chat"] .moments-swipe-row .moment-swipe-action--delete {
+    flex: 0 0 32px !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    max-width: 32px !important;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+}
+
+.app-shell[data-app-id="chat"] .moments-swipe-row .moment-swipe-action--edit {
+    background: #4A6FA5;
+    color: #fff;
+}
+
+.app-shell[data-app-id="chat"] .moments-swipe-row .moment-swipe-action--delete {
+    background: #FF6B9D;
+    color: #fff;
+}
+
+.app-shell[data-app-id="chat"] .moments-swipe-row .moment-swipe-action--edit:hover,
+.app-shell[data-app-id="chat"] .moments-swipe-row .moment-swipe-action--delete:hover {
+    transform: scale(1.06);
+    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.16);
+}
+
+.app-shell[data-app-id="chat"] .moments-swipe-row .moment-swipe-action--edit:active,
+.app-shell[data-app-id="chat"] .moments-swipe-row .moment-swipe-action--delete:active {
+    transform: scale(0.94);
+}
+
+.app-shell[data-app-id="chat"] .moments-swipe-row .moment-swipe-action--edit svg,
+.app-shell[data-app-id="chat"] .moments-swipe-row .moment-swipe-action--delete svg {
+    width: 15px;
+    height: 15px;
+    margin: 0;
+}
+
+/* ============================
+   朋友圈删除确认弹窗(v0.85)
+   ============================ */
+.app-shell[data-app-id="chat"] .moment-delete-confirm-modal .moment-delete-confirm-icon-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 0 12px;
+}
+
+.app-shell[data-app-id="chat"] .moment-delete-confirm-modal .moment-delete-confirm-icon-wrap svg {
+    width: 48px;
+    height: 48px;
+    display: block;
+}
+
+.app-shell[data-app-id="chat"] .moment-delete-confirm-modal .moment-delete-confirm-preview {
+    background: #f9fafb;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 8px;
+    text-align: left;
+}
+
+.app-shell[data-app-id="chat"] .moment-delete-confirm-modal .moment-delete-confirm-preview-text {
+    font-size: 13px;
+    color: #6b7280;
+    line-height: 1.5;
+    max-height: 60px;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
 }
 
 /* ---- 评论区 ---- */
@@ -527,6 +703,11 @@
 
 .app-shell[data-app-id="chat"] .moments-empty-icon {
     margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 48px;
 }
 
 .app-shell[data-app-id="chat"] .moments-empty-icon svg {
@@ -545,6 +726,55 @@
     color: #bbb;
 }
 
+/* ---- AI 图片网格项 ---- */
+.app-shell[data-app-id="chat"] .ai-image-grid-item {
+    position: relative;
+    border-radius: 10px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="chat"] .ai-image-grid-item:hover {
+    transform: scale(1.03);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.app-shell[data-app-id="chat"] .ai-image-grid-item:active {
+    transform: scale(0.98);
+}
+
+.app-shell[data-app-id="chat"] .ai-image-grid-label {
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    backdrop-filter: blur(4px);
+}
+
+/* ---- AI 图片单卡片 ---- */
+.app-shell[data-app-id="chat"] .ai-image-display {
+    border-radius: 14px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="chat"] .ai-image-display:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.app-shell[data-app-id="chat"] .ai-image-display:active {
+    transform: translateY(0);
+}
+
+.app-shell[data-app-id="chat"] .ai-image-display-label {
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    backdrop-filter: blur(4px);
+}
+
 /* ---- 动画 ---- */
 @keyframes fadeInUp {
     from {
@@ -560,4 +790,193 @@
 @keyframes spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
+}
+
+/* ============================================
+ * 朋友圈分享弹窗样式 (AcModal 风格)
+ * ============================================ */
+
+/* 分享弹窗整体 - AcModal hook */
+/* 注意:不要给 .ac-modal 加 overflow:hidden,否则会裁剪掉关闭按钮(top:-10px) */
+
+/* 搜索框 */
+.share-search-wrap {
+    padding: 0 0 12px;
+}
+
+.share-search-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid rgba(99, 102, 241, 0.15);
+    border-radius: 10px;
+    font-size: 14px;
+    background: linear-gradient(180deg, #f8faff, #f0f5ff);
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.share-search-input:focus {
+    outline: none;
+    border-color: #6366f1;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* 预览卡片 */
+.share-preview-card {
+    background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+}
+
+.share-preview-label {
+    font-size: 10px;
+    color: #6366f1;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.share-preview-author {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.share-preview-content {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 4px;
+    line-height: 1.4;
+}
+
+/* 联系人列表区域 */
+.share-contacts-body {
+    max-height: 320px;
+    overflow-y: auto;
+    padding-bottom: 8px;
+}
+
+.share-list-section-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 8px 0 6px;
+}
+
+.share-contact-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 0;
+    gap: 12px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    border-radius: 10px;
+}
+
+.share-contact-item:hover {
+    background: rgba(99, 102, 241, 0.06);
+}
+
+.share-contact-item:active {
+    background: rgba(99, 102, 241, 0.1);
+}
+
+.share-contact-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #A29BFE, #6C5CE7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 15px;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.share-contact-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.share-contact-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.share-contact-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: #1f2937;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.share-contact-subtitle {
+    font-size: 12px;
+    color: #9ca3af;
+    margin-top: 2px;
+}
+
+.share-contact-arrow {
+    width: 20px;
+    height: 20px;
+    color: #d1d5db;
+    flex-shrink: 0;
+}
+
+.share-list-empty {
+    text-align: center;
+    padding: 30px 0;
+    color: #9ca3af;
+    font-size: 14px;
+}
+
+/* 选中状态 */
+.share-contact-item--selected {
+    background: linear-gradient(90deg, rgba(162, 155, 254, 0.12), rgba(108, 92, 231, 0.08));
+    border-color: rgba(108, 92, 231, 0.3);
+}
+
+.share-contact-check {
+    width: 22px;
+    height: 22px;
+    color: #6C5CE7;
+    flex-shrink: 0;
+}
+
+.share-contact-check svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* 分享成功 Toast */
+.share-success-toast {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: rgba(0, 0, 0, 0.75);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 10001;
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.share-success-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
 }

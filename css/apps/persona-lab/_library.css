@@ -1,0 +1,587 @@
+/**
+ * 人设机 · 人设库 + 导入导出页
+ */
+
+/* ── 页面容器 ──────────────────────────────── */
+
+.app-shell[data-app-id="persona-lab"] .pl-library {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 0 var(--pl-pad) 24px;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 0;
+    height: 100%;
+}
+
+/* ── 顶部导航 ──────────────────────────────── */
+
+.app-shell[data-app-id="persona-lab"] .pl-import-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: calc(var(--pl-statusbar) + 10px) var(--pl-pad) 12px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-header h1 {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-back {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: var(--pl-radius);
+    background: var(--pl-surface-sunken);
+    color: var(--pl-text);
+    cursor: pointer;
+    transition: background 0.16s ease;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-back:active {
+    background: var(--pl-border-strong);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-back svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* ── 模式切换标签 ──────────────────────────── */
+
+.app-shell[data-app-id="persona-lab"] .pl-import-tabs {
+    display: flex;
+    gap: 6px;
+    padding: 0 var(--pl-pad) 16px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    padding: 10px 14px;
+    border: 1px solid var(--pl-border-strong);
+    border-radius: var(--pl-radius);
+    background: var(--pl-surface);
+    color: var(--pl-text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.16s ease;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-tab svg {
+    width: 16px;
+    height: 16px;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-tab.is-active {
+    background: var(--pl-surface-sunken);
+    border-color: var(--pl-primary-line);
+    color: var(--pl-primary-strong);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-tab:active {
+    background: var(--pl-surface-soft);
+}
+
+/* ── 内容区域 ──────────────────────────────── */
+
+.app-shell[data-app-id="persona-lab"] .pl-import-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 var(--pl-pad) 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    scrollbar-width: none;
+}
+.app-shell[data-app-id="persona-lab"] .pl-import-content::-webkit-scrollbar {
+    display: none;
+}
+
+/* ── 分区 ────────────────────────────────── */
+
+.app-shell[data-app-id="persona-lab"] .pl-import-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--pl-text);
+}
+
+/* ── 示例按钮 ──────────────────────────────── */
+
+.app-shell[data-app-id="persona-lab"] .pl-import-sample-btn {
+    padding: 4px 10px;
+    border: 1px solid var(--pl-border);
+    border-radius: var(--pl-radius-sm);
+    background: none;
+    color: var(--pl-text-secondary);
+    font-size: 11.5px;
+    cursor: pointer;
+    transition: all 0.16s ease;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-sample-btn:active {
+    background: var(--pl-surface-sunken);
+    border-color: var(--pl-border-strong);
+}
+
+/* ── 文本框 ───────────────────────────────── */
+
+.app-shell[data-app-id="persona-lab"] .pl-import-textarea {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--pl-border-strong);
+    border-radius: var(--pl-radius);
+    background: var(--pl-surface);
+    color: var(--pl-text);
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.6;
+    resize: none;
+    outline: none;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-textarea:focus {
+    border-color: var(--pl-primary-line);
+    box-shadow: 0 0 0 3px var(--pl-primary-soft);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-textarea::placeholder {
+    color: var(--pl-text-tertiary);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-textarea--result {
+    background: var(--pl-surface-soft);
+    font-family: var(--pl-font-mono);
+    font-size: 12px;
+}
+
+/* ── API 状态行 ────────────────────────────── */
+
+.app-shell[data-app-id="persona-lab"] .pl-import-api {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: var(--pl-radius);
+    background: var(--pl-surface-sunken);
+    font-size: 11.5px;
+    color: var(--pl-text-secondary);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-api svg {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-api-label[data-ok="1"] {
+    color: var(--pl-text);
+    font-weight: 500;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-api-label[data-ok="0"] {
+    color: var(--pl-danger);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-api-sub {
+    color: var(--pl-text-tertiary);
+}
+
+/* ── 主操作按钮 ────────────────────────────── */
+
+.app-shell[data-app-id="persona-lab"] .pl-import-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 44px;
+    padding: 0 16px;
+    border: 1px solid var(--pl-border-strong);
+    border-radius: var(--pl-radius);
+    background: var(--pl-surface);
+    color: var(--pl-text);
+    font-size: 13.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.16s ease;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-action svg {
+    width: 16px;
+    height: 16px;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-action:active {
+    background: var(--pl-surface-sunken);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-action:disabled {
+    opacity: 0.42;
+    cursor: default;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-action--primary {
+    background: var(--pl-primary);
+    border-color: var(--pl-primary);
+    color: var(--pl-on-primary);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-action--primary:active {
+    background: var(--pl-primary-strong);
+    border-color: var(--pl-primary-strong);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-action-spin {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    animation: pl-spin 0.7s linear infinite;
+}
+
+/* ── 错误提示 ──────────────────────────────── */
+
+.app-shell[data-app-id="persona-lab"] .pl-import-error {
+    padding: 10px 12px;
+    border-radius: var(--pl-radius);
+    background: var(--pl-danger-soft);
+    color: var(--pl-danger);
+    font-size: 12px;
+}
+
+/* ── 转换结果区域 ──────────────────────────── */
+
+.app-shell[data-app-id="persona-lab"] .pl-import-result {
+    padding-top: 4px;
+    border-top: 1px solid var(--pl-divider);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-preview-hint {
+    font-size: 11.5px;
+    color: var(--pl-text-tertiary);
+}
+
+/* ── 字段预览 ──────────────────────────────── */
+
+.app-shell[data-app-id="persona-lab"] .pl-import-patch {
+    padding: 12px;
+    border: 1px solid var(--pl-border);
+    border-radius: var(--pl-radius);
+    background: var(--pl-surface-soft);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-patch-head {
+    margin-bottom: 10px;
+    font-size: 12px;
+    color: var(--pl-text-secondary);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-patch-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-patch-list li {
+    display: flex;
+    gap: 12px;
+    align-items: baseline;
+    font-size: 12px;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-patch-key {
+    flex: 0 0 5em;
+    color: var(--pl-text-on-soft);
+    font-weight: 500;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-patch-val {
+    flex: 1;
+    min-width: 0;
+    color: var(--pl-text);
+    word-break: break-word;
+}
+
+/* ── 存成类型选择 ──────────────────────────── */
+
+.app-shell[data-app-id="persona-lab"] .pl-import-scope {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-scope-label {
+    font-size: 12px;
+    color: var(--pl-text-secondary);
+}
+
+/* ── 导出卡片列表 ──────────────────────────── */
+
+.app-shell[data-app-id="persona-lab"] .pl-import-card-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-card-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--pl-border);
+    border-radius: var(--pl-radius);
+    background: var(--pl-surface);
+    cursor: pointer;
+    transition: all 0.16s ease;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-card-item:active {
+    background: var(--pl-surface-soft);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-card-item.is-selected {
+    border-color: var(--pl-primary-line);
+    background: var(--pl-surface-soft);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-card-name {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--pl-text);
+    text-align: left;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-card-scope {
+    font-size: 11px;
+    color: var(--pl-text-tertiary);
+}
+
+/* ── 复制按钮 ──────────────────────────────── */
+
+.app-shell[data-app-id="persona-lab"] .pl-import-copy-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border: 1px solid var(--pl-border-strong);
+    border-radius: var(--pl-radius-sm);
+    background: none;
+    color: var(--pl-text-secondary);
+    font-size: 11.5px;
+    cursor: pointer;
+    transition: all 0.16s ease;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-copy-btn svg {
+    width: 13px;
+    height: 13px;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-copy-btn:active {
+    background: var(--pl-surface-sunken);
+}
+
+/* ── 空状态提示 ────────────────────────────── */
+
+.app-shell[data-app-id="persona-lab"] .pl-import-hint {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--pl-text-tertiary);
+    font-size: 12.5px;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-import-hint svg {
+    width: 24px;
+    height: 24px;
+    opacity: 0.5;
+}
+
+/* ── 导入按钮样式 ──────────────────────────── */
+
+.app-shell[data-app-id="persona-lab"] .pl-lib-hero-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    border: 1px solid var(--pl-border-strong);
+    border-radius: var(--pl-radius);
+    background: none;
+    color: var(--pl-text);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.16s ease;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-lib-hero-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-lib-hero-btn:active {
+    background: var(--pl-surface-sunken);
+}
+
+/* ── 人设库头部 ────────────────────────────────── */
+
+.app-shell[data-app-id="persona-lab"] .pl-lib-hero {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-top: calc(var(--pl-statusbar) + 10px);
+    padding-bottom: 4px;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-lib-hero-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-lib-hero h1 {
+    flex: 1;
+    min-width: 0;
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-lib-hero p {
+    font-size: 12px;
+    color: var(--pl-text-tertiary);
+}
+
+/* ── 分区 ────────────────────────────────── */
+
+.app-shell[data-app-id="persona-lab"] .pl-lib-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* ── 卡片列表 ────────────────────────────── */
+
+.app-shell[data-app-id="persona-lab"] .pl-card-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-card {
+    display: flex;
+    align-items: stretch;
+    border: 1px solid var(--pl-border);
+    border-radius: var(--pl-radius-lg);
+    background: var(--pl-surface);
+    overflow: hidden;
+    transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-card:active { background: var(--pl-surface-soft); }
+.app-shell[data-app-id="persona-lab"] .pl-card[data-dirty="1"] { border-color: var(--pl-primary-line); }
+.app-shell[data-app-id="persona-lab"] .pl-card[data-pulled="1"] { opacity: 0.62; }
+
+.app-shell[data-app-id="persona-lab"] .pl-card-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 12px 13px;
+    border: 0;
+    background: none;
+    color: inherit;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-card-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-card-title {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--pl-text);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-card-sub {
+    font-size: 12px;
+    color: var(--pl-text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 3px;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-card-status {
+    font-size: 11px;
+    color: var(--pl-text-tertiary);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-card-status[data-dirty="1"] { color: var(--pl-primary-strong); }
+
+.app-shell[data-app-id="persona-lab"] .pl-card-kill {
+    flex-shrink: 0;
+    width: 40px;
+    border: 0;
+    border-left: 1px solid var(--pl-divider);
+    background: none;
+    color: var(--pl-text-tertiary);
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-card-kill:active {
+    background: var(--pl-danger-soft);
+    color: var(--pl-danger);
+}

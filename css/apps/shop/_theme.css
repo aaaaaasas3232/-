@@ -1,0 +1,143 @@
+/* 四叶草 · 主题 token
+ *
+ * ── 这个文件是颜色的唯一真相 ──────────────────────────────────────
+ *
+ * JS 里一个 hex 都没有。`theme.js` 只维护「有哪些 token、分别叫什么、归在哪一类」,
+ * 具体色值运行时从这里读（`readPresetColors` 造一个隐藏探针再 getComputedStyle）。
+ *
+ * 梦境编织那轮的教训：原型定义了一套变量、同时又散着 694 处硬编码 hex，
+ * 换主题时那 694 处纹丝不动。所以这里的约束是物理性的 ——
+ * 只要 JS 里没有 hex，就不可能出现「换了个寂寞」。
+ *
+ * ── 用户改色的两条路 ──────────────────────────────────────────────
+ *   1. 单个改：色板里点一格 → 写 inline style 到根节点
+ *   2. 整套覆盖：粘一段 `--sp-bg: #xxx;` → 解析后批量写
+ * 两条路都只是往根节点写 inline 变量，内置主题本身不会被改坏。
+ */
+
+/* ── 晨露（浅色，默认）─────────────────────────────────────────────
+   韩系清新的底子：不是纯白，是掺了一点点绿的米白。
+   主色取四叶草的叶绿，压到很低的饱和度；强调色用杏色，
+   两者的明度接近，所以并排放不会互相压过去。 */
+.app-shell[data-app-id="shop"],
+.app-shell[data-app-id="shop"] [data-sp-theme="dawn"] {
+    --sp-bg: #F7F8F5;
+    --sp-bg-soft: #FFFFFF;
+    --sp-surface: #FFFFFF;
+    --sp-surface-2: #F2F4EF;
+    --sp-elevated: #FFFFFF;
+
+    --sp-primary: #6E9C7C;
+    --sp-primary-soft: #E4EDE6;
+    --sp-primary-strong: #557C61;
+    --sp-on-primary: #FFFFFF;
+
+    --sp-accent: #D9A183;
+    --sp-accent-soft: #F6EAE2;
+    --sp-on-accent: #FFFFFF;
+
+    --sp-price: #C2705A;
+    --sp-coin: #B98C4A;
+    --sp-income: #4E8C63;
+    --sp-expense: #C2705A;
+
+    --sp-text: #2E332F;
+    --sp-text-2: #6B7570;
+    --sp-text-3: #A3ABA6;
+    --sp-text-inverse: #FFFFFF;
+
+    --sp-line: #E6E9E3;
+    --sp-line-soft: #F0F2ED;
+    --sp-line-strong: #D2D7CD;
+
+    --sp-card: #FFFFFF;
+    --sp-card-hover: #FAFBF8;
+    --sp-shadow: rgba(46, 51, 47, 0.06);
+
+    --sp-success: #4E8C63;
+    --sp-warning: #B98C4A;
+    --sp-danger: #C05B54;
+    --sp-info: #5F8299;
+
+    --sp-input-bg: #F4F6F1;
+    --sp-input-line: #E2E6DD;
+    --sp-input-focus: rgba(110, 156, 124, 0.28);
+
+    --sp-tag-bg: #EFF2EC;
+    --sp-tag-text: #6B7570;
+    --sp-tag-line: #E2E6DD;
+
+    --sp-nav-bg: rgba(255, 255, 255, 0.92);
+    --sp-nav-line: #E9ECE5;
+    --sp-nav-icon: #A3ABA6;
+    --sp-nav-active: #4C6E57;
+
+    --sp-overlay: rgba(46, 51, 47, 0.32);
+    --sp-scrim: rgba(255, 255, 255, 0.7);
+
+    --sp-skeleton: #ECEFE9;
+    --sp-skeleton-shine: rgba(255, 255, 255, 0.85);
+}
+
+/* ── 夜樱（深色）───────────────────────────────────────────────────
+   不是把浅色反过来。深色下四叶草绿会发灰，所以主色往青偏一点、
+   明度提上去；强调色的杏色改成更暖的陶土色，否则在深底上会显脏。 */
+.app-shell[data-app-id="shop"] [data-sp-theme="dusk"],
+.app-shell[data-app-id="shop"][data-sp-theme="dusk"] {
+    --sp-bg: #1A1D1B;
+    --sp-bg-soft: #212523;
+    --sp-surface: #232725;
+    --sp-surface-2: #2B302D;
+    --sp-elevated: #2A2F2C;
+
+    --sp-primary: #8FBF9E;
+    --sp-primary-soft: #2C3931;
+    --sp-primary-strong: #A9D3B6;
+    --sp-on-primary: #17201A;
+
+    --sp-accent: #D9A183;
+    --sp-accent-soft: #3A302A;
+    --sp-on-accent: #241B15;
+
+    --sp-price: #E39D86;
+    --sp-coin: #D9B872;
+    --sp-income: #86C79A;
+    --sp-expense: #E39D86;
+
+    --sp-text: #E8EDE9;
+    --sp-text-2: #A6B0A9;
+    --sp-text-3: #737D77;
+    --sp-text-inverse: #1A1D1B;
+
+    --sp-line: #333936;
+    --sp-line-soft: #2A2F2C;
+    --sp-line-strong: #454C48;
+
+    --sp-card: #232725;
+    --sp-card-hover: #2A2F2C;
+    --sp-shadow: rgba(0, 0, 0, 0.38);
+
+    --sp-success: #86C79A;
+    --sp-warning: #D9B872;
+    --sp-danger: #DE8A83;
+    --sp-info: #8FB2C9;
+
+    --sp-input-bg: #2A2F2C;
+    --sp-input-line: #3B423E;
+    --sp-input-focus: rgba(143, 191, 158, 0.3);
+
+    --sp-tag-bg: #2C312E;
+    --sp-tag-text: #A6B0A9;
+    --sp-tag-line: #3B423E;
+
+    --sp-nav-bg: rgba(26, 29, 27, 0.92);
+    --sp-nav-line: #2F3532;
+    --sp-nav-icon: #737D77;
+    --sp-nav-active: #A9D3B6;
+
+    --sp-overlay: rgba(0, 0, 0, 0.55);
+    --sp-scrim: rgba(26, 29, 27, 0.72);
+
+    --sp-skeleton: #2B302D;
+    --sp-skeleton-shine: rgba(255, 255, 255, 0.06);
+}

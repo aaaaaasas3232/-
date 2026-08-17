@@ -681,91 +681,72 @@
 }
 
 /* ============================================
+ * ★ v0.69 群聊设置 - 整行可点击的设置项
+ *   - 包含 data-app-action 属性的 item 加 hover/active 反馈
+ *   - cursor: pointer 让用户知道这一行可点
+ * ============================================ */
+.app-shell[data-app-id="chat"] .chat-setting-item.chat-setting-item-clickable {
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+.app-shell[data-app-id="chat"] .chat-setting-item.chat-setting-item-clickable:hover {
+    background: rgba(74, 111, 165, 0.04);
+}
+.app-shell[data-app-id="chat"] .chat-setting-item.chat-setting-item-clickable:active {
+    background: rgba(74, 111, 165, 0.08);
+}
+
+/* ============================================
+ * ★ v0.69 群聊设置 - 聊天背景预览小方块(对齐私聊 chat-settings)
+ * ============================================ */
+.app-shell[data-app-id="chat"] .chat-setting-bg-preview {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    vertical-align: middle;
+    margin-right: 4px;
+}
+
+/* ============================================
+ * ★ v0.69 群聊设置 - 设置项右侧默认值文字
+ * ============================================ */
+.app-shell[data-app-id="chat"] .chat-setting-default-text {
+    color: #8E8E93;
+    font-size: 13px;
+}
+
+/* ============================================
  * ★ v0.61.8.11 上下文长度设置弹窗(ContextLengthModal)
- *   - 极简风格:减/加按钮 + 中间数字输入 + 底部取消/保存
- *   - 视觉与 AiRemarkModal / EditReplyPromptModal 对齐
+ *   - v0.72 改 AcModal:外壳/header/footer/关闭按钮由 AcModal 提供
+ *   - v0.72 风格对齐:
+ *     - 加减按钮统一用 AcModal 粉蓝色 #a8c8ed(无渐变)
+ *     - 凸起阴影 0 3px 0 #7aa8d6(跟 .ac-btn-primary / .ac-btn-secondary 同款)
+ *     - hover translateY(-2px) / active translateY(2px) 凸起-按下反馈
+ *   - 保留功能性内部样式:描述/控制条/输入框/提示/示例
+ *   - selector hook:.ctx-length-modal(class 透传到 .ac-overlay)
  * ============================================ */
 
-.ctx-length-modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.45);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-}
-
-.ctx-length-modal {
-    width: 85%;
-    max-width: 320px;
-    background: #fff;
-    border-radius: 14px;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
-    overflow: hidden;
-}
-
-.ctx-length-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 18px 12px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-}
-
-.ctx-length-title {
-    font-size: 16px;
-    font-weight: 600;
-    color: #222;
-}
-
-.ctx-length-close {
-    width: 28px;
-    height: 28px;
-    border: none;
-    background: rgba(0, 0, 0, 0.05);
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #666;
-    padding: 0;
-    transition: background 0.15s;
-}
-
-.ctx-length-close:hover {
-    background: rgba(0, 0, 0, 0.1);
-}
-
-.ctx-length-close svg {
-    width: 16px;
-    height: 16px;
-}
-
-.ctx-length-body {
-    padding: 18px 20px;
-}
-
 .ctx-length-desc {
-    font-size: 13px;
+    font-size: 12px;
     color: #8e8e93;
-    margin-bottom: 18px;
+    margin-bottom: 10px;
     text-align: center;
-    line-height: 1.5;
+    line-height: 1.4;
 }
 
 .ctx-length-control {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 16px;
-    margin-bottom: 12px;
+    gap: 10px;
+    margin-bottom: 4px;
 }
 
 .ctx-length-btn {
-    width: 44px;
-    height: 44px;
+    width: 36px;
+    height: 36px;
     border: none;
     border-radius: 50%;
     cursor: pointer;
@@ -773,25 +754,37 @@
     align-items: center;
     justify-content: center;
     padding: 0;
-    transition: all 0.15s;
+    transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
 }
 
 .ctx-length-btn--minus {
-    background: #f2f2f7;
-    color: #007aff;
+    background: #a8c8ed;
+    color: #ffffff;
+    box-shadow: 0 3px 0 #7aa8d6;
 }
 
 .ctx-length-btn--minus:hover:not(:disabled) {
-    background: #e0e0e8;
+    transform: translateY(-2px);
+}
+
+.ctx-length-btn--minus:active:not(:disabled) {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 #7aa8d6;
 }
 
 .ctx-length-btn--plus {
-    background: linear-gradient(135deg, #4A6FA5 0%, #D4728A 100%);
-    color: #fff;
+    background: #a8c8ed;
+    color: #ffffff;
+    box-shadow: 0 3px 0 #7aa8d6;
 }
 
 .ctx-length-btn--plus:hover:not(:disabled) {
-    opacity: 0.85;
+    transform: translateY(-2px);
+}
+
+.ctx-length-btn--plus:active:not(:disabled) {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 #7aa8d6;
 }
 
 .ctx-length-btn:disabled {
@@ -800,8 +793,8 @@
 }
 
 .ctx-length-btn svg {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
 }
 
 .ctx-length-display {
@@ -811,12 +804,12 @@
 }
 
 .ctx-length-input {
-    width: 72px;
-    height: 48px;
+    width: 60px;
+    height: 36px;
     border: 1.5px solid #d1d1d6;
     border-radius: 10px;
     text-align: center;
-    font-size: 28px;
+    font-size: 20px;
     font-weight: 600;
     color: #222;
     background: #f8f8f8;
@@ -838,16 +831,16 @@
 }
 
 .ctx-length-unit {
-    font-size: 15px;
+    font-size: 13px;
     color: #8e8e93;
 }
 
 .ctx-length-hint {
     text-align: center;
-    font-size: 12px;
+    font-size: 11px;
     color: #8e8e93;
-    margin-bottom: 16px;
-    min-height: 18px;
+    margin-bottom: 4px;
+    min-height: 14px;
 }
 
 .ctx-length-hint--error {
@@ -887,62 +880,1155 @@
     flex-shrink: 0;
 }
 
-.ctx-length-footer {
+/* ============================================================
+   ★ v0.88 K 链记忆弹窗
+   复用 ctx-length-* 的步进器和提示样式,这里只补开关 + 正文编辑区
+   ============================================================ */
+
+.app-shell[data-app-id="chat"] .kchain-switch {
     display: flex;
+    align-items: center;
+    justify-content: space-between;
     gap: 10px;
-    padding: 14px 20px 20px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    border: 1px solid rgba(174, 214, 241, 0.7);
+    border-radius: 12px;
+    background: rgba(240, 248, 255, 0.6);
+    cursor: pointer;
+}
+.app-shell[data-app-id="chat"] .kchain-switch-label {
+    font-size: 13px;
+    color: #2C3E50;
+}
+.app-shell[data-app-id="chat"] .kchain-switch input {
+    width: 18px;
+    height: 18px;
+    accent-color: #4A6FA5;
 }
 
-.ctx-length-btn-cancel {
+.app-shell[data-app-id="chat"] .kchain-current {
+    margin-top: 12px;
+}
+.app-shell[data-app-id="chat"] .kchain-current-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 5px;
+}
+.app-shell[data-app-id="chat"] .kchain-current-title {
     flex: 1;
-    height: 44px;
-    border: 1.5px solid #d1d1d6;
-    border-radius: 10px;
-    background: #fff;
-    font-size: 15px;
-    font-weight: 500;
-    color: #444;
-    cursor: pointer;
-    transition: all 0.15s;
-}
-
-.ctx-length-btn-cancel:hover {
-    background: #f5f5f5;
-}
-
-.ctx-length-btn-save {
-    flex: 1.5;
-    height: 44px;
-    border: none;
-    border-radius: 10px;
-    background: linear-gradient(135deg, #4A6FA5 0%, #D4728A 100%);
-    font-size: 15px;
+    font-size: 12px;
     font-weight: 600;
-    color: #fff;
+    color: #4A6FA5;
+}
+.app-shell[data-app-id="chat"] .kchain-current-title em {
+    margin-left: 5px;
+    font-style: normal;
+    font-weight: 400;
+    font-size: 10px;
+    color: #92A6B6;
+}
+.app-shell[data-app-id="chat"] .kchain-clear {
+    padding: 2px 9px;
+    border: 1px solid rgba(224, 92, 92, 0.5);
+    border-radius: 999px;
+    background: transparent;
+    color: #E05C5C;
+    font-family: inherit;
+    font-size: 10px;
     cursor: pointer;
-    transition: opacity 0.15s;
 }
-
-.ctx-length-btn-save:hover:not(:disabled) {
-    opacity: 0.85;
+.app-shell[data-app-id="chat"] .kchain-textarea {
+    width: 100%;
+    padding: 9px 11px;
+    border: 1px solid rgba(174, 214, 241, 0.9);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #2C3E50;
+    font-family: inherit;
+    font-size: 12px;
+    line-height: 1.7;
+    resize: vertical;
+    outline: none;
+    box-sizing: border-box;
 }
-
-.ctx-length-btn-save:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
+.app-shell[data-app-id="chat"] .kchain-textarea:focus {
+    border-color: #5DADE2;
+    box-shadow: 0 0 0 3px rgba(93, 173, 226, 0.25);
+}
+.app-shell[data-app-id="chat"] .kchain-note {
+    margin: 8px 0 0;
+    font-size: 11px;
+    line-height: 1.6;
+    color: #92A6B6;
 }
 
 /* ★ v0.63 滚动摘要容量弹窗 rcap-field */
 .app-shell[data-app-id="chat"] .rcap-field {
-    margin-bottom: 14px;
+    margin-bottom: 6px;
 }
 .app-shell[data-app-id="chat"] .rcap-field:last-child {
     margin-bottom: 0;
 }
 .app-shell[data-app-id="chat"] .rcap-field-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #4A6FA5;
+    margin-bottom: 3px;
+    padding-left: 4px;
+}
+
+/* ★ v0.67.1 滚动摘要容量弹窗 - 清空 K 链 section
+ *   - 视觉风格:跟整体毛玻璃 + 蓝粉主色一致
+ *   - 顶部用纤细分隔线 + 垃圾桶 icon 区分"危险操作"区域
+ *   - 按钮 3 种状态:默认灰蓝 / 二次确认 armed 红 / 清空进行中 disabled
+ *   - 走 iOS 风格 hover/active 反馈(translateY)
+ */
+.app-shell[data-app-id="chat"] .rcap-clear-section {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px dashed rgba(74, 111, 165, 0.22);
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.app-shell[data-app-id="chat"] .rcap-clear-summary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    background: rgba(74, 111, 165, 0.06);
+    border-radius: 8px;
+    font-size: 11px;
+    color: #4A6FA5;
+}
+
+.app-shell[data-app-id="chat"] .rcap-clear-icon {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    color: #4A6FA5;
+}
+
+.app-shell[data-app-id="chat"] .rcap-clear-summary-text {
+    font-weight: 500;
+    letter-spacing: 0.01em;
+}
+
+.app-shell[data-app-id="chat"] .rcap-btn-clear {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    height: 30px;
+    padding: 0 14px;
+    border: 1px solid rgba(217, 76, 100, 0.28);
+    border-radius: 10px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.88) 0%, rgba(255, 240, 244, 0.72) 100%);
+    color: #D94C64;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 160ms ease, transform 100ms ease, color 160ms ease, box-shadow 160ms ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.app-shell[data-app-id="chat"] .rcap-btn-clear:hover {
+    background: linear-gradient(180deg, rgba(255, 230, 238, 0.92) 0%, rgba(252, 215, 226, 0.86) 100%);
+    box-shadow: 0 4px 10px rgba(217, 76, 100, 0.18);
+}
+
+.app-shell[data-app-id="chat"] .rcap-btn-clear:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 3px rgba(217, 76, 100, 0.18);
+}
+
+.app-shell[data-app-id="chat"] .rcap-btn-clear[disabled] {
+    background: rgba(217, 76, 100, 0.04);
+    color: rgba(217, 76, 100, 0.55);
+    border-color: rgba(217, 76, 100, 0.14);
+    cursor: not-allowed;
+    box-shadow: none;
+    opacity: 0.7;
+}
+
+.app-shell[data-app-id="chat"] .rcap-btn-clear[disabled]:hover {
+    box-shadow: none;
+}
+
+/* 二次确认 armed 态:红色高亮 + 边框更粗,提示用户"再点一次就真删了" */
+.app-shell[data-app-id="chat"] .rcap-btn-clear--armed {
+    background: linear-gradient(180deg, #E57385 0%, #D94C64 100%);
+    color: #ffffff;
+    border-color: rgba(217, 76, 100, 0.72);
+    box-shadow: 0 2px 8px rgba(217, 76, 100, 0.32);
+    animation: rcap-armed-pulse 0.8s ease-in-out infinite;
+}
+
+.app-shell[data-app-id="chat"] .rcap-btn-clear--armed:hover {
+    background: linear-gradient(180deg, #E57385 0%, #C13E55 100%);
+    box-shadow: 0 4px 12px rgba(217, 76, 100, 0.42);
+}
+
+@keyframes rcap-armed-pulse {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.02); }
+}
+
+/* 简易 spinner:跟 framework 灵动岛 / 通用 spinner 风格一致 */
+.app-shell[data-app-id="chat"] .rcap-btn-clear-spinner {
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(217, 76, 100, 0.32);
+    border-top-color: #D94C64;
+    border-radius: 50%;
+    animation: rcap-spin 0.7s linear infinite;
+}
+
+.app-shell[data-app-id="chat"] .rcap-btn-clear--armed .rcap-btn-clear-spinner {
+    border: 2px solid rgba(255, 255, 255, 0.32);
+    border-top-color: #ffffff;
+}
+
+@keyframes rcap-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ============================================================
+ * ★ v0.79 可读取朋友圈设置弹窗(MomentsReadModal)
+ *   - 跟 ContextLengthModal 同款数字步进器
+ *   - selector hook:.moments-read-modal(class 透传到 .ac-overlay)
+ * ============================================================ */
+.app-shell[data-app-id="chat"] .moments-read-modal .moments-read-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.app-shell[data-app-id="chat"] .moments-read-modal .moments-read-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    background: rgba(74, 111, 165, 0.05);
+    border-radius: 12px;
+    border: 1px solid rgba(74, 111, 165, 0.12);
+}
+
+.app-shell[data-app-id="chat"] .moments-read-modal .moments-read-row__info {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="chat"] .moments-read-modal .moments-read-row__label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #4A6FA5;
+}
+
+.app-shell[data-app-id="chat"] .moments-read-modal .moments-read-row__sub {
+    font-size: 11px;
+    color: #8e8e93;
+    margin-top: 2px;
+    line-height: 1.4;
+}
+
+.app-shell[data-app-id="chat"] .moments-read-modal .moments-read-counter {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.app-shell[data-app-id="chat"] .moments-read-modal .moments-read-btn {
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 50%;
+    background: #a8c8ed;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    box-shadow: 0 3px 0 #7aa8d6;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.app-shell[data-app-id="chat"] .moments-read-modal .moments-read-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+}
+
+.app-shell[data-app-id="chat"] .moments-read-modal .moments-read-btn:active:not(:disabled) {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 #7aa8d6;
+}
+
+.app-shell[data-app-id="chat"] .moments-read-modal .moments-read-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.app-shell[data-app-id="chat"] .moments-read-modal .moments-read-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.app-shell[data-app-id="chat"] .moments-read-modal .moments-read-input {
+    width: 56px;
+    height: 32px;
+    text-align: center;
+    border: 1px solid rgba(74, 111, 165, 0.22);
+    border-radius: 8px;
+    font-size: 14px;
+    color: #4A6FA5;
+    background: #fff;
+    outline: none;
+    font-weight: 600;
+    -moz-appearance: textfield;
+}
+
+.app-shell[data-app-id="chat"] .moments-read-modal .moments-read-input::-webkit-outer-spin-button,
+.app-shell[data-app-id="chat"] .moments-read-modal .moments-read-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* ============================================================
+ * ★ v0.79 AI 朋友圈概要详情弹窗(AiMomentsDetailModal)
+ *   - 列表滚动 + 每条可展开 + 概要编辑 / 重生成 / 删除
+ *   - selector hook:.ai-moments-detail-modal(class 透传到 .ac-overlay)
+ * ============================================================ */
+.app-shell[data-app-id="chat"] .ai-moments-detail-modal .ai-moments-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.app-shell[data-app-id="chat"] .ai-moments-detail-modal .ai-moments-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    text-align: center;
+    color: #8e8e93;
+}
+
+.app-shell[data-app-id="chat"] .ai-moments-detail-modal .ai-moments-empty__icon {
+    font-size: 36px;
+    margin-bottom: 8px;
+}
+
+.app-shell[data-app-id="chat"] .ai-moments-detail-modal .ai-moments-empty__title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #4A6FA5;
+    margin-bottom: 4px;
+}
+
+.app-shell[data-app-id="chat"] .ai-moments-detail-modal .ai-moments-empty__sub {
     font-size: 12px;
+    line-height: 1.4;
+}
+
+.app-shell[data-app-id="chat"] .ai-moments-detail-modal .ai-moments-item {
+    background: rgba(74, 111, 165, 0.05);
+    border: 1px solid rgba(74, 111, 165, 0.12);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.app-shell[data-app-id="chat"] .ai-moments-detail-modal .ai-moments-item.is-expanded {
+    background: rgba(74, 111, 165, 0.08);
+    border-color: rgba(74, 111, 165, 0.28);
+}
+
+.app-shell[data-app-id="chat"] .ai-moments-detail-modal .ai-moments-item__head {
+    padding: 10px 12px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    position: relative;
+}
+
+.app-shell[data-app-id="chat"] .ai-moments-detail-modal .ai-moments-item__time {
+    font-size: 11px;
+    color: #8e8e93;
+    letter-spacing: 0.02em;
+}
+
+.app-shell[data-app-id="chat"] .ai-moments-detail-modal .ai-moments-item__content {
+    font-size: 13px;
+    color: #2c3e50;
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.app-shell[data-app-id="chat"] .ai-moments-detail-modal .ai-moments-item__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.app-shell[data-app-id="chat"] .ai-moments-detail-modal .ai-moments-tag {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 6px;
+    background: rgba(74, 111, 165, 0.12);
+    color: #4A6FA5;
+    letter-spacing: 0.02em;
+}
+
+.app-shell[data-app-id="chat"] .ai-moments-detail-modal .ai-moments-tag.is-on {
+    background: rgba(76, 175, 80, 0.18);
+    color: #2E7D32;
+}
+
+.app-shell[data-app-id="chat"] .ai-moments-detail-modal .ai-moments-item__arrow {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 16px;
+    height: 16px;
+    color: #8e8e93;
+    transition: transform 0.2s;
+}
+
+.app-shell[data-app-id="chat"] .ai-moments-detail-modal .ai-moments-item__arrow.is-open {
+    transform: rotate(180deg);
+}
+
+.app-shell[data-app-id="chat"] .ai-moments-detail-modal .ai-moments-item__body {
+    padding: 0 12px 12px 12px;
+    border-top: 1px dashed rgba(74, 111, 165, 0.18);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="chat"] .ai-moments-detail-modal .ai-moments-field__label {
+    font-size: 11px;
+    color: #8e8e93;
+    margin-top: 8px;
+    line-height: 1.4;
+}
+
+.app-shell[data-app-id="chat"] .ai-moments-detail-modal .ai-moments-textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid rgba(74, 111, 165, 0.22);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 12px;
+    color: #2c3e50;
+    line-height: 1.5;
+    resize: vertical;
+    background: #fff;
+    outline: none;
+    font-family: inherit;
+}
+
+.app-shell[data-app-id="chat"] .ai-moments-detail-modal .ai-moments-textarea:focus {
+    border-color: #4A6FA5;
+}
+
+.app-shell[data-app-id="chat"] .ai-moments-detail-modal .ai-moments-field__actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.app-shell[data-app-id="chat"] .ai-moments-detail-modal .ai-moments-btn {
+    font-size: 12px;
+    padding: 6px 12px;
+}
+
+.app-shell[data-app-id="chat"] .ai-moments-detail-modal .ai-moments-footer {
+    margin-top: 4px;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(217, 76, 100, 0.18);
+    display: flex;
+    justify-content: flex-end;
+}
+
+.app-shell[data-app-id="chat"] .ai-moments-detail-modal .ai-moments-btn--danger {
+    background: #D94C64;
+    color: #fff;
+}
+
+.app-shell[data-app-id="chat"] .ai-moments-detail-modal .ai-moments-btn--danger:hover:not(:disabled) {
+    background: #c93a52;
+}
+
+/* ============================================================
+ * ★ v0.81 群成员管理页 (chat-group-manage)
+ *   整体风格对齐 chat-favorites / wallet
+ *   - 顶部 topbar / 渐变背景 / 摘要卡片 / 列表卡片 全套沿用 chat-favorites
+ *   - 新增 class 前缀:cgm-
+ * ============================================================ */
+
+/* 顶部导航上的「群成员管理」主标题颜色跟收藏一致 */
+.app-shell[data-app-id="chat"] .chat-group-manage .chat-favorites-topbar h1 {
+    color: #344b68;
+    font-size: 17px;
+    font-weight: 650;
+}
+
+/* 只读模式提示(非群主访问时显示) */
+.app-shell[data-app-id="chat"] .cgm-readonly-hint {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: rgba(255, 200, 102, 0.16);
+    border: 1px solid rgba(245, 166, 35, 0.32);
+    color: #B57420;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.app-shell[data-app-id="chat"] .cgm-readonly-hint-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="chat"] .cgm-readonly-hint-icon svg {
+    width: 14px;
+    height: 14px;
+    stroke: #B57420;
+}
+
+/* 通用卡片(跟 chat-favorites-list 视觉一致) */
+.app-shell[data-app-id="chat"] .cgm-card {
+    margin-top: 12px;
+    padding: 0;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid rgba(168, 200, 236, 0.22);
+    box-shadow: 0 5px 18px rgba(74, 111, 165, 0.06);
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="chat"] .cgm-card-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 14px 16px 6px;
+    border-bottom: 1px dashed rgba(168, 200, 236, 0.22);
+}
+
+.app-shell[data-app-id="chat"] .cgm-card-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #384858;
+}
+
+.app-shell[data-app-id="chat"] .cgm-card-sub {
+    font-size: 11px;
+    color: #9aa8b5;
+}
+
+/* 群主行 */
+.app-shell[data-app-id="chat"] .cgm-owner-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px 16px;
+}
+
+.app-shell[data-app-id="chat"] .cgm-owner-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.app-shell[data-app-id="chat"] .cgm-owner-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #2c3e50;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 通用成员头像容器(对外导出给页面使用) */
+.app-shell[data-app-id="chat"] .cgm-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    color: #fff;
+    font-weight: 600;
+    overflow: hidden;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(74, 111, 165, 0.18);
+}
+
+.app-shell[data-app-id="chat"] .cgm-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* 角色徽章 */
+.app-shell[data-app-id="chat"] .cgm-role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    width: fit-content;
+}
+
+.app-shell[data-app-id="chat"] .cgm-role-badge--owner {
+    background: linear-gradient(135deg, #FFD27A, #FFB45E);
+    color: #7C4A0D;
+}
+
+.app-shell[data-app-id="chat"] .cgm-role-badge--admin {
+    background: rgba(74, 111, 165, 0.16);
+    color: #4A6FA5;
+}
+
+.app-shell[data-app-id="chat"] .cgm-role-badge--member {
+    background: rgba(154, 168, 181, 0.18);
+    color: #6b7c93;
+}
+
+.app-shell[data-app-id="chat"] .cgm-role-icon {
+    width: 12px;
+    height: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="chat"] .cgm-role-icon svg {
+    width: 12px;
+    height: 12px;
+    stroke-width: 2;
+}
+
+/* 编辑按钮(右侧) */
+.app-shell[data-app-id="chat"] .cgm-edit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 7px 12px;
+    border: 1px solid rgba(168, 200, 236, 0.45);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.92);
+    color: #4A6FA5;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.app-shell[data-app-id="chat"] .cgm-edit-btn:hover {
+    background: rgba(168, 200, 236, 0.18);
+}
+
+.app-shell[data-app-id="chat"] .cgm-edit-btn:active {
+    transform: scale(0.96);
+}
+
+.app-shell[data-app-id="chat"] .cgm-edit-btn-icon {
+    width: 14px;
+    height: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="chat"] .cgm-edit-btn-icon svg {
+    width: 14px;
+    height: 14px;
+    stroke: currentColor;
+}
+
+/* 管理员列表行 */
+.app-shell[data-app-id="chat"] .cgm-admin-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(168, 200, 236, 0.14);
+}
+
+.app-shell[data-app-id="chat"] .cgm-admin-row:last-of-type {
+    border-bottom: none;
+}
+
+.app-shell[data-app-id="chat"] .cgm-admin-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.app-shell[data-app-id="chat"] .cgm-admin-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #2c3e50;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 删除按钮(圆形 icon 按钮) */
+.app-shell[data-app-id="chat"] .cgm-icon-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid rgba(217, 76, 100, 0.28);
+    background: rgba(255, 255, 255, 0.92);
+    color: #D94C64;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, transform 0.1s ease;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .cgm-icon-btn:hover {
+    background: rgba(217, 76, 100, 0.12);
+}
+
+.app-shell[data-app-id="chat"] .cgm-icon-btn:active {
+    transform: scale(0.92);
+}
+
+.app-shell[data-app-id="chat"] .cgm-icon-btn-icon {
+    width: 14px;
+    height: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="chat"] .cgm-icon-btn-icon svg {
+    width: 14px;
+    height: 14px;
+    stroke: currentColor;
+}
+
+/* 添加按钮 */
+.app-shell[data-app-id="chat"] .cgm-add-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: calc(100% - 32px);
+    margin: 12px 16px 16px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px dashed rgba(74, 111, 165, 0.35);
+    background: rgba(74, 111, 165, 0.04);
+    color: #4A6FA5;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.app-shell[data-app-id="chat"] .cgm-add-btn:hover {
+    background: rgba(74, 111, 165, 0.10);
+}
+
+.app-shell[data-app-id="chat"] .cgm-add-btn:active {
+    transform: scale(0.98);
+}
+
+.app-shell[data-app-id="chat"] .cgm-add-btn--disabled {
+    background: rgba(154, 168, 181, 0.06);
+    color: #9aa8b5;
+    border-color: rgba(154, 168, 181, 0.35);
+    cursor: not-allowed;
+}
+
+.app-shell[data-app-id="chat"] .cgm-add-btn-icon {
+    width: 14px;
+    height: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="chat"] .cgm-add-btn-icon svg {
+    width: 14px;
+    height: 14px;
+    stroke: currentColor;
+}
+
+.app-shell[data-app-id="chat"] .cgm-empty-hint {
+    padding: 14px 16px;
+    text-align: center;
+    font-size: 12px;
+    color: #9aa8b5;
+}
+
+/* 成员行 + 群昵称 */
+.app-shell[data-app-id="chat"] .cgm-member-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(168, 200, 236, 0.14);
+}
+
+.app-shell[data-app-id="chat"] .cgm-member-row:last-of-type {
+    border-bottom: none;
+}
+
+.app-shell[data-app-id="chat"] .cgm-member-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.app-shell[data-app-id="chat"] .cgm-member-name-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.app-shell[data-app-id="chat"] .cgm-member-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #2c3e50;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="chat"] .cgm-member-nick-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+}
+
+.app-shell[data-app-id="chat"] .cgm-member-nick-label {
+    color: #9aa8b5;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .cgm-member-nick-value {
+    color: #4A6FA5;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="chat"] .cgm-muted {
+    color: #9aa8b5;
+    font-style: italic;
+    font-weight: 400;
+}
+
+.app-shell[data-app-id="chat"] .cgm-nick-edit {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 1px solid rgba(168, 200, 236, 0.32);
+    background: rgba(255, 255, 255, 0.92);
+    color: #4A6FA5;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.app-shell[data-app-id="chat"] .cgm-nick-edit:hover {
+    background: rgba(168, 200, 236, 0.18);
+}
+
+.app-shell[data-app-id="chat"] .cgm-nick-edit:active {
+    transform: scale(0.92);
+}
+
+.app-shell[data-app-id="chat"] .cgm-nick-edit svg {
+    width: 12px;
+    height: 12px;
+}
+
+/* AI 生成按钮 */
+.app-shell[data-app-id="chat"] .cgm-ai-gen {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    border: 1px solid rgba(155, 122, 160, 0.36);
+    border-radius: 10px;
+    background: rgba(248, 240, 255, 0.85);
+    color: #7B5594;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.app-shell[data-app-id="chat"] .cgm-ai-gen:hover {
+    background: rgba(155, 122, 160, 0.16);
+}
+
+.app-shell[data-app-id="chat"] .cgm-ai-gen:active {
+    transform: scale(0.96);
+}
+
+.app-shell[data-app-id="chat"] .cgm-ai-gen svg {
+    width: 12px;
+    height: 12px;
+    stroke: currentColor;
+}
+
+/* 底部说明 */
+.app-shell[data-app-id="chat"] .cgm-footer-note {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 16px 0 4px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: rgba(74, 111, 165, 0.06);
+    color: #4A6FA5;
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.app-shell[data-app-id="chat"] .cgm-footer-note svg {
+    width: 14px;
+    height: 14px;
+    stroke: currentColor;
+    flex-shrink: 0;
+}
+
+/* 空状态 */
+.app-shell[data-app-id="chat"] .cgm-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+    color: #9aa8b5;
+}
+
+.app-shell[data-app-id="chat"] .cgm-empty-state-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background: rgba(74, 111, 165, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+    color: #4A6FA5;
+}
+
+.app-shell[data-app-id="chat"] .cgm-empty-state-icon svg {
+    width: 28px;
+    height: 28px;
+    stroke: currentColor;
+}
+
+.app-shell[data-app-id="chat"] .cgm-empty-state-title {
+    font-size: 14px;
     font-weight: 600;
     color: #4A6FA5;
     margin-bottom: 6px;
-    padding-left: 4px;
 }
+
+.app-shell[data-app-id="chat"] .cgm-empty-state-sub {
+    font-size: 12px;
+    color: #9aa8b5;
+}
+
+/* ============================================================
+ * ★ v0.81 群成员选择器弹窗 (cgm-picker-modal)
+ *   - 走 AcModal,样式继承 .ai-remark-modal / .moments-read-modal 风格
+ *   - 内容区是单选列表
+ * ============================================================ */
+.cgm-picker-modal .cgm-picker-header {
+    text-align: center;
+    margin-bottom: 14px;
+}
+
+.cgm-picker-modal .cgm-picker-sub {
+    margin: 8px 0 0;
+    color: #9aa8b5;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.cgm-picker-modal .cgm-picker-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 50vh;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+.cgm-picker-modal .cgm-picker-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.cgm-picker-modal .cgm-picker-list::-webkit-scrollbar-thumb {
+    background: rgba(74, 111, 165, 0.22);
+    border-radius: 4px;
+}
+
+.cgm-picker-modal .cgm-picker-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(168, 200, 236, 0.22);
+    background: rgba(255, 255, 255, 0.85);
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    font-family: inherit;
+}
+
+.cgm-picker-modal .cgm-picker-item:hover:not(.is-disabled) {
+    background: rgba(168, 200, 236, 0.10);
+}
+
+.cgm-picker-modal .cgm-picker-item.is-selected {
+    border-color: #4A6FA5;
+    background: rgba(74, 111, 165, 0.10);
+    box-shadow: 0 3px 10px rgba(74, 111, 165, 0.18);
+}
+
+.cgm-picker-modal .cgm-picker-item.is-disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.cgm-picker-modal .cgm-picker-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 600;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.cgm-picker-modal .cgm-picker-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.cgm-picker-modal .cgm-picker-initial {
+    font-size: 15px;
+}
+
+.cgm-picker-modal .cgm-picker-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.cgm-picker-modal .cgm-picker-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #2c3e50;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cgm-picker-modal .cgm-picker-me {
+    font-size: 11px;
+    color: #9aa8b5;
+    font-weight: 500;
+    margin-left: 4px;
+}
+
+.cgm-picker-modal .cgm-picker-tag {
+    font-size: 11px;
+    color: #7B5594;
+    background: rgba(155, 122, 160, 0.10);
+    padding: 1px 6px;
+    border-radius: 6px;
+    width: fit-content;
+}
+
+.cgm-picker-modal .cgm-picker-disabled {
+    font-size: 10px;
+    color: #B57420;
+    margin-top: 1px;
+}
+
+.cgm-picker-modal .cgm-picker-check {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #4A6FA5;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.cgm-picker-modal .cgm-picker-check svg {
+    width: 14px;
+    height: 14px;
+    stroke: currentColor;
+}
+
+.cgm-picker-modal .cgm-picker-empty {
+    padding: 30px 20px;
+    text-align: center;
+}
+
+.cgm-picker-modal .cgm-picker-empty-text {
+    font-size: 12px;
+    color: #9aa8b5;
+}
+

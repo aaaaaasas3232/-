@@ -16,15 +16,12 @@ import {
     getGroupImages,
     getImageByCode,
     getImageSrcByCode,
-    getGroupWithPath,
     createLibrary,
     updateLibrary,
     deleteLibrary,
-    getLibrary,
     createAlbum,
     updateAlbum,
     deleteAlbum,
-    getAlbum,
     createGroup,
     updateGroup,
     deleteGroup,
@@ -253,33 +250,39 @@ function _toast(type, title, msg) {
     }
 }
 
-function _reloadAll() {
-    // 重新加载所有数据（写操作后调用）
-    getAllLibraries().then(libs => {
-        _cache.libraries = libs;
-        // 如果当前在 albums 视图，reload albums
-        if (_cache.currentView === 'albums' && _cache.currentLibraryId) {
-            return getLibraryAlbums(_cache.currentLibraryId);
+async function _reloadAll() {
+    // 重新加载整条路径（写操作后调用）。
+    // ★ 逐层校验 current*Id 是否还存在：被删掉的那一层要就地出栈，
+    //   否则 cache 里留着已删除的记录，视图照旧渲染 → 看起来「删了但没反应」。
+    try {
+        _cache.libraries = await getAllLibraries();
+        if (_cache.currentLibraryId && !_cache.libraries.some(l => l.id === _cache.currentLibraryId)) {
+            _cache.currentLibraryId = null;
+            _cache.currentAlbumId = null;
+            _cache.currentGroupId = null;
         }
-        return null;
-    }).then(albums => {
-        if (albums) _cache.albums = albums;
-        // 如果当前在 groups 视图，reload groups
-        if (_cache.currentView === 'groups' && _cache.currentAlbumId) {
-            return getAlbumGroups(_cache.currentAlbumId);
+
+        _cache.albums = _cache.currentLibraryId ? await getLibraryAlbums(_cache.currentLibraryId) : [];
+        if (_cache.currentAlbumId && !_cache.albums.some(a => a.id === _cache.currentAlbumId)) {
+            _cache.currentAlbumId = null;
+            _cache.currentGroupId = null;
         }
-        return null;
-    }).then(groups => {
-        if (groups) _cache.groups = groups;
-        // 如果当前在 images 视图，reload images
-        if (_cache.currentView === 'images' && _cache.currentGroupId) {
-            return getGroupImages(_cache.currentGroupId);
+
+        _cache.groups = _cache.currentAlbumId ? await getAlbumGroups(_cache.currentAlbumId) : [];
+        if (_cache.currentGroupId && !_cache.groups.some(g => g.id === _cache.currentGroupId)) {
+            _cache.currentGroupId = null;
         }
-        return null;
-    }).then(images => {
-        if (images) _cache.images = images;
-        _invalidate();
-    }).catch(e => { console.error('[gallery] _reloadAll error:', e); _invalidate(); });
+
+        _cache.images = _cache.currentGroupId ? await getGroupImages(_cache.currentGroupId) : [];
+
+        _cache.currentView = _cache.currentGroupId ? 'images'
+            : _cache.currentAlbumId ? 'groups'
+            : _cache.currentLibraryId ? 'albums'
+            : 'libraries';
+    } catch (e) {
+        console.error('[gallery] _reloadAll error:', e);
+    }
+    _invalidate();
 }
 
 function _reloadAlbums(libraryId) {

@@ -17,8 +17,8 @@
  *   4. 同步更新目标会话的 lastMessage(by sdk.chatFriends / chatGroups)
  */
 
-import { escapeHtml } from '@/src/core/escape.js';
 import { chatModalManager } from './components/chat-modal-registry.js';
+import { DEFAULT_AI_AVATAR_BG } from './aiMeta.js';
 
 /**
  * 合并多条消息 → 单条 chat_record 消息
@@ -95,7 +95,7 @@ function collectForwardTargets(sdk, user, mode, sourceMeta) {
                 id: entry.aiPersonId,
                 name,
                 avatar: chatProfile.avatar || ai?.avatar || '',
-                avatarBg: entry.avatarBg || chatProfile.avatarBg || ai?.avatarBg || '#A8C8EC',
+                avatarBg: entry.avatarBg || chatProfile.avatarBg || ai?.avatarBg || DEFAULT_AI_AVATAR_BG,
                 subtitle: entry.lastMessage?.content ? truncate(entry.lastMessage.content, 24) : '',
             });
         }
@@ -238,31 +238,53 @@ export async function openForwardTargetSelection(opts = {}) {
     // 预构建 chatRecord(用户选目标后直接复用)
     const chatRecord = buildChatRecord({ messageIds, sourceMessages, sourceMeta });
 
+    let modalClosed = false;
+    const closeModalNow = () => {
+        if (modalClosed) return;
+        modalClosed = true;
+        try { window.__appNavigation?.closeModal?.(); } catch (_) { /* noop */ }
+    };
+
     return new Promise((resolve) => {
         chatModalManager.openForwardTarget({
             mode,
             privateChats: targets.privateChats,
             groupChats: targets.groupChats,
             onSelect: async (sel) => {
-                const ok = await dispatchForwardToTarget(sdk, user, sel, mode, chatRecord);
-                if (ok) {
-                    const targetName = sel.target?.name || sel.id;
-                    if (typeof window !== 'undefined') {
-                        window.__phoneIsland?.notify?.(
-                            'success',
-                            '已转发',
-                            `消息已发送到「${targetName}」`
-                        );
+                // ★ 用户已点底部「发送」→ 立刻关弹窗(符合"操作完成立即消失"直觉);
+                //   实际 SDK 异步写盘 fire-and-forget,完成后才 resolve + 灵动岛通知
+                closeModalNow();
+                const targetName = sel.target?.name || sel.id;
+                try {
+                    const ok = await dispatchForwardToTarget(sdk, user, sel, mode, chatRecord);
+                    if (ok) {
+                        if (typeof window !== 'undefined') {
+                            window.__phoneIsland?.notify?.(
+                                'success',
+                                '已转发',
+                                `消息已发送到「${targetName}」`
+                            );
+                        }
+                        resolve({ success: true, target: sel, count: messageIds.length });
+                    } else {
+                        if (typeof window !== 'undefined') {
+                            window.__phoneIsland?.notify?.('error', '转发失败', '请重试');
+                        }
+                        resolve({ success: false });
                     }
-                    resolve({ success: true, target: sel, count: messageIds.length });
-                } else {
+                } catch (err) {
+                    console.error('[chat-forward] dispatch failed', err);
                     if (typeof window !== 'undefined') {
-                        window.__phoneIsland?.notify?.('error', '转发失败', '请重试');
+                        window.__phoneIsland?.notify?.('error', '转发失败', err?.message || '请重试');
                     }
                     resolve({ success: false });
                 }
             },
             onClose: () => {
+                // 弹窗关闭场景:点 ✕ / 遮罩 / Esc / 底部「取消」/ 主动 closeModalNow
+                // 主动 closeModalNow 不会触发 onClose (framework 不会回调,见 use-app-navigation 的 closeModal())
+                // 这里处理的都是用户主动取消
+                closeModalNow();
                 resolve({ success: false, cancelled: true });
             },
         });

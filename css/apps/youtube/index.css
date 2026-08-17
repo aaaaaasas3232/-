@@ -1,0 +1,2036 @@
+/**
+ * 萤火（视频 App）· 样式（单文件，本文件即全部真相）
+ *
+ * ── 颜色规矩 ──────────────────────────────────────────────────────
+ *   本文件开头的 token 段是**颜色的唯一真相**。
+ *   其余所有规则只允许 var(--yt-*)；JS 里一个 hex 都没有
+ *   （唯一例外是桌面图标和 appConfig 首帧兜底 —— 它们在 app-shell 外/前）。
+ *
+ * ── 风格约束 ──────────────────────────────────────────────────────
+ *   暖纸底 + 烛红强调（参考原型的 INS 粉调，但压灰做成哑光）；
+ *   禁 emoji；不用渐变；层次靠 1px 细线和很小的明度差。
+ *   封面没有真实图片：色块（8 个哑光色槽）+ 大字 + 时长角标。
+ *
+ * ── 主题怎么切 ────────────────────────────────────────────────────
+ *   `.app-shell[data-app-id="youtube"]` 挂 `data-yt-theme="paper|dusk"`。
+ *   每套主题写两个选择器：shell 自身 + shell 内任意后代 ——
+ *   后者是给 theme.js 的探针 div 和配色页迷你预览用的，删了预览会全坏。
+ *   用户自定义色由 JS setProperty 覆盖（值来自用户，不算硬编码）。
+ */
+
+/* ============================================================
+   token · 纸灯（浅色，默认）
+   ============================================================ */
+.app-shell[data-app-id="youtube"],
+.app-shell[data-app-id="youtube"][data-yt-theme="paper"],
+.app-shell[data-app-id="youtube"] [data-yt-theme="paper"] {
+    --yt-bg: #FBF7F4;
+    --yt-bg-soft: #FFFFFF;
+    --yt-surface: #FFFFFF;
+    --yt-surface-2: #F5EDE9;
+    --yt-elevated: #FFFFFF;
+
+    --yt-primary: #C4485B;
+    --yt-primary-soft: #F9E3E1;
+    --yt-primary-strong: #98333F;
+    --yt-on-primary: #FFFFFF;
+
+    --yt-accent: #B06A3B;
+    --yt-accent-soft: #F4E8DC;
+    --yt-on-accent: #FFFFFF;
+
+    --yt-text: #3B2B2E;
+    --yt-text-2: #7A686B;
+    --yt-text-3: #AB9B9D;
+    --yt-text-inverse: #FFFFFF;
+
+    --yt-line: #ECDFDB;
+    --yt-line-soft: #F3EAE6;
+    --yt-line-strong: #DCC9C4;
+    --yt-card: #FFFFFF;
+    --yt-card-hover: #FAF3F0;
+    --yt-shadow: rgba(59, 43, 46, 0.07);
+
+    /* 封面色板：哑光，深到能压住白字 */
+    --yt-cover-0: #C4485B;
+    --yt-cover-1: #B06A3B;
+    --yt-cover-2: #8A7B2F;
+    --yt-cover-3: #3F7D5C;
+    --yt-cover-4: #35707E;
+    --yt-cover-5: #4A6394;
+    --yt-cover-6: #7A5490;
+    --yt-cover-7: #9C4B6E;
+    --yt-cover-text: #FFF6F2;
+
+    --yt-live: #C63A3A;
+    --yt-live-soft: #F9E2E0;
+    --yt-stage: #2A2124;
+    --yt-stage-text: #F5E9E4;
+    --yt-danmaku-bg: rgba(0, 0, 0, 0.35);
+    --yt-danmaku-text: #F5EFEA;
+    --yt-danmaku-mine: #F2C063;
+
+    --yt-bubble-user-bg: #C4485B;
+    --yt-bubble-user-text: #FFFFFF;
+    --yt-bubble-peer-bg: #FFFFFF;
+    --yt-bubble-peer-text: #3B2B2E;
+
+    --yt-success: #4E8C6C;
+    --yt-warning: #B9924A;
+    --yt-danger: #C05B54;
+    --yt-info: #4A6394;
+
+    --yt-input-bg: #F7F0ED;
+    --yt-input-line: #E7D9D4;
+    --yt-input-focus: rgba(196, 72, 91, 0.22);
+
+    --yt-tag-bg: #F5EDE9;
+    --yt-tag-text: #7A686B;
+    --yt-tag-line: #E7D9D4;
+
+    --yt-nav-bg: rgba(255, 255, 255, 0.94);
+    --yt-nav-line: #F0E4E0;
+    --yt-nav-icon: #AB9B9D;
+    --yt-nav-active: #C4485B;
+
+    --yt-overlay: rgba(59, 43, 46, 0.36);
+    --yt-skeleton: #F0E6E2;
+}
+
+/* ============================================================
+   token · 夜幕（深色）
+   ------------------------------------------------------------
+   不是浅色反过来：熄灯后的放映厅 —— 底是暖黑，
+   烛红提亮一档，封面色板整体压暗以免刺眼。
+   ============================================================ */
+.app-shell[data-app-id="youtube"][data-yt-theme="dusk"],
+.app-shell[data-app-id="youtube"] [data-yt-theme="dusk"] {
+    --yt-bg: #201A1B;
+    --yt-bg-soft: #262021;
+    --yt-surface: #2A2324;
+    --yt-surface-2: #332B2C;
+    --yt-elevated: #2F2728;
+
+    --yt-primary: #E06B7D;
+    --yt-primary-soft: #45292E;
+    --yt-primary-strong: #F09AA6;
+    --yt-on-primary: #2A1216;
+
+    --yt-accent: #D99E6B;
+    --yt-accent-soft: #3D3226;
+    --yt-on-accent: #241B12;
+
+    --yt-text: #F0E4E0;
+    --yt-text-2: #B5A4A6;
+    --yt-text-3: #7E6F71;
+    --yt-text-inverse: #201A1B;
+
+    --yt-line: #3A3132;
+    --yt-line-soft: #322A2B;
+    --yt-line-strong: #4C4041;
+    --yt-card: #2A2324;
+    --yt-card-hover: #322A2B;
+    --yt-shadow: rgba(0, 0, 0, 0.4);
+
+    --yt-cover-0: #A93C4E;
+    --yt-cover-1: #96592F;
+    --yt-cover-2: #736725;
+    --yt-cover-3: #33684C;
+    --yt-cover-4: #2B5D69;
+    --yt-cover-5: #3D527B;
+    --yt-cover-6: #654578;
+    --yt-cover-7: #833E5C;
+    --yt-cover-text: #F7ECE7;
+
+    --yt-live: #E05252;
+    --yt-live-soft: #472A2A;
+    --yt-stage: #171213;
+    --yt-stage-text: #EFE0DA;
+    --yt-danmaku-bg: rgba(0, 0, 0, 0.45);
+    --yt-danmaku-text: #EFE6E0;
+    --yt-danmaku-mine: #F2C063;
+
+    --yt-bubble-user-bg: #A93C4E;
+    --yt-bubble-user-text: #FBF3F0;
+    --yt-bubble-peer-bg: #332B2C;
+    --yt-bubble-peer-text: #F0E4E0;
+
+    --yt-success: #7FBF9A;
+    --yt-warning: #D9B872;
+    --yt-danger: #DE8A83;
+    --yt-info: #8FA6D4;
+
+    --yt-input-bg: #332B2C;
+    --yt-input-line: #453A3B;
+    --yt-input-focus: rgba(224, 107, 125, 0.3);
+
+    --yt-tag-bg: #332B2C;
+    --yt-tag-text: #B5A4A6;
+    --yt-tag-line: #453A3B;
+
+    --yt-nav-bg: rgba(38, 32, 33, 0.94);
+    --yt-nav-line: #362D2E;
+    --yt-nav-icon: #7E6F71;
+    --yt-nav-active: #E06B7D;
+
+    --yt-overlay: rgba(0, 0, 0, 0.5);
+    --yt-skeleton: #322A2B;
+}
+
+/* ============================================================
+   骨架布局
+   ============================================================ */
+
+.app-shell[data-app-id="youtube"] {
+    background: var(--yt-bg);
+}
+
+/* ============================================================
+   框架容器覆写 —— 让 vue 根组件真正铺满手机壳（AGENTS2 §18）
+   ------------------------------------------------------------
+   不写这四条会同时得到两个「没有报错的」视觉 bug：
+
+   1. 底栏不固定：
+        .app-page          position:absolute; inset:0   → 高度确定
+        .app-screen-panel  min-height:100%; height:auto → ★ 高度不确定
+        .yt-root           height:100%                  → 对着 auto 父级算 → 退回 auto
+      于是整页在 .app-page 里一起滚，flex:0 0 auto 的 tab 栏被内容
+      顶到屏幕外。修法：panel 给死高度，滚动权交给 .yt-body。
+
+   2. 左右各 14px 空隙：
+      framework 默认 .app-content { padding: 0 14px }（给普通 App 留卡片边距），
+      .app-screen-panel 又有自己的 16px/14px/18px 内边距。
+      平时空隙的颜色 = app.background（已同步成主题色）所以看不出来，
+      弹窗遮罩（absolute inset:0 只盖到根组件）一出来就露馅 —— 遮罩两侧
+      各有一条没变暗的亮边。顺带把 .app-page-stack 的顶部圆角清掉，
+      否则遮罩四个上角会缺一小块。
+   ============================================================ */
+.app-shell[data-app-id="youtube"] .app-content {
+    padding: 0;
+}
+
+.app-shell[data-app-id="youtube"] .app-page-stack {
+    border-radius: 0;
+}
+
+.app-shell[data-app-id="youtube"] .app-page {
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="youtube"] .app-screen-panel {
+    height: 100%;
+    min-height: 0;
+    padding: 0;
+}
+
+.app-shell[data-app-id="youtube"] .yt-root {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--yt-bg);
+    color: var(--yt-text);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.app-shell[data-app-id="youtube"] .yt-top {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 54px 18px 10px;
+}
+
+.app-shell[data-app-id="youtube"] .yt-top__mark {
+    display: inline-flex;
+    width: 30px;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: var(--yt-primary);
+    color: var(--yt-on-primary);
+}
+
+.app-shell[data-app-id="youtube"] .yt-top__title {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.app-shell[data-app-id="youtube"] .yt-top__sub {
+    margin: 0;
+    font-size: 11px;
+    color: var(--yt-text-3);
+}
+
+.app-shell[data-app-id="youtube"] .yt-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="youtube"] .yt-page {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 6px 14px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="youtube"] .yt-page::-webkit-scrollbar { width: 4px; }
+.app-shell[data-app-id="youtube"] .yt-page::-webkit-scrollbar-thumb {
+    background: var(--yt-line-strong);
+    border-radius: 2px;
+}
+
+.app-shell[data-app-id="youtube"] .yt-blockedwrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+/* ── 覆盖页顶条 ── */
+.app-shell[data-app-id="youtube"] .yt-subtop {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: -6px -14px 0;
+    padding: 52px 14px 8px;
+    background: var(--yt-bg);
+    border-bottom: 1px solid var(--yt-line-soft);
+}
+
+.app-shell[data-app-id="youtube"] .yt-subtop__back {
+    display: inline-flex;
+    width: 30px;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--yt-line);
+    border-radius: 50%;
+    background: var(--yt-surface);
+    color: var(--yt-text);
+    cursor: pointer;
+}
+.app-shell[data-app-id="youtube"] .yt-subtop__back:active { background: var(--yt-card-hover); }
+
+.app-shell[data-app-id="youtube"] .yt-subtop__title {
+    font-size: 15px;
+    font-weight: 600;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="youtube"] .yt-subtop__peer {
+    flex: 1;
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    border: none;
+    background: none;
+    color: var(--yt-text);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+}
+
+/* ============================================================
+   底栏
+   ============================================================ */
+
+.app-shell[data-app-id="youtube"] .yt-tabbar {
+    flex-shrink: 0;
+    display: flex;
+    /* fullscreen App：home 指示条浮在 shell 最底 40px（--app-safe-bottom），
+       底栏自己让出这一段，否则指示条那条横线会压在 tab 文字上 */
+    padding: 5px 8px max(12px, calc(var(--app-safe-bottom, 12px) - 10px));
+    background: var(--yt-nav-bg);
+    border-top: 1px solid var(--yt-nav-line);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+
+.app-shell[data-app-id="youtube"] .yt-tabbar__item {
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 5px 0 2px;
+    border: none;
+    background: none;
+    color: var(--yt-nav-icon);
+    cursor: pointer;
+    transition: color 0.18s, transform 0.12s;
+}
+.app-shell[data-app-id="youtube"] .yt-tabbar__item:active { transform: scale(0.92); }
+.app-shell[data-app-id="youtube"] .yt-tabbar__item.is-on { color: var(--yt-nav-active); }
+.app-shell[data-app-id="youtube"] .yt-tabbar__label { font-size: 10px; }
+.app-shell[data-app-id="youtube"] .yt-tabbar__dot {
+    position: absolute;
+    top: 3px;
+    right: calc(50% - 14px);
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--yt-live);
+}
+
+/* ============================================================
+   通用小组件
+   ============================================================ */
+
+.app-shell[data-app-id="youtube"] .yt-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ── 按钮 ── */
+.app-shell[data-app-id="youtube"] .yt-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 9px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--yt-line);
+    background: var(--yt-surface);
+    color: var(--yt-text);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.12s, background 0.15s, opacity 0.15s;
+    white-space: nowrap;
+}
+.app-shell[data-app-id="youtube"] .yt-btn:active:not(:disabled) { transform: scale(0.96); }
+.app-shell[data-app-id="youtube"] .yt-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.app-shell[data-app-id="youtube"] .yt-btn.is-block { width: 100%; }
+.app-shell[data-app-id="youtube"] .yt-btn--primary {
+    background: var(--yt-primary);
+    border-color: var(--yt-primary);
+    color: var(--yt-on-primary);
+}
+.app-shell[data-app-id="youtube"] .yt-btn--primary:active:not(:disabled) { background: var(--yt-primary-strong); }
+.app-shell[data-app-id="youtube"] .yt-btn--soft {
+    background: var(--yt-primary-soft);
+    border-color: var(--yt-primary-soft);
+    color: var(--yt-primary-strong);
+}
+.app-shell[data-app-id="youtube"] .yt-btn--ghost {
+    background: transparent;
+    border-color: transparent;
+    color: var(--yt-text-2);
+}
+.app-shell[data-app-id="youtube"] .yt-btn--danger {
+    background: transparent;
+    border-color: var(--yt-danger);
+    color: var(--yt-danger);
+}
+.app-shell[data-app-id="youtube"] .yt-btn--sm { padding: 6px 11px; font-size: 12px; border-radius: 10px; }
+.app-shell[data-app-id="youtube"] .yt-btn--lg { padding: 12px 20px; font-size: 14px; }
+.app-shell[data-app-id="youtube"] .yt-btn__spin {
+    width: 13px;
+    height: 13px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: yt-spin 0.7s linear infinite;
+}
+@keyframes yt-spin { to { transform: rotate(360deg); } }
+
+/* ── 分区 ── */
+.app-shell[data-app-id="youtube"] .yt-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.app-shell[data-app-id="youtube"] .yt-section__head {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 4px;
+}
+.app-shell[data-app-id="youtube"] .yt-section__title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+}
+.app-shell[data-app-id="youtube"] .yt-section__sub { font-size: 11px; color: var(--yt-text-3); }
+.app-shell[data-app-id="youtube"] .yt-section__spacer { flex: 1; }
+
+/* ── 空态 ── */
+.app-shell[data-app-id="youtube"] .yt-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 30px 22px;
+    text-align: center;
+}
+.app-shell[data-app-id="youtube"] .yt-empty__mark {
+    display: inline-flex;
+    width: 52px;
+    height: 52px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--yt-surface-2);
+    color: var(--yt-text-3);
+}
+.app-shell[data-app-id="youtube"] .yt-empty__title { font-size: 14px; font-weight: 600; margin: 2px 0 0; }
+.app-shell[data-app-id="youtube"] .yt-empty__desc { font-size: 12px; color: var(--yt-text-3); margin: 0; max-width: 240px; }
+.app-shell[data-app-id="youtube"] .yt-empty__slot { margin-top: 8px; }
+
+/* ── 加载：一枚萤火沿虚线飘 ── */
+.app-shell[data-app-id="youtube"] .yt-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 30px 18px;
+}
+.app-shell[data-app-id="youtube"] .yt-loading__stage {
+    position: relative;
+    width: 170px;
+    height: 40px;
+}
+.app-shell[data-app-id="youtube"] .yt-loading__trail {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    border-top: 1.5px dashed var(--yt-line-strong);
+}
+.app-shell[data-app-id="youtube"] .yt-loading__bug {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    color: var(--yt-primary);
+    animation: yt-drift 2.6s ease-in-out infinite;
+}
+@keyframes yt-drift {
+    0% { transform: translate(0, -50%); opacity: 0.35; }
+    50% { transform: translate(148px, -62%); opacity: 1; }
+    100% { transform: translate(0, -50%); opacity: 0.35; }
+}
+.app-shell[data-app-id="youtube"] .yt-loading__text {
+    margin: 0;
+    font-size: 12px;
+    color: var(--yt-text-2);
+    animation: yt-fadein 0.4s ease;
+}
+.app-shell[data-app-id="youtube"] .yt-loading__slow {
+    margin: 0;
+    font-size: 11px;
+    color: var(--yt-warning);
+}
+@keyframes yt-fadein { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+
+/* ── 骨架 ── */
+.app-shell[data-app-id="youtube"] .yt-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 6px 0;
+}
+.app-shell[data-app-id="youtube"] .yt-skeleton__item {
+    height: 84px;
+    border-radius: 14px;
+    background: var(--yt-skeleton);
+    animation: yt-breathe 1.4s ease-in-out infinite;
+}
+.app-shell[data-app-id="youtube"] .yt-skeleton__item:nth-child(2n) { animation-delay: 0.2s; }
+@keyframes yt-breathe { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+
+/* ── 表单 ── */
+.app-shell[data-app-id="youtube"] .yt-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.app-shell[data-app-id="youtube"] .yt-field__label { font-size: 12px; font-weight: 600; color: var(--yt-text-2); }
+.app-shell[data-app-id="youtube"] .yt-field__hint { margin: 0; font-size: 11px; color: var(--yt-text-3); }
+
+.app-shell[data-app-id="youtube"] .yt-input,
+.app-shell[data-app-id="youtube"] .yt-textarea {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--yt-input-line);
+    border-radius: 11px;
+    background: var(--yt-input-bg);
+    color: var(--yt-text);
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+.app-shell[data-app-id="youtube"] .yt-input:focus,
+.app-shell[data-app-id="youtube"] .yt-textarea:focus {
+    border-color: var(--yt-primary);
+    box-shadow: 0 0 0 3px var(--yt-input-focus);
+}
+.app-shell[data-app-id="youtube"] .yt-input:disabled { opacity: 0.55; }
+.app-shell[data-app-id="youtube"] .yt-textarea { resize: vertical; min-height: 60px; }
+
+/* ── 头像（占位色块用封面色板，同一 externalId 永远同一槽）── */
+.app-shell[data-app-id="youtube"] .yt-avatar {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border-radius: 50%;
+    overflow: visible;
+    background: var(--yt-surface-2);
+    color: var(--yt-cover-text);
+    font-size: 13px;
+    font-weight: 700;
+}
+.app-shell[data-app-id="youtube"] .yt-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+.app-shell[data-app-id="youtube"] .yt-avatar__initial { font-style: normal; }
+.app-shell[data-app-id="youtube"] .yt-avatar--p0 { background: var(--yt-cover-0); }
+.app-shell[data-app-id="youtube"] .yt-avatar--p1 { background: var(--yt-cover-1); }
+.app-shell[data-app-id="youtube"] .yt-avatar--p2 { background: var(--yt-cover-2); }
+.app-shell[data-app-id="youtube"] .yt-avatar--p3 { background: var(--yt-cover-3); }
+.app-shell[data-app-id="youtube"] .yt-avatar--p4 { background: var(--yt-cover-4); }
+.app-shell[data-app-id="youtube"] .yt-avatar--p5 { background: var(--yt-cover-5); }
+.app-shell[data-app-id="youtube"] .yt-avatar--p6 { background: var(--yt-cover-6); }
+.app-shell[data-app-id="youtube"] .yt-avatar--p7 { background: var(--yt-cover-7); }
+.app-shell[data-app-id="youtube"] .yt-avatar.is-live { box-shadow: 0 0 0 2px var(--yt-live); }
+.app-shell[data-app-id="youtube"] .yt-avatar__livedot {
+    position: absolute;
+    right: -1px;
+    bottom: -1px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--yt-live);
+    border: 2px solid var(--yt-bg);
+    animation: yt-pulse 1.4s ease-in-out infinite;
+}
+@keyframes yt-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.25); } }
+
+/* ── 封面（文字模拟）── */
+.app-shell[data-app-id="youtube"] .yt-cover {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    color: var(--yt-cover-text);
+}
+.app-shell[data-app-id="youtube"] .yt-cover.is-small { border-radius: 10px; }
+.app-shell[data-app-id="youtube"] .yt-cover--h0 { background: var(--yt-cover-0); }
+.app-shell[data-app-id="youtube"] .yt-cover--h1 { background: var(--yt-cover-1); }
+.app-shell[data-app-id="youtube"] .yt-cover--h2 { background: var(--yt-cover-2); }
+.app-shell[data-app-id="youtube"] .yt-cover--h3 { background: var(--yt-cover-3); }
+.app-shell[data-app-id="youtube"] .yt-cover--h4 { background: var(--yt-cover-4); }
+.app-shell[data-app-id="youtube"] .yt-cover--h5 { background: var(--yt-cover-5); }
+.app-shell[data-app-id="youtube"] .yt-cover--h6 { background: var(--yt-cover-6); }
+.app-shell[data-app-id="youtube"] .yt-cover--h7 { background: var(--yt-cover-7); }
+.app-shell[data-app-id="youtube"] .yt-cover__text {
+    max-width: 82%;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-align: center;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.18);
+}
+.app-shell[data-app-id="youtube"] .yt-cover.is-small .yt-cover__text { font-size: 15px; letter-spacing: 2px; }
+.app-shell[data-app-id="youtube"] .yt-cover__play {
+    position: absolute;
+    left: 10px;
+    bottom: 8px;
+    display: inline-flex;
+    width: 26px;
+    height: 26px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.35);
+}
+.app-shell[data-app-id="youtube"] .yt-cover.is-small .yt-cover__play { width: 20px; height: 20px; left: 7px; bottom: 6px; }
+.app-shell[data-app-id="youtube"] .yt-cover__duration {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    padding: 2px 7px;
+    border-radius: 7px;
+    background: rgba(0, 0, 0, 0.45);
+    font-size: 11px;
+    font-weight: 600;
+}
+.app-shell[data-app-id="youtube"] .yt-cover__live {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 8px;
+    border-radius: 7px;
+    background: var(--yt-live);
+    font-size: 11px;
+    font-weight: 700;
+}
+.app-shell[data-app-id="youtube"] .yt-cover__live i,
+.app-shell[data-app-id="youtube"] .yt-livetag i,
+.app-shell[data-app-id="youtube"] .yt-stage__badge i {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: yt-pulse 1.2s ease-in-out infinite;
+}
+
+/* ── 视频卡 ── */
+.app-shell[data-app-id="youtube"] .yt-vcard {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid var(--yt-line-soft);
+    border-radius: 16px;
+    background: var(--yt-card);
+    box-shadow: 0 1px 4px var(--yt-shadow);
+    transition: transform 0.14s ease;
+}
+.app-shell[data-app-id="youtube"] .yt-vcard:active { transform: scale(0.985); }
+.app-shell[data-app-id="youtube"] .yt-vcard.is-dense { flex-direction: row; align-items: center; }
+.app-shell[data-app-id="youtube"] .yt-vcard.is-dense .yt-vcard__coverbtn { width: 118px; flex-shrink: 0; }
+.app-shell[data-app-id="youtube"] .yt-vcard__coverbtn {
+    border: none;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+    text-align: left;
+}
+.app-shell[data-app-id="youtube"] .yt-vcard__body {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+    flex: 1;
+}
+.app-shell[data-app-id="youtube"] .yt-vcard__title {
+    border: none;
+    background: none;
+    padding: 0;
+    text-align: left;
+    color: var(--yt-text);
+    font-size: 13.5px;
+    font-weight: 600;
+    line-height: 1.4;
+    cursor: pointer;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.app-shell[data-app-id="youtube"] .yt-vcard__meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex-wrap: wrap;
+}
+.app-shell[data-app-id="youtube"] .yt-vcard__author {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border: none;
+    background: none;
+    padding: 0;
+    color: var(--yt-text-2);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.app-shell[data-app-id="youtube"] .yt-vcard__author.is-plain { cursor: default; }
+.app-shell[data-app-id="youtube"] .yt-vcard__stats { font-size: 11px; color: var(--yt-text-3); }
+.app-shell[data-app-id="youtube"] .yt-vcard__tags { display: flex; gap: 5px; flex-wrap: wrap; }
+
+.app-shell[data-app-id="youtube"] .yt-tag {
+    display: inline-flex;
+    padding: 1px 8px;
+    border: 1px solid var(--yt-tag-line);
+    border-radius: 8px;
+    background: var(--yt-tag-bg);
+    color: var(--yt-tag-text);
+    font-size: 10.5px;
+    font-style: normal;
+}
+
+.app-shell[data-app-id="youtube"] .yt-cap {
+    display: inline-flex;
+    min-width: 17px;
+    height: 15px;
+    padding: 0 4px;
+    margin-left: 4px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: var(--yt-primary);
+    color: var(--yt-on-primary);
+    font-size: 9.5px;
+    font-weight: 700;
+}
+
+/* ── prompt 分段预览 ── */
+.app-shell[data-app-id="youtube"] .yt-ctx {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 10px;
+    border: 1px solid var(--yt-line-soft);
+    border-radius: 12px;
+    background: var(--yt-surface);
+}
+.app-shell[data-app-id="youtube"] .yt-ctx__stat { margin: 0 0 3px; font-size: 11px; color: var(--yt-text-3); }
+.app-shell[data-app-id="youtube"] .yt-ctx__part {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 9px;
+    background: var(--yt-surface-2);
+}
+.app-shell[data-app-id="youtube"] .yt-ctx__part.is-off { opacity: 0.45; }
+.app-shell[data-app-id="youtube"] .yt-ctx__main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.app-shell[data-app-id="youtube"] .yt-ctx__title { font-size: 12px; font-weight: 600; }
+.app-shell[data-app-id="youtube"] .yt-ctx__meta { font-size: 10px; color: var(--yt-text-3); }
+.app-shell[data-app-id="youtube"] .yt-ctx__lock {
+    font-size: 10px;
+    color: var(--yt-primary-strong);
+    background: var(--yt-primary-soft);
+    padding: 1px 6px;
+    border-radius: 6px;
+}
+
+/* ── 分段控件 / 行 / 开关 ── */
+.app-shell[data-app-id="youtube"] .yt-seg {
+    display: flex;
+    gap: 4px;
+    padding: 3px;
+    border-radius: 12px;
+    background: var(--yt-surface-2);
+}
+.app-shell[data-app-id="youtube"] .yt-seg__item {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 7px 0;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--yt-text-2);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+.app-shell[data-app-id="youtube"] .yt-seg__item.is-on {
+    background: var(--yt-surface);
+    color: var(--yt-text);
+    box-shadow: 0 1px 3px var(--yt-shadow);
+}
+
+.app-shell[data-app-id="youtube"] .yt-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 12px;
+    border: 1px solid var(--yt-line-soft);
+    border-radius: 13px;
+    background: var(--yt-card);
+    color: var(--yt-text);
+    font-size: 13px;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    transition: background 0.15s;
+}
+.app-shell[data-app-id="youtube"] .yt-row:active { background: var(--yt-card-hover); }
+.app-shell[data-app-id="youtube"] .yt-row.is-static { cursor: default; }
+.app-shell[data-app-id="youtube"] .yt-row__label { font-weight: 600; flex-shrink: 0; }
+.app-shell[data-app-id="youtube"] .yt-row__value {
+    flex: 1;
+    min-width: 0;
+    text-align: right;
+    color: var(--yt-text-3);
+    font-size: 12px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="youtube"] .yt-switch {
+    position: relative;
+    width: 40px;
+    height: 23px;
+    flex-shrink: 0;
+    border: none;
+    border-radius: 12px;
+    background: var(--yt-line-strong);
+    cursor: pointer;
+    transition: background 0.18s;
+}
+.app-shell[data-app-id="youtube"] .yt-switch i {
+    position: absolute;
+    top: 2.5px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--yt-bg-soft);
+    transition: transform 0.18s ease;
+}
+.app-shell[data-app-id="youtube"] .yt-switch.is-on { background: var(--yt-primary); }
+.app-shell[data-app-id="youtube"] .yt-switch.is-on i { transform: translateX(16px); }
+
+.app-shell[data-app-id="youtube"] .yt-row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.app-shell[data-app-id="youtube"] .yt-muted { margin: 0; font-size: 11px; color: var(--yt-text-3); }
+
+/* ── 错误条 ── */
+.app-shell[data-app-id="youtube"] .yt-error {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--yt-danger);
+    border-radius: 12px;
+    background: var(--yt-surface);
+}
+.app-shell[data-app-id="youtube"] .yt-error p { flex: 1; margin: 0; font-size: 12px; color: var(--yt-danger); }
+.app-shell[data-app-id="youtube"] .yt-error__actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* ── toast ── */
+.app-shell[data-app-id="youtube"] .yt-toast {
+    position: absolute;
+    left: 50%;
+    bottom: 96px;
+    transform: translateX(-50%);
+    z-index: 60;
+    max-width: 78%;
+    padding: 9px 16px;
+    border-radius: 20px;
+    background: var(--yt-text);
+    color: var(--yt-text-inverse);
+    font-size: 12.5px;
+    box-shadow: 0 6px 18px var(--yt-shadow);
+    text-align: center;
+}
+.app-shell[data-app-id="youtube"] .yt-toast-enter-active,
+.app-shell[data-app-id="youtube"] .yt-toast-leave-active { transition: opacity 0.22s, transform 0.22s; }
+.app-shell[data-app-id="youtube"] .yt-toast-enter-from,
+.app-shell[data-app-id="youtube"] .yt-toast-leave-to { opacity: 0; transform: translate(-50%, 8px); }
+
+/* ============================================================
+   首次配置
+   ============================================================ */
+
+.app-shell[data-app-id="youtube"] .yt-ob {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 8px 18px 16px;
+}
+.app-shell[data-app-id="youtube"] .yt-ob__stage {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-bottom: 10px;
+}
+.app-shell[data-app-id="youtube"] .yt-ob__center { align-items: center; justify-content: center; }
+.app-shell[data-app-id="youtube"] .yt-ob__hero {
+    align-self: center;
+    display: inline-flex;
+    width: 76px;
+    height: 76px;
+    align-items: center;
+    justify-content: center;
+    margin-top: 22px;
+    border-radius: 26px;
+    background: var(--yt-primary);
+    color: var(--yt-on-primary);
+    animation: yt-hero-in 0.5s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+@keyframes yt-hero-in { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.app-shell[data-app-id="youtube"] .yt-ob__title {
+    margin: 6px 0 0;
+    text-align: center;
+    font-size: 21px;
+    font-weight: 700;
+    letter-spacing: 2px;
+}
+.app-shell[data-app-id="youtube"] .yt-ob__desc {
+    margin: 0 auto;
+    max-width: 270px;
+    text-align: center;
+    font-size: 12.5px;
+    color: var(--yt-text-2);
+}
+.app-shell[data-app-id="youtube"] .yt-ob__panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+}
+.app-shell[data-app-id="youtube"] .yt-ob__pill {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 13px;
+    border: 1px solid var(--yt-line-soft);
+    border-radius: 12px;
+    background: var(--yt-card);
+}
+.app-shell[data-app-id="youtube"] .yt-ob__pill-k { font-size: 12px; color: var(--yt-text-3); }
+.app-shell[data-app-id="youtube"] .yt-ob__pill-v { font-size: 13px; font-weight: 600; }
+.app-shell[data-app-id="youtube"] .yt-ob__summary {
+    padding: 11px 13px;
+    border: 1px dashed var(--yt-line-strong);
+    border-radius: 12px;
+}
+.app-shell[data-app-id="youtube"] .yt-ob__summary-text { margin: 0; font-size: 12px; color: var(--yt-text-2); white-space: pre-wrap; }
+.app-shell[data-app-id="youtube"] .yt-ob__summary-empty { margin: 0; font-size: 12px; color: var(--yt-text-3); }
+.app-shell[data-app-id="youtube"] .yt-ob__group { margin: 6px 0 0; font-size: 12px; font-weight: 700; color: var(--yt-text-2); }
+.app-shell[data-app-id="youtube"] .yt-ob__none { margin: 0; font-size: 12px; color: var(--yt-text-3); }
+
+.app-shell[data-app-id="youtube"] .yt-ob__card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--yt-line);
+    border-radius: 13px;
+    background: var(--yt-card);
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    color: var(--yt-text);
+    transition: border-color 0.15s, background 0.15s;
+}
+.app-shell[data-app-id="youtube"] .yt-ob__card.is-on {
+    border-color: var(--yt-primary);
+    background: var(--yt-primary-soft);
+}
+.app-shell[data-app-id="youtube"] .yt-ob__tick {
+    width: 17px;
+    height: 17px;
+    flex-shrink: 0;
+    border: 1.5px solid var(--yt-line-strong);
+    border-radius: 50%;
+    position: relative;
+}
+.app-shell[data-app-id="youtube"] .yt-ob__card.is-on .yt-ob__tick {
+    border-color: var(--yt-primary);
+    background: var(--yt-primary);
+}
+.app-shell[data-app-id="youtube"] .yt-ob__card.is-on .yt-ob__tick::after {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 2.5px;
+    width: 4px;
+    height: 8px;
+    border: solid var(--yt-on-primary);
+    border-width: 0 2px 2px 0;
+    transform: rotate(42deg);
+}
+.app-shell[data-app-id="youtube"] .yt-ob__card-main { display: flex; flex-direction: column; min-width: 0; }
+.app-shell[data-app-id="youtube"] .yt-ob__card-title { font-size: 13px; font-weight: 600; }
+.app-shell[data-app-id="youtube"] .yt-ob__card-sub,
+.app-shell[data-app-id="youtube"] .yt-ob__card-path {
+    font-size: 11px;
+    color: var(--yt-text-3);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="youtube"] .yt-ob__presets {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 7px;
+}
+.app-shell[data-app-id="youtube"] .yt-ob__preset {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 9px 11px;
+    border: 1px solid var(--yt-line);
+    border-radius: 12px;
+    background: var(--yt-card);
+    color: var(--yt-text);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, transform 0.12s;
+}
+.app-shell[data-app-id="youtube"] .yt-ob__preset:active { transform: scale(0.97); }
+.app-shell[data-app-id="youtube"] .yt-ob__preset.is-on {
+    border-color: var(--yt-primary);
+    background: var(--yt-primary-soft);
+}
+.app-shell[data-app-id="youtube"] .yt-ob__preset b { font-size: 13px; }
+.app-shell[data-app-id="youtube"] .yt-ob__preset span { font-size: 11px; color: var(--yt-text-3); }
+.app-shell[data-app-id="youtube"] .yt-ob__followers { margin-top: 6px; }
+.app-shell[data-app-id="youtube"] .yt-ob__failed { margin: 4px 0 0; font-size: 12px; color: var(--yt-danger); }
+
+.app-shell[data-app-id="youtube"] .yt-ob__foot {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 10px;
+}
+.app-shell[data-app-id="youtube"] .yt-ob__dots { display: flex; gap: 6px; justify-content: center; }
+.app-shell[data-app-id="youtube"] .yt-ob__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--yt-line-strong);
+    transition: width 0.2s, background 0.2s;
+}
+.app-shell[data-app-id="youtube"] .yt-ob__dot.is-on { width: 18px; border-radius: 3px; background: var(--yt-primary); }
+.app-shell[data-app-id="youtube"] .yt-ob__actions { display: flex; gap: 8px; }
+
+/* ============================================================
+   首页 / 人员行 / 私信
+   ============================================================ */
+
+.app-shell[data-app-id="youtube"] .yt-feedbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.app-shell[data-app-id="youtube"] .yt-feedbar__hint { font-size: 11px; color: var(--yt-text-3); }
+
+.app-shell[data-app-id="youtube"] .yt-person {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 10px 12px;
+    border: 1px solid var(--yt-line-soft);
+    border-radius: 14px;
+    background: var(--yt-card);
+    color: var(--yt-text);
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    transition: background 0.15s, transform 0.12s;
+}
+.app-shell[data-app-id="youtube"] .yt-person:active { background: var(--yt-card-hover); transform: scale(0.985); }
+.app-shell[data-app-id="youtube"] .yt-person__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.app-shell[data-app-id="youtube"] .yt-person__name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13.5px;
+    font-weight: 600;
+}
+.app-shell[data-app-id="youtube"] .yt-person__sub {
+    font-size: 11.5px;
+    color: var(--yt-text-3);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+.app-shell[data-app-id="youtube"] .yt-person__time { font-size: 10.5px; color: var(--yt-text-3); flex-shrink: 0; }
+
+.app-shell[data-app-id="youtube"] .yt-person__livetag,
+.app-shell[data-app-id="youtube"] .yt-person__followtag,
+.app-shell[data-app-id="youtube"] .yt-person__friendtag {
+    display: inline-flex;
+    padding: 0.5px 6px;
+    border-radius: 6px;
+    font-size: 9.5px;
+    font-style: normal;
+    font-weight: 600;
+}
+.app-shell[data-app-id="youtube"] .yt-person__livetag { background: var(--yt-live-soft); color: var(--yt-live); }
+.app-shell[data-app-id="youtube"] .yt-person__followtag { background: var(--yt-primary-soft); color: var(--yt-primary-strong); }
+.app-shell[data-app-id="youtube"] .yt-person__friendtag { background: var(--yt-accent-soft); color: var(--yt-accent); }
+
+/* 私信 */
+.app-shell[data-app-id="youtube"] .yt-dmbar {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 11px 12px;
+    border: 1px dashed var(--yt-line-strong);
+    border-radius: 14px;
+}
+.app-shell[data-app-id="youtube"] .yt-dmbar__hint { margin: 0; font-size: 11.5px; color: var(--yt-text-2); }
+.app-shell[data-app-id="youtube"] .yt-dmbar__providers { margin: 0; font-size: 10.5px; color: var(--yt-text-3); }
+.app-shell[data-app-id="youtube"] .yt-dmbar__actions { display: flex; gap: 8px; }
+
+.app-shell[data-app-id="youtube"] .yt-dm {
+    display: flex;
+    gap: 10px;
+    padding: 11px 12px;
+    border: 1px solid var(--yt-line-soft);
+    border-radius: 14px;
+    background: var(--yt-card);
+    animation: yt-fadein 0.3s ease;
+}
+.app-shell[data-app-id="youtube"] .yt-dm__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.app-shell[data-app-id="youtube"] .yt-dm__head { display: flex; align-items: center; gap: 6px; }
+.app-shell[data-app-id="youtube"] .yt-dm__head b { font-size: 13px; }
+.app-shell[data-app-id="youtube"] .yt-dm__tone { font-size: 10px; color: var(--yt-text-3); }
+.app-shell[data-app-id="youtube"] .yt-dm__text { margin: 0; font-size: 12.5px; color: var(--yt-text-2); }
+.app-shell[data-app-id="youtube"] .yt-dm__time { font-size: 10px; color: var(--yt-text-3); }
+.app-shell[data-app-id="youtube"] .yt-dm__del {
+    align-self: flex-start;
+    display: inline-flex;
+    padding: 5px;
+    border: none;
+    background: none;
+    color: var(--yt-text-3);
+    cursor: pointer;
+}
+.app-shell[data-app-id="youtube"] .yt-dm__del:active { color: var(--yt-danger); }
+
+/* ============================================================
+   我的
+   ============================================================ */
+
+.app-shell[data-app-id="youtube"] .yt-mecard {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid var(--yt-line-soft);
+    border-radius: 16px;
+    background: var(--yt-card);
+}
+.app-shell[data-app-id="youtube"] .yt-mecard__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.app-shell[data-app-id="youtube"] .yt-mecard__name { font-size: 16px; font-weight: 700; }
+.app-shell[data-app-id="youtube"] .yt-mecard__sub {
+    font-size: 11.5px;
+    color: var(--yt-text-3);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="youtube"] .yt-mestats {
+    display: flex;
+    border: 1px solid var(--yt-line-soft);
+    border-radius: 14px;
+    background: var(--yt-card);
+    overflow: hidden;
+}
+.app-shell[data-app-id="youtube"] .yt-mestats__item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    padding: 11px 0;
+}
+.app-shell[data-app-id="youtube"] .yt-mestats__item + .yt-mestats__item { border-left: 1px solid var(--yt-line-soft); }
+.app-shell[data-app-id="youtube"] .yt-mestats__item b { font-size: 15px; }
+.app-shell[data-app-id="youtube"] .yt-mestats__item span { font-size: 10.5px; color: var(--yt-text-3); }
+
+/* ============================================================
+   视频详情页
+   ============================================================ */
+
+.app-shell[data-app-id="youtube"] .yt-video__title {
+    margin: 2px 0 0;
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.4;
+}
+.app-shell[data-app-id="youtube"] .yt-video__meta { margin: 0; font-size: 11.5px; color: var(--yt-text-3); }
+
+.app-shell[data-app-id="youtube"] .yt-video__actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 4px 0;
+    border-top: 1px solid var(--yt-line-soft);
+    border-bottom: 1px solid var(--yt-line-soft);
+}
+.app-shell[data-app-id="youtube"] .yt-action {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-width: 52px;
+    padding: 7px 8px;
+    border: none;
+    border-radius: 11px;
+    background: none;
+    color: var(--yt-text-2);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, transform 0.12s;
+}
+.app-shell[data-app-id="youtube"] .yt-action:active { transform: scale(0.92); }
+.app-shell[data-app-id="youtube"] .yt-action i { font-size: 10.5px; font-style: normal; }
+.app-shell[data-app-id="youtube"] .yt-action.is-static { cursor: default; }
+.app-shell[data-app-id="youtube"] .yt-action.is-on { color: var(--yt-primary); background: var(--yt-primary-soft); }
+.app-shell[data-app-id="youtube"] .yt-action.is-danger:active { color: var(--yt-danger); }
+
+.app-shell[data-app-id="youtube"] .yt-video__creator {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--yt-line-soft);
+    border-radius: 14px;
+    background: var(--yt-card);
+    color: var(--yt-text);
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    transition: background 0.15s;
+}
+.app-shell[data-app-id="youtube"] .yt-video__creator:active { background: var(--yt-card-hover); }
+.app-shell[data-app-id="youtube"] .yt-video__creator-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+.app-shell[data-app-id="youtube"] .yt-video__creator-main b { font-size: 13.5px; }
+.app-shell[data-app-id="youtube"] .yt-video__creator-main span { font-size: 11px; color: var(--yt-text-3); }
+
+.app-shell[data-app-id="youtube"] .yt-livetag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 9px;
+    background: var(--yt-live-soft);
+    color: var(--yt-live);
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="youtube"] .yt-video__intro {
+    margin: 0;
+    font-size: 13px;
+    color: var(--yt-text-2);
+    white-space: pre-wrap;
+}
+
+.app-shell[data-app-id="youtube"] .yt-chapters {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+}
+.app-shell[data-app-id="youtube"] .yt-chapters__item {
+    position: relative;
+    display: flex;
+    gap: 10px;
+    padding: 8px 0 8px 2px;
+}
+.app-shell[data-app-id="youtube"] .yt-chapters__item + .yt-chapters__item { border-top: 1px dashed var(--yt-line-soft); }
+.app-shell[data-app-id="youtube"] .yt-chapters__at {
+    flex-shrink: 0;
+    min-width: 42px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--yt-primary);
+    font-variant-numeric: tabular-nums;
+    padding-top: 2px;
+}
+.app-shell[data-app-id="youtube"] .yt-chapters__text { margin: 0; font-size: 12.5px; color: var(--yt-text-2); }
+
+/* 评论 */
+.app-shell[data-app-id="youtube"] .yt-comment {
+    display: flex;
+    gap: 9px;
+    padding: 7px 0;
+}
+.app-shell[data-app-id="youtube"] .yt-comment__avatar {
+    border: none;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+    align-self: flex-start;
+}
+.app-shell[data-app-id="youtube"] .yt-comment__avatar:disabled { cursor: default; }
+.app-shell[data-app-id="youtube"] .yt-comment__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.app-shell[data-app-id="youtube"] .yt-comment__name {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border: none;
+    background: none;
+    padding: 0;
+    color: var(--yt-text-3);
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.app-shell[data-app-id="youtube"] .yt-comment__name:disabled { cursor: default; }
+.app-shell[data-app-id="youtube"] .yt-comment__metag {
+    display: inline-flex;
+    padding: 0 5px;
+    border-radius: 5px;
+    background: var(--yt-primary-soft);
+    color: var(--yt-primary-strong);
+    font-size: 9px;
+    font-style: normal;
+}
+.app-shell[data-app-id="youtube"] .yt-comment__text { margin: 0; font-size: 13px; }
+.app-shell[data-app-id="youtube"] .yt-comment__likes {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 10.5px;
+    color: var(--yt-text-3);
+}
+
+.app-shell[data-app-id="youtube"] .yt-commentbox {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+/* ============================================================
+   主页（站内用户）
+   ============================================================ */
+
+.app-shell[data-app-id="youtube"] .yt-creator__hero {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    padding: 6px 2px 0;
+}
+.app-shell[data-app-id="youtube"] .yt-creator__head { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.app-shell[data-app-id="youtube"] .yt-creator__name { font-size: 18px; font-weight: 700; }
+.app-shell[data-app-id="youtube"] .yt-creator__stats { font-size: 11.5px; color: var(--yt-text-3); }
+.app-shell[data-app-id="youtube"] .yt-creator__badges { display: flex; gap: 5px; }
+.app-shell[data-app-id="youtube"] .yt-creator__actions { display: flex; gap: 7px; flex-wrap: wrap; }
+.app-shell[data-app-id="youtube"] .yt-creator__bio { margin: 0; font-size: 12.5px; color: var(--yt-text-2); white-space: pre-wrap; }
+
+.app-shell[data-app-id="youtube"] .yt-work {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid var(--yt-line-soft);
+    border-radius: 13px;
+    background: var(--yt-card);
+    color: var(--yt-text);
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    transition: background 0.15s, transform 0.12s;
+}
+.app-shell[data-app-id="youtube"] .yt-work:active { background: var(--yt-card-hover); transform: scale(0.985); }
+.app-shell[data-app-id="youtube"] .yt-work .yt-cover { width: 104px; flex-shrink: 0; }
+.app-shell[data-app-id="youtube"] .yt-work__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.app-shell[data-app-id="youtube"] .yt-work__main b {
+    font-size: 12.5px;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.app-shell[data-app-id="youtube"] .yt-work__main span { font-size: 10.5px; color: var(--yt-text-3); }
+
+/* ============================================================
+   直播间
+   ============================================================ */
+
+.app-shell[data-app-id="youtube"] .yt-stage {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 190px;
+    border-radius: 16px;
+    background: var(--yt-stage);
+    color: var(--yt-stage-text);
+    overflow: hidden;
+    padding: 18px;
+    text-align: center;
+}
+.app-shell[data-app-id="youtube"] .yt-stage.is-offline,
+.app-shell[data-app-id="youtube"] .yt-stage.is-waiting { gap: 8px; }
+.app-shell[data-app-id="youtube"] .yt-stage__offline-title { margin: 0; font-size: 15px; font-weight: 700; }
+.app-shell[data-app-id="youtube"] .yt-stage__offline-sub { margin: 0; font-size: 11.5px; opacity: 0.75; max-width: 250px; }
+
+/* 在播画面：中央光斑呼吸（纯色 + 透明度，不是渐变） */
+.app-shell[data-app-id="youtube"] .yt-stage__glow {
+    position: absolute;
+    left: 50%;
+    top: 46%;
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    background: var(--yt-live);
+    opacity: 0.14;
+    transform: translate(-50%, -50%);
+    animation: yt-glow 3.4s ease-in-out infinite;
+}
+@keyframes yt-glow {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.1; }
+    50% { transform: translate(-50%, -50%) scale(1.35); opacity: 0.2; }
+}
+.app-shell[data-app-id="youtube"] .yt-stage__topic {
+    position: relative;
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    max-width: 85%;
+}
+.app-shell[data-app-id="youtube"] .yt-stage__viewers { position: relative; margin: 0; font-size: 11px; opacity: 0.7; }
+.app-shell[data-app-id="youtube"] .yt-stage__badge {
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 8px;
+    background: var(--yt-live);
+    color: var(--yt-on-primary);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+.app-shell[data-app-id="youtube"] .yt-stage__ended {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: var(--yt-danmaku-bg);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+}
+.app-shell[data-app-id="youtube"] .yt-stage__ended p { margin: 0; font-size: 13px; }
+
+/* 弹幕层 */
+.app-shell[data-app-id="youtube"] .yt-danmaku {
+    position: absolute;
+    inset: 8px 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+.app-shell[data-app-id="youtube"] .yt-danmaku__item {
+    position: absolute;
+    left: 100%;
+    padding: 3px 11px;
+    border-radius: 13px;
+    background: var(--yt-danmaku-bg);
+    color: var(--yt-danmaku-text);
+    font-size: 12px;
+    white-space: nowrap;
+    animation-name: yt-danmaku-fly;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+    will-change: transform;
+}
+.app-shell[data-app-id="youtube"] .yt-danmaku__item.is-lg { font-size: 14px; font-weight: 600; }
+.app-shell[data-app-id="youtube"] .yt-danmaku__item.is-mine {
+    color: var(--yt-danmaku-mine);
+    font-weight: 700;
+    border: 1px solid var(--yt-danmaku-mine);
+}
+/* 弹幕文字色槽（同一条永远同一色，由 JS 的确定性哈希定槽） */
+.app-shell[data-app-id="youtube"] .yt-danmaku__item.is-c1 { color: #F2D6A0; }
+.app-shell[data-app-id="youtube"] .yt-danmaku__item.is-c2 { color: #BFE3C5; }
+.app-shell[data-app-id="youtube"] .yt-danmaku__item.is-c3 { color: #BCD9F0; }
+.app-shell[data-app-id="youtube"] .yt-danmaku__item.is-c4 { color: #E5C6E8; }
+.app-shell[data-app-id="youtube"] .yt-danmaku__item.is-c5 { color: #F0C2BC; }
+@keyframes yt-danmaku-fly {
+    from { transform: translateX(0); }
+    to { transform: translateX(calc(-100vw - 100%)); }
+}
+
+.app-shell[data-app-id="youtube"] .yt-live__notice {
+    margin: 0;
+    padding: 8px 12px;
+    border: 1px dashed var(--yt-line-strong);
+    border-radius: 11px;
+    font-size: 11.5px;
+    color: var(--yt-text-2);
+}
+
+.app-shell[data-app-id="youtube"] .yt-live__lines {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 90px;
+}
+.app-shell[data-app-id="youtube"] .yt-live__waitline { margin: 6px 0 0; font-size: 11.5px; color: var(--yt-text-3); text-align: center; }
+
+.app-shell[data-app-id="youtube"] .yt-livemsg {
+    display: flex;
+    gap: 7px;
+    padding: 7px 11px;
+    border-radius: 11px;
+    background: var(--yt-surface);
+    border: 1px solid var(--yt-line-soft);
+    font-size: 12.5px;
+    animation: yt-fadein 0.3s ease;
+}
+.app-shell[data-app-id="youtube"] .yt-livemsg b { color: var(--yt-text-3); font-weight: 600; flex-shrink: 0; }
+.app-shell[data-app-id="youtube"] .yt-livemsg.is-host b { color: var(--yt-primary); }
+
+.app-shell[data-app-id="youtube"] .yt-livebox {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    gap: 8px;
+    padding: 8px 0 4px;
+    background: var(--yt-bg);
+}
+.app-shell[data-app-id="youtube"] .yt-livebox.is-disabled { opacity: 0.7; }
+
+/* ============================================================
+   站内闲聊
+   ============================================================ */
+
+.app-shell[data-app-id="youtube"] .yt-chat {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 6px 14px 8px;
+}
+.app-shell[data-app-id="youtube"] .yt-chat__scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    padding: 10px 2px;
+}
+.app-shell[data-app-id="youtube"] .yt-chat__rule {
+    margin: 0 auto;
+    max-width: 250px;
+    text-align: center;
+    font-size: 10.5px;
+    color: var(--yt-text-3);
+}
+.app-shell[data-app-id="youtube"] .yt-chat__row { display: flex; gap: 8px; align-items: flex-end; }
+.app-shell[data-app-id="youtube"] .yt-chat__row.is-user { justify-content: flex-end; }
+.app-shell[data-app-id="youtube"] .yt-chat__bubble {
+    max-width: 76%;
+    padding: 8px 12px;
+    border-radius: 15px;
+    font-size: 13px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+    animation: yt-bubble-in 0.22s cubic-bezier(0.34, 1.3, 0.64, 1);
+}
+@keyframes yt-bubble-in { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.app-shell[data-app-id="youtube"] .yt-chat__row.is-user .yt-chat__bubble {
+    background: var(--yt-bubble-user-bg);
+    color: var(--yt-bubble-user-text);
+    border-bottom-right-radius: 5px;
+}
+.app-shell[data-app-id="youtube"] .yt-chat__row.is-peer .yt-chat__bubble {
+    background: var(--yt-bubble-peer-bg);
+    color: var(--yt-bubble-peer-text);
+    border: 1px solid var(--yt-line-soft);
+    border-bottom-left-radius: 5px;
+}
+.app-shell[data-app-id="youtube"] .yt-chat__bubble.is-typing {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+    padding: 11px 13px;
+}
+.app-shell[data-app-id="youtube"] .yt-chat__bubble.is-typing i {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--yt-text-3);
+    animation: yt-typing 1s ease-in-out infinite;
+}
+.app-shell[data-app-id="youtube"] .yt-chat__bubble.is-typing i:nth-child(2) { animation-delay: 0.16s; }
+.app-shell[data-app-id="youtube"] .yt-chat__bubble.is-typing i:nth-child(3) { animation-delay: 0.32s; }
+@keyframes yt-typing { 0%, 100% { transform: translateY(0); opacity: 0.4; } 50% { transform: translateY(-3px); opacity: 1; } }
+
+.app-shell[data-app-id="youtube"] .yt-chat__friendhint {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    align-items: center;
+    margin: 4px auto 0;
+    padding: 10px 14px;
+    border: 1px dashed var(--yt-line-strong);
+    border-radius: 13px;
+    max-width: 270px;
+}
+.app-shell[data-app-id="youtube"] .yt-chat__friendhint p { margin: 0; font-size: 11.5px; color: var(--yt-text-2); text-align: center; }
+.app-shell[data-app-id="youtube"] .yt-chat__box { padding: 8px 0 2px; }
+
+/* ============================================================
+   提示词页
+   ============================================================ */
+
+.app-shell[data-app-id="youtube"] .yt-prompts__picker { display: flex; gap: 6px; flex-wrap: wrap; }
+.app-shell[data-app-id="youtube"] .yt-prompts__pick {
+    padding: 5px 11px;
+    border: 1px solid var(--yt-line);
+    border-radius: 10px;
+    background: var(--yt-surface);
+    color: var(--yt-text-2);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.app-shell[data-app-id="youtube"] .yt-prompts__pick.is-on {
+    border-color: var(--yt-primary);
+    background: var(--yt-primary-soft);
+    color: var(--yt-primary-strong);
+}
+.app-shell[data-app-id="youtube"] .yt-prompts__note { margin: 0; font-size: 11.5px; color: var(--yt-text-3); }
+.app-shell[data-app-id="youtube"] .yt-prompts__murmur {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 10px 12px;
+    border: 1px solid var(--yt-line-soft);
+    border-radius: 12px;
+    background: var(--yt-card);
+}
+.app-shell[data-app-id="youtube"] .yt-prompts__murmur b { font-size: 12.5px; }
+.app-shell[data-app-id="youtube"] .yt-prompts__pre {
+    margin: 0;
+    padding: 8px 10px;
+    border-radius: 9px;
+    background: var(--yt-surface-2);
+    font-size: 10.5px;
+    line-height: 1.6;
+    color: var(--yt-text-2);
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: inherit;
+}
+
+/* ============================================================
+   配色页
+   ============================================================ */
+
+.app-shell[data-app-id="youtube"] .yt-theme-picks {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+.app-shell[data-app-id="youtube"] .yt-theme-pick {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 10px;
+    border: 1.5px solid var(--yt-line);
+    border-radius: 14px;
+    background: var(--yt-card);
+    color: var(--yt-text);
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.15s;
+}
+.app-shell[data-app-id="youtube"] .yt-theme-pick.is-on { border-color: var(--yt-primary); }
+.app-shell[data-app-id="youtube"] .yt-theme-pick__mini {
+    position: relative;
+    height: 52px;
+    border-radius: 9px;
+    background: var(--yt-bg);
+    border: 1px solid var(--yt-line-soft);
+    overflow: hidden;
+    display: block;
+}
+.app-shell[data-app-id="youtube"] .yt-theme-pick__bar {
+    position: absolute;
+    left: 8px;
+    top: 8px;
+    width: 46%;
+    height: 7px;
+    border-radius: 4px;
+    background: var(--yt-primary);
+}
+.app-shell[data-app-id="youtube"] .yt-theme-pick__card {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    height: 22px;
+    border-radius: 6px;
+    background: var(--yt-surface);
+    border: 1px solid var(--yt-line);
+}
+.app-shell[data-app-id="youtube"] .yt-theme-pick__dot {
+    position: absolute;
+    right: 10px;
+    top: 9px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--yt-cover-4);
+}
+.app-shell[data-app-id="youtube"] .yt-theme-pick__name { font-size: 13px; font-weight: 700; }
+.app-shell[data-app-id="youtube"] .yt-theme-pick__desc { font-size: 10.5px; color: var(--yt-text-3); }
+
+.app-shell[data-app-id="youtube"] .yt-theme-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.app-shell[data-app-id="youtube"] .yt-theme-chip {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--yt-line);
+    border-radius: 11px;
+    background: var(--yt-card);
+    overflow: hidden;
+}
+.app-shell[data-app-id="youtube"] .yt-theme-chip.is-active { border-color: var(--yt-primary); }
+.app-shell[data-app-id="youtube"] .yt-theme-chip__main {
+    padding: 6px 10px;
+    border: none;
+    background: none;
+    color: var(--yt-text);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.app-shell[data-app-id="youtube"] .yt-theme-chip__act,
+.app-shell[data-app-id="youtube"] .yt-theme-chip__del {
+    padding: 6px 8px;
+    border: none;
+    border-left: 1px solid var(--yt-line-soft);
+    background: none;
+    color: var(--yt-text-3);
+    font-size: 11px;
+    cursor: pointer;
+}
+.app-shell[data-app-id="youtube"] .yt-theme-chip__act:disabled { opacity: 0.4; cursor: not-allowed; }
+.app-shell[data-app-id="youtube"] .yt-theme-chip__del:active { color: var(--yt-danger); }
+
+.app-shell[data-app-id="youtube"] .yt-swatch-group {
+    border: 1px solid var(--yt-line-soft);
+    border-radius: 13px;
+    background: var(--yt-card);
+    overflow: hidden;
+}
+.app-shell[data-app-id="youtube"] .yt-swatch-group + .yt-swatch-group { margin-top: 7px; }
+.app-shell[data-app-id="youtube"] .yt-swatch-group__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 10px 13px;
+    border: none;
+    background: none;
+    color: var(--yt-text);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.app-shell[data-app-id="youtube"] .yt-swatch-group__count { font-size: 11px; color: var(--yt-text-3); }
+.app-shell[data-app-id="youtube"] .yt-swatch-group__body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 3px 10px 10px;
+}
+.app-shell[data-app-id="youtube"] .yt-swatch {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+.app-shell[data-app-id="youtube"] .yt-swatch__chip {
+    position: relative;
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--yt-line);
+}
+.app-shell[data-app-id="youtube"] .yt-swatch__fill { position: absolute; inset: 0; }
+.app-shell[data-app-id="youtube"] .yt-swatch__picker {
+    position: absolute;
+    inset: -6px;
+    opacity: 0;
+    cursor: pointer;
+}
+.app-shell[data-app-id="youtube"] .yt-swatch__main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.app-shell[data-app-id="youtube"] .yt-swatch__label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 600;
+}
+.app-shell[data-app-id="youtube"] .yt-swatch__changed {
+    display: inline-flex;
+    padding: 0 5px;
+    border-radius: 5px;
+    background: var(--yt-accent-soft);
+    color: var(--yt-accent);
+    font-size: 9px;
+    font-style: normal;
+}
+.app-shell[data-app-id="youtube"] .yt-swatch__token {
+    font-size: 10px;
+    color: var(--yt-text-3);
+    cursor: pointer;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+.app-shell[data-app-id="youtube"] .yt-swatch__value {
+    width: 96px;
+    flex-shrink: 0;
+    padding: 5px 8px;
+    border: 1px solid var(--yt-input-line);
+    border-radius: 8px;
+    background: var(--yt-input-bg);
+    color: var(--yt-text);
+    font-size: 11px;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    outline: none;
+}
+.app-shell[data-app-id="youtube"] .yt-swatch__reset {
+    border: none;
+    background: none;
+    color: var(--yt-text-3);
+    font-size: 15px;
+    cursor: pointer;
+    padding: 2px 5px;
+}
+
+/* ============================================================
+   弹窗
+   ============================================================ */
+
+.app-shell[data-app-id="youtube"] .yt-modal {
+    position: absolute;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 18px;
+    background: var(--yt-overlay);
+    animation: yt-overlay-in 0.18s ease;
+}
+@keyframes yt-overlay-in { from { opacity: 0; } to { opacity: 1; } }
+.app-shell[data-app-id="youtube"] .yt-modal__card {
+    width: 100%;
+    max-width: 300px;
+    max-height: 82%;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    padding: 15px;
+    border-radius: 18px;
+    background: var(--yt-elevated);
+    border: 1px solid var(--yt-line-soft);
+    box-shadow: 0 14px 34px var(--yt-shadow);
+    animation: yt-card-in 0.24s cubic-bezier(0.34, 1.3, 0.64, 1);
+}
+@keyframes yt-card-in { from { transform: translateY(14px) scale(0.96); opacity: 0; } to { transform: none; opacity: 1; } }
+.app-shell[data-app-id="youtube"] .yt-modal__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.app-shell[data-app-id="youtube"] .yt-modal__head b { font-size: 15px; }
+.app-shell[data-app-id="youtube"] .yt-modal__x {
+    display: inline-flex;
+    padding: 4px;
+    border: none;
+    background: none;
+    color: var(--yt-text-3);
+    cursor: pointer;
+}
+.app-shell[data-app-id="youtube"] .yt-modal__desc { margin: 0; font-size: 12px; color: var(--yt-text-2); }
+.app-shell[data-app-id="youtube"] .yt-modal__body { display: flex; flex-direction: column; gap: 9px; }
+.app-shell[data-app-id="youtube"] .yt-modal__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 2px;
+}
+.app-shell[data-app-id="youtube"] .yt-modal__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="youtube"] .yt-share__list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+.app-shell[data-app-id="youtube"] .yt-share__ai {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 10px;
+    border: 1px solid var(--yt-line);
+    border-radius: 12px;
+    background: var(--yt-card);
+    color: var(--yt-text);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.15s, background 0.15s;
+}
+.app-shell[data-app-id="youtube"] .yt-share__ai.is-on {
+    border-color: var(--yt-primary);
+    background: var(--yt-primary-soft);
+}

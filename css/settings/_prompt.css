@@ -74,10 +74,10 @@
 .prompt-group-info {
     background: #ffffff;
     border-radius: 14px;
-    border: 1px solid rgba(0, 0, 0, 0.05);
-    padding: 14px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    padding: 12px 16px 14px;
     margin-bottom: 12px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 .prompt-group-info__row {
     display: flex;
@@ -105,17 +105,21 @@
 .prompt-group-info__value--off { color: #94a3b8; }
 
 /* --- 卡片 --- */
+/* 卡片视觉对齐人设页的 .phome-card（css/settings/_persona-home.css）：
+   同样的 14px 圆角、同样的 1px rgba(0,0,0,0.06) 描边、同样的
+   0 2px 8px 阴影。以前这里用的是更浅的 0 1px 3px，跟隔壁页面并排看
+   会觉得「这两页不是一个 App 里的」。 */
 .prompt-card {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 12px 14px;
+    padding: 12px 16px;
     background: #ffffff;
     border-radius: 14px;
-    border: 1px solid rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.06);
     cursor: pointer;
     transition: transform 0.15s, box-shadow 0.15s;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 .prompt-card:active {
     transform: scale(0.98);
@@ -185,11 +189,11 @@
 .prompt-item-card {
     background: #ffffff;
     border-radius: 14px;
-    border: 1px solid rgba(0, 0, 0, 0.05);
-    padding: 14px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    padding: 12px 16px 14px;
     cursor: pointer;
     transition: transform 0.15s, box-shadow 0.15s;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 .prompt-item-card:active {
     transform: scale(0.98);

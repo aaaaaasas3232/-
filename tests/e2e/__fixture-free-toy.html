@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8" />
+    <title>relax / 自由捏捏零件台</title>
+    <!--
+        __probe-free-toy.mjs 的靶子。
+        只把「零件引擎 + 自由模式预设」单独架起来,不启动整个小听 ——
+        要测的是指针进去、CSS 变量出来这条链路,不需要桌面和 app 注册。
+        作用域用 #stage{ } 包一层,和主体那边 [data-htmlbubble-scope]{ } 是同一种写法。
+    -->
+    <link rel="stylesheet" href="/css/apps/relax/index.css" />
+    <style>
+        html, body { margin: 0; height: 100%; background: #fff6f2; }
+        #host {
+            position: relative;
+            width: 320px;
+            height: 320px;
+            margin: 20px;
+            --rx-toy-tint: #ffd6e0;
+            --htmlbubble-tint: #ffd6e0;
+            --hb-unit: 320px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-shell" data-app-id="relax">
+        <div id="host" class="htmlbubble-root is-free">
+            <div id="stage" class="hbfree-stage"></div>
+            <!-- ★ 沙箱要单独一个块级容器,和主体里的 .hbcode-stage 一模一样。
+                 塞进上面那个 grid + place-items:center 的自由舞台里,
+                 iframe 会被按内容尺寸摆成 0×0 —— 里面读到的 hb.width 就是 0。 -->
+            <div id="codeStage" class="hbcode-stage" hidden></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createToyParts } from '/js/apps/relax-app/services/toy-parts.js';
+        import { createToySandbox } from '/js/apps/relax-app/services/toy-sandbox.js';
+        import { FREE_HTML_TEMPLATES, CODE_HTML_TEMPLATES } from '/js/apps/relax-app/toys/custom-html-board.js';
+
+        const stage = document.getElementById('stage');
+        const styleEl = document.createElement('style');
+        document.head.appendChild(styleEl);
+
+        let parts = null;
+
+        /** 直接喂一段 HTML + CSS —— 验示例代码文件里的片段用 */
+        window.__loadCode = (html, css) => {
+            styleEl.textContent = `#stage{\n${css}\n}`;
+            stage.innerHTML = html;
+
+            parts?.destroy();
+            window.__sounds = [];
+            window.__haptics = [];
+            window.__persisted = null;
+
+            parts = createToyParts(stage, {
+                playSound: (opts) => window.__sounds.push(opts),
+                haptic: (strength) => window.__haptics.push(strength),
+                onPersist: (values) => { window.__persisted = values; },
+            });
+            window.__parts = parts;
+            return parts.count();
+        };
+
+        window.__loadPreset = (id) => {
+            const template = FREE_HTML_TEMPLATES.find(item => item.id === id);
+            if (!template) throw new Error('没有这套预设: ' + id);
+
+            styleEl.textContent = `#stage{\n${template.css}\n}`;
+            stage.innerHTML = template.html;
+
+            parts?.destroy();
+            window.__sounds = [];
+            window.__haptics = [];
+            window.__persisted = null;
+
+            parts = createToyParts(stage, {
+                playSound: (opts) => window.__sounds.push(opts),
+                haptic: (strength) => window.__haptics.push(strength),
+                onPersist: (values) => { window.__persisted = values; },
+            });
+            window.__parts = parts;
+            return parts.count();
+        };
+
+        /** 读一个零件身上的自定义属性(内联的,不用等样式计算) */
+        window.__varOf = (selector, name) => {
+            const el = stage.querySelector(selector);
+            if (!el) return null;
+            const raw = el.style.getPropertyValue(name).trim();
+            return raw === '' ? null : Number(raw);
+        };
+
+        /** 读整块(stage)上的镜像变量 */
+        window.__mirror = (name) => {
+            const raw = stage.style.getPropertyValue(name).trim();
+            return raw === '' ? null : Number(raw);
+        };
+
+        window.__hasClass = (selector, cls) =>
+            !!stage.querySelector(selector)?.classList.contains(cls);
+
+        /** 元素在视口里的中心点 —— CDP 派发鼠标事件要绝对坐标 */
+        window.__box = (selector) => {
+            const el = stage.querySelector(selector);
+            if (!el) return null;
+            const r = el.getBoundingClientRect();
+            return { x: r.left, y: r.top, w: r.width, h: r.height, cx: r.left + r.width / 2, cy: r.top + r.height / 2 };
+        };
+
+        /** 帽子实际被搬了多远(px) —— 光看变量不够,要确认 CSS 真的用上了 */
+        window.__shiftOf = (selector) => {
+            const el = stage.querySelector(selector);
+            if (!el) return null;
+            const m = new DOMMatrixReadOnly(getComputedStyle(el).transform);
+            return { x: Math.round(m.m41), y: Math.round(m.m42) };
+        };
+
+        // ── 沙箱(写代码模式)────────────────────────────────
+        //
+        // ★ 沙箱是不透明源,父页面**读不进去** —— 这正是它存在的意义。
+        //   所以断言只能从桥这一侧看:代码有没有跑起来,靠它调了什么来判断。
+        let sandbox = null;
+
+        function resetCapture() {
+            window.__sounds = [];
+            window.__haptics = [];
+            window.__notes = [];
+            window.__persisted = null;
+            window.__errors = [];
+        }
+
+        const codeStage = document.getElementById('codeStage');
+
+        window.__mountSandbox = (html, css, js) => {
+            sandbox?.destroy();
+            resetCapture();
+            stage.innerHTML = '';
+            stage.hidden = true;
+            codeStage.hidden = false;
+            styleEl.textContent = '';
+            sandbox = createToySandbox(codeStage, {
+                html, css, js,
+                tint: '#ffd6e0',
+                values: window.__seedState || {},
+                playSound: (opts) => window.__sounds.push(opts),
+                haptic: (s) => window.__haptics.push(s),
+                notify: (title, message) => window.__notes.push({ title, message }),
+                onPersist: (values) => { window.__persisted = values; },
+                onError: (msg) => window.__errors.push(msg),
+            });
+            window.__sandbox = sandbox;
+            return true;
+        };
+
+        window.__mountCodePreset = (id) => {
+            const t = CODE_HTML_TEMPLATES.find(item => item.id === id);
+            if (!t) throw new Error('没有这套预设: ' + id);
+            return window.__mountSandbox(t.html, t.css, t.js);
+        };
+
+        /** iframe 在视口里的位置 —— CDP 要按绝对坐标派发事件 */
+        window.__frameBox = () => {
+            const el = codeStage.querySelector('iframe');
+            if (!el) return null;
+            const r = el.getBoundingClientRect();
+            return { x: r.left, y: r.top, w: r.width, h: r.height, cx: r.left + r.width / 2, cy: r.top + r.height / 2 };
+        };
+
+        /** 父页面能不能读进沙箱?(应该永远是 false) */
+        window.__canPeekIntoFrame = () => {
+            const el = codeStage.querySelector('iframe');
+            if (!el) return 'no-frame';
+            try {
+                return el.contentDocument ? 'READABLE' : 'null';
+            } catch (err) {
+                return 'THROWS:' + err.name;
+            }
+        };
+
+        window.__ready = true;
+    </script>
+</body>
+</html>

@@ -96,7 +96,10 @@ export default function createFocusApp() {
                 age: '4+',
                 version: '1.0.0',
                 whatsNew: '首次发布：新增 25 分钟专注计时与完成提醒。',
-                description: '片刻是一款轻量的专注计时器。没有复杂设置，只为帮你开始一段安静、完整的专注时间。',
+                description:
+                    '有些时候，真正难的不是做完，而是肯把别的声音先放到一边。\n\n'
+                    + '片刻从 25 分钟开始。计时可以暂停，也可以重置；走到终点时，它会留下一句完成提醒。\n\n'
+                    + '没有清单，也没有进度比较。这里只放得下一件正在做的事。',
                 accent: 'linear-gradient(145deg, #6D5DFB 0%, #B968F0 100%)',
             },
         },

@@ -20,26 +20,13 @@
  */
 
 import { escapeHtml } from '@/src/core/escape.js';
-import { chatModalManager } from '../components/chat-modal-registry.js';
+import { resolveAiAvatar } from '../aiMeta.js';
 
 // Demo 联系人兜底
-const DEMO_CONTACTS = {
-    'ai-1': { id: 'ai-1', name: '小美' },
-    'ai-2': { id: 'ai-2', name: '小明' },
-    'ai-3': { id: 'ai-3', name: '小蓝' },
-    'ai-4': { id: 'ai-4', name: '小红' },
-    'group-1': { id: 'group-1', name: '游戏群' },
-};
+// ★ v0.80:移除占位联系人(小美/小明/小蓝/小红/游戏群) — 真实联系人走 SDK。
+const DEMO_CONTACTS = {};
 
-// 头像背景色工具(与 chat-settings-page 同款)
-function getAvatarColor(id) {
-    const palette = ['#A8C8EC', '#F4A6CD', '#B8D4F0', '#FFD4E5', '#C8E6F4', '#FFC8DD', '#B8E6CF', '#D4B8F0'];
-    let hash = 0;
-    for (let i = 0; i < (id || '').length; i++) {
-        hash = (hash * 31 + id.charCodeAt(i)) & 0xffffffff;
-    }
-    return palette[Math.abs(hash) % palette.length];
-}
+// ★ v0.71 头像背景色已统一到 aiMeta.resolveAiAvatar,删除本地 getAvatarColor 重复实现
 
 /**
  * 把 timestamp 转成 YYYY-MM-DD(本地时区)
@@ -148,7 +135,7 @@ export function renderHistoryPage(app, contactId) {
         if (demo) contactName = demo.name;
     }
 
-    const avatarColor = getAvatarColor(aiPersonId);
+    const avatarColor = resolveAiAvatar(aiPersonId).bg;
     const avatarText = String(contactName || '?').charAt(0);
 
     // 读归档消息(sdk.chatArchive.list)

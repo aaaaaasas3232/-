@@ -1,0 +1,180 @@
+/* 灯塔 · 主题 token
+ *
+ * ── 这个文件是颜色的唯一真相 ──────────────────────────────────────
+ *
+ * JS 里一个 hex 都没有。`theme.js` 只维护「有哪些 token、分别叫什么、归在哪一类」,
+ * 具体色值运行时从这里读（`readPresetColors` 造一个隐藏探针再 getComputedStyle）。
+ *
+ * 梦境编织那轮的教训：原型定义了一套变量、同时又散着 694 处硬编码 hex,
+ * 换主题时那 694 处纹丝不动。所以这里的约束是物理性的 ——
+ * 只要 JS 里没有 hex,就不可能出现「换了个寂寞」。
+ *
+ * ── 用户改色的两条路 ──────────────────────────────────────────────
+ *   1. 单个改：色板里点一格 → 写 inline style 到根节点
+ *   2. 整套覆盖：粘一段 `--jb-bg: #xxx;` → 解析后批量写
+ * 两条路都只是往根节点写 inline 变量,内置主题本身不会被改坏。
+ *
+ * ── 关于渐变 ──────────────────────────────────────────────────────
+ * 全 App 不使用渐变。所有层次靠「底色 + 毛玻璃 + 一条描边」拉开,
+ * 这样任何一个 token 被用户换掉时,整体关系仍然成立 ——
+ * 渐变要两个色一起换,用户改一个就会脏。
+ */
+
+/* ── 晨班（浅色，默认）─────────────────────────────────────────────
+   偏冷的米白底，主色是压低饱和度的钢蓝（招聘板、公文、制服的调子），
+   强调色取灯塔那束光的暖黄。两者明度接近，并排放不会互相压过去。 */
+.app-shell[data-app-id="job"],
+.app-shell[data-app-id="job"] [data-jb-theme="dayshift"] {
+    --jb-bg: #F4F6F8;
+    --jb-bg-soft: #FFFFFF;
+    --jb-surface: #FFFFFF;
+    --jb-surface-2: #EDF0F4;
+    --jb-elevated: #FFFFFF;
+
+    --jb-glass: rgba(255, 255, 255, 0.66);
+    --jb-glass-strong: rgba(255, 255, 255, 0.88);
+    --jb-glass-line: rgba(255, 255, 255, 0.72);
+
+    --jb-primary: #3E5C86;
+    --jb-primary-soft: #E4EAF3;
+    --jb-primary-strong: #2C4568;
+    --jb-on-primary: #FFFFFF;
+
+    --jb-accent: #C4864A;
+    --jb-accent-soft: #F6EBDD;
+    --jb-on-accent: #FFFFFF;
+
+    --jb-pay: #2C4568;
+    --jb-coin: #B0762F;
+    --jb-income: #3F7D5C;
+    --jb-expense: #B4564E;
+
+    --jb-text: #1E242C;
+    --jb-text-2: #5C6673;
+    --jb-text-3: #97A1AE;
+    --jb-text-inverse: #FFFFFF;
+
+    --jb-line: #E2E7ED;
+    --jb-line-soft: #EDF0F4;
+    --jb-line-strong: #CDD5DF;
+
+    --jb-card: #FFFFFF;
+    --jb-card-hover: #F7F9FB;
+    --jb-shadow: rgba(30, 36, 44, 0.07);
+
+    --jb-success: #3F7D5C;
+    --jb-warning: #B0762F;
+    --jb-danger: #B4564E;
+    --jb-info: #4A6E8F;
+
+    --jb-input-bg: #F1F4F7;
+    --jb-input-line: #DDE3EA;
+    --jb-input-focus: rgba(62, 92, 134, 0.26);
+
+    --jb-tag-bg: #EEF1F5;
+    --jb-tag-text: #5C6673;
+    --jb-tag-line: #DFE4EB;
+
+    /* 工作日和休息日的底色必须一眼分得开。第一版取的是 #E4EAF3 / #F4F6F8，
+       两者都落在毛玻璃卡的白底附近，扫一眼整个月是一片灰 —— 而这张日历的
+       全部意义就是「哪几天要上班」。现在蓝的更蓝、灰的更灰。 */
+    --jb-day-work: #CFDDF0;
+    --jb-day-work-text: #24395A;
+    --jb-day-rest: #E9ECF0;
+    --jb-day-rest-text: #A3ACB8;
+    --jb-day-today: #C4864A;
+    --jb-day-done: #3F7D5C;
+
+    --jb-bubble-me: #3E5C86;
+    --jb-bubble-me-text: #FFFFFF;
+    --jb-bubble-hr: #FFFFFF;
+    --jb-bubble-hr-text: #1E242C;
+
+    --jb-nav-bg: rgba(255, 255, 255, 0.82);
+    --jb-nav-line: #E4E9EF;
+    --jb-nav-icon: #9AA4B1;
+    --jb-nav-active: #2C4568;
+
+    --jb-overlay: rgba(24, 30, 38, 0.36);
+    --jb-scrim: rgba(255, 255, 255, 0.72);
+    --jb-skeleton: #E8ECF1;
+    --jb-skeleton-shine: rgba(255, 255, 255, 0.9);
+}
+
+/* ── 夜班（深色）───────────────────────────────────────────────────
+   不是把浅色反过来。深底上钢蓝会糊成一片，所以主色提亮往青偏；
+   暖黄压暗一点，否则在深底上会跳得刺眼。 */
+.app-shell[data-app-id="job"] [data-jb-theme="nightshift"],
+.app-shell[data-app-id="job"][data-jb-theme="nightshift"] {
+    --jb-bg: #161A20;
+    --jb-bg-soft: #1D222A;
+    --jb-surface: #1F252E;
+    --jb-surface-2: #262D37;
+    --jb-elevated: #242B35;
+
+    --jb-glass: rgba(36, 43, 53, 0.62);
+    --jb-glass-strong: rgba(31, 37, 46, 0.88);
+    --jb-glass-line: rgba(255, 255, 255, 0.07);
+
+    --jb-primary: #8AA9D6;
+    --jb-primary-soft: #29323F;
+    --jb-primary-strong: #A9C3E8;
+    --jb-on-primary: #141A22;
+
+    --jb-accent: #D9A46C;
+    --jb-accent-soft: #362C22;
+    --jb-on-accent: #221A11;
+
+    --jb-pay: #A9C3E8;
+    --jb-coin: #D9B87A;
+    --jb-income: #79BE9A;
+    --jb-expense: #DE8C84;
+
+    --jb-text: #E6EBF1;
+    --jb-text-2: #A3ADBA;
+    --jb-text-3: #6F7885;
+    --jb-text-inverse: #161A20;
+
+    --jb-line: #2D343E;
+    --jb-line-soft: #252B34;
+    --jb-line-strong: #3D4550;
+
+    --jb-card: #1F252E;
+    --jb-card-hover: #262D37;
+    --jb-shadow: rgba(0, 0, 0, 0.4);
+
+    --jb-success: #79BE9A;
+    --jb-warning: #D9B87A;
+    --jb-danger: #DE8C84;
+    --jb-info: #8FB2CE;
+
+    --jb-input-bg: #242B35;
+    --jb-input-line: #353D48;
+    --jb-input-focus: rgba(138, 169, 214, 0.3);
+
+    --jb-tag-bg: #262D37;
+    --jb-tag-text: #A3ADBA;
+    --jb-tag-line: #353D48;
+
+    --jb-day-work: #33445C;
+    --jb-day-work-text: #BDD4F2;
+    --jb-day-rest: #1B2027;
+    --jb-day-rest-text: #5D6672;
+    --jb-day-today: #D9A46C;
+    --jb-day-done: #79BE9A;
+
+    --jb-bubble-me: #3E5C86;
+    --jb-bubble-me-text: #F2F6FB;
+    --jb-bubble-hr: #262D37;
+    --jb-bubble-hr-text: #E6EBF1;
+
+    --jb-nav-bg: rgba(22, 26, 32, 0.86);
+    --jb-nav-line: #2A313A;
+    --jb-nav-icon: #6F7885;
+    --jb-nav-active: #A9C3E8;
+
+    --jb-overlay: rgba(0, 0, 0, 0.58);
+    --jb-scrim: rgba(22, 26, 32, 0.74);
+    --jb-skeleton: #262D37;
+    --jb-skeleton-shine: rgba(255, 255, 255, 0.05);
+}

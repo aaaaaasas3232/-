@@ -1,0 +1,160 @@
+/* ============================================
+ * chat-app / 朋友圈分享卡片 (v0.78)
+ *
+ *   对齐 chat-app 现有 chat.js 朋友圈卡片样式:
+ *   - 圆角 12px + 渐变背景 + 阴影 + 粉色边框
+ *   - 顶部:头像 (32px 圆形) + 用户名 + "的动态"
+ *   - 中部:内容文字 + 缩略图
+ *   - 底部:"朋友圈动态" + "查看详情 ›"
+ * ============================================ */
+
+.moment-share-card-msg {
+    background: linear-gradient(135deg, #FFFFFF, #FFF8FA);
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    width: 200px;
+    box-shadow: 0 3px 12px rgba(255, 177, 193, 0.15);
+    border: 1px solid rgba(255, 177, 193, 0.2);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.moment-share-card-msg:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(255, 177, 193, 0.22);
+}
+
+.moment-share-card-msg:active {
+    transform: scale(0.98);
+}
+
+/* ---- 顶部:头像 + 用户名 ---- */
+.moment-share-card-header {
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid rgba(255, 177, 193, 0.1);
+}
+
+.moment-share-card-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2px solid #FFE6F0;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, #FFB1C1, #A8C8EC);
+}
+
+.moment-share-card-avatar-inner {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: white;
+    font-weight: 600;
+}
+
+.moment-share-card-avatar-inner img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.moment-share-card-author {
+    flex: 1;
+    min-width: 0;
+}
+
+.moment-share-card-name {
+    font-weight: 600;
+    color: #262626;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.moment-share-card-sub {
+    font-size: 10px;
+    color: #8E8E8E;
+}
+
+/* ---- 中部:内容 + 缩略图 ---- */
+.moment-share-card-body {
+    padding: 10px 12px;
+}
+
+.moment-share-card-content {
+    font-size: 12px;
+    color: #262626;
+    line-height: 1.4;
+    margin-bottom: 8px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+    max-height: 5em;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+}
+
+.moment-share-card-images {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.moment-share-card-thumb {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    background: #FFE4EC;
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.moment-share-card-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* ---- 底部:朋友圈动态 ---- */
+.moment-share-card-footer {
+    padding: 8px 12px;
+    background: linear-gradient(135deg, rgba(255, 177, 193, 0.1), rgba(168, 200, 236, 0.1));
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.moment-share-card-footer-left {
+    color: #8E8E8E;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.moment-share-card-footer-left svg {
+    width: 12px;
+    height: 12px;
+    fill: #A8C8EC;
+}
+
+/* ---- 消息气泡容器适配 ---- */
+.message-bubble-card .moment-share-card-msg {
+    /* 当在 message-bubble 内部时,保持自己的圆角和阴影 */
+    max-width: 100%;
+}

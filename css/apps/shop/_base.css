@@ -1,0 +1,234 @@
+/* 四叶草 · 框架接线 + 根布局 */
+
+/* ============================================================
+   和框架容器的接线（四条必须一起改）
+   ------------------------------------------------------------
+   框架默认给了两层内边距（.app-content 14 + .app-screen-panel 14），
+   自绘内容再加 16，左右一共被吃掉 44px —— 374 宽的屏幕只剩 330。
+
+   更麻烦的是高度：框架的滚动容器是 .app-page，而 .app-screen-panel
+   只有 min-height:100%，**没有 height**。CSS 里百分比高度需要父级有
+   确定高度，min-height 不算 —— 所以 .sp-root 写 height:100% 会静默
+   退化成 auto，被内容整个撑长，自绘的底栏跟着掉到文档流最底下，
+   表现是「要把整页滑到最底才看得见 tab 栏」。
+
+   所以：清 padding、滚动收回 App 内部、给 panel 一个确定高度、
+   根节点绝对定位铺满。
+   ============================================================ */
+
+.app-shell[data-app-id="shop"] .app-content { padding: 0; }
+.app-shell[data-app-id="shop"] .app-page-stack { border-radius: 0; }
+.app-shell[data-app-id="shop"] .app-page { overflow: hidden; }
+.app-shell[data-app-id="shop"] .app-screen-panel {
+    position: relative;
+    height: 100%;
+    min-height: 100%;
+    padding: 0;
+}
+
+/* 滚动条一律不显示。这个 App 里能滚的地方有六七处，
+   只要有一处露出灰条就很脏 */
+.app-shell[data-app-id="shop"] * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.app-shell[data-app-id="shop"] *::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
+/* 内联 SVG 不带 width/height 时浏览器按 300×150 画，整张卡会被撑爆。
+   两层 :where() 把特异性压到 (0,0,1)，任何具名规则都能盖过它 ——
+   只用一层的话 svg:not([width]) 本身是 (0,2,1)，会反过来盖掉
+   .sp-xxx svg 这种 (0,1,1) 的规则 */
+:where(.app-shell[data-app-id="shop"]) svg:where(:not([width]):not([height])) {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+/* ============================================================
+   根布局
+   ============================================================ */
+
+.app-shell[data-app-id="shop"] .sp-root {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--sp-bg);
+    color: var(--sp-text);
+    font-size: 14px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+}
+
+.app-shell[data-app-id="shop"] .sp-root * { box-sizing: border-box; }
+
+/* 顶栏。状态栏是画在整个手机屏最上层的，不在 App 的文档流里，
+   自绘内容必须自己让出 54px，而且那一块得是实色 ——
+   内容从底下滚过去时透出来会和时间叠在一起 */
+.app-shell[data-app-id="shop"] .sp-top {
+    flex: 0 0 auto;
+    padding: 58px 18px 10px;
+    background: var(--sp-bg);
+    border-bottom: 1px solid var(--sp-line-soft);
+}
+
+.app-shell[data-app-id="shop"] .sp-top__main {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.app-shell[data-app-id="shop"] .sp-top__mark {
+    display: inline-flex;
+    color: var(--sp-primary);
+}
+
+.app-shell[data-app-id="shop"] .sp-top__title {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 620;
+    letter-spacing: 0.2px;
+    color: var(--sp-text);
+}
+
+.app-shell[data-app-id="shop"] .sp-top__sub {
+    margin: 1px 0 0;
+    font-size: 11px;
+    color: var(--sp-text-3);
+}
+
+/* 内容区：只有它滚 */
+.app-shell[data-app-id="shop"] .sp-body {
+    flex: 1 1 auto;
+    min-height: 0;          /* 少了会撑破 flex */
+    position: relative;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="shop"] .sp-page,
+.app-shell[data-app-id="shop"] .sp-panel__body,
+.app-shell[data-app-id="shop"] .sp-detail__body {
+    height: 100%;
+    overflow-y: auto;
+    /* overflow-y:auto 会把 overflow-x 一起算成 auto —— 桌面看不出来，
+       手机上整页能左右拖。容器层一次性关掉，别逐个追溢出源 */
+    overflow-x: hidden;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+    padding: 14px 16px 18px;
+}
+
+.app-shell[data-app-id="shop"] .sp-blocked {
+    height: 100%;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+}
+
+/* ============================================================
+   底栏
+   ============================================================ */
+
+.app-shell[data-app-id="shop"] .sp-tabbar {
+    flex: 0 0 auto;
+    display: flex;
+    background: var(--sp-nav-bg);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-top: 1px solid var(--sp-nav-line);
+    /* fullscreen 之后 .app-bottom 浮在最上层，底栏得自己让开那 40px。
+       var() 的兜底是 0，所以非全屏时写了也没副作用 */
+    padding-bottom: var(--app-safe-bottom, 0px);
+}
+
+.app-shell[data-app-id="shop"] .sp-tabbar__item {
+    flex: 1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 8px 0 7px;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    color: var(--sp-nav-icon);
+    transition: color 0.18s ease;
+}
+
+.app-shell[data-app-id="shop"] .sp-tabbar__item.is-on { color: var(--sp-nav-active); }
+
+.app-shell[data-app-id="shop"] .sp-tabbar__icon {
+    display: inline-flex;
+    transition: transform 0.22s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+.app-shell[data-app-id="shop"] .sp-tabbar__item.is-on .sp-tabbar__icon {
+    transform: translateY(-1px);
+}
+
+.app-shell[data-app-id="shop"] .sp-tabbar__label {
+    font-size: 10px;
+    letter-spacing: 0.3px;
+}
+
+.app-shell[data-app-id="shop"] .sp-tabbar__item.is-on .sp-tabbar__label { font-weight: 560; }
+
+.app-shell[data-app-id="shop"] .sp-tabbar__badge {
+    position: absolute;
+    top: 4px;
+    left: 50%;
+    margin-left: 6px;
+    min-width: 15px;
+    height: 15px;
+    padding: 0 4px;
+    border-radius: 8px;
+    background: var(--sp-accent);
+    color: var(--sp-on-accent);
+    font-size: 9px;
+    font-style: normal;
+    font-weight: 600;
+    line-height: 15px;
+    text-align: center;
+}
+
+.app-shell[data-app-id="shop"] .sp-tabbar__dot {
+    position: absolute;
+    top: 7px;
+    left: 50%;
+    margin-left: 8px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--sp-accent);
+}
+
+/* ============================================================
+   toast
+   ============================================================ */
+
+.app-shell[data-app-id="shop"] .sp-toast {
+    position: absolute;
+    left: 50%;
+    bottom: calc(78px + var(--app-safe-bottom, 0px));
+    transform: translateX(-50%);
+    max-width: 78%;
+    padding: 9px 16px;
+    border-radius: 18px;
+    background: var(--sp-text);
+    color: var(--sp-text-inverse);
+    font-size: 12.5px;
+    z-index: 60;
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="shop"] .sp-toast-enter-active,
+.app-shell[data-app-id="shop"] .sp-toast-leave-active {
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.app-shell[data-app-id="shop"] .sp-toast-enter-from,
+.app-shell[data-app-id="shop"] .sp-toast-leave-to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(6px);
+}

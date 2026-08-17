@@ -143,13 +143,22 @@ function _commitReorder(containerArg, rootArg) {
     const aiPersonId = root?.getAttribute('data-ai-person-id')
         || root?.dataset?.aiPersonId
         || '';
-    if (!aiPersonId || ids.length === 0) return;
+    // ★ v0.82 群聊版:从 root 读 data-is-group + data-group-id,传给 reorderContextPrompts
+    const isGroup = root?.getAttribute('data-is-group') === 'true';
+    const groupId = root?.getAttribute('data-group-id') || '';
+    const mode = root?.getAttribute('data-chat-mode') || 'calendar';
+    // ★ v0.82 群聊版没 aiPersonId 也要通过校验(aiPersonId 在群聊版只是占位)
+    if (!isGroup && (!aiPersonId || ids.length === 0)) return;
+    if (isGroup && (!groupId || ids.length === 0)) return;
     const chatApp = externalAppRegistry.getApp('chat');
     const method = chatApp?.methods?.reorderContextPrompts;
     if (typeof method === 'function') {
         // async fire-and-forget;SDK 落盘后 invalidate + syncNow({force:true}) 触发整页重画
         try {
-            const result = method({ aiPersonId, promptIdsInOrder: ids });
+            const payload = isGroup
+                ? { isGroup: true, groupId, mode, aiPersonId, promptIdsInOrder: ids }
+                : { aiPersonId, promptIdsInOrder: ids };
+            const result = method(payload);
             if (result && typeof result.then === 'function') {
                 result.catch((err) => console.warn('[prompt-drag-controller] reorder failed', err));
             }
@@ -196,14 +205,18 @@ function _onPointerMove(ev) {
     _placePlaceholderAt(card, ev.clientY);
 }
 
-function _onPointerUp() {
+function _onPointerUp(ev) {
     if (!dragState.active) return;
     const dragging = dragState.draggingCard;
     const placeholder = dragState.placeholder;
-    // 把拖拽卡片移到占位符位置(visual settle)
-    if (dragging && placeholder && placeholder.parentNode) {
+    // ★ 手机端拖拽修复:pointercancel(系统手势 / 通知弹出 / 来电)不要走正常 commit 路径
+    //   - cancelled = true 时 placeholder 可能已经被浏览器 detach,
+    //     把 dragging 强行 insertBefore 会把卡片插到错位置,commit 顺序错乱
+    //   - 直接 _endDrag 还原,不持久化
+    const cancelled = !!(ev && ev.type === 'pointercancel');
+    if (dragging && placeholder && placeholder.parentNode && !cancelled) {
+        // 把拖拽卡片移到占位符位置(visual settle)
         placeholder.parentNode.insertBefore(dragging, placeholder);
-        // 占位符移除(dragging 已插入到它的位置)
     }
     // ★ v0.61.7 关键:必须在 _endDrag() 之前缓存 container / root — _endDrag() 会把 dragState 清空
     //   - 否则 _commitReorder 读 dragState.container 永远 null,reorderContextPrompts 不被调
@@ -217,6 +230,8 @@ function _onPointerUp() {
     }
     // 先 end drag(清 listeners 和 visual)
     _endDrag();
+    // ★ 手机端:cancel 时跳过 commit(否则会基于错乱的 DOM 顺序持久化)
+    if (cancelled) return;
     // 再 commit(走 method → SDK → syncNow)
     _commitReorder(preCommitContainer, preCommitRoot);
 }
@@ -318,7 +333,8 @@ function _wirePromptManager(rootEl) {
     if (rootEl.__promptDragBound) return;
     rootEl.__promptDragBound = true;
     // 用 capture: true,确保在 framework 的 click 委托之前先抓到 pointerdown
-    rootEl.addEventListener('pointerdown', _onPointerDown, { capture: true });
+    // ★ 手机端拖拽修复:passive: false → ev.preventDefault() 真正能阻止浏览器吞掉 pointermove
+    rootEl.addEventListener('pointerdown', _onPointerDown, { capture: true, passive: false });
 }
 
 if (typeof window !== 'undefined' && typeof MutationObserver !== 'undefined' && !window.__promptDragObserverInstalled) {
@@ -340,9 +356,6 @@ if (typeof window !== 'undefined' && typeof MutationObserver !== 'undefined' && 
         }
     });
     observer.observe(document.body, { childList: true, subtree: true });
-    // 启动日志(对齐 __chatPrivateObserver 风格)
-    // eslint-disable-next-line no-console
-    console.log('[chat-app] MutationObserver installed for .prompt-manager drag');
 }
 
 // 暴露给 chat-app 内部调试用(不依赖)

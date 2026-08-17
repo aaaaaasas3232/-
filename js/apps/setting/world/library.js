@@ -14,22 +14,17 @@
  */
 
 import { escapeHtml } from '@/src/core/escape.js';
-import {
-    REAL_CITIES,
-    TIMELINE_TYPES,
-    ANCHOR_TYPES,
-} from './sdk/defaults.js';
-import { buildPresetGroupState } from './presets/world-presets.js';
+import { REAL_CITIES } from './sdk/defaults.js';
 import { renderEditForm, renderViewForm } from './sdk/form-renderer.js';
 import {
     WORLD_GROUP_FORM_SCHEMA,
-    ANCHOR_FORM_SCHEMA,
-    TIMELINE_FORM_SCHEMA,
-    CHRONICLE_EVENT_FORM_SCHEMA,
     LOCATION_FORM_SCHEMA,
     PLACE_FORM_SCHEMA,
     WORLD_FORM_SCHEMA,
 } from './sdk/form-schema.js';
+import { ANCHOR_TYPES } from './sdk/chronology/chronology-constants.js';
+import { buildPresetGroupState, WORLD_PRESET_TEMPLATES } from './presets/world-presets.js';
+import { renderMapMark, renderLandmarkSvg, DEFAULT_LANDMARK_BG, DEFAULT_LANDMARK_STROKE } from './sdk/landmark-icons.js';
 
 const SETTINGS_APP_ID = 'settings';
 
@@ -107,16 +102,23 @@ const emptyHint = (glyph, text) => `
 // 是两个独立的维度：时间提供背景年份，阶段挂在某个/某些时间位置上。
 // ============================================
 
+// 全 SVG，禁用 emoji 与 ◉ ◯ ↕ 这类符号字符（字体不同机器渲染差异极大）
+const WV_ICONS = Object.freeze({
+    chevronDown: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>',
+});
+
 const LIBRARY_TABS = [
-    { id: 'overview', label: '预览',   glyph: '◉' },
-    { id: 'worlds',   label: '世界观', glyph: '◯' },
+    { id: 'overview', label: '预览',   glyph: '' },
+    { id: 'worlds',   label: '世界观', glyph: '' },
 ];
 
+// 锚点没有独立 tab —— 段锚点/点锚点住在「时间」tab 的「时间锚点」视图里
+// （时间轴 / 时间锚点 / 时间表 三个维度切换）。
 const WORLD_TABS = [
-    { id: 'overview',  label: '概览',     glyph: '◉' },
-    { id: 'map',       label: '空间',     glyph: '◈' },
-    { id: 'timelines', label: '时间',     glyph: '⌚' },
-    { id: 'flow',      label: '夹子',     glyph: '≋' },
+    { id: 'overview',  label: '概览' },
+    { id: 'map',       label: '空间' },
+    { id: 'timelines', label: '时间' },
+    { id: 'flow',      label: '夹子' },
 ];
 
 // v0.17：删除"场所"（空间tab已有）、"标签"、"快照"；只保留"预设"、"导入导出"
@@ -127,7 +129,7 @@ const SETTINGS_PANEL_SECTIONS = [
     { id: 'assets',   label: '资产',     glyph: '', desc: '货币名称与资产设定' },
     // —— 运维 / 导出 ——
     { id: 'presets',   label: '预设',     glyph: '', desc: '预设世界观方案' },
-    { id: 'export',    label: '导入导出', glyph: '↕', desc: '打包 / 分享 / 同步' },
+    { id: 'export',    label: '导入导出', glyph: '', desc: '打包 / 分享 / 同步' },
 ];
 
 const renderLibraryTabs = (activeSub, route) => {
@@ -359,6 +361,28 @@ const renderWorldGroupEditForm = (group) => renderEditForm(
     }
 );
 
+const renderWorldCreatePicker = () => `
+    <div class="wv-createpick">
+        <div class="wv-createpick__title">先选要不要用预设</div>
+        <div class="wv-createpick__desc">演员世界和电竞世界已经做好体验模式。也可以从空白开始，自己往后拓展。</div>
+        <div class="wv-createpick__grid">
+            <button class="wv-createpick__card" ${wvAction('worldCreateBlank')}>
+                <b>空白世界</b>
+                <span>自己写简介、地点、纪时和锚点</span>
+            </button>
+            ${WORLD_PRESET_TEMPLATES.map((p) => `
+                <button class="wv-createpick__card is-preset" ${wvAction('worldImportPreset', { presetId: p.id })}>
+                    <b>${e(p.name)}</b>
+                    <span>${e(p.summary)}</span>
+                </button>
+            `).join('')}
+        </div>
+        <div class="wv-createpick__actions">
+            <button class="wv-btn wv-btn--ghost wv-btn--sm" ${wvAction('worldCancelCreate')}>取消</button>
+        </div>
+    </div>
+`;
+
 const renderWorldsList = (app) => {
     const sdk = window.settingsSdk;
     if (!sdk) return '<div class="wv-empty">SDK 未初始化</div>';
@@ -382,10 +406,11 @@ const renderWorldsList = (app) => {
                     <div class="wv-list__title">${e(groupLabel)}</div>
                     ${groupDesc ? `<div class="wv-list__desc">${e(groupDesc)}</div>` : ''}
                 </div>
-                <button class="wv-btn wv-btn--primary" ${wvAction('worldCreate')}>+ 新建世界观</button>
+                <button class="wv-btn wv-btn--primary" ${wvAction('worldStartCreate')}>+ 新建世界观</button>
             </div>
-            ${items.length === 0 ? `
-                ${emptyHint('', isUngrouped ? '「未分组」区为空。' : '还没有世界观，点击右上角新建。')}
+            ${route.pickingPreset ? renderWorldCreatePicker() : ''}
+            ${items.length === 0 && !route.pickingPreset ? `
+                ${emptyHint('', isUngrouped ? '「未分组」区为空。' : '还没有世界观。先选空白，或从演员 / 电竞预设开始。')}
             ` : items.map(item => {
                 const isEditing = item.id === editingId;
                 return isEditing
@@ -512,7 +537,7 @@ const renderLocationCard = (loc) => {
     return `
         <div class="wv-loc-card">
             <div class="wv-loc-card__main">
-                <span class="wv-loc-card__icon">${e(loc.icon || '')}</span>
+                <span class="wv-loc-card__icon wv-place-item__icon--orb" style="--mark-bg:${e(loc.pinBg || DEFAULT_LANDMARK_BG)};--mark-stroke:${e(loc.pinStroke || DEFAULT_LANDMARK_STROKE)}">${renderLandmarkSvg(loc.icon || 'pin', 13)}</span>
                 <span class="wv-loc-card__name">${e(loc.name)}</span>
                 ${loc.isCenter ? `<span class="wv-loc-card__badge wv-loc-card__badge--center">主</span>` : ''}
                 ${loc.accessType === 'restricted' ? `<span class="wv-loc-card__badge wv-loc-card__badge--warn">受限</span>` : ''}
@@ -590,7 +615,7 @@ const renderMapPlacePin = (place, editingId, world) => {
     return `
         <div class="wv-place-item">
             <div class="wv-place-item__row">
-                <span class="wv-place-item__icon">${e(place.icon || '')}</span>
+                <span class="wv-place-item__icon wv-place-item__icon--orb" style="--mark-bg:${e(place.pinBg || DEFAULT_LANDMARK_BG)};--mark-stroke:${e(place.pinStroke || DEFAULT_LANDMARK_STROKE)}">${renderLandmarkSvg(place.icon || 'pin', 12)}</span>
                 <span class="wv-place-item__name">${e(place.name)}</span>
                 <div class="wv-place-item__actions">
                     <button class="wv-btn wv-btn--ghost wv-btn--sm" ${wvAction('worldEditPlace', { id: place.id })}>编辑</button>
@@ -614,7 +639,7 @@ const renderMapLocationRow = (loc, editingId, world, app) => {
     return `
         <div class="wv-loc-item">
             <div class="wv-loc-item__row">
-                <span class="wv-loc-item__icon">${e(loc.icon || '')}</span>
+                <span class="wv-loc-item__icon wv-place-item__icon--orb" style="--mark-bg:${e(loc.pinBg || DEFAULT_LANDMARK_BG)};--mark-stroke:${e(loc.pinStroke || DEFAULT_LANDMARK_STROKE)}">${renderLandmarkSvg(loc.icon || 'pin', 12)}</span>
                 <span class="wv-loc-item__name">${e(loc.name)}</span>
                 ${badges}
                 <div class="wv-loc-item__actions">
@@ -630,8 +655,8 @@ const renderMapLocationRow = (loc, editingId, world, app) => {
 const renderMap = (app) => {
     const sdk = window.settingsSdk;
     if (!sdk) return '<div class="wv-empty">SDK 未初始化</div>';
-    const world = sdk.worlds.getActive();
-    if (!world) return '<div class="wv-empty">先在「世界观」里选一个当前</div>';
+    const world = getCurrentWorld(app, sdk);
+    if (!world) return '<div class="wv-empty">请先进入一个世界观</div>';
 
     const route = app?.state?.world || {};
     const mapMode = route.mapMode || 'place';
@@ -647,7 +672,6 @@ const renderMap = (app) => {
     const locations = sdk.locations.list({ worldRef: world.id });
     const filteredLocations = selectedPlaceId ? locations.filter(l => l.placeRef === selectedPlaceId) : locations;
 
-    const centerPlace = centerPlaceId ? sdk.places.get(centerPlaceId) : null;
     const selectedPlace = selectedPlaceId ? sdk.places.get(selectedPlaceId) : null;
     const center = sdk.locations.getCenter(world.id);
 
@@ -662,7 +686,12 @@ const renderMap = (app) => {
             data-wv-zoom ${extra}
             style="--wv-zoom-fill: ${fillPct.toFixed(2)}%">
         <span class="wv-map__zoom-val" data-wv-zoom-val>${(zoom * 100).toFixed(0)}%</span>
-        <button class="wv-map__zoom-reset" ${wvAction('worldSetMapZoom', { zoom: 1 })} title="重置缩放 (1×)" aria-label="重置缩放"></button>
+        <button class="wv-map__zoom-reset" ${wvAction('worldSetMapZoom', { zoom: 1 })} title="重置缩放 (1×)" aria-label="重置缩放">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-rotate-cw" aria-hidden="true">
+                <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
+                <path d="M21 3v5h-5"/>
+            </svg>
+        </button>
     `;
     };
 
@@ -692,7 +721,7 @@ const renderMap = (app) => {
                     <div class="wv-callout__header">
                         <div>
                             <div class="wv-callout__title">地点地图</div>
-                            <div class="wv-callout__desc">${places.length} 个地点 · 上传背景图自定义样式</div>
+                            <div class="wv-callout__desc">${places.length} 个地点 · 世界级地图（例如中国地图）</div>
                         </div>
                         <label class="wv-upload-btn" title="上传地图背景图">
                             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -702,7 +731,7 @@ const renderMap = (app) => {
                         </label>
                     </div>
                 </div>
-                ${centerPlace?.mapImageUrl ? '<div class="wv-map__custom-bg-tip"><span class="wv-tag wv-tag--primary">自定义背景</span> 已应用自定义地图背景图</div>' : ''}
+                ${world.mapImageUrl ? '<div class="wv-map__custom-bg-tip"><span class="wv-tag wv-tag--primary">世界地图背景</span> 与各地点的场所地图相互独立</div>' : ''}
 
                 <div class="wv-map__toolbar">
                     <div class="wv-map__toolbar-section wv-map__toolbar-section--zoom">
@@ -712,23 +741,23 @@ const renderMap = (app) => {
                 </div>
 
                 <div class="wv-map__stage" data-wv-map-stage style="cursor: grab;">
-                    ${places.length === 0 ? emptyHint('◈', '还没有地点，请先创建') : `
+                    ${places.length === 0 && !world.mapImageUrl ? emptyHint('', '还没有地点，请先创建') : `
                         <div class="wv-map__world" style="transform:scale(${zoom}) translate(${panX}px, ${panY}px)">
-                            ${centerPlace?.mapImageUrl
-                                ? `<img class="wv-map__bg-image" src="${e(centerPlace.mapImageUrl)}" alt="地图背景" />`
+                            ${world.mapImageUrl
+                                ? `<img class="wv-map__bg-image" src="${e(world.mapImageUrl)}" alt="地点地图背景" />`
                                 : '<div class="wv-map__grid"></div>'}
                             ${places.map(place => {
                                 const px = ((place.mapOffsetX + 100) / 200 * 100).toFixed(2);
                                 const py = (100 - (place.mapOffsetY + 100) / 200 * 100).toFixed(2);
-                                return `
-                                    <div class="wv-map__pin ${place.id === centerPlaceId ? 'is-center' : ''}"
-                                         style="left:${e(px)}%;top:${e(py)}%;--pin-scale:${invZoom.toFixed(4)}"
-                                         title="${e(place.name)} · 坐标(${place.mapOffsetX}, ${place.mapOffsetY})"
-                                         data-place-id="${e(place.id)}" data-wv-map-pin
-                                         ${wvAction('worldSetMapCenterPlace', { placeId: place.id })}>
-                                        <div class="wv-map__pin-icon">${e(place.icon || '')}</div>
-                                        <div class="wv-map__pin-label">${e(place.name)}</div>
-                                    </div>`;
+                                return renderMapMark({
+                                    name: e(place.name),
+                                    iconId: place.icon || 'pin',
+                                    bg: place.pinBg || DEFAULT_LANDMARK_BG,
+                                    stroke: place.pinStroke || '',
+                                    extraClass: place.id === centerPlaceId ? 'is-center' : '',
+                                    style: `left:${e(px)}%;top:${e(py)}%;--pin-scale:${invZoom.toFixed(4)}`,
+                                    attrs: `title="${e(place.name)}" data-place-id="${e(place.id)}" data-wv-map-pin ${wvAction('worldSetMapCenterPlace', { placeId: place.id })}`,
+                                });
                             }).join('')}
                         </div>
                     `}
@@ -770,7 +799,7 @@ const renderMap = (app) => {
                     <div class="wv-callout__header">
                         <div>
                             <div class="wv-callout__title">${e(selectedPlace?.name || '未知地点')} · 场所地图</div>
-                            <div class="wv-callout__desc">${filteredLocations.length} 个场所 · 坐标以主场所为中心</div>
+                            <div class="wv-callout__desc">${filteredLocations.length} 个场所 · 地区级地图（例如浙江地图）</div>
                         </div>
                         <label class="wv-upload-btn" title="上传场所地图背景图">
                             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -789,7 +818,7 @@ const renderMap = (app) => {
                             ${filteredLocations.length === 0 ? '<option value="">— 无 —</option>' :
                                 filteredLocations.map(loc => `<option value="${e(loc.id)}" ${loc.id === center?.id ? 'selected' : ''}>${e(loc.name)}${loc.isCenter ? '（主）' : ''}</option>`).join('')}
                         </select>
-                        <button class="wv-btn wv-btn--ghost wv-btn--sm" ${wvAction('worldSetMapCenter', { locId: center?.id || '' })} title="重置">↺</button>
+                        <button class="wv-btn wv-btn--ghost wv-btn--sm" ${wvAction('worldSetMapCenter', { locId: center?.id || '' })} title="重置">重置</button>
                     </div>
                     <div class="wv-map__toolbar-section wv-map__toolbar-section--zoom">
                         <span class="wv-map__toolbar-label">缩放：</span>
@@ -806,16 +835,15 @@ const renderMap = (app) => {
                             ${filteredLocations.map(loc => {
                                 const px = coordToPct(Number(loc.position?.x || 0));
                                 const py = (100 - coordToPct(Number(loc.position?.y || 0))).toFixed(2);
-                                return `
-                                    <div class="wv-map__pin ${loc.id === center?.id ? 'is-center' : ''} ${loc.accessType === 'restricted' ? 'is-restricted' : ''}"
-                                         style="left:${e(px)}%;top:${e(py)}%;--pin-scale:${invZoom.toFixed(4)}"
-                                         title="${e(loc.name)} · ${e(loc.summary || '')}"
-                                         data-location-id="${e(loc.id)}" data-wv-map-pin
-                                         ${wvAction('worldEditLocation', { id: loc.id })}>
-                                        <div class="wv-map__pin-icon">${e(loc.icon || '')}</div>
-                                        <div class="wv-map__pin-label">${e(loc.name)}</div>
-                                        ${loc.id === center?.id ? '<div class="wv-map__pin-dist">主场所</div>' : ''}
-                                    </div>`;
+                                return renderMapMark({
+                                    name: e(loc.name),
+                                    iconId: loc.icon || 'pin',
+                                    bg: loc.pinBg || DEFAULT_LANDMARK_BG,
+                                    stroke: loc.pinStroke || '',
+                                    extraClass: `${loc.id === center?.id ? 'is-center' : ''} ${loc.accessType === 'restricted' ? 'is-restricted' : ''}`,
+                                    style: `left:${e(px)}%;top:${e(py)}%;--pin-scale:${invZoom.toFixed(4)}`,
+                                    attrs: `title="${e(loc.name)}" data-location-id="${e(loc.id)}" data-wv-map-pin ${wvAction('worldEditLocation', { id: loc.id })}`,
+                                });
                             }).join('')}
                         </div>
                     `}
@@ -899,11 +927,11 @@ const renderChronicle = (app) => {
     // ★ 纪时设置面板（可折叠）
     const isChronologyOpen = route.chronologyPanelOpen ?? false;
     const chronoPanel = `
-        <div class="wv-chronology-settings" data-wv-chronology-panel>
+        <div class="wv-chronology-settings ${isChronologyOpen ? 'is-open' : ''}" data-wv-chronology-panel>
             <div class="wv-chronology-settings__header" ${wvAction('worldToggleChronologyPanel')}>
                 <span class="wv-chronology-settings__title">纪时系统</span>
                 <span class="wv-tag ${chronoEnabled ? 'wv-tag--primary' : ''}">${chronoEnabled ? '已启用' : '未启用'}</span>
-                <span class="wv-chronology-settings__toggle">${isChronologyOpen ? '▲' : '▼'}</span>
+                <span class="wv-chronology-settings__toggle">${WV_ICONS.chevronDown}</span>
             </div>
             ${isChronologyOpen ? `
                 <div class="wv-chronology-settings__body">
@@ -1199,13 +1227,55 @@ const renderChronicleScheduleView = (world, sdk, route, chronoSummary, e) => {
         return list;
     };
 
+    // ★ 联动日记 App 的「日子」：倒计时与纪念日。
+    //   走 window.__diaryContext.getDayMarkers()（内存优先 + localStorage 快照），
+    //   不 import 日记的 store —— 日记没装 / 没打开过都不会炸。
+    const dayMarkers = (() => {
+        try {
+            return window.__diaryContext?.getDayMarkers?.() || { countdowns: [], anniversaries: [] };
+        } catch (_) {
+            return { countdowns: [], anniversaries: [] };
+        }
+    })();
+    // 本周命中的日子：倒计时按真实日期落格；纪念日按「今年的这一天」落格
+    const markersByDate = new Map();
+    const pushMarker = (date, item) => {
+        if (!date || !dates.includes(date)) return;
+        if (!markersByDate.has(date)) markersByDate.set(date, []);
+        markersByDate.get(date).push(item);
+    };
+    for (const c of dayMarkers.countdowns) {
+        pushMarker(c.date, {
+            kind: 'countdown',
+            title: c.title,
+            sub: c.days === 0 ? '就是今天' : `还有 ${c.days} 天`,
+        });
+    }
+    const thisYear = new Date().getFullYear();
+    for (const a of dayMarkers.anniversaries) {
+        const md = String(a.date).slice(5);
+        pushMarker(`${thisYear}-${md}`, {
+            kind: 'anniversary',
+            title: a.title,
+            sub: a.years > 0 ? `${a.years} 周年` : '纪念日',
+        });
+    }
+    const renderDayMarkers = (date) => (markersByDate.get(date) || []).map((m) => `
+        <div class="wv-schedule__item wv-schedule__item--${e(m.kind)}" title="${e(m.title)}">
+            <span class="wv-schedule__item-time">${e(m.sub)}</span>
+            <div class="wv-schedule__item-title">${e(m.title)}</div>
+            <div class="wv-schedule__item-from">来自日记</div>
+        </div>
+    `).join('');
+
     const dayCells = dates.map((date, i) => {
         const dayName = weekDayNames[i] || '';
         const items = weekMap.get(date) || [];
         const flat = flatEvents(items);
-        const body = flat.length === 0
+        const markerHtml = renderDayMarkers(date);
+        const body = (flat.length === 0 && !markerHtml)
             ? `<div class="wv-schedule__slot-empty">暂无</div>`
-            : flat.map(({ ev, personaName }) => {
+            : markerHtml + flat.map(({ ev, personaName }) => {
                 const timeLabel = ev.startTime
                     ? (ev.endTime ? `${ev.startTime}–${ev.endTime}` : ev.startTime)
                     : '全天';
@@ -1262,9 +1332,58 @@ const renderChronicleScheduleView = (world, sdk, route, chronoSummary, e) => {
             <div class="wv-schedule__board">
                 <div class="wv-schedule__week-grid">${dayCells}</div>
             </div>
+            ${renderDayMarkerBoard(dayMarkers, e)}
             <div class="wv-schedule__hint">
-                只读视图 · 如需新增 / 修改日程，请前往「人设主页 → 本周日程」选择具体日期编辑。
+                只读视图 · 日程在「人设主页 → 本周日程」编辑；纪念日与倒计时在「日记 → 日子」编辑。
             </div>
+        </div>
+    `;
+};
+
+/**
+ * 时间表下方的「日子」板：日记 App 里的倒计时与纪念日。
+ * 空数据时整块不渲染，不占版面。
+ */
+const renderDayMarkerBoard = (dayMarkers, e) => {
+    const { countdowns = [], anniversaries = [] } = dayMarkers || {};
+    if (!countdowns.length && !anniversaries.length) return '';
+
+    const row = (title, sub, tone) => `
+        <div class="wv-daycard wv-daycard--${e(tone)}">
+            <div class="wv-daycard__main">
+                <div class="wv-daycard__title">${e(title)}</div>
+                <div class="wv-daycard__sub">${e(sub)}</div>
+            </div>
+        </div>
+    `;
+
+    const cdHtml = countdowns.map((c) => row(
+        c.title,
+        `${c.dateLabel} · ${c.days === 0 ? '就是今天' : c.days === 1 ? '就是明天' : `还有 ${c.days} 天`}`,
+        'countdown',
+    )).join('');
+
+    const anHtml = anniversaries.map((a) => row(
+        a.title,
+        `${a.dateLabel} · 已经 ${a.days} 天${a.years > 0 ? ` · ${a.years} 周年` : ''}`,
+        'anniversary',
+    )).join('');
+
+    return `
+        <div class="wv-daysboard">
+            <div class="wv-list__head"><div class="wv-list__title">日子（来自日记）</div></div>
+            ${countdowns.length ? `
+                <div class="wv-daysboard__group">
+                    <div class="wv-daysboard__label">倒计时</div>
+                    ${cdHtml}
+                </div>
+            ` : ''}
+            ${anniversaries.length ? `
+                <div class="wv-daysboard__group">
+                    <div class="wv-daysboard__label">纪念日</div>
+                    ${anHtml}
+                </div>
+            ` : ''}
         </div>
     `;
 };
@@ -1373,7 +1492,7 @@ const renderFlow = (app) => {
             </div>
 
             ${flows.length === 0 ? `
-                ${emptyHint('≋', '还没有流动体。点击右上角新建一个 prompt 数据。')}
+                ${emptyHint('', '还没有流动体。点击右上角新建一个 prompt 数据。')}
             ` : `
                 <div class="wv-ticket-strip">
                     ${flows.map(renderFlowTicket).join('')}
@@ -1409,24 +1528,10 @@ const renderChronicleAnchorView = (world, sdk, route, e) => {
         const monthLabel = chrono.monthLabel || '月';
         const dayLabel = chrono.dayLabel || '日';
 
+        // 编辑和新建共用一套手写表单：ANCHOR_FORM_SCHEMA 里没有「止」和
+        // 「绑定 AI」，用它渲染编辑态会导致段锚点永远改不了结束时间。
         if (isEditing) {
-            return `
-                ${renderEditForm(
-                    ANCHOR_FORM_SCHEMA,
-                    {
-                        ...a,
-                        startYear: a.start?.year ?? 0,
-                        startMonth: a.start?.month ?? 0,
-                        startDay: a.start?.day ?? 0,
-                    },
-                    {
-                        e,
-                        checkedAttr,
-                        saveAction: wvAction('worldSaveAnchor', { anchorId: a.id }),
-                        cancelAction: wvAction('worldEditAnchorCancel'),
-                    }
-                )}
-            `;
+            return renderAnchorForm(a.type === 'point' ? 'point' : 'range', a);
         }
 
         const fmtRange = () => {
@@ -1462,51 +1567,73 @@ const renderChronicleAnchorView = (world, sdk, route, e) => {
         `;
     };
 
-    const renderAddForm = () => {
-        if (!creatingType) return '';
+    /**
+     * 锚点表单（新建 / 编辑共用）。
+     *
+     * @param {'range'|'point'} type
+     * @param {object|null} anchor 传了就是编辑态，按现值预填
+     */
+    const renderAnchorForm = (type, anchor = null) => {
         const chrono = world.chronologySettings || {};
         const yearLabel = chrono.yearLabel || '年';
         const monthLabel = chrono.monthLabel || '月';
         const dayLabel = chrono.dayLabel || '日';
+        const isRange = type === 'range';
+        const editing = Boolean(anchor?.id);
+        const start = anchor?.start || {};
+        const end = anchor?.end || {};
+        const bound = new Set(anchor?.boundAiIds || []);
+        const num = (v, dflt) => (Number.isFinite(Number(v)) ? Number(v) : dflt);
+
         return `
             <div class="wv-editor wv-anchor-add-form wv-anchor-editor">
-                    <div class="wv-editor__row">
-                        <label class="wv-editor__label">标签 *</label>
-                        <input class="wv-editor__input" type="text" data-anchor-field="label"
-                            placeholder="${creatingType === 'range' ? '如：春季赛 / 夏季赛' : '如：xxx 的纪念日'}">
-                    </div>
-                    <div class="wv-editor__row wv-editor__row--no-label">
-                        <textarea class="wv-editor__textarea" data-anchor-field="description" rows="2"
-                            placeholder="${creatingType === 'range' ? '5-7月 夏季赛 …' : '往后每年这天都作为某纪念日'}"></textarea>
-                    </div>
-                    <div class="wv-editor__row wv-editor__row--inline">
-                        <label class="wv-editor__label">${creatingType === 'range' ? '起' : '日期'}</label>
-                        <input class="wv-editor__input wv-editor__input--num" type="number" data-anchor-field="startYear" placeholder="${yearLabel}" value="0">
-                        <span class="wv-editor__sep">${yearLabel}</span>
-                        <input class="wv-editor__input wv-editor__input--num" type="number" data-anchor-field="startMonth" placeholder="${monthLabel}" value="${creatingType === 'range' ? 1 : 1}">
-                        <span class="wv-editor__sep">${monthLabel}</span>
-                        ${creatingType === 'point' ? `<input class="wv-editor__input wv-editor__input--num" type="number" data-anchor-field="startDay" placeholder="${dayLabel}" value="1"><span class="wv-editor__sep">${dayLabel}</span>` : ''}
-                    </div>
-                    ${creatingType === 'range' ? `
+                <div class="wv-editor__section-title">${editing ? (isRange ? '编辑段锚点' : '编辑点锚点') : (isRange ? '新建段锚点' : '新建点锚点')}</div>
+                <div class="wv-editor__row">
+                    <label class="wv-editor__label">标签</label>
+                    <input class="wv-editor__input" type="text" data-anchor-field="label"
+                        value="${e(anchor?.label || anchor?.title || '')}"
+                        placeholder="${isRange ? '如：春季赛 / 夏季赛' : '如：某人的纪念日'}">
+                </div>
+                <div class="wv-editor__row">
+                    <label class="wv-editor__label">描述</label>
+                    <textarea class="wv-editor__textarea" data-anchor-field="description" rows="2"
+                        placeholder="${isRange ? '这段时间里世界在发生什么' : '往后每年这天都作为某纪念日'}">${e(anchor?.description || '')}</textarea>
+                </div>
+                <div class="wv-editor__row wv-editor__row--inline">
+                    <label class="wv-editor__label">${isRange ? '起' : '日期'}</label>
+                    <input class="wv-editor__input wv-editor__input--num" type="number" data-anchor-field="startYear" placeholder="${e(yearLabel)}" value="${num(start.year, 0)}">
+                    <span class="wv-editor__sep">${e(yearLabel)}</span>
+                    <input class="wv-editor__input wv-editor__input--num" type="number" data-anchor-field="startMonth" placeholder="${e(monthLabel)}" value="${num(start.month, 1)}">
+                    <span class="wv-editor__sep">${e(monthLabel)}</span>
+                    ${!isRange ? `
+                        <input class="wv-editor__input wv-editor__input--num" type="number" data-anchor-field="startDay" placeholder="${e(dayLabel)}" value="${num(start.day, 1)}">
+                        <span class="wv-editor__sep">${e(dayLabel)}</span>
+                    ` : ''}
+                </div>
+                ${isRange ? `
                     <div class="wv-editor__row wv-editor__row--inline">
                         <label class="wv-editor__label">止</label>
-                        <input class="wv-editor__input wv-editor__input--num" type="number" data-anchor-field="endYear" placeholder="${yearLabel}" value="0">
-                        <span class="wv-editor__sep">${yearLabel}</span>
-                        <input class="wv-editor__input wv-editor__input--num" type="number" data-anchor-field="endMonth" placeholder="${monthLabel}" value="2">
-                        <span class="wv-editor__sep">${monthLabel}</span>
+                        <input class="wv-editor__input wv-editor__input--num" type="number" data-anchor-field="endYear" placeholder="${e(yearLabel)}" value="${num(end.year, 0)}">
+                        <span class="wv-editor__sep">${e(yearLabel)}</span>
+                        <input class="wv-editor__input wv-editor__input--num" type="number" data-anchor-field="endMonth" placeholder="${e(monthLabel)}" value="${num(end.month, 2)}">
+                        <span class="wv-editor__sep">${e(monthLabel)}</span>
                     </div>
-                    ` : ''}
-                    <div class="wv-editor__row">
-                        <label class="wv-editor__label">绑定 AI（可多选）</label>
-                        <select class="wv-editor__select wv-anchor-add-ais" data-anchor-field="boundAiIds" multiple size="${Math.min(aiList.length || 1, 4)}">
-                            ${aiList.length === 0 ? '<option value="" disabled>(尚无 AI)</option>' : aiList.map(ai => `<option value="${e(ai.id)}">${e(ai.name)}</option>`).join('')}
-                        </select>
-                        <span class="wv-editor__hint">按住 Ctrl/⌘ 多选；后续可绑定提醒（待开发）</span>
-                    </div>
-                    <div class="wv-editor__actions">
-                        <button class="wv-btn wv-btn--primary" ${wvAction('worldCreateAnchor', { type: creatingType })}>保存</button>
-                        <button class="wv-btn wv-btn--ghost" ${wvAction('worldCancelAnchorCreate')}>取消</button>
-                    </div>
+                ` : ''}
+                <div class="wv-editor__row">
+                    <label class="wv-editor__label">绑定 AI（可多选）</label>
+                    <select class="wv-editor__select wv-anchor-add-ais" data-anchor-field="boundAiIds" multiple size="${Math.min(Math.max(aiList.length, 1), 4)}">
+                        ${aiList.length === 0
+                            ? '<option value="" disabled>还没有 AI 人设</option>'
+                            : aiList.map(ai => `<option value="${e(ai.id)}" ${bound.has(ai.id) ? 'selected' : ''}>${e(ai.name)}</option>`).join('')}
+                    </select>
+                    <span class="wv-editor__hint">按住 Ctrl 或 Command 多选</span>
+                </div>
+                <div class="wv-editor__actions">
+                    <button class="wv-btn wv-btn--ghost" ${editing ? wvAction('worldEditAnchorCancel') : wvAction('worldCancelAnchorCreate')}>取消</button>
+                    <button class="wv-btn wv-btn--primary" ${editing
+                        ? wvAction('worldSaveAnchor', { anchorId: anchor.id })
+                        : wvAction('worldCreateAnchor', { type })}>保存</button>
+                </div>
             </div>
         `;
     };
@@ -1516,29 +1643,28 @@ const renderChronicleAnchorView = (world, sdk, route, e) => {
             <div class="wv-callout wv-callout--info">
                 <div class="wv-callout__title">时间锚点</div>
                 <div class="wv-callout__desc">
-                    时间锚点用来给 AI 圈定"应当注意的时间范围"，可以绑定到 AI，后续给 AI 注入上下文。
-                    段锚点按中周期（月）定义一段范围，点锚点按基周期（日）定义一个具体日期。
-                    <br/>绑定 AI / 提醒功能 <b>待开发</b>，先做好数据骨架。
+                    给 AI 圈定「应当注意的时间范围」，可以绑定到具体 AI 人设。
+                    段锚点按月定义一段范围（起 ~ 止），点锚点按日定义一个每年重复的日期。
                 </div>
             </div>
 
             <div class="wv-list__head wv-anchor__head wv-anchor__head--inline">
                 <div class="wv-anchor__head-group">
                     <div class="wv-list__title">段锚点（按月）</div>
-                    <button class="wv-btn wv-btn--primary" ${wvAction('worldStartAnchorCreate', { type: 'range' })}>+ 新建段锚点</button>
+                    <button class="wv-btn wv-btn--primary" ${wvAction('worldStartAnchorCreate', { type: 'range' })}>新建段锚点</button>
                 </div>
             </div>
-            ${rangeAnchors.length === 0 ? emptyHint('↔', '还没有段锚点。') : rangeAnchors.map(renderAnchorCard).join('')}
-            ${creatingType === 'range' ? renderAddForm() : ''}
+            ${rangeAnchors.length === 0 && creatingType !== 'range' ? emptyHint('', '还没有段锚点。') : rangeAnchors.map(renderAnchorCard).join('')}
+            ${creatingType === 'range' ? renderAnchorForm('range') : ''}
 
             <div class="wv-list__head wv-anchor__head wv-anchor__head--inline">
                 <div class="wv-anchor__head-group">
                     <div class="wv-list__title">点锚点（按日）</div>
-                    <button class="wv-btn wv-btn--primary" ${wvAction('worldStartAnchorCreate', { type: 'point' })}>+ 新建点锚点</button>
+                    <button class="wv-btn wv-btn--primary" ${wvAction('worldStartAnchorCreate', { type: 'point' })}>新建点锚点</button>
                 </div>
             </div>
-            ${pointAnchors.length === 0 ? emptyHint('⊙', '还没有点锚点。') : pointAnchors.map(renderAnchorCard).join('')}
-            ${creatingType === 'point' ? renderAddForm() : ''}
+            ${pointAnchors.length === 0 && creatingType !== 'point' ? emptyHint('', '还没有点锚点。') : pointAnchors.map(renderAnchorCard).join('')}
+            ${creatingType === 'point' ? renderAnchorForm('point') : ''}
         </div>
     `;
 };
@@ -1908,7 +2034,7 @@ const renderPresets = () => {
             <div class="wv-list__head">
                 <div class="wv-list__title-block">
                     <div class="wv-list__title">预设世界观组</div>
-                    <div class="wv-list__desc">快速创建预设世界观，可一键导入（功能开发中）</div>
+                    <div class="wv-list__desc">目前只有演员世界和电竞世界两套做好的预设。导入后对应专属 App 会出现。</div>
                 </div>
             </div>
             ${groups.length === 0 ? emptyHint('', '暂无预设世界观组') : groups.map(group => `
@@ -1919,8 +2045,19 @@ const renderPresets = () => {
                             <span class="wv-tag">${group.presets?.length || 0} 个预设</span>
                         </div>
                         ${group.description ? `<div class="wv-list__item-summary">${e(group.description)}</div>` : ''}
-                        <div class="wv-list__item-meta">预设功能开发中…</div>
                     </div>
+                    ${(group.presets || []).map(preset => `
+                        <div class="wv-list__item wv-preset-item">
+                            <div class="wv-list__item-head">
+                                <div class="wv-list__item-name">${e(preset.icon)} ${e(preset.name)}</div>
+                                <div class="wv-list__item-actions">
+                                    <button class="wv-btn wv-btn--primary wv-btn--sm" ${wvAction('worldImportPreset', { presetId: preset.id })}>导入</button>
+                                </div>
+                            </div>
+                            ${preset.summary ? `<div class="wv-list__item-summary">${e(preset.summary)}</div>` : ''}
+                            <div class="wv-list__item-meta">${preset.keyPointsCount || 0} 条关键设定${preset.locationCount ? ` · ${preset.locationCount} 个地点` : ''}</div>
+                        </div>
+                    `).join('')}
                 </div>
             `).join('')}
         </div>
@@ -2009,9 +2146,8 @@ const LIBRARY_ROUTES = {
 const WORLD_ROUTES = {
     overview:  renderWorldOverview,
     map:       renderMap,
-    anchors:   renderChronicle,    // ★ v0.17 时间线 + 时间锚点
-    timelines: renderChronicle,    // 向后兼容
-    flow:      renderFlow,         // ★ v0.17 流动数据（prompt 数据结构）
+    timelines: renderChronicle,
+    flow:      renderFlow,
     presets:   renderPresets,
     export:    renderExport,
 };
@@ -2093,6 +2229,11 @@ export function renderWorldLibrary(app) {
     // 「世界级 scope」只在用户调用 worldEnter(payload.id) 进入编辑态时才出现，
     // 通过 route.currentWorldId 标识。该标识只作用于设置 App 内部的导航，
     // 不影响全局的「当前世界观」（那个由用户人设绑定决定）。
+    // 旧路由兼容：独立「锚点」tab 已删除，重定向到时间 tab 的锚点视图
+    if (route.sub === 'anchors') {
+        route.sub = 'timelines';
+        route.chronicleView = 'anchor';
+    }
     const activeSub = route.sub || 'worlds';
     const currentWorldId = route.currentWorldId || null;
     const world = currentWorldId ? sdk.worlds.get(currentWorldId) : null;

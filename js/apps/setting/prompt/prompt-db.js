@@ -41,6 +41,13 @@ export async function initPromptDb() {
     return _promptDb.open();
 }
 
+export function closePromptDb() {
+    if (_promptDb) {
+        try { _promptDb.close(); } catch (_) {}
+        _promptDb = null;
+    }
+}
+
 async function _withDb(fn) {
     if (!_promptDb) {
         await initPromptDb();

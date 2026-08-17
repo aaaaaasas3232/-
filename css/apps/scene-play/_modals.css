@@ -1,0 +1,94 @@
+/**
+ * 情景剧场 · 弹窗皮肤
+ *
+ * 把框架 `AcModal` 的 `--ac-*` 桥到本 App 的 `--sp-*`,换配色时弹窗跟着变。
+ *
+ * ⚠️ `class="sp-modal"` 落在**根元素 `.ac-overlay`** 上,不是 `.ac-modal`。
+ *    业务钩子一律写后代选择器:`.sp-modal .ac-modal-body` ✓
+ *                              `.sp-modal.ac-modal`      ✗
+ *
+ * ⚠️ `.ac-modal` 永远不加 `overflow: hidden` —— 关闭按钮用 `top:-10px`
+ *    故意露在弹窗外面(本 App 关掉了那个叉,但别给后来人留坑)。
+ */
+
+.app-shell[data-app-id="scene-play"] .sp-modal .ac-modal {
+    --ac-color-primary: var(--sp-primary);
+    --ac-color-primary-dark: var(--sp-primary-strong);
+    --ac-color-primary-soft: var(--sp-primary-soft);
+    --ac-shadow-primary: var(--sp-btn-shadow);
+    --ac-shadow-secondary: var(--sp-primary-soft);
+
+    background: var(--sp-surface);
+    color: var(--sp-text);
+    border-radius: var(--sp-r-xl);
+}
+
+.app-shell[data-app-id="scene-play"] .sp-modal .ac-modal-title {
+    color: var(--sp-text);
+    font-size: 15px;
+    font-weight: 700;
+}
+.app-shell[data-app-id="scene-play"] .sp-modal .ac-modal-subtitle {
+    color: var(--sp-text-tertiary);
+    font-size: 11px;
+}
+
+.app-shell[data-app-id="scene-play"] .sp-modal .ac-modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    /* 内容多的弹窗(新建情景)自己滚,别把整个弹窗顶出屏幕 */
+    max-height: 58vh;
+    overflow-y: auto;
+    color: var(--sp-text);
+}
+
+.app-shell[data-app-id="scene-play"] .sp-modal .ac-modal-footer {
+    display: flex;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="scene-play"] .sp-modal .ac-btn {
+    flex: 1 1 0;
+    padding: 9px 12px;
+    border: 1px solid var(--sp-btn-border);
+    border-radius: var(--sp-r-pill);
+    background: var(--sp-btn-bg);
+    color: var(--sp-btn-text);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 0 var(--sp-btn-shadow);
+    transition: transform 0.16s var(--sp-bounce), box-shadow 0.16s var(--sp-ease);
+}
+.app-shell[data-app-id="scene-play"] .sp-modal .ac-btn:active {
+    transform: translateY(2px);
+    box-shadow: 0 0 0 var(--sp-btn-shadow);
+}
+.app-shell[data-app-id="scene-play"] .sp-modal .ac-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.app-shell[data-app-id="scene-play"] .sp-modal .ac-btn-primary {
+    background: var(--sp-primary);
+    border-color: var(--sp-primary);
+    color: var(--sp-on-primary);
+}
+.app-shell[data-app-id="scene-play"] .sp-modal .ac-btn-danger {
+    background: var(--sp-danger);
+    border-color: var(--sp-danger);
+    color: var(--sp-text-inverse);
+}
+
+.app-shell[data-app-id="scene-play"] .sp-modal-text {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.75;
+    color: var(--sp-text-secondary);
+}
+.app-shell[data-app-id="scene-play"] .sp-modal-warn {
+    margin: 0;
+    padding: 9px 11px;
+    border-radius: var(--sp-r);
+    background: var(--sp-primary-soft);
+    color: var(--sp-danger);
+    font-size: 11.5px;
+    line-height: 1.65;
+}

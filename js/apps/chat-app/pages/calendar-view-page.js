@@ -17,26 +17,13 @@
 
 import { escapeHtml } from '@/src/core/escape.js';
 import { renderTextBubble } from '../components/text-bubble.js';
-import { getAiMeta, resolveContactDisplay } from '../aiMeta.js';
+import { getAiMeta, resolveContactDisplay, resolveAiAvatar, resolveUserAvatar } from '../aiMeta.js';
 
 // Demo 联系人(与 chat-settings-page.js / chat-page.js 共享,后续 Phase 接入 IndexedDB)
-const DEMO_CONTACTS = {
-    'ai-1': { id: 'ai-1', name: '小美' },
-    'ai-2': { id: 'ai-2', name: '小明' },
-    'ai-3': { id: 'ai-3', name: '小蓝' },
-    'ai-4': { id: 'ai-4', name: '小红' },
-    'group-1': { id: 'group-1', name: '游戏群' },
-};
+// ★ v0.80:移除占位联系人(小美/小明/小蓝/小红/游戏群) — 真实联系人走 SDK。
+const DEMO_CONTACTS = {};
 
-// 头像背景色工具(与 chat-settings-page 同款)
-function getAvatarColor(id) {
-    const palette = ['#A8C8EC', '#F4A6CD', '#B8D4F0', '#FFD4E5', '#C8E6F4', '#FFC8DD', '#B8E6CF', '#D4B8F0'];
-    let hash = 0;
-    for (let i = 0; i < (id || '').length; i++) {
-        hash = (hash * 31 + id.charCodeAt(i)) & 0xffffffff;
-    }
-    return palette[Math.abs(hash) % palette.length];
-}
+// ★ v0.71 头像背景色已统一到 aiMeta.resolveAiAvatar,删除本地 getAvatarColor 重复实现
 
 // 月份中文名
 const MONTH_NAMES = ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'];
@@ -224,7 +211,9 @@ function renderCalendarMonth(year, month, chatDates, aiPersonId, mode) {
         if (isToday) classes.push('is-today');
         if (isWeekend) classes.push('is-weekend');
 
-        // 只在「有聊天记录」时挂 data-app-action → framework 顶层 click 委托派发
+        // ★ 保留点击日期展开面板的逻辑——用户需求是「关闭按钮太丑」，不点也不需要关闭
+        //   - data-app-action 继续挂，由 framework 顶层 click 委托派发到 viewCalendarDay
+        //   - viewCalendarDay method 仍要恢复成真正的「展开当天面板」实现
         const actionAttr = hasChat
             ? ` data-app-action='${escapeHtml(JSON.stringify({
                 action: 'appMethod',
@@ -295,15 +284,13 @@ function renderCalendarMonth(year, month, chatDates, aiPersonId, mode) {
  * @param {Array} [daySummaries] - 当天已生成的 L1 概要
  * @param {string} [aiPersonId] - 当前 AI 人设 id(给 action 派发用)
  * @param {string} [mode] - 'calendar' | 'story'
+ * @param {Object} [options] - 可选配置
+ * @param {string} [options.userAvatar] - 用户头像 URL
+ * @param {string} [options.userAvatarBg] - 用户头像背景色
  * @returns {string} HTML
  */
-function renderCalendarDayPanel(dateKey, messages, contact, daySummaries = [], aiPersonId = '', mode = 'calendar') {
+function renderCalendarDayPanel(dateKey, messages, contact, daySummaries = [], aiPersonId = '', mode = 'calendar', options = {}) {
     const list = Array.isArray(messages) ? messages : [];
-    const closeAction = JSON.stringify({
-        action: 'appMethod',
-        appId: 'chat',
-        method: 'closeCalendarDay',
-    });
 
     // 把「2026-08-05」格式化成「2026年8月5日」
     const dateDisplay = toDateDisplay(dateKey);
@@ -315,9 +302,6 @@ function renderCalendarDayPanel(dateKey, messages, contact, daySummaries = [], a
                     <div class="cdd-header-left">
                         <div class="cdd-date">${dateDisplay}</div>
                     </div>
-                    <button class="cdd-close-btn" type="button" aria-label="关闭" data-app-action='${escapeHtml(closeAction)}'>
-                        <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                    </button>
                 </div>
                 <div class="cdd-empty">这一天还没有聊天记录</div>
             </div>
@@ -341,14 +325,14 @@ function renderCalendarDayPanel(dateKey, messages, contact, daySummaries = [], a
         };
     }).filter((m) => m.type !== 'system' && m.type !== 'call_record');
 
-    // ★ v0.61.x 日历视图聊天记录区使用简化气泡：
-    //   - text / sticker 走 renderTextBubble 保持原貌(文本/表情包图片)
-    //   - 其它特殊消息(地点/图片描述/语音/红包/转账/聊天记录/通话记录)
-    //     全部转成 [类型]摘要 的纯文本标签,避免在日历列表里堆复杂卡片
+    // ★ v0.31 把 userAvatar/userAvatarBg 透传到 renderTextBubble
+    //   跟 chat-page.js 同款:日历视图里的用户消息也用真实社媒头像
+    const userAvatar = options?.userAvatar || '';
+    const userAvatarBg = options?.userAvatarBg || '';
     const bubblesHtml = displayMessages.map((m) => {
         const simplified = summarizeMessageForList(m);
         const simplifiedMsg = { ...m, type: simplified.type, content: simplified.content, url: simplified.url };
-        return renderTextBubble(simplifiedMsg, contact);
+        return renderTextBubble(simplifiedMsg, contact, { userAvatar, userAvatarBg, aiPersonId, mode });
     }).join('');
 
     // 消息计数文案
@@ -358,18 +342,15 @@ function renderCalendarDayPanel(dateKey, messages, contact, daySummaries = [], a
 
     return `
         <div class="calendar-date-detail" data-date="${escapeHtml(dateKey)}">
-            <!-- 顶部：日期 + 计数 + 关闭按钮 -->
+            <!-- 顶部：日期 + 计数（关闭按钮已去除，参考"日历上的日期 div 关闭"逻辑） -->
             <div class="cdd-header">
                 <div class="cdd-header-left">
                     <div class="cdd-date">${dateDisplay}</div>
                     <div class="cdd-count">${msgCountText}</div>
                 </div>
-                <button class="cdd-close-btn" type="button" aria-label="关闭" data-app-action='${escapeHtml(closeAction)}'>
-                    <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                </button>
 </div>
 
-            <!-- 当日概要区（v0.66:已生成概要时显示概要内容 + 「应用到 prompt 管理」按钮） -->
+            <!-- 当日概要区（v0.66:已生成概要时显示概要内容；"已应用到 Prompt 管理"按钮已去除） -->
             <div class="cdd-summary">
                 <div class="cdd-summary-head">
                     <svg viewBox="0 0 24 24" class="cdd-section-icon"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" fill="#4A6FA5"/></svg>
@@ -390,24 +371,10 @@ function renderCalendarDayPanel(dateKey, messages, contact, daySummaries = [], a
                     const ordered = sums.slice().sort((a, b) => (Number(b.generatedAt) || 0) - (Number(a.generatedAt) || 0));
                     return ordered.map((s) => {
                         const content = String(s.content || '').trim();
-                        const short = content.length > 160 ? content.slice(0, 160) + '…' : content;
-                        const isActive = s.asPrompt && s.asPrompt.active !== false;
                         return `
                         <div class="cdd-summary-card" data-summary-id="${escapeHtml(s.id)}">
                             <div class="cdd-summary-card-title">${escapeHtml(s.title || '概要')}</div>
-                            <div class="cdd-summary-card-body">${escapeHtml(short)}</div>
-                            <div class="cdd-summary-card-actions">
-                                <button type="button" class="cdd-summary-apply-btn ${isActive ? 'is-applied' : ''}"
-                                    ${isActive ? 'disabled' : ''}
-                                    data-app-action='${escapeHtml(JSON.stringify({
-                                        action: 'appMethod',
-                                        appId: 'chat',
-                                        method: 'applyMemorySummaryToPromptManager',
-                                        payload: { aiPersonId, mode, summaryId: s.id },
-                                    }))}'>
-                                    ${isActive ? '已应用到 Prompt 管理' : '应用到 Prompt 管理'}
-                                </button>
-                            </div>
+                            <div class="cdd-summary-card-body">${escapeHtml(content)}</div>
                         </div>`;
                     }).join('');
                 })()}
@@ -479,7 +446,7 @@ export function renderCalendarViewPage(app, contactId) {
             avatarBg: aiMeta.avatarBg,
         };
 
-    const avatarColor = contact.avatarBg || getAvatarColor(contact.id);
+    const avatarColor = contact.avatarBg || resolveAiAvatar(contact.id).bg;
     const avatarText = (contact.name || '?').charAt(0);
 
     const now = new Date();
@@ -541,33 +508,6 @@ export function renderCalendarViewPage(app, contactId) {
         </div>
     `;
 
-    // 上下文加载方式卡片（v0.65 重写：换成可编辑的 AI Prompt 文本框）
-    //   - 文本框内容会被作为「上下文」拼到 AI 的 systemPrompt 里
-    //   - 文本中可用 {{aiName}} {{userName}} {{dateRange}} {{messages}} 占位
-    //   - 文本持久化到 localStorage,key = xiaoting::calendar-prompt-template-{aiPersonId}-{mode}
-    const promptTemplate = (() => {
-        try {
-            const key = `xiaoting::calendar-prompt-template-${aiPersonId}-${mode}`;
-            const saved = localStorage.getItem(key);
-            if (saved && typeof saved === 'string') return saved;
-        } catch (_) {}
-        // 默认模板:告诉 AI 怎么根据上下文压缩聊天
-        return `你是一个逻辑清晰严谨的人。请根据以下两个人（{{userName}} 和 {{aiName}}）在 {{dateRange}} 的对话记录进行摘要整理,要求:\n1. 保留关键事件 / 情感转折 / 重要话题\n2. 用客观简练的语言,不添加原对话没有的信息\n3. 按时间顺序分段,每段不超过 3 句话\n4. 输出 Markdown 格式,标题用「## 日期」,正文用项目符号\n\n---\n{{messages}}`;
-    })();
-    const contextCardHtml = `
-        <div class="calendar-context-card">
-            <div class="calendar-section-title">
-                <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="#4A6FA5"/></svg>
-                <span>发给 AI Prompt（用于概要整理）</span>
-            </div>
-            <textarea class="calendar-prompt-textarea"
-                data-ai-person-id="${escapeHtml(aiPersonId)}"
-                data-mode="${escapeHtml(mode)}"
-                placeholder="写一段发给 AI 的 prompt,用于概要整理。{{aiName}} {{userName}} {{dateRange}} {{messages}} 是占位符"
-                rows="6">${escapeHtml(promptTemplate)}</textarea>
-        </div>
-    `;
-
     // 日历卡片
     // ★ 初始打开 / 重画时:如果在持久化状态里有「当前选中的日期」,直接展开当天面板
     const persistedSelected = (() => {
@@ -602,6 +542,10 @@ export function renderCalendarViewPage(app, contactId) {
         } catch (_) {}
         return map;
     })();
+    // ★ v0.87:把 userAvatar/userAvatarBg 透传到当日面板,让用户消息用真实社媒头像
+    const userAv = resolveUserAvatar();
+    const userAvatar = userAv.url;
+    const userAvatarBg = userAv.bg;
     const initialDayPanelHtml = persistedSelected
         ? renderCalendarDayPanel(
             persistedSelected,
@@ -610,6 +554,7 @@ export function renderCalendarViewPage(app, contactId) {
             summariesByDate[persistedSelected] || [],
             aiPersonId,
             mode,
+            { userAvatar, userAvatarBg },
         )
         : '';
 
@@ -627,7 +572,6 @@ export function renderCalendarViewPage(app, contactId) {
             ${headerBarHtml}
             <div class="chat-calendar-view-page">
                 ${headerHtml}
-                ${contextCardHtml}
                 ${calendarCardHtml}
             </div>
         </div>
@@ -636,5 +580,5 @@ export function renderCalendarViewPage(app, contactId) {
 
 export default renderCalendarViewPage;
 
-// 供 index.js 在 viewCalendarDay method 里复用,避免重复实现
+// 供 index.js 复用
 export { renderCalendarDayPanel, groupMessagesByDate, toDateKey, toDateDisplay, toTimeText };

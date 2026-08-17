@@ -47,6 +47,7 @@ const DEFAULT_DESKTOP_CONFIG = {
     dock: {
         visible: true,
         order: [],    // App ID 列表
+        customized: false, // 用户是否手动增删或调整过 Dock
     },
 
     // 已安装App列表（仅记录安装状态，不记录位置）
@@ -332,6 +333,7 @@ export async function migrateFromLegacyAsync(themeRaw) {
             current.dock = {
                 visible: true,
                 order: dockOrder,
+                customized: true,
             };
             migrated = true;
         }
@@ -373,7 +375,7 @@ export function migrateFromLegacy() {
                 .filter(([id, meta]) => meta && meta.visible)
                 .sort(([, a], [, b]) => (a.order || 999) - (b.order || 999))
                 .map(([appId]) => appId);
-            current.dock = { visible: true, order: dockOrder };
+            current.dock = { visible: true, order: dockOrder, customized: true };
             migrated = true;
         }
     } catch (e) {}

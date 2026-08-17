@@ -1,0 +1,36 @@
+/**
+ * 人设机 · 弹窗皮肤
+ *
+ * ⚠️ 业务钩子写**后代**选择器:AcModal 把 class 透传到根元素 `.ac-overlay`,
+ *    不是 `.ac-modal`。
+ *      .pl-modal .ac-modal-body  ✓
+ *      .pl-modal.ac-modal        ✗(永远匹配不到)
+ *
+ * ⚠️ `.ac-modal` 永远不加 `overflow: hidden` —— 关闭按钮用 `top: -10px`
+ *    故意露在弹窗外面,加了会被裁掉一半。
+ *
+ * 颜色桥接(`--ac-*` → `--pl-*`)在 `_theme.css` 里,这里只补版式。
+ */
+
+.app-shell[data-app-id="persona-lab"] .pl-modal .ac-modal-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--pl-text);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-modal .ac-modal-body {
+    padding-top: 4px;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-modal-text {
+    font-size: 13px;
+    line-height: 1.75;
+    color: var(--pl-text-secondary);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-modal .ac-modal-footer {
+    display: flex;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-modal .ac-modal-footer > * { flex: 1; }

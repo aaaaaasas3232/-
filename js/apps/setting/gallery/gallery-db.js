@@ -39,6 +39,13 @@ export async function initGalleryDb() {
     return _galleryDb.open();
 }
 
+export function closeGalleryDb() {
+    if (_galleryDb) {
+        try { _galleryDb.close(); } catch (_) {}
+        _galleryDb = null;
+    }
+}
+
 async function _withDb(fn) {
     if (!_galleryDb) {
         await initGalleryDb();
@@ -224,10 +231,9 @@ export async function deleteGroup(id) {
         const group = await db.get('groups', id);
         if (!group) throw new Error('图组不存在');
 
-        // 先删所有图片
+        // 先删所有图片（source / thumbnail 都是 base64，随记录一起删掉即可）
         const images = await db.find('images', img => img.groupId === id);
         for (const img of images) {
-            await _deleteImageBlobs(img.code, db);
             await db.remove('images', img.code);
         }
         await db.remove('groups', id);

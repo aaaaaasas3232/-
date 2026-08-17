@@ -13,13 +13,24 @@
  *   - renderEmojiPickerPanel 渲染 picker DOM 到 chat-private 末尾
  *   - data-emoji-open="1" 切显隐(emojiBtn toggle)
  *   - 工具栏「表情」按钮删除,替换为「自定义」占位
+ *
+ *  v1.0 身份转换模式:
+ *   - 工具栏「自定义」按钮改名为「身份」,点击切换 swap 模式
+ *   - 状态挂到 .chat-private[data-swap-active="1"]
+ *   - 状态值存 app.state.chat.swapMode[`<aiPersonId>::<mode>`]
+ *   - swap 模式开启后,用户发出去的消息(文字 + 图片/语音/位置/红包/转账)全部以 AI 身份显示
  */
 
 import { escapeHtml } from '@/src/core/escape.js';
 import { renderMessage, renderMessageList, renderVoiceBubble } from '../components/message-renderer.js';
-import { renderEmojiPickerPanel, _fillEmojiPickerImages } from '../components/emoji-picker-panel.js';
+import { renderEmojiPickerPanel } from '../components/emoji-picker-panel.js';
 import { chatModalManager } from '../components/chat-modal-registry.js';
-import { getAiMeta, resolveContactDisplay } from '../aiMeta.js';
+import {
+    DEFAULT_AI_AVATAR_BG,
+    resolveContactDisplay,
+    resolveAiAvatar,
+    resolveUserAvatar,
+} from '../aiMeta.js';
 
 /**
  * 把带前缀的 chatBackground 值转成 CSS 值（chat-page 私聊页专用）
@@ -87,29 +98,29 @@ function isTodayMessage(msg) {
 
 /**
  * 过滤消息列表，只保留当天的消息和当天的日期分割线
+ * ★ v0.85 修复:移除"昨天"分割线的保留,避免用户看到"昨天"但下面只有今天消息的混乱情况
  * @param {Array} messages - 原始消息数组
  * @returns {Array} 过滤后的消息数组
  */
 function filterTodayMessages(messages) {
     if (!Array.isArray(messages)) return [];
-    
+
     const result = [];
     let seenTodayDivider = false;
-    
+
     for (const msg of messages) {
         // 日期分割线(system 类型)
         if (msg.type === 'system') {
             const content = msg.content || '';
-            
+
             // 如果是当天的分割线，保留并标记
             if (content.startsWith('今天') && !seenTodayDivider) {
                 result.push(msg);
                 seenTodayDivider = true;
             }
-            // 如果是"昨天"或更早的分割线，保留但不影响是否已见当天
-            else if (content.startsWith('昨天') || /^\d+天前/.test(content)) {
-                result.push(msg);
-            }
+            // ★ v0.85 修复:不再保留"昨天"或"X天前"的分割线,
+            //   日历模式下每天只能看到当天的消息,不需要显示昨天的日期分割线
+            // 原代码:else if (content.startsWith('昨天') || /^\d+天前/.test(content)) { result.push(msg); }
             // 尝试解析日期格式 "MM/DD HH:MM"
             else {
                 const match = content.match(/^(\d{1,2})\/(\d{1,2})/);
@@ -122,13 +133,11 @@ function filterTodayMessages(messages) {
                             result.push(msg);
                             seenTodayDivider = true;
                         }
-                    } else {
-                        // 非今天的日期分割线也保留，用于显示日期
-                        result.push(msg);
                     }
+                    // ★ v0.85:非今天的日期分割线不保留
                 }
             }
-        } 
+        }
         // 普通消息，如果是当天的就保留
         else if (isTodayMessage(msg)) {
             // 如果还没见过当天的分割线，但消息是今天的，可能消息比分割线更早出现
@@ -145,7 +154,7 @@ function filterTodayMessages(messages) {
         }
         // 非今天的普通消息不保留
     }
-    
+
     return result;
 }
 
@@ -174,13 +183,11 @@ function formatMessageTime(timestamp) {
  * 把 SDK 消息记录规范成 renderMessageList 期望的形状:
  *  - 补 time 字段(从 timestamp 算出)
  *  - 补 senderName(AI 消息用 aiPerson.name,user 消息用 defaultUser.name)
- *  - 兼容 DEMO_MESSAGES 静态字段(msg.time 已经存在就直接保留)
  */
 function normalizeMessages(messages, contact) {
     if (!Array.isArray(messages)) return [];
     return messages.map((m) => {
         if (!m) return m;
-        // DEMO_MESSAGES 静态数据已经有完整字段,跳过
         if (m.time && !m.timestamp) return m;
         const ts = Number(m.timestamp) || Date.now();
         const senderName = m.senderName || (
@@ -201,114 +208,6 @@ function normalizeMessages(messages, contact) {
     });
 }
 
-// Demo 联系人数据
-const DEMO_CONTACTS = {
-    'ai-1': { id: 'ai-1', name: '小美', type: 'ai', status: 'online', avatar: null },
-    'ai-2': { id: 'ai-2', name: '小明', type: 'ai', status: 'online', avatar: null },
-    'ai-3': { id: 'ai-3', name: '小蓝', type: 'ai', status: 'offline', avatar: null },
-    'ai-4': { id: 'ai-4', name: '小红', type: 'ai', status: 'offline', avatar: null },
-    'group-1': { id: 'group-1', name: '游戏群', type: 'group' },
-};
-
-// Demo 消息数据
-const DEMO_MESSAGES = [
-    { id: 'm1', sender: 'ai', senderName: '小美', type: 'text', content: '你好呀！有什么我可以帮你的吗？', time: '14:23' },
-    { id: 'm2', sender: 'user', type: 'text', content: '你好小美，我想问一下关于 AI 助手的问题', time: '14:24' },
-    { id: 'm3', sender: 'ai', senderName: '小美', type: 'text', content: '当然可以！我是你的 AI 助手小美，可以帮你回答问题、聊天、写作、编程等各种任务。有什么具体想了解的吗？', time: '14:25' },
-    { id: 'img-1', sender: 'ai', senderName: '小美', type: 'descriptive_image', imageDescription: '阳光洒在窗台上，一只橘猫正慵懒地躺在毛茸茸的垫子上，眯着眼睛享受午后的温暖时光。背景是淡蓝色的窗帘随风轻摇。', cardColor: '#FFF3E0', textColor: '#FF9800', time: '14:26' },
-    { id: 'm4', sender: 'system', type: 'system', content: '今天 14:30' },
-    { id: 'img-2', sender: 'user', type: 'descriptive_image', imageDescription: '海边日落的壮丽景色，橙红色的晚霞映照在波光粼粼的海面上，一群海鸥在天空飞翔，远处帆船点点。', cardColor: '#E8F2FF', textColor: '#4A6FA5', time: '14:31' },
-    { id: 'm5', sender: 'user', type: 'text', content: '好的，我想了解如何更好地使用 AI 助手', time: '14:32' },
-    { id: 'm6', sender: 'ai', senderName: '小美', type: 'text', content: '使用 AI 助手的技巧：\n1. 问清楚具体的问题\n2. 分步骤提问\n3. 可以让我帮你修改润色文章\n4. 代码问题可以发给我帮你 review', time: '14:33' },
-    { id: 'm7', sender: 'user', type: 'text', content: '太棒了！谢谢小美', time: '14:35' },
-    { id: 'm8', sender: 'ai', senderName: '小美', type: 'text', content: '不客气~ 有问题随时问我哦！', time: '14:36' },
-    { id: 'm9', sender: 'system', type: 'system', content: '今天 18:00' },
-    { id: 'm10', sender: 'user', type: 'text', content: '小美，今天晚上有空吗？', time: '18:05' },
-    { id: 'm11', sender: 'ai', senderName: '小美', type: 'text', content: '晚上可以呀，怎么了？', time: '18:06' },
-    { id: 'm12', sender: 'user', type: 'text', content: '想约你一起看电影', time: '18:08' },
-    { id: 'm13', sender: 'ai', senderName: '小美', type: 'text', content: '好呀！看什么类型的电影？', time: '18:10' },
-    { id: 'm14', sender: 'user', type: 'text', content: '科幻片怎么样？', time: '18:12' },
-    { id: 'm15', sender: 'ai', senderName: '小美', type: 'text', content: '没问题，我最近也超喜欢科幻片的！', time: '18:15' },
-    { id: 'm16', sender: 'system', type: 'system', content: '昨天 20:00' },
-    { id: 'm17', sender: 'user', type: 'text', content: '小美，昨天看的电影太精彩了！', time: '昨天 20:00' },
-    { id: 'm18', sender: 'ai', senderName: '小美', type: 'text', content: '是呀！那段特效太震撼了', time: '昨天 20:05' },
-    { id: 'm19', sender: 'user', type: 'text', content: '下次再一起看~', time: '昨天 20:08' },
-    { id: 'm20', sender: 'ai', senderName: '小美', type: 'text', content: '好呀！期待下一次~', time: '昨天 20:10' },
-    { id: 'm21', sender: 'system', type: 'system', content: '1天前 晚安' },
-    { id: 'm22', sender: 'ai', senderName: '小蓝', type: 'text', content: '晚安~', time: '1天前 晚安' },
-    { id: 'm23', sender: 'user', type: 'text', content: '早安小美！新的一天开始了', time: '今天 07:30' },
-    { id: 'm24', sender: 'ai', senderName: '小美', type: 'text', content: '早安！今天天气真不错呀，感觉心情也变好了呢~', time: '今天 07:32' },
-    { id: 'm25', sender: 'user', type: 'text', content: '是啊，感觉今天会有好事发生', time: '今天 07:33' },
-    { id: 'm26', sender: 'ai', senderName: '小美', type: 'text', content: '那祝你今天一切顺利哦！有什么计划吗？', time: '今天 07:35' },
-    { id: 'm27', sender: 'user', type: 'text', content: '今天要开会，然后下午有个项目要交付', time: '今天 07:36' },
-    { id: 'm28', sender: 'ai', senderName: '小美', type: 'text', content: '加油！相信你一定可以顺利完成任务的~', time: '今天 07:38' },
-    { id: 'm29', sender: 'system', type: 'system', content: '今天 08:00' },
-    { id: 'm30', sender: 'user', type: 'text', content: '对了，晚上要不要一起吃饭？', time: '今天 08:02' },
-    { id: 'm31', sender: 'ai', senderName: '小美', type: 'text', content: '好啊！去哪里吃？你选地方~', time: '今天 08:05' },
-    { id: 'm32', sender: 'user', type: 'text', content: '上次去的那家日料店怎么样？', time: '今天 08:06' },
-    { id: 'm33', sender: 'ai', senderName: '小美', type: 'text', content: '那家很好吃！刺身特别新鲜，就去那里吧~', time: '今天 08:08' },
-    { id: 'm34', sender: 'user', type: 'text', content: '好的，那晚上几点见？', time: '今天 08:10' },
-    { id: 'm35', sender: 'ai', senderName: '小美', type: 'text', content: '七点怎么样？在老地方见~', time: '今天 08:12' },
-    { id: 'm36', sender: 'user', type: 'text', content: '没问题，不见不散！', time: '今天 08:15' },
-    { id: 'm37', sender: 'ai', senderName: '小美', type: 'text', content: '嗯嗯，等你哦~ 上班加油！', time: '今天 08:16' },
-    { id: 'm38', sender: 'system', type: 'system', content: '今天 09:15' },
-    { id: 'm39', sender: 'ai', senderName: '小美', type: 'text', content: '刚才发给你的那个文档看了吗？', time: '今天 09:15' },
-    { id: 'm40', sender: 'user', type: 'text', content: '看了，写的很详细，有几个地方想请教一下', time: '今天 09:20' },
-    { id: 'm41', sender: 'ai', senderName: '小美', type: 'text', content: '好的，你说~ 我详细给你讲解', time: '今天 09:22' },
-    { id: 'm42', sender: 'user', type: 'text', content: '这个第三段的方案感觉有点复杂，有没有更简单的实现方式？', time: '今天 09:25' },
-    { id: 'm43', sender: 'ai', senderName: '小美', type: 'text', content: '其实可以用一个更简单的思路，我给你画个图说明一下...', time: '今天 09:28' },
-    { id: 'm44', sender: 'user', type: 'text', content: '哇，这样清晰多了！明白了', time: '今天 09:30' },
-    { id: 'm45', sender: 'ai', senderName: '小美', type: 'text', content: '有问题随时问哦~', time: '今天 09:32' },
-    {
-        id: 'cr-voice-1', sender: 'system', type: 'call_record', time: '今天 14:00',
-        callRecord: {
-            id: 'cr-voice-1', callType: 'voice', wasConnected: true, duration: 326,
-            timestamp: Date.now() - 3 * 3600 * 1000,
-            summary: '聊了下周末去哪儿吃饭、推荐了新开的那家日料店,顺便撒娇说最近有点累想休息',
-            messages: [
-                { role: 'user', content: '小美,周末要不要一起吃饭呀?', time: '14:00' },
-                { role: 'ai', content: '好呀!你有什么想吃的吗?上次那家日料店我还挺想再去的~', time: '14:01' },
-                { role: 'user', content: '我也正想说那家店呢!晚上七点?', time: '14:02' },
-                { role: 'ai', content: '没问题,我订个位~今天有点累,吃完想回家躺一会儿', time: '14:05' },
-                { role: 'user', content: '工作辛苦啦,那我请你吃大餐补补', time: '14:10' },
-                { role: 'ai', content: '(撒娇)那我要吃三文鱼、烤鳗鱼还有甜虾哦~谢谢老公~', time: '14:12' },
-                { role: 'user', content: '都依你', time: '14:14' },
-                { role: 'ai', content: '嘻嘻,那我先去忙了,晚上见~', time: '14:15' },
-                { role: 'user', content: '好,晚上见', time: '14:16' },
-            ],
-        },
-    },
-    {
-        id: 'cr-video-1', sender: 'system', type: 'call_record', time: '昨天 21:30',
-        callRecord: {
-            id: 'cr-video-1', callType: 'video', wasConnected: true, duration: 1825,
-            timestamp: Date.now() - 26 * 3600 * 1000,
-            summary: '视频看了一下午的旅行照片,讨论了国庆小长假去京都的计划和住宿预算',
-            messages: [
-                { role: 'user', content: '小美,我把今天的照片整理了一下,视频看看?', time: '21:30' },
-                { role: 'ai', content: '好呀!我刚洗完澡等你呢~', time: '21:31' },
-                { role: 'user', content: '看这张,在清水寺拍的,光影好好看', time: '21:35' },
-                { role: 'ai', content: '哇,这也太美了吧!你看地上的影子~下次我们也去吧?', time: '21:36' },
-                { role: 'user', content: '国庆节?正好七天假', time: '21:40' },
-                { role: 'ai', content: '太好了!那我们早点订机票和住宿,京都秋天红叶超美的~', time: '21:42' },
-                { role: 'user', content: '预算大概多少?机票+酒店', time: '21:46' },
-                { role: 'ai', content: '我查了下,人均五六千左右应该够住好一些的町屋了', time: '21:48' },
-                { role: 'user', content: '那就这么定了!我去做攻略', time: '21:55' },
-                { role: 'ai', content: '辛苦啦~我先去吹头发啦,晚安~', time: '22:00' },
-                { role: 'user', content: '晚安,做美梦~', time: '22:01' },
-            ],
-        },
-    },
-    { id: 'loc-1', sender: 'ai', senderName: '小美', type: 'location', time: '今天 13:00', locationCard: { name: '上海中心大厦', address: '上海市浦东新区陆家嘴环路 501 号', lat: 31.2335, lng: 121.5054 } },
-    { id: 'loc-2', sender: 'user', type: 'location', time: '今天 13:15', locationCard: { name: '那家日料店', address: '上海市黄浦区南京东路 100 号 3 楼', lat: 31.2360, lng: 121.4800 } },
-    { id: 'rp-1', sender: 'ai', senderName: '小美', type: 'redpacket', time: '今天 14:00', redpacketCard: { style: 'normal', message: '今天心情好,请你喝奶茶~', opened: false } },
-    { id: 'rp-2', sender: 'user', type: 'redpacket', time: '今天 14:30', redpacketCard: { style: 'opened', message: '恭喜发财,大吉大利', opened: true, amount: 88.88 } },
-    { id: 'rp-3', sender: 'ai', senderName: '小强', type: 'redpacket', time: '昨天 20:15', redpacketCard: { style: 'expired', message: '生日快乐呀~', opened: false, expired: true } },
-    { id: 'rp-4', sender: 'ai', senderName: '群活动', type: 'redpacket', time: '昨天 19:00', redpacketCard: { style: 'cover', coverTitle: '口令红包', coverSubtitle: '发送口令领取', message: '大吉大利', opened: false } },
-    { id: 'transfer-1', sender: 'ai', senderName: '老王', type: 'transfer', time: '今天 10:30', transferCard: { amount: 200.00, note: '还款', received: false } },
-    { id: 'transfer-2', sender: 'user', type: 'transfer', time: '今天 10:35', transferCard: { amount: 500.00, note: '房租', received: true } },
-];
-
 // 渲染工具栏按钮
 function renderToolbarButton(action, label, iconSvg) {
     return `
@@ -327,8 +226,6 @@ function renderToolbarButton(action, label, iconSvg) {
  *   pageId 格式: `private-<aiPersonId>-<mode>`
  *   contactId 参数 = `private-<aiPersonId>-${mode}` 拦截剩下的部分
  *   解析得到 aiPersonId + mode,从 sdk.chatFriends 读取对应 entry。
- *
- *   兼容:contactId 仍可能传旧的副本 id,先尝试 parse 失败再 fallback DEMO_CONTACTS。
  */
 export function renderPrivateChatPage(app, contactId) {
     let contact = { id: contactId, name: '未知联系人', status: 'offline', type: 'ai' };
@@ -373,34 +270,37 @@ export function renderPrivateChatPage(app, contactId) {
                 chatBackground: entry.chatBackground || '', // 聊天背景 per-mode 保留 entry 快照
                 status: 'online',
             };
-        } else {
-            // 兜底:DEMO_CONTACTS(老路径)
-            const legacy = DEMO_CONTACTS[contactId];
-            if (legacy) contact = legacy;
         }
+        // ★ 已移除 DEMO_CONTACTS fallback — 没真实联系人就保持「未知联系人」
     } catch (_) {}
 
-    const statusText = contact.status === 'online' ? '在线' : '离线';
-    const statusColor = contact.status === 'online' ? '#4CAF50' : '#999';
+    // ★ 已删除:statusText / statusColor(原用于 chat-header-status「在线」展示)
 
-    // ★ v0.30 加载真实消息:SDK 就绪时从 chatMessages 拉消息,否则用 DEMO_MESSAGES
-    //   - 真实消息需要补 time / senderName 字段(demo 已有)
-    //   - DEMO_MESSAGES 静态数据留着做冷启动 fallback + 老路径兼容
-    let messages = DEMO_MESSAGES;
+    // ★ v0.30 加载真实消息:SDK 就绪时从 chatMessages 拉消息
+    //   - 真实消息需要补 time / senderName 字段
+    //   ★ v0.71 fix:不要用预设 DEMO 兜底,否则 SDK 加载完后会再渲染一遍假数据,
+    //     表现为"清空聊天记录后界面又出现假数据"。
+    //   ★ v0.80 fix:也不要在 SDK 未就绪时回退占位消息 — 统一用空数组兜底,
+    //     等待 chat:message-sent / syncNow 渲染真实数据。
+    let messages = [];
     try {
         const sdk = window.settingsSdk;
-        // ★ LOG-4: renderPrivateChatPage 读消息前
-        console.log('[LOG-4][renderPrivate] contactId=', contactId, 'aiPersonId=', aiPersonId, 'mode=', mode, 'sdk?=', !!sdk, 'chatMessages?=', !!sdk?.chatMessages, 'cacheMapSize=', sdk?.chatMessages?._cacheSize?.() ?? 'N/A');
         if (sdk?.chatMessages?.list) {
             const realMessages = sdk.chatMessages.list(null, aiPersonId, mode);
-            // ★ LOG-5: 读到消息后
-            console.log('[LOG-5][renderPrivate] realMessages.length=', realMessages?.length, 'using real?=', Array.isArray(realMessages) && realMessages.length > 0, 'types=', realMessages?.slice(-5).map(m => m.type).join(','));
             if (Array.isArray(realMessages) && realMessages.length > 0) {
-                messages = realMessages;
+                // ★ v0.68 过滤:通话系统提示(call_end_notice)和通话中消息(call_chat)
+                //   不渲染在普通聊天界面里 — 它们属于通话页内的内容
+                //   call_record 卡片保留(用户在私聊页能看到通话记录入口)
+                messages = realMessages.filter((m) => {
+                    if (!m) return false;
+                    if (m.type === 'call_end_notice') return false;
+                    if (m.type === 'call_chat') return false;
+                    return true;
+                });
             }
         }
     } catch (err) {
-        console.warn('[chat-page] load real messages failed, fallback to DEMO:', err);
+        console.warn('[chat-page] load real messages failed:', err);
     }
 
     // ★ v0.61.8 过滤消息列表:只显示当天的消息,隐藏之前的聊天记录
@@ -440,49 +340,13 @@ export function renderPrivateChatPage(app, contactId) {
         }
     } catch (_) {}
 
-    // ★ v0.61.3 滚动摘要 K 链压缩(异步,fire-and-forget,不阻塞 renderPage)
-    //   - 用户在 chat-settings 配置的 contextRounds + rollingEnabled 决定是否触发
-    //   - 压缩成功时只通知灵动岛,不自动重画(避免死循环)
-    try {
-        const sdk = window.settingsSdk;
-        if (sdk?.rollingSummaries?.compressIfNeeded) {
-            const cfg = sdk.rollingSummaries.getRollingConfig?.(aiPersonId);
-            if (cfg?.enabled) {
-                sdk.rollingSummaries.compressIfNeeded(aiPersonId, mode, messages, {
-                    contextRounds: cfg.contextRounds,
-                    kMergeSize: cfg.kMergeSize,
-                    maxChainLength: cfg.maxChainLength,
-                }).then((res) => {
-                    if (res?.compressed) {
-                        try {
-                            window.__phoneIsland?.notify?.('info',
-                                '已生成滚动摘要',
-                                `K 链现有 ${res.chainLength} 个 K`);
-                        } catch (_) {}
-                    }
-                }).catch((err) => {
-                    console.warn('[chat-page] rolling compress failed', err);
-                });
-            }
-        }
-    } catch (_) {}
-
     // 使用组件系统渲染消息列表
     // ★ v0.32 userAvatar / userAvatarBg:从 SDK 拿当前 user 社媒头像,
     //   让用户消息气泡(self avatar)也用真实头像,不再是固定「我」+ #F4A6CD
-    let userAvatar = '';
-    let userAvatarBg = '';
-    try {
-        const sdk = window.settingsSdk;
-        if (sdk?.users?.getActive) {
-            const activeUser = sdk.users.getActive();
-            if (activeUser) {
-                const chatProfile = activeUser.socialProfiles?.chat || {};
-                userAvatar = chatProfile.avatar || activeUser.avatar || '';
-                userAvatarBg = chatProfile.avatarBg || activeUser.avatarBg || '';
-            }
-        }
-    } catch (_) {}
+    // ★ v0.71 统一头像来源:走 aiMeta.resolveUserAvatar()
+    const userAv = resolveUserAvatar();
+    const userAvatar = userAv.url;
+    const userAvatarBg = userAv.bg;
     const messageListHtml = renderMessageList(
         normalizeMessages(messages, contact),
         contact,
@@ -534,17 +398,27 @@ export function renderPrivateChatPage(app, contactId) {
     try {
         emojiOpen = !!(app?.state?.chat?.emojiOpen);
     } catch (_) {}
+
+    // ★ v1.0 身份转换模式开关:读取 app.state.chat.swapMode[`<aiPersonId>::<mode>`]
+    //   - true → data-swap-active="1"(CSS 切到粉色 + 工具栏底显示提示条)
+    //   - 切换在 index.js 的 toolBtn click handler / toggleSwapMode() 完成
+    let swapActive = false;
+    try {
+        const key = `${aiPersonId}::${mode}`;
+        swapActive = !!(app?.state?.chat?.swapMode?.[key]);
+    } catch (_) {}
     const chatPrivateClass = `chat-private chat-${mode}${multiSelectActive ? ' multi-select-mode' : ''}`;
     const chatPrivateDataEmoji = emojiOpen ? ' data-emoji-open="1"' : '';
+    const chatPrivateDataSwap = swapActive ? ' data-swap-active="1"' : '';
 
     // 工具栏按钮 SVG
     const toolbarButtons = `
         ${renderToolbarButton('image', '图片', '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/><polyline points="21 15 16 10 5 21" fill="none" stroke="currentColor" stroke-width="2"/></svg>')}
         ${renderToolbarButton('voice', '语音', '<svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M19 10v2a7 7 0 0 1-14 0v-2" fill="none" stroke="currentColor" stroke-width="2"/><line x1="12" y1="19" x2="12" y2="23" stroke="currentColor" stroke-width="2"/><line x1="8" y1="23" x2="16" y2="23" stroke="currentColor" stroke-width="2"/></svg>')}
-        ${renderToolbarButton('custom', '自定义', '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="3 2"/><line x1="9" y1="12" x2="15" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="9" x2="12" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>')}
+        ${renderToolbarButton('custom', '身份', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11h.01"/><path d="M14 6h.01"/><path d="M18 6h.01"/><path d="M6.5 13.1h.01"/><path d="M22 5c0 9-4 12-6 12s-6-3-6-12c0-2 2-3 6-3s6 1 6 3"/><path d="M17.4 9.9c-.8.8-2 .8-2.8 0"/><path d="M10.1 7.1C9 7.2 7.7 7.7 6 8.6c-3.5 2-4.7 3.9-3.7 5.6 4.5 7.8 9.5 8.4 11.2 7.4.9-.5 1.9-2.1 1.9-4.7"/><path d="M9.1 16.5c.3-1.1 1.4-1.7 2.4-1.4"/></svg>')}
         ${renderToolbarButton('location', '位置', '<svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="10" r="3" fill="none" stroke="currentColor" stroke-width="2"/></svg>')}
-        ${renderToolbarButton('redpacket', '红包', '<svg viewBox="0 0 24 24"><path d="M20 12v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 12h16v-2a2 2 0 0 0-4-2H8a2 2 0 0 0-4 2v2z" fill="none" stroke="currentColor" stroke-width="2"/></svg>')}
-        ${renderToolbarButton('transfer', '转账', '<svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 8v8m-4-4h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>')}
+        ${renderToolbarButton('redpacket', '红包', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 17h3v2a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-3a3.16 3.16 0 0 0 2-2h1a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1h-1a5 5 0 0 0-2-4V3a4 4 0 0 0-3.2 1.6l-.3.4H11a6 6 0 0 0-6 6v1a5 5 0 0 0 2 4v3a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1z"/><path d="M16 10h.01"/><path d="M2 8v1a2 2 0 0 0 2 2h1"/></svg>')}
+        ${renderToolbarButton('transfer', '转账', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/></svg>')}
         ${renderToolbarButton('call', '通话', '<svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" fill="none" stroke="currentColor" stroke-width="2"/></svg>')}
         ${renderToolbarButton('favorite', '收藏', '<svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" fill="none" stroke="currentColor" stroke-width="2"/></svg>')}
     `;
@@ -572,7 +446,7 @@ export function renderPrivateChatPage(app, contactId) {
     const rawMessagesAttr = ` data-raw-messages="${escapeHtml(JSON.stringify(compactMessages))}"`;
 
     return `
-        <div class="${chatPrivateClass}" data-contact-id="${escapeHtml(contactId)}" data-mode="${escapeHtml(mode)}" data-conversation-type="private" data-conversation-id="${escapeHtml(aiPersonId)}" data-conversation-name="${escapeHtml(contact.name)}"${bgAttr}${rawMessagesAttr}${chatPrivateDataEmoji}>
+        <div class="${chatPrivateClass}" data-contact-id="${escapeHtml(contactId)}" data-mode="${escapeHtml(mode)}" data-conversation-type="private" data-conversation-id="${escapeHtml(aiPersonId)}" data-conversation-name="${escapeHtml(contact.name)}"${bgAttr}${rawMessagesAttr}${chatPrivateDataEmoji}${chatPrivateDataSwap}>
             <!-- 顶部栏 -->
             <div class="chat-header">
                 <div class="chat-header-left">
@@ -581,30 +455,28 @@ export function renderPrivateChatPage(app, contactId) {
                             <polyline points="15 18 9 12 15 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </button>
-                    <div class="chat-header-avatar" style="background: ${escapeHtml(contact.avatarBg || '#A8C8EC')};">
+                    <div class="chat-header-avatar" style="background: ${escapeHtml(contact.avatarBg || DEFAULT_AI_AVATAR_BG)};">
                         ${contact.avatar
                             ? `<img src="${escapeHtml(contact.avatar)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;" />`
                             : escapeHtml((contact.name || '?').charAt(0))}
                     </div>
                     <div class="chat-header-info">
                         <div class="chat-header-name">${escapeHtml(contact.name)}</div>
-                        <div class="chat-header-status" data-status="${contact.status}">
-                            <span class="status-dot" style="background: ${statusColor};"></span>
-                            ${escapeHtml(statusText)}
-                        </div>
+                        <!-- ★ 已删除:chat-header-status「在线」标签不再展示 -->
                     </div>
                 </div>
             <div class="chat-header-right">
                     <div class="header-actions">
+                        <!-- ★ v0.67.x 修复:补 payload { aiPersonId, mode },触发后 triggerVoiceCall 才能拿到联系人上下文 -->
                         <button class="header-btn"
-                            data-app-action='{"action":"appMethod","appId":"chat","method":"triggerVoiceCall"}'
+                            data-app-action='${escapeHtml(JSON.stringify({ action: 'appMethod', appId: 'chat', method: 'triggerVoiceCall', payload: { aiPersonId, mode } }))}'
                             title="语音通话">
                             <svg viewBox="0 0 24 24">
                                 <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" fill="none" stroke="currentColor" stroke-width="2"/>
                             </svg>
                         </button>
                         <button class="header-btn"
-                            data-app-action='{"action":"appMethod","appId":"chat","method":"triggerVideoCall"}'
+                            data-app-action='${escapeHtml(JSON.stringify({ action: 'appMethod', appId: 'chat', method: 'triggerVideoCall', payload: { aiPersonId, mode } }))}'
                             title="视频通话">
                             <svg viewBox="0 0 24 24">
                                 <polygon points="23 7 16 12 23 17 23 7" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -771,17 +643,13 @@ export function openAiRemarkModal(contactId, mode) {
         effectiveMode = parts[1] || mode || 'calendar';
     }
 
-    console.log('[chat] openAiRemarkModal', { contactId, aiPersonId, mode, effectiveMode });
-
     const defaultUser = sdk?.defaultUserCard?.getDefault?.() || sdk?.users?.getActive();
     const entry = (sdk && defaultUser)
         ? sdk.chatFriends?.get?.(defaultUser, aiPersonId, effectiveMode)
         : null;
 
-    console.log('[chat] openAiRemarkModal entry:', entry);
-
     const name = entry?.displayName || aiPersonId || '未知联系人';
-    const avatarBg = entry?.avatarBg || '#A8C8EC';
+    const avatarBg = resolveAiAvatar(aiPersonId).bg;
     const currentRemark = entry?.remark || '';
 
     chatModalManager.openAiRemark({
@@ -790,13 +658,10 @@ export function openAiRemarkModal(contactId, mode) {
         remark: currentRemark,
         mode: effectiveMode,
         onSave: async (remarkText) => {
-            console.log('[chat] AiRemarkModal onSave called, remarkText:', remarkText);
             // 保存备注到 SDK
             if (sdk && defaultUser) {
                 try {
-                    console.log('[chat] calling sdk.chatFriends.updateRemark', { aiPersonId, effectiveMode, remarkText });
                     await sdk.chatFriends?.updateRemark?.(sdk, defaultUser, aiPersonId, effectiveMode, remarkText);
-                    console.log('[chat] updateRemark completed');
                     window.__phoneIsland?.notify?.('success', '备注已保存', remarkText ? `「${remarkText.slice(0, 20)}...」` : '已清空备注');
                 } catch (err) {
                     console.error('[chat] save remark failed:', err);
@@ -807,7 +672,6 @@ export function openAiRemarkModal(contactId, mode) {
             }
         },
         onClose: () => {
-            console.log('[chat] AiRemarkModal onClose called');
             // 关闭后刷新聊天设置页和私聊页显示最新备注名
             setTimeout(() => {
                 // 刷新聊天设置页
@@ -824,14 +688,20 @@ export function openAiRemarkModal(contactId, mode) {
 }
 
 /**
- * 从 DEMO_MESSAGES 里反查一条通话记录
+ * 根据 callRecordId 反查一条通话记录
+ *   - 优先从当前渲染的消息列表(已包含 call_record 类型)里反查
+ *   - 找不到再回退到 SDK 的 callRecords API
+ *   - 找不到就返回 null,调用方自己处理空态
  */
 export function findDemoCallRecordById(callRecordId) {
-    for (const msg of DEMO_MESSAGES) {
-        if (msg.type === 'call_record' && msg.callRecord && msg.callRecord.id === callRecordId) {
-            return msg.callRecord;
+    if (!callRecordId) return null;
+    try {
+        const sdk = window.settingsSdk;
+        if (sdk?.callRecords?.get) {
+            const rec = sdk.callRecords.get(callRecordId);
+            if (rec) return rec;
         }
-    }
+    } catch (_) {}
     return null;
 }
 

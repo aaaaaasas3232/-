@@ -1,0 +1,493 @@
+/* 灯塔 · 我的 / 流水 / 提示词 / 配色 */
+
+/* ── 我的 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-wallet { margin-bottom: 14px; }
+
+.app-shell[data-app-id="job"] .jb-wallet__k {
+    margin: 0 0 2px;
+    font-size: 11.5px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-wallet__grid {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--jb-line-soft);
+}
+
+.app-shell[data-app-id="job"] .jb-wallet__cell {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.app-shell[data-app-id="job"] .jb-wallet__cell span {
+    font-size: 10.5px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-wallet__cell b {
+    font-size: 14px;
+    font-weight: 620;
+    color: var(--jb-text);
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="job"] .jb-wallet__note {
+    margin: 12px 0 0;
+    font-size: 11px;
+    line-height: 1.65;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-me__who { margin-bottom: 16px; }
+
+.app-shell[data-app-id="job"] .jb-me__entries {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="job"] .jb-entry {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 13px 14px;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="job"] .jb-entry:active { background: var(--jb-card-hover); }
+
+.app-shell[data-app-id="job"] .jb-entry__icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+    background: var(--jb-primary-soft);
+    color: var(--jb-primary-strong);
+}
+
+.app-shell[data-app-id="job"] .jb-entry__main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.app-shell[data-app-id="job"] .jb-entry__main b {
+    font-size: 13.5px;
+    font-weight: 580;
+    color: var(--jb-text);
+}
+
+.app-shell[data-app-id="job"] .jb-entry__main i {
+    font-style: normal;
+    font-size: 11.5px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-entry__go {
+    flex: 0 0 auto;
+    display: inline-flex;
+    color: var(--jb-text-3);
+}
+
+/* ── 流水 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-flow__sum {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.app-shell[data-app-id="job"] .jb-flow__sum span {
+    font-size: 12px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-flow__list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="job"] .jb-flowrow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 13px;
+}
+
+.app-shell[data-app-id="job"] .jb-flowrow__main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.app-shell[data-app-id="job"] .jb-flowrow__main b {
+    font-size: 12.5px;
+    font-weight: 540;
+    color: var(--jb-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="job"] .jb-flowrow__main i {
+    font-style: normal;
+    font-size: 10.5px;
+    color: var(--jb-text-3);
+}
+
+/* ── 提示词管理 ───────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-pm__stat {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 14px;
+    font-size: 11.5px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-pm__group { margin-bottom: 10px; }
+
+.app-shell[data-app-id="job"] .jb-pm__group-head {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    padding: 11px 13px;
+    border: 1px solid var(--jb-line);
+    border-radius: 13px;
+    background: var(--jb-surface);
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="job"] .jb-pm__group-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--jb-text);
+}
+
+.app-shell[data-app-id="job"] .jb-pm__group-desc {
+    flex: 1;
+    min-width: 0;
+    font-size: 11px;
+    color: var(--jb-text-3);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="job"] .jb-pm__group-count {
+    flex: 0 0 auto;
+    min-width: 20px;
+    padding: 1px 6px;
+    border-radius: 7px;
+    background: var(--jb-surface-2);
+    color: var(--jb-text-3);
+    font-size: 10.5px;
+    text-align: center;
+}
+
+.app-shell[data-app-id="job"] .jb-pm__cards {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+    padding-left: 10px;
+}
+
+.app-shell[data-app-id="job"] .jb-pmcard { padding: 13px 14px; }
+.app-shell[data-app-id="job"] .jb-pmcard.is-off { opacity: 0.52; }
+
+.app-shell[data-app-id="job"] .jb-pmcard__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 5px;
+}
+
+.app-shell[data-app-id="job"] .jb-pmcard__title {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--jb-text);
+}
+
+.app-shell[data-app-id="job"] .jb-pmcard__title i { font-style: normal; }
+
+.app-shell[data-app-id="job"] .jb-pmcard__desc {
+    margin: 0 0 4px;
+    font-size: 11.5px;
+    line-height: 1.65;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-pmcard__scenes {
+    margin: 0 0 9px;
+    font-size: 10.5px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-pmcard__body {
+    margin: 0 0 10px;
+    padding: 10px 12px;
+    max-height: 160px;
+    overflow-y: auto;
+    border-radius: 10px;
+    background: var(--jb-surface-2);
+    color: var(--jb-text-2);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    line-height: 1.75;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.app-shell[data-app-id="job"] .jb-pmcard__btns {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.app-shell[data-app-id="job"] .jb-pmcard__btns > :last-child { margin-left: auto; }
+
+.app-shell[data-app-id="job"] .jb-pm__preview-stat {
+    margin: 0 0 8px;
+    font-size: 11px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-pm__preview-body {
+    margin: 0;
+    padding: 12px;
+    max-height: 320px;
+    overflow-y: auto;
+    border-radius: 11px;
+    background: var(--jb-surface-2);
+    color: var(--jb-text-2);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10.5px;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* ── 配色 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-theme__picks {
+    display: flex;
+    gap: 9px;
+}
+
+.app-shell[data-app-id="job"] .jb-theme__pick {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 11px;
+    border: 1px solid var(--jb-line);
+    border-radius: 14px;
+    background: var(--jb-bg);
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+}
+
+.app-shell[data-app-id="job"] .jb-theme__pick.is-on {
+    border-color: var(--jb-primary);
+    box-shadow: 0 0 0 2px var(--jb-input-focus);
+}
+
+/* 小预览：三条色块，用的是那套主题自己的变量（按钮上挂了 data-jb-theme） */
+.app-shell[data-app-id="job"] .jb-theme__mini {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 26px;
+    margin-bottom: 3px;
+    padding: 5px;
+    border-radius: 8px;
+    background: var(--jb-surface);
+}
+
+.app-shell[data-app-id="job"] .jb-theme__bar {
+    width: 22px;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--jb-primary);
+}
+
+.app-shell[data-app-id="job"] .jb-theme__card {
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--jb-line);
+}
+
+.app-shell[data-app-id="job"] .jb-theme__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--jb-accent);
+}
+
+.app-shell[data-app-id="job"] .jb-theme__name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--jb-text);
+}
+
+.app-shell[data-app-id="job"] .jb-theme__desc {
+    font-size: 10.5px;
+    line-height: 1.5;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-swatch-group { margin-bottom: 8px; }
+
+.app-shell[data-app-id="job"] .jb-swatch-group__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 10px 13px;
+    border: 1px solid var(--jb-line);
+    border-radius: 12px;
+    background: var(--jb-surface);
+    text-align: left;
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 560;
+    color: var(--jb-text);
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="job"] .jb-swatch-group__count {
+    padding: 1px 7px;
+    border-radius: 7px;
+    background: var(--jb-surface-2);
+    color: var(--jb-text-3);
+    font-size: 10.5px;
+    font-weight: 400;
+}
+
+.app-shell[data-app-id="job"] .jb-swatch-group__body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+    padding-left: 8px;
+}
+
+.app-shell[data-app-id="job"] .jb-swatch {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="job"] .jb-swatch__chip {
+    position: relative;
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--jb-line-strong);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="job"] .jb-swatch__picker {
+    position: absolute;
+    inset: -4px;
+    width: calc(100% + 8px);
+    height: calc(100% + 8px);
+    padding: 0;
+    border: 0;
+    background: none;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="job"] .jb-swatch__main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.app-shell[data-app-id="job"] .jb-swatch__label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-swatch__changed {
+    padding: 0 6px;
+    border-radius: 6px;
+    background: var(--jb-accent-soft);
+    color: var(--jb-accent);
+    font-style: normal;
+    font-size: 10px;
+}
+
+.app-shell[data-app-id="job"] .jb-swatch__value {
+    width: 100%;
+    padding: 4px 8px;
+    border: 1px solid var(--jb-input-line);
+    border-radius: 8px;
+    background: var(--jb-input-bg);
+    color: var(--jb-text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    outline: none;
+}
+
+.app-shell[data-app-id="job"] .jb-swatch__token {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-swatch__reset {
+    flex: 0 0 auto;
+    padding: 4px 9px;
+    border: 1px solid var(--jb-line);
+    border-radius: 8px;
+    background: none;
+    color: var(--jb-text-3);
+    font: inherit;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="job"] .jb-batch__actions {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+}

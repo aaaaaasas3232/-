@@ -19,19 +19,15 @@
  */
 
 import { escapeHtml } from '@/src/core/escape.js';
-import { bindDescImageEvents, renderDescImageCard, renderDescImageGridItem } from '../components/desc-image-modal.js';
-import { getAiMeta } from '../aiMeta.js';
+import { renderDescImageCard, renderDescImageGridItem } from '../components/desc-image-modal.js';
+import { getAiMeta, resolveAiAvatar, resolveUserAvatar } from '../aiMeta.js';
+import { loadAllMoments, getFavoritedMomentIds } from '../services/moments-service.js';
+import { renderSwipeRow } from '@/src/core/components/swipe-actions.js';
 
 // ─── 工具函数 ───────────────────────────────────────────
 
-function getAvatarColor(id) {
-    const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F8B500', '#6C5CE7', '#A29BFE'];
-    let index = 0;
-    for (let i = 0; i < (id || '').length; i++) {
-        index += id.charCodeAt(i);
-    }
-    return colors[index % colors.length];
-}
+// ★ v0.71 头像色统一改用 aiMeta.resolveAiAvatar / resolveUserAvatar
+//   之前这里有一份 getAvatarColor(id) 重复实现,删除
 
 function formatTime(timestamp) {
     if (!timestamp) return '';
@@ -44,6 +40,33 @@ function formatTime(timestamp) {
     if (hours < 24) return `${hours}小时前`;
     if (days < 7) return `${days}天前`;
     return new Date(timestamp).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+// ─── 朋友圈滑动操作按钮 ───────────────────────────────────
+
+/**
+ * 生成朋友圈卡片的滑动操作按钮（左滑露出）。
+ * 编辑/删除按钮通过左滑手势显示，收藏按钮始终可见。
+ */
+function renderMomentSwipeActions(momentId, authorId, isUser) {
+    const mk = (method) => escapeHtml(JSON.stringify({
+        action: 'appMethod',
+        appId: 'chat',
+        method,
+        payload: { momentId, authorId, isUser },
+    }));
+    return `
+        <div class="moment-swipe-stack">
+            <button type="button" class="swipe-row__action moment-swipe-action--edit"
+                data-app-action='${mk('editMoment')}' aria-label="编辑">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+            </button>
+            <button type="button" class="swipe-row__action moment-swipe-action--delete"
+                data-app-action='${mk('deleteMoment')}' aria-label="删除">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+        </div>
+    `;
 }
 
 // ─── 单条动态卡片 ─────────────────────────────────────────
@@ -63,36 +86,21 @@ function renderMomentCard(item) {
     const content = item.content ? escapeHtml(item.content) : '';
     const timeStr = formatTime(item.timestamp || item.ts);
     const likeCount = (item.likes || []).length;
-    const commentCount = (item.comments || []).length;
 
-    // 头像
-    const avatarBg = getAvatarColor(authorId);
+    // ★ v0.71 统一头像来源:
+    //   - isUser=true → 用 resolveUserAvatar().bg (用户头像背景)
+    //   - isUser=false → 用 resolveAiAvatar(authorId).bg (AI 头像背景)
+    const avatarData = isUser
+        ? resolveUserAvatar()
+        : resolveAiAvatar(item.authorId || '');
+    const authorAvatar = item.authorAvatar || avatarData.url;
+    const avatarBg = avatarData.bg;
 
-    // 评论区 HTML (简化版:只显示评论数,点击后续 Phase 实现)
+    // 评论区域已移除(用户要求)
     let commentsHtml = '';
-    const comments = item.comments || [];
-    if (comments.length > 0) {
-        const commentItems = comments.slice(0, 3).map(c => {
-            const cAuthor = escapeHtml(c.author || c.authorName || '匿名');
-            const cContent = escapeHtml(c.content || '');
-            const cIsReply = !!c.replyTo;
-            return `
-                <div class="comment-item">
-                    <div class="comment-content">
-                        <span class="comment-author">${cAuthor}</span>
-                        ${cIsReply ? `<span class="comment-reply-tag">回复</span><span class="comment-author">${escapeHtml(c.replyTo || '')}</span>` : ''}
-                        <span class="comment-text">：${cContent}</span>
-                    </div>
-                </div>
-            `;
-        }).join('');
-        commentsHtml = `
-            <div class="moments-comments-list">
-                ${commentItems}
-                ${comments.length > 3 ? `<div class="comments-expand">展开全部 ${comments.length} 条评论</div>` : ''}
-            </div>
-        `;
-    }
+    // 原评论区代码保留注释:
+    // const comments = item.comments || [];
+    // if (comments.length > 0) { ... }
 
     // 图片区域（包括真实图片和 AI 描述图片）
     let imagesHtml = '';
@@ -180,164 +188,77 @@ function renderMomentCard(item) {
 
     // 用户标识
     const userBadge = isUser ? '<span class="moments-user-badge">(我)</span>' : '';
+    // ★ v0.87 收藏 / 编辑 / 转发 / 删除四件套,用户的和 AI 的动态一视同仁。
+    //   之前只有用户自己的卡有删除,AI 的卡什么都不能做。
+    const isFavorited = !!item._favorited;
+    const momentId = escapeHtml(item.id || '');
+    const dataAttrs = `data-moment-id="${momentId}" data-author-id="${authorId}" data-is-user="${isUser}"`;
 
-    return `
-        <div class="moments-card moment-item"
-             data-moment-id="${escapeHtml(item.id || '')}"
-             data-author-id="${authorId}"
-             data-is-user="${isUser}">
-
-            <!-- 头部:头像+名字+时间 -->
-            <div class="moments-card-header">
-                <div class="post-avatar">
-                    <div class="post-avatar-inner" data-color="${avatarBg}">
-                        ${item.authorAvatar
-                            ? `<img src="${escapeHtml(item.authorAvatar)}" alt="" class="post-avatar-img">`
-                            : escapeHtml(authorName.charAt(0))
-                        }
-                    </div>
-                </div>
-                <div class="moments-author-info">
-                    <div class="moments-author-name">
-                        ${authorName}
-                        ${userBadge}
-                    </div>
-                    <div class="moments-author-time">${timeStr}</div>
+    // 卡片内容（除操作按钮外）
+    const cardContent = `
+        <!-- 头部:头像+名字+时间 -->
+        <div class="moments-card-header">
+            <div class="post-avatar">
+                <div class="post-avatar-inner" data-color="${avatarBg}">
+                    ${item.authorAvatar
+                        ? `<img src="${escapeHtml(item.authorAvatar)}" alt="" class="post-avatar-img">`
+                        : escapeHtml(authorName.charAt(0))
+                    }
                 </div>
             </div>
-
-            <!-- 文字内容 -->
-            ${content ? `<div class="moments-card-content">${content}</div>` : ''}
-
-            <!-- 图片区域 -->
-            ${imagesHtml}
-
-            <!-- 位置 -->
-            ${locationHtml}
-
-            <!-- 互动按钮 -->
-            <div class="moments-card-actions">
-                <button class="moment-like-btn"
-                        data-moment-id="${escapeHtml(item.id || '')}"
-                        data-author-id="${authorId}"
-                        data-is-user="${isUser}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
-                    <span>${likeCount}</span>
-                </button>
-                <button class="moment-comment-btn"
-                        data-moment-id="${escapeHtml(item.id || '')}"
-                        data-author-id="${authorId}"
-                        data-is-user="${isUser}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-                    <span>${commentCount}</span>
-                </button>
-                <button class="moment-share-btn"
-                        data-moment-id="${escapeHtml(item.id || '')}"
-                        data-author-id="${authorId}"
-                        data-is-user="${isUser}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-                    <span>分享</span>
-                </button>
+            <div class="moments-author-info">
+                <div class="moments-author-name">
+                    ${authorName}
+                    ${userBadge}
+                </div>
+                <div class="moments-author-time">${timeStr}</div>
             </div>
+        </div>
 
-            <!-- 评论区 -->
-            ${commentsHtml ? `<div class="moments-card-comments">${commentsHtml}</div>` : ''}
+        <!-- 文字内容 -->
+        ${content ? `<div class="moments-card-content">${content}</div>` : ''}
 
+        <!-- 图片区域 -->
+        ${imagesHtml}
+
+        <!-- 位置 -->
+        ${locationHtml}
+
+        <!-- 收藏按钮（始终可见） -->
+        <div class="moments-card-actions moments-card-actions--fixed">
+            <button class="moment-like-btn${isFavorited ? ' liked' : ''}"
+                    data-moment-id="${momentId}"
+                    data-author-id="${authorId}"
+                    data-is-user="${isUser}"
+                    aria-pressed="${isFavorited}"
+                    title="${isFavorited ? '取消收藏' : '收藏'}">
+                <svg viewBox="0 0 24 24" fill="${isFavorited ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.5"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+            </button>
+            <button class="moment-share-btn"
+                    data-moment-id="${momentId}"
+                    data-author-id="${authorId}"
+                    data-is-user="${isUser}"
+                    title="分享">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
+            </button>
         </div>
     `;
+
+    // 左滑操作按钮（编辑、删除）
+    const swipeActionsHtml = renderMomentSwipeActions(momentId, authorId, isUser);
+
+    // ★ v0.88 朋友圈卡片改为左滑显示编辑/删除按钮，更符合操作习惯
+    return renderSwipeRow({
+        actionsHtml: swipeActionsHtml,
+        contentHtml: cardContent,
+        extraClass: 'moments-swipe-row',
+        dataAttrs,
+    });
 }
 
 // ─── 演示数据 ────────────────────────────────────────────
-
-const DEMO_MOMENTS = [
-    {
-        id: 'moment-demo-1',
-        authorName: '小美',
-        authorId: 'ai-xiaomei',
-        authorAvatar: '',
-        isUser: false,
-        timestamp: Date.now() - 1800000, // 30分钟前
-        content: '今天的咖啡拉花好漂亮呀~心情也跟着美起来了 ☕️',
-        images: [],
-        likes: [{ id: 'l1', name: '小明' }],
-        comments: [
-            { id: 'c1', author: '小明', content: '真的很好看！在哪里喝的？' },
-        ],
-    },
-    {
-        id: 'moment-demo-2',
-        authorName: '小明',
-        authorId: 'ai-xiaoming',
-        authorAvatar: '',
-        isUser: false,
-        timestamp: Date.now() - 7200000, // 2小时前
-        content: '周末去了海边，日落真的很美 🌅',
-        images: [
-            'https://picsum.photos/seed/sunset1/400/300',
-            'https://picsum.photos/seed/sunset2/400/300',
-            'https://picsum.photos/seed/sunset3/400/300',
-            'https://picsum.photos/seed/sunset4/400/300',
-        ],
-        aiImages: [
-            {
-                description: '金色阳光洒在海面上，波光粼粼，远处的灯塔在夕阳中显得格外宁静',
-                cardColor: '#FFF3E0',
-                textColor: '#FF9800',
-            },
-            {
-                description: '一只海鸥在晚霞中翱翔，剪影映衬着橙红色的天空',
-                cardColor: '#E8F2FF',
-                textColor: '#4A6FA5',
-            },
-        ],
-        likes: [
-            { id: 'l2', name: '小美' },
-            { id: 'l3', name: '小蓝' },
-        ],
-        comments: [],
-    },
-    {
-        id: 'moment-demo-3',
-        authorName: '我',
-        authorId: 'user_self',
-        isUser: true,
-        timestamp: Date.now() - 86400000, // 1天前
-        content: '新买的小盆栽，希望能养活它们 🌱',
-        aiImages: [
-            {
-                description: '窗台上摆放着几盆可爱的多肉植物，晶莹剔透的叶片在阳光下闪闪发亮',
-                cardColor: '#E8F8F0',
-                textColor: '#4CAF50',
-            },
-        ],
-        likes: [],
-        comments: [
-            { id: 'c2', author: '小美', content: '好可爱！' },
-            { id: 'c3', author: '小明', content: '加油！' },
-            { id: 'c4', author: '小美', replyTo: '小明', content: '哈哈' },
-        ],
-    },
-    {
-        id: 'moment-demo-4',
-        authorName: '小蓝',
-        authorId: 'ai-xiaolan',
-        authorAvatar: '',
-        isUser: false,
-        timestamp: Date.now() - 3600000, // 1小时前
-        content: '今天画了一幅画，分享给大家看看~',
-        aiImages: [
-            {
-                description: '一幅梦幻的星空画作，深蓝色的夜空中繁星点点，一条银河横贯天际，画面下方是一片宁静的湖面，倒映着星光',
-                cardColor: '#F3E8FF',
-                textColor: '#8B5CF6',
-            },
-        ],
-        likes: [
-            { id: 'l4', name: '小美' },
-        ],
-        comments: [],
-    },
-];
+// ★ v0.80 移除 DEMO_MOMENTS 占位朋友圈 — 朋友圈数据全部从 SDK / chatMoments 读,
+//   没数据就展示空状态(「还没有动态」),不再展示「小美/小明/小蓝」的示例动态。
 
 // ─── 用户数据获取 ────────────────────────────────────────
 
@@ -420,6 +341,25 @@ function renderEmptyState() {
 // ─── 主渲染函数 ──────────────────────────────────────────
 
 /**
+ * 合并调用方传入的动态 + 用户自己发的 + 所有 AI 发的，按时间倒序。
+ *
+ * ★ v0.87 之前这里只合并了用户自己的动态，AI 用 [发朋友圈:] 发的内容
+ * 只能在「聊天设置 → AI 朋友圈概要」弹窗里看到，主 feed 里根本不出现。
+ */
+function mergeMoments(extraMoments) {
+    const seen = new Set();
+    const out = [];
+    for (const m of [...loadAllMoments(), ...(extraMoments || [])]) {
+        if (!m || !m.id) continue;
+        const key = String(m.id);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(m);
+    }
+    return out.sort((a, b) => (Number(b.timestamp) || 0) - (Number(a.timestamp) || 0));
+}
+
+/**
  * 渲染动态页面 (朋友圈)
  *
  * 三种用法:
@@ -428,18 +368,15 @@ function renderEmptyState() {
  *   - renderMomentsPage(app, null, null, owner)           → AI 专属朋友圈(viewer 是 owner)
  *     owner = { aiPersonId, mode }
  *
- * v0.31:
- *   - AI 专属朋友圈:用 aiPerson.socialProfiles.chat.* 实时数据填背景图/头像/名字
- *   - 列表中匹配 owner.aiPersonId 的卡片自动套用 owner 头像/名字
- *   - 未传 owner 时维持「我」视角
- *
  * @param {Object} app
- * @param {Array} moments 动态列表(默认演示数据)
+ * @param {Array} moments 动态列表(默认演示数据+用户发布)
  * @param {Object} userData 当前用户数据 { avatar, background, name, userId }
  * @param {Object} owner 看 AI 朋友圈时传入 { aiPersonId, mode }
  */
 export function renderMomentsPage(app, moments = null, userData = null, owner = null) {
-    const momentList = moments || DEMO_MOMENTS;
+    // ★ v0.80 移除 demo fallback — moments 直接使用调用方传入的列表(SDK 提供),没传就是空
+    const demoMoments = moments || [];
+    const momentList = owner ? demoMoments : mergeMoments(demoMoments);
 
     // ★ v0.31 ★ v0.32:用户视角时,如果没传 userData,自动从 SDK 同步读当前 user 社媒数据
     //   注意:avatarCode 走 gallery-db 异步解析,这里只能拿到 avatar URL 字段;
@@ -465,45 +402,43 @@ export function renderMomentsPage(app, moments = null, userData = null, owner = 
     }
 
     // ★ v0.31 owner 视角:读 aiPerson 实时社媒数据作为 profile-section
-    let profileAvatar = userData?.avatar || '';
+    // ★ v0.71 统一头像(背景)来源:owner → resolveAiAvatar,非 owner → resolveUserAvatar
+    const userAv = resolveUserAvatar();
+    let profileAvatar = userAv.url || userData?.avatar || '';
     let profileBackground = userData?.background || '';
     let profileName = userData?.name || '我';
-    let profileAvatarBg = '';
+    let profileAvatarBg = userAv.bg;
 
     if (owner && owner.aiPersonId) {
-        const meta = getAiMeta(owner.aiPersonId);
-        profileAvatar = meta.avatar || '';
-        profileBackground = meta.background || '';
-        profileName = meta.nickname || owner.aiPersonId;
-        profileAvatarBg = meta.avatarBg || '';
+        const aiAv = resolveAiAvatar(owner.aiPersonId);
+        profileAvatar = aiAv.url || userData?.avatar || '';
+        profileBackground = aiAv.url ? '' : (userData?.background || '');
+        profileName = getAiMeta(owner.aiPersonId).nickname || owner.aiPersonId;
+        profileAvatarBg = aiAv.bg;
     }
 
     // 更新当前用户的动态显示:isUser 卡片或者 authorId 匹配 owner 的卡片都用当前 profile
+    // 顺便把收藏状态回填到每张卡（之前只在点击时加 CSS class，一重渲染就丢了）
+    const favoritedIds = getFavoritedMomentIds();
     const processedMoments = momentList.map(item => {
+        const _favorited = favoritedIds.has(String(item.id));
         const isOwnerCard = owner && item.authorId === owner.aiPersonId;
-        if (item.isUser && userData) {
+        if ((item.isUser && userData) || isOwnerCard) {
             return {
                 ...item,
+                _favorited,
                 authorName: profileName,
                 authorAvatar: profileAvatar,
             };
         }
-        if (isOwnerCard) {
-            return {
-                ...item,
-                authorName: profileName,
-                authorAvatar: profileAvatar,
-            };
-        }
-        return item;
+        return { ...item, _favorited };
     });
 
-    // 背景样式:优先用 owner.background,没有就用 userData.background
+    // 背景样式:优先用 owner.background,没有就用渐变蓝色背景
+    // ★ 修复:不使用用户头像背景色(#F4A6CD玫红色),改为固定蓝色渐变
     const backgroundStyle = profileBackground
         ? `background-image: url("${escapeHtml(profileBackground)}"); background-size: cover; background-position: center;`
-        : (profileAvatarBg
-            ? `background: ${escapeHtml(profileAvatarBg)};`
-            : '');
+        : `background: linear-gradient(135deg, #E8F2FF, #F0F5FF);`;
 
     const avatarContent = profileAvatar
         ? `<img src="${escapeHtml(profileAvatar)}" alt="" class="profile-avatar-img">`
@@ -525,39 +460,39 @@ export function renderMomentsPage(app, moments = null, userData = null, owner = 
            </svg>`;
     const postBtnTitle = owner ? `查看 ${profileName} 的更多动态` : '发布新动态';
     const postBtnHint = owner ? '由 AI 自主发布的日常...' : '分享你的生活点滴...';
-    const postBtnAction = owner
-        ? 'placeholderSoon'
-        : 'chat-post';
 
     // 渲染页面并注入事件绑定脚本
-    // ★ v0.31 AI 朋友圈 detail 页需要自带返回按钮(chat-app 全局隐藏了
-    //   framework 的 .app-detail-header,所以 self-manage topbar)
-    const topbarHtml = owner
-        ? `<div class="moments-topbar">
-                <button class="moments-back-btn" data-app-action='{"action":"appMethod","appId":"chat","method":"closeDetail"}' aria-label="返回">
-                    <svg viewBox="0 0 24 24">
-                        <polyline points="15 18 9 12 15 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </button>
-                <div class="moments-topbar-title">${escapeHtml(profileName)}的朋友圈</div>
-            </div>`
+    // ★ v0.31+ AI 朋友圈 detail 页:chat-app 全局隐藏了 framework 的 .app-detail-header,
+    //   所以这里把返回按钮直接放进 .moments-profile-section 内部(absolute 定位覆盖在
+    //   蓝色渐变背景之上),不再渲染独立的白条 topbar,也不再显示「xx 的朋友圈」标题。
+    const backBtnHtml = owner
+        ? `<button class="moments-back-btn" data-app-action='{"action":"appMethod","appId":"chat","method":"closeDetail"}' aria-label="返回">
+                <svg viewBox="0 0 24 24">
+                    <polyline points="15 18 9 12 15 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>`
         : '';
+
+    // ★ 修复:发布朋友圈按钮使用 detail action 导航到 chat-post 页面
+    const postBtnNavAction = owner
+        ? null  // AI 朋友圈不显示发布按钮
+        : '{"action":"detail","appId":"chat","pageId":"chat-post"}';
 
     const pageHtml = `
         <div class="moments-page" ${owner ? `data-owner-id="${escapeHtml(owner.aiPersonId)}" data-owner-mode="${escapeHtml(owner.mode || 'calendar')}"` : ''}>
 
-            ${topbarHtml}
-
-            <!-- 韩风博主信息区 -->
+            <!-- 韩风博主信息区(返回按钮 absolute 定位覆盖在背景之上) -->
             <div class="moments-profile-section" ${backgroundStyle ? `style="${backgroundStyle}"` : ''}>
+                ${backBtnHtml}
                 <div class="moments-profile-avatar">
                     ${avatarContent}
                 </div>
             </div>
 
             <!-- 发布新动态 / 查看更多按钮 -->
+            ${postBtnNavAction ? `
             <button class="moments-post-btn"
-                    data-app-action='{"action":"appMethod","appId":"chat","method":"${postBtnAction}"}'>
+                    data-app-action='${postBtnNavAction}'>
                 <div class="moments-post-avatar">
                     ${postBtnAvatar}
                 </div>
@@ -569,6 +504,7 @@ export function renderMomentsPage(app, moments = null, userData = null, owner = 
                     <svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
                 </div>
             </button>
+            ` : ''}
 
             <!-- 动态列表 -->
             <div class="moments-list" id="momentsList">

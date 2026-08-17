@@ -25,6 +25,7 @@ import {
     APPEARANCE_STORE_NAME,
     APPEARANCE_DB_KEY,
 } from '../defaults.js';
+import { setClockMode, getClockMode } from '@/js/apps/setting/world/chronology-clock.js';
 
 /**
  * 通用：把当前 app.state.ui.appearance 写入 IndexedDB（deviceSettings::device-theme）。
@@ -92,6 +93,22 @@ export function buildStatusBarMethods() {
             applyDeviceTheme(ui);
             refreshPhoneSystem();
             persistAppearance(this.app);
+        },
+
+        /**
+         * 顶部时间显示模式：真实 / 世界观纪时 / 同世界不同地区的时差。
+         *
+         * 这个值**不进 IndexedDB**：状态栏每秒同步调一次格式化函数，
+         * 异步读盘来不及，所以走 localStorage（见 world/chronology-clock.js）。
+         * 因此这里也不调 persistAppearance。
+         */
+        setStatusBarClockMode(payload) {
+            const mode = (payload && typeof payload === 'object') ? payload.mode : payload;
+            if (getClockMode() === mode) return;
+            const applied = setClockMode(mode);
+            refreshPhoneSystem();
+            const label = { real: '真实时间', chronology: '世界观纪时', offset: '本地时差' }[applied] || applied;
+            this.toolkit?.island?.notify?.('success', '顶部时间已切换', label);
         },
     };
 }

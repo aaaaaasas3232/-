@@ -1,0 +1,377 @@
+/**
+ * relax-app / 弹窗皮肤
+ *
+ * 只做两件事:
+ *   1. 把框架级 AcModal(css/core/80-ac-modal.css 的基线)染成糖果粉
+ *   2. 弹窗内部的业务样式(输入框 / 存档列表)
+ *
+ * ★ 不要重写 `.ac-modal` 的 flex 三段式 / max-height / border-radius —— 基线已经对了。
+ *   也不要给 `.ac-modal` 加 overflow:hidden(会裁掉右上角 ✕)。
+ *
+ * ★ class 透传落在 `.ac-overlay` 上,所以业务 hook 都是后代选择器:
+ *   `.rx-save-modal .ac-modal-body`,而不是 `.rx-save-modal.ac-modal`。
+ */
+
+/* 遮罩:粉调 */
+.app-shell[data-app-id="relax"] .ac-overlay {
+    background: rgba(200, 90, 117, 0.16);
+}
+
+/* 弹窗主体:糖果粉 token + 更圆润的不规则形状 */
+.app-shell[data-app-id="relax"] .ac-modal {
+    --ac-color-primary: var(--rx-primary);
+    --ac-color-primary-dark: var(--rx-primary-deep);
+    --ac-color-primary-soft: var(--rx-primary-soft);
+    --ac-shadow-primary: var(--rx-primary);
+    --ac-shadow-secondary: var(--rx-surface-2);
+
+    background: var(--rx-surface);
+    box-shadow: 0 20px 50px rgba(200, 90, 117, 0.22);
+    border-radius: 44% 68% 50% 50% / 34% 28% 26% 44%;
+}
+
+.app-shell[data-app-id="relax"] .ac-modal-subtitle {
+    color: var(--rx-ink-soft);
+}
+
+.app-shell[data-app-id="relax"] .ac-modal-body {
+    color: var(--rx-ink);
+}
+
+/* ============================
+   确认框
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-confirm-text {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.75;
+    color: var(--rx-ink-soft);
+}
+
+/* ============================
+   文本输入(另存为)
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-text-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid var(--rx-surface-2);
+    border-radius: 18px 22px 20px 16px;
+    background: #fff;
+    color: var(--rx-ink);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease;
+}
+
+.app-shell[data-app-id="relax"] .rx-text-input:focus {
+    border-color: var(--rx-primary-soft);
+}
+
+.app-shell[data-app-id="relax"] .rx-input-counter {
+    margin: 6px 0 0;
+    font-size: 11px;
+    color: var(--rx-ink-soft);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ============================
+   存档库
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-library-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="relax"] .rx-library-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 6px 4px 4px;
+    border-radius: 20px 15px 18px 22px;
+    background: #fff;
+    box-shadow: 0 2px 0 var(--rx-surface-2);
+}
+
+.app-shell[data-app-id="relax"] .rx-library-main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+        "name date"
+        "meta date";
+    align-items: center;
+    gap: 0 8px;
+    padding: 9px 8px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+}
+
+.app-shell[data-app-id="relax"] .rx-library-name {
+    grid-area: name;
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--rx-ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="relax"] .rx-library-meta {
+    grid-area: meta;
+    font-size: 11px;
+    color: var(--rx-ink-soft);
+}
+
+.app-shell[data-app-id="relax"] .rx-library-date {
+    grid-area: date;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--rx-primary-soft);
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="relax"] .rx-library-del {
+    flex: 0 0 auto;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: var(--rx-surface-2);
+    color: var(--rx-ink-soft);
+    font-size: 11px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="relax"] .rx-library-del:active {
+    background: #ffe3e3;
+    color: #d6516b;
+}
+
+/* ============================
+   自定义 HTML 捏捏编辑器
+   ============================ */
+.app-shell[data-app-id="relax"] .rx-custom-toy-modal .ac-modal-body {
+    /* 编辑器内容长,允许内部滚动 */
+    padding: 4px 4px 4px 4px;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-templates {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 0 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-templates::-webkit-scrollbar {
+    display: none;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-template-chip {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 14px 18px 16px 20px;
+    background: #fff;
+    color: var(--rx-ink);
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    box-shadow: 0 2px 0 var(--rx-surface-2);
+    transition: transform 0.16s, box-shadow 0.16s, background 0.16s;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-template-chip:active {
+    transform: translateY(2px);
+    box-shadow: 0 0 0 var(--rx-surface-2);
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-template-chip.is-active {
+    background: var(--rx-primary-soft);
+    color: #fff;
+    box-shadow: 0 2px 0 var(--rx-primary);
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-template-chip.is-active .rx-custom-template-desc {
+    color: rgba(255, 255, 255, 0.78);
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-template-name {
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-template-desc {
+    font-size: 10px;
+    color: var(--rx-ink-soft);
+}
+
+/* 提示词块 */
+.app-shell[data-app-id="relax"] .rx-custom-prompt {
+    margin: 0 4px 12px;
+    padding: 10px 12px;
+    border-radius: 16px 20px 14px 18px;
+    background: var(--rx-surface-2);
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-prompt-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-prompt-title {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--rx-primary);
+    letter-spacing: 0.4px;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-prompt-copy {
+    padding: 4px 10px;
+    border: none;
+    border-radius: 999px;
+    background: #fff;
+    color: var(--rx-primary);
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 2px 0 var(--rx-primary-soft);
+    transition: background 0.16s, color 0.16s;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-prompt-copy.is-copied {
+    background: var(--rx-primary);
+    color: #fff;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-prompt-text {
+    margin: 0;
+    padding: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px;
+    line-height: 1.6;
+    color: var(--rx-ink);
+    white-space: pre-wrap;
+    max-height: 180px;
+    overflow-y: auto;
+}
+
+/* 编辑器两块 */
+.app-shell[data-app-id="relax"] .rx-custom-edit {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 0 4px 12px;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-field-label {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--rx-primary);
+    letter-spacing: 0.4px;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 2px solid var(--rx-surface-2);
+    border-radius: 12px 14px 10px 16px;
+    background: #fff;
+    color: var(--rx-ink);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    line-height: 1.5;
+    resize: vertical;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-textarea:focus {
+    border-color: var(--rx-primary-soft);
+}
+
+/* 预览 */
+.app-shell[data-app-id="relax"] .rx-custom-preview {
+    margin: 0 4px 4px;
+    padding: 10px 12px;
+    border-radius: 16px 20px 14px 18px;
+    background: #fff;
+    box-shadow: 0 2px 0 var(--rx-surface-2);
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-preview-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-preview-title {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--rx-primary);
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-preview-hint {
+    font-size: 9px;
+    color: var(--rx-ink-soft);
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-preview-board {
+    display: grid;
+    gap: 4px;
+    width: 100%;
+    aspect-ratio: 1;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-preview-cell {
+    border-radius: 14px;
+    background: var(--rx-surface-2);
+    overflow: hidden;
+    --htmlbubble-tint: var(--rx-toy-tint, #ffd6e0);
+}
+
+/* 弹窗底部按钮排版:三个按钮居中,只让第一个收缩 */
+.app-shell[data-app-id="relax"] .rx-custom-toy-modal .ac-modal-footer {
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-toy-modal .ac-modal-footer .ac-btn {
+    flex: 0 0 auto;
+}
+
+.app-shell[data-app-id="relax"] .rx-custom-toy-modal .ac-modal-footer .ac-btn-secondary:first-child {
+    margin-right: auto;
+}

@@ -1,0 +1,186 @@
+/* 灯塔 · 职位详情 */
+
+.app-shell[data-app-id="job"] .jb-detail__hero { margin-bottom: 18px; }
+
+.app-shell[data-app-id="job"] .jb-detail__hero-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 5px;
+}
+
+.app-shell[data-app-id="job"] .jb-detail__title {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 650;
+    line-height: 1.35;
+    color: var(--jb-text);
+}
+
+.app-shell[data-app-id="job"] .jb-detail__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 10px;
+    font-size: 11.5px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-detail__meta span + span::before {
+    content: '·';
+    margin-right: 8px;
+    color: var(--jb-line-strong);
+}
+
+.app-shell[data-app-id="job"] .jb-detail__pay {
+    margin: 0 0 10px;
+    font-size: 17px;
+    font-weight: 640;
+    color: var(--jb-pay);
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="job"] .jb-detail__blurb {
+    margin: 0 0 6px;
+    font-size: 13px;
+    line-height: 1.75;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-detail__ask {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-detail__tags { margin-top: 10px; }
+
+/* 正文 */
+
+.app-shell[data-app-id="job"] .jb-prose p {
+    margin: 0 0 9px;
+    font-size: 13px;
+    line-height: 1.85;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-prose p:last-child { margin-bottom: 0; }
+
+.app-shell[data-app-id="job"] .jb-detail__ul {
+    margin: 0;
+    padding: 14px 15px 14px 30px;
+    list-style: none;
+}
+
+.app-shell[data-app-id="job"] .jb-detail__ul li {
+    position: relative;
+    margin-bottom: 8px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-detail__ul li:last-child { margin-bottom: 0; }
+
+.app-shell[data-app-id="job"] .jb-detail__ul li::before {
+    content: '';
+    position: absolute;
+    left: -15px;
+    top: 9px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--jb-primary);
+}
+
+.app-shell[data-app-id="job"] .jb-detail__steps {
+    margin: 0;
+    padding: 14px 15px 14px 32px;
+    counter-reset: jbstep;
+    list-style: none;
+}
+
+.app-shell[data-app-id="job"] .jb-detail__steps li {
+    position: relative;
+    margin-bottom: 9px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--jb-text-2);
+    counter-increment: jbstep;
+}
+
+.app-shell[data-app-id="job"] .jb-detail__steps li:last-child { margin-bottom: 0; }
+
+.app-shell[data-app-id="job"] .jb-detail__steps li::before {
+    content: counter(jbstep);
+    position: absolute;
+    left: -20px;
+    top: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--jb-primary-soft);
+    color: var(--jb-primary-strong);
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 16px;
+    text-align: center;
+}
+
+/* 听人说 */
+
+.app-shell[data-app-id="job"] .jb-detail__voices {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="job"] .jb-voice__who {
+    margin: 0 0 4px;
+    font-size: 12px;
+    font-weight: 580;
+    color: var(--jb-text);
+}
+
+.app-shell[data-app-id="job"] .jb-voice__who i {
+    margin-left: 6px;
+    font-style: normal;
+    font-weight: 400;
+    font-size: 11px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-voice__text {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-detail__reroll {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 12px;
+}
+
+/* 底部行动条 */
+
+.app-shell[data-app-id="job"] .jb-detail__cta {
+    margin-top: 8px;
+    padding-top: 14px;
+    border-top: 1px solid var(--jb-line-soft);
+}
+
+.app-shell[data-app-id="job"] .jb-detail__cta-note {
+    margin: 8px 0 0;
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: var(--jb-text-3);
+    text-align: center;
+}
+
+.app-shell[data-app-id="job"] .jb-detail__cta-note:first-child {
+    margin: 0 0 10px;
+    color: var(--jb-accent);
+}

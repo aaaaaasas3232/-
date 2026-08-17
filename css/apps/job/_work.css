@@ -1,0 +1,453 @@
+/* 灯塔 · 在职列表 + 工作详情 + 日历 */
+
+/* ── 在职列表 ─────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-work__today {
+    margin: 0 0 12px;
+    font-size: 12px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-post {
+    display: block;
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 14px 15px;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="job"] .jb-post:active { background: var(--jb-card-hover); }
+
+.app-shell[data-app-id="job"] .jb-post__head {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 3px;
+}
+
+.app-shell[data-app-id="job"] .jb-post__title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 620;
+    color: var(--jb-text);
+}
+
+.app-shell[data-app-id="job"] .jb-post__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 9px;
+    font-size: 11.5px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-post__meta span + span::before {
+    content: '·';
+    margin-right: 8px;
+    color: var(--jb-line-strong);
+}
+
+.app-shell[data-app-id="job"] .jb-post__rows {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-bottom: 10px;
+}
+
+.app-shell[data-app-id="job"] .jb-post__row {
+    font-size: 12.5px;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-post__row--pay { color: var(--jb-coin); }
+
+.app-shell[data-app-id="job"] .jb-post__foot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 9px;
+    border-top: 1px solid var(--jb-line-soft);
+}
+
+.app-shell[data-app-id="job"] .jb-post__state {
+    font-size: 12px;
+    font-weight: 560;
+}
+
+.app-shell[data-app-id="job"] .jb-post__state.is-ok { color: var(--jb-success); }
+.app-shell[data-app-id="job"] .jb-post__state.is-done { color: var(--jb-text-3); }
+.app-shell[data-app-id="job"] .jb-post__state.is-rest { color: var(--jb-text-3); }
+
+.app-shell[data-app-id="job"] .jb-work__empty-btns {
+    display: flex;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="job"] .jb-work__add { margin-top: 6px; }
+
+/* ── 工作详情 ─────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-post__tabs { margin-bottom: 16px; }
+
+.app-shell[data-app-id="job"] .jb-sum { margin-bottom: 18px; }
+
+.app-shell[data-app-id="job"] .jb-sum__row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.app-shell[data-app-id="job"] .jb-sum__right { text-align: right; }
+
+.app-shell[data-app-id="job"] .jb-sum__k {
+    margin: 0 0 3px;
+    font-size: 11.5px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-sum__pay {
+    margin: 11px 0 0;
+    padding-top: 10px;
+    border-top: 1px solid var(--jb-line-soft);
+    font-size: 12.5px;
+    color: var(--jb-coin);
+}
+
+.app-shell[data-app-id="job"] .jb-sum__note {
+    margin: 5px 0 0;
+    font-size: 11.5px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-today__day {
+    margin: 0 0 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--jb-text);
+}
+
+.app-shell[data-app-id="job"] .jb-today__done {
+    margin: 0 0 10px;
+    font-size: 13px;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-today__done b {
+    margin-left: 6px;
+    color: var(--jb-income);
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="job"] .jb-today__blocked {
+    margin: 0 0 4px;
+    font-size: 13px;
+    color: var(--jb-text-3);
+}
+
+/* 记录条目 */
+
+.app-shell[data-app-id="job"] .jb-logitem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    margin-bottom: 8px;
+    padding: 11px 13px;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="job"] .jb-logitem:active { background: var(--jb-card-hover); }
+
+.app-shell[data-app-id="job"] .jb-logitem__day {
+    flex: 0 0 auto;
+    min-width: 38px;
+    font-size: 11.5px;
+    color: var(--jb-text-3);
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="job"] .jb-logitem__title {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    color: var(--jb-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="job"] .jb-logitem__lv {
+    flex: 0 0 auto;
+    font-size: 11px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-logitem__pay {
+    flex: 0 0 auto;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--jb-income);
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="job"] .jb-digests { display: flex; flex-direction: column; gap: 9px; }
+
+.app-shell[data-app-id="job"] .jb-digest {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.75;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-digest b {
+    margin-right: 7px;
+    color: var(--jb-text-3);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+}
+
+/* 薪资预览 */
+
+.app-shell[data-app-id="job"] .jb-paypreview {
+    display: flex;
+    gap: 6px;
+    margin: 10px 0 0;
+}
+
+.app-shell[data-app-id="job"] .jb-paypreview__cell {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 7px 2px;
+    border: 1px solid var(--jb-line);
+    border-radius: 9px;
+    background: var(--jb-surface-2);
+}
+
+.app-shell[data-app-id="job"] .jb-paypreview__cell i {
+    font-style: normal;
+    font-size: 10px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-paypreview__cell b {
+    font-size: 13px;
+    color: var(--jb-pay);
+    font-variant-numeric: tabular-nums;
+}
+
+/* 周几选择 */
+
+.app-shell[data-app-id="job"] .jb-weekpick {
+    display: flex;
+    gap: 5px;
+    margin-top: 10px;
+}
+
+.app-shell[data-app-id="job"] .jb-weekpick__btn {
+    flex: 1;
+    padding: 9px 0;
+    border: 1px solid var(--jb-line);
+    border-radius: 10px;
+    background: var(--jb-surface);
+    color: var(--jb-text-3);
+    font: inherit;
+    font-size: 12.5px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.app-shell[data-app-id="job"] .jb-weekpick__btn.is-on {
+    background: var(--jb-day-work);
+    border-color: var(--jb-primary);
+    color: var(--jb-day-work-text);
+    font-weight: 600;
+}
+
+.app-shell[data-app-id="job"] .jb-prompt__btns,
+.app-shell[data-app-id="job"] .jb-post__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.app-shell[data-app-id="job"] .jb-prompt__btns > :last-child { margin-left: auto; }
+
+.app-shell[data-app-id="job"] .jb-post__actions {
+    flex-direction: column;
+    margin-top: 20px;
+}
+
+/* ── 日历 ─────────────────────────────────────────────────────── */
+
+.app-shell[data-app-id="job"] .jb-cal {
+    margin-bottom: 16px;
+    padding: 12px;
+    border: 1px solid var(--jb-line);
+    border-radius: 15px;
+    background: var(--jb-glass);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+
+.app-shell[data-app-id="job"] .jb-cal__bar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.app-shell[data-app-id="job"] .jb-cal__month {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--jb-text);
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="job"] .jb-cal__stats {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-cal__week,
+.app-shell[data-app-id="job"] .jb-cal__grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+
+.app-shell[data-app-id="job"] .jb-cal__week {
+    margin-bottom: 5px;
+    font-size: 10.5px;
+    color: var(--jb-text-3);
+    text-align: center;
+}
+
+.app-shell[data-app-id="job"] .jb-cal__cell {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    display: grid;
+    place-items: center;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    background: var(--jb-day-rest);
+    color: var(--jb-day-rest-text);
+    font: inherit;
+    font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    transition: transform 0.12s ease;
+}
+
+.app-shell[data-app-id="job"] .jb-cal__cell:active:not(:disabled) { transform: scale(0.94); }
+
+.app-shell[data-app-id="job"] .jb-cal__cell.is-blank {
+    background: transparent;
+    cursor: default;
+}
+
+.app-shell[data-app-id="job"] .jb-cal__cell.is-work {
+    background: var(--jb-day-work);
+    color: var(--jb-day-work-text);
+    font-weight: 560;
+}
+
+/* 请假：在「按周排」下才有意义 —— 本来该上班，被划掉了 */
+.app-shell[data-app-id="job"] .jb-cal__cell.is-off .jb-cal__num {
+    text-decoration: line-through;
+    opacity: 0.7;
+}
+
+.app-shell[data-app-id="job"] .jb-cal__cell.is-future { opacity: 0.5; }
+
+.app-shell[data-app-id="job"] .jb-cal__cell.is-today {
+    border-color: var(--jb-day-today);
+}
+
+.app-shell[data-app-id="job"] .jb-cal__cell.is-picked {
+    border-color: var(--jb-primary);
+    box-shadow: 0 0 0 2px var(--jb-input-focus);
+}
+
+.app-shell[data-app-id="job"] .jb-cal__dot {
+    position: absolute;
+    right: 4px;
+    bottom: 4px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--jb-day-done);
+}
+
+.app-shell[data-app-id="job"] .jb-cal__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 10px;
+    padding-top: 9px;
+    border-top: 1px solid var(--jb-line-soft);
+    font-size: 10.5px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-cal__legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.app-shell[data-app-id="job"] .jb-cal__legend-item::before {
+    content: '';
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    border: 1px solid transparent;
+}
+
+.app-shell[data-app-id="job"] .jb-cal__legend-item.is-work::before { background: var(--jb-day-work); }
+.app-shell[data-app-id="job"] .jb-cal__legend-item.is-rest::before { background: var(--jb-day-rest); border-color: var(--jb-line); }
+.app-shell[data-app-id="job"] .jb-cal__legend-item.is-played::before { background: var(--jb-day-done); border-radius: 50%; width: 7px; height: 7px; }
+.app-shell[data-app-id="job"] .jb-cal__legend-item.is-today::before { background: transparent; border-color: var(--jb-day-today); }
+
+/* 选中那天的操作盒 */
+
+.app-shell[data-app-id="job"] .jb-daybox__day {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--jb-text);
+}
+
+.app-shell[data-app-id="job"] .jb-daybox__done {
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    border-radius: 11px;
+    background: var(--jb-surface-2);
+}
+
+.app-shell[data-app-id="job"] .jb-daybox__done p {
+    margin: 0 0 8px;
+    font-size: 12.5px;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-daybox__btns {
+    display: flex;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="job"] .jb-daybox__btns > * { flex: 1; }

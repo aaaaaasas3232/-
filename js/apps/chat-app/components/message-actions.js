@@ -5,17 +5,25 @@
  *  - 单条动作(method): copyMessage / editMessage / quoteMessage / favoriteMessage / deleteMessage / forwardMessage
  *  - payload: { messageId, aiPersonId, mode, sender } 全部走 payload,不要写到顶层
  *
- * 撤回 / 重roll / 分享微博本次不实现,仅保留复制/编辑/引用/收藏/删除/转发六个动作
+ *  v0.72:
+ *   - AI 消息新增「重roll」按钮(派发 method: rerollMessage):
+ *       · 删除该消息之后的所有消息(含后续 user/ai)
+ *       · 重生当前 AI 回复
+ *       · 重写 prompt 上下文(= 不含后续消息的 history)
+ *       · 私聊/群聊都生效
+ *   - 撤回按钮本次仍保留占位但不挂派发(后续单独实现)
  *
  * 使用方式:
  *   import { renderMessageActions } from './message-actions.js';
- *   const actionsHtml = renderMessageActions(msgId, sender, mode, options);
+ *   const actionsHtml = renderMessageActions(msgId, ctx, options);
  *
- *   sender: 'user' | 'ai'  (决定是显示「撤回」还是「重roll」按钮 ——本次统一保留按钮位但不实现派发)
- *   mode:   'calendar' | 'story'
+ *   ctx.sender: 'user' | 'ai'  (决定是显示「重roll」按钮)
+ *   ctx.mode:   'calendar' | 'story'
+ *   ctx.conversationType: 'private' | 'group' (群聊时 aiPersonId 字段就是 groupId)
  */
 
 import { escapeHtml } from '@/src/core/escape.js';
+import { DEFAULT_AI_AVATAR_BG, DEFAULT_USER_AVATAR_BG } from '../aiMeta.js';
 
 // ============================================
 // SVG 图标定义
@@ -27,6 +35,7 @@ const ICONS = {
     favorite: `<svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" fill="none" stroke="currentColor" stroke-width="2"/></svg>`,
     delete: `<svg viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" fill="none" stroke="currentColor" stroke-width="2"/></svg>`,
     forward: `<svg viewBox="0 0 24 24"><path d="M15 7l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 18v-2a4 4 0 0 1 4-4h12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    sendToAi: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>`,
 };
 
 /**
@@ -123,23 +132,55 @@ function renderCommonButtons(ctx) {
 }
 
 /**
- * 渲染用户专属操作按钮(本次只保留按钮位,不挂事件,等后续需求)
+ * 渲染用户专属操作按钮 — v0.72 启用「重roll」
+ *  - 用户点重roll = 删除该消息之后的所有消息,然后重新触发 AI 回复(找之前最后一条 AI 消息的发送者)
+ *  - 派发 method: rerollMessage，payload 里 sender 字段区分来源
  */
 function renderUserOnlyButtons(ctx) {
-    return `<button class="action-btn recall disabled"
-                    title="撤回(暂未实现)"
+    const action = escapeHtml(JSON.stringify({
+        action: 'appMethod',
+        appId: 'chat',
+        method: 'rerollMessage',
+        payload: {
+            messageId: ctx.messageId,
+            aiPersonId: ctx.aiPersonId,
+            mode: ctx.mode,
+            sender: 'user',
+            conversationType: ctx.conversationType || 'private',
+            senderId: ctx.senderId || '',
+        },
+    }));
+    return `<button class="action-btn reroll"
+                    title="重roll"
                     type="button"
-                    disabled>${ICONS_NOT_IMPLEMENTED.recall}</button>`;
+                    data-app-action="${action}">${ICONS_NOT_IMPLEMENTED.reroll}</button>`;
 }
 
 /**
- * 渲染 AI 专属操作按钮(本次只保留按钮位,不挂事件,等后续需求)
+ * 渲染 AI 专属操作按钮 — v0.72 启用「重roll」派发
+ *  - data-app-action → method: rerollMessage
+ *  - payload: { messageId, aiPersonId, mode, sender:'ai', conversationType, senderId }
+ *    (群聊时 aiPersonId=groupId, senderId=具体的 AI 成员 ID)
  */
 function renderAiOnlyButtons(ctx) {
-    return `<button class="action-btn reroll disabled"
-                    title="重roll(暂未实现)"
+    const action = escapeHtml(JSON.stringify({
+        action: 'appMethod',
+        appId: 'chat',
+        method: 'rerollMessage',
+        payload: {
+            messageId: ctx.messageId,
+            aiPersonId: ctx.aiPersonId,
+            mode: ctx.mode,
+            sender: 'ai',
+            conversationType: ctx.conversationType || 'private',
+            // 群聊里 senderId = 具体的 AI 人设 ID,AI 重生时按它调 AI
+            senderId: ctx.senderId || '',
+        },
+    }));
+    return `<button class="action-btn reroll"
+                    title="重roll"
                     type="button"
-                    disabled>${ICONS_NOT_IMPLEMENTED.reroll}</button>`;
+                    data-app-action="${action}">${ICONS_NOT_IMPLEMENTED.reroll}</button>`;
 }
 
 // 占位 SVG(未实现的撤回 / 重roll,样式保留但不派发)
@@ -156,12 +197,14 @@ const ICONS_NOT_IMPLEMENTED = {
  * @param {object} options
  *   showEdit         boolean   是否显示编辑按钮(默认 true)
  *   showForward      boolean   是否显示转发按钮(默认 true)
+ *   showSendToAi    boolean   是否显示"发送给AI"按钮(仅群聊时显示,默认 false)
  * @returns {string} HTML 字符串
  */
 export function renderMessageActions(msgId, ctx, options = {}) {
     const {
         showEdit = true,
         showForward = true,
+        showSendToAi = false, // ★ v0.85:默认不显示,群聊页面传 true
     } = options;
 
     let buttons = renderCommonButtons({ ...ctx, messageId: msgId });
@@ -174,14 +217,46 @@ export function renderMessageActions(msgId, ctx, options = {}) {
         buttons = buttons.replace(/<button class="action-btn forward"[\s\S]*?<\/button>/, '');
     }
 
-    const senderButton = ctx.sender === 'user' ? renderUserOnlyButtons(ctx) : renderAiOnlyButtons(ctx);
+    const senderButton = (ctx.sender === 'user' ? renderUserOnlyButtons : renderAiOnlyButtons)({
+        ...ctx,
+        messageId: msgId,
+    });
+
+    // ★ v0.85:群聊时显示"发送给AI"按钮(所有消息都显示)
+    const sendToAiButton = showSendToAi ? renderSendToAiButton({ ...ctx, messageId: msgId }) : '';
 
     return `
         <div class="message-actions" data-message-id="${escapeHtml(msgId)}">
             ${buttons}
             ${senderButton}
+            ${sendToAiButton}
         </div>
     `;
+}
+
+/**
+ * ★ v0.85 渲染"发送给AI"按钮
+ * 群聊时可用:将消息内容发送给AI处理
+ */
+function renderSendToAiButton(ctx) {
+    const action = escapeHtml(JSON.stringify({
+        action: 'appMethod',
+        appId: 'chat',
+        method: 'sendMessageToAi',
+        payload: {
+            messageId: ctx.messageId,
+            aiPersonId: ctx.aiPersonId,
+            mode: ctx.mode,
+            sender: ctx.sender,
+            conversationType: ctx.conversationType || 'group',
+            text: ctx.text || '',
+            senderLabel: ctx.senderLabel || '',
+        },
+    }));
+    return `<button class="action-btn send-to-ai"
+                    title="发送给AI"
+                    type="button"
+                    data-app-action="${action}">${ICONS.sendToAi}</button>`;
 }
 
 /**
@@ -220,7 +295,7 @@ export function renderSelectButton(msgId, ctx) {
  * @returns {string} HTML 字符串
  */
 export function renderAvatar(isUser, senderName = '', avatarBg = null, avatarUrl = '') {
-    const bg = avatarBg || (isUser ? '#F4A6CD' : '#A8C8EC');
+    const bg = avatarBg || (isUser ? DEFAULT_USER_AVATAR_BG : DEFAULT_AI_AVATAR_BG);
     const text = isUser ? '我' : (senderName?.charAt(0) || '?');
 
     // v0.31:有 avatarUrl 就渲染 img,没有就走首字母 placeholder

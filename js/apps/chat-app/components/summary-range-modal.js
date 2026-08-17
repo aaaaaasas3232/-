@@ -26,8 +26,12 @@
  *     confirm({ startDay, endDay, messages, mode, contactName })
  */
 
+// ★ v0.69+ AcModal 通用弹窗组件
+import { AcModal } from './ac-modal.js';
+
 const SummaryRangeModal = {
     name: 'SummaryRangeModal',
+    components: { AcModal },
     props: {
         mode: { type: String, default: 'calendar' },  // 'calendar' | 'story'
         contactName: { type: String, default: '' },
@@ -174,82 +178,77 @@ const SummaryRangeModal = {
         onCancel() { this.$emit('close'); },
     },
     template: `
-        <div class="summary-range-modal-overlay" @click.self="onCancel">
-            <div class="summary-range-modal">
-                <div class="summary-range-modal-header">
-                    <div class="summary-range-modal-title">{{ title }}</div>
-                    <div class="summary-range-modal-subtitle">{{ subtitle }}</div>
-                    <button class="summary-range-modal-close" aria-label="关闭" @click="onCancel">
+        <AcModal
+            class="summary-range-modal"
+            :title="title"
+            :subtitle="subtitle"
+            :show-close="true"
+            :close-on-backdrop="true"
+            :max-width="'420px'"
+            @close="$emit('close')"
+        >
+            <!-- 故事模式:不需选日期,显示当前故事概要 -->
+            <div class="summary-range-modal-body" v-if="isStory">
+                <div class="summary-range-mode-block">
+                    <div class="summary-range-mode-icon" data-kind="story">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="18" y1="6" x2="6" y2="18"/>
-                            <line x1="6" y1="6" x2="18" y2="18"/>
+                            <path d="M12 2.5l2.4 5 5.5.8-4 3.9.9 5.5L12 15.4 7.2 17.7l.9-5.5-4-3.9 5.5-.8L12 2.5z"/>
                         </svg>
-                    </button>
-                </div>
-
-                <!-- 故事模式:不需选日期,显示当前故事概要 -->
-                <div class="summary-range-modal-body" v-if="isStory">
-                    <div class="summary-range-mode-block">
-                        <div class="summary-range-mode-icon" data-kind="story">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M12 2.5l2.4 5 5.5.8-4 3.9.9 5.5L12 15.4 7.2 17.7l.9-5.5-4-3.9 5.5-.8L12 2.5z"/>
-                            </svg>
-                        </div>
-                        <div class="summary-range-mode-text">
-                            <div class="summary-range-mode-title">当前故事会话</div>
-                            <div class="summary-range-mode-desc">包含 {{ messageCount }} 条消息,占位 AI 将拼接生成概要</div>
-                        </div>
                     </div>
-                </div>
-
-                <!-- 日历模式:按月展示可选日期方块 + 预设按钮 -->
-                <div class="summary-range-modal-body" v-else>
-                    <div class="summary-range-presets">
-                        <button type="button" class="summary-range-preset-chip" @click="applyPreset('recent3')">最近3天</button>
-                        <button type="button" class="summary-range-preset-chip" @click="applyPreset('recent7')">最近7天</button>
-                        <button type="button" class="summary-range-preset-chip" @click="applyPreset('thisMonth')">本月</button>
-                        <button type="button" class="summary-range-preset-chip" @click="applyPreset('lastMonth')">上月</button>
-                        <button type="button" class="summary-range-preset-chip" @click="applyPreset('thisYear')">本年</button>
-                    </div>
-
-                    <div class="summary-range-months">
-                        <div class="summary-range-month" v-for="m in daysByMonth" :key="m.year + '-' + m.month">
-                            <div class="summary-range-month-title">{{ m.year }} 年 {{ monthNames[m.month - 1] }}</div>
-                            <div class="summary-range-day-grid">
-                                <button v-for="d in m.days" :key="d.dateKey"
-                                    type="button"
-                                    class="summary-range-day-btn"
-                                    :class="{ 'is-selected': selectedDays.has(d.dateKey) }"
-                                    @click="toggleDay(d.dateKey)"
-                                    :title="d.dateKey + ' · ' + d.count + ' 条'">
-                                    <span class="summary-range-day-num">{{ d.day }}</span>
-                                    <span class="summary-range-day-dot" v-if="d.count > 0"></span>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="summary-range-empty" v-if="daysByMonth.length === 0">
-                            暂无聊天记录可选
-                        </div>
-                    </div>
-                </div>
-
-                <div class="summary-range-modal-footer">
-                    <div class="summary-range-modal-hint">
-                        <template v-if="isCalendar">已选 {{ selectedRangeText }} · 共 {{ messageCount }} 条消息</template>
-                        <template v-else>将生成 {{ messageCount }} 条消息的故事概要</template>
-                    </div>
-                    <div class="summary-range-modal-actions">
-                        <button class="summary-range-btn summary-range-btn-cancel" @click="onCancel">取消</button>
-                        <button class="summary-range-btn summary-range-btn-confirm"
-                            :disabled="!canConfirm"
-                            :class="{ 'is-disabled': !canConfirm }"
-                            @click="onConfirm">
-                            生成概要
-                        </button>
+                    <div class="summary-range-mode-text">
+                        <div class="summary-range-mode-title">当前故事会话</div>
+                        <div class="summary-range-mode-desc">包含 {{ messageCount }} 条消息,占位 AI 将拼接生成概要</div>
                     </div>
                 </div>
             </div>
-        </div>
+
+            <!-- 日历模式:按月展示可选日期方块 + 预设按钮 -->
+            <div class="summary-range-modal-body" v-else>
+                <div class="summary-range-presets">
+                    <button type="button" class="summary-range-preset-chip" @click="applyPreset('recent3')">最近3天</button>
+                    <button type="button" class="summary-range-preset-chip" @click="applyPreset('recent7')">最近7天</button>
+                    <button type="button" class="summary-range-preset-chip" @click="applyPreset('thisMonth')">本月</button>
+                    <button type="button" class="summary-range-preset-chip" @click="applyPreset('lastMonth')">上月</button>
+                    <button type="button" class="summary-range-preset-chip" @click="applyPreset('thisYear')">本年</button>
+                </div>
+
+                <div class="summary-range-months">
+                    <div class="summary-range-month" v-for="m in daysByMonth" :key="m.year + '-' + m.month">
+                        <div class="summary-range-month-title">{{ m.year }} 年 {{ monthNames[m.month - 1] }}</div>
+                        <div class="summary-range-day-grid">
+                            <button v-for="d in m.days" :key="d.dateKey"
+                                type="button"
+                                class="summary-range-day-btn"
+                                :class="{ 'is-selected': selectedDays.has(d.dateKey) }"
+                                @click="toggleDay(d.dateKey)"
+                                :title="d.dateKey + ' · ' + d.count + ' 条'">
+                                <span class="summary-range-day-num">{{ d.day }}</span>
+                                <span class="summary-range-day-dot" v-if="d.count > 0"></span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="summary-range-empty" v-if="daysByMonth.length === 0">
+                        暂无聊天记录可选
+                    </div>
+                </div>
+            </div>
+
+            <div class="summary-range-modal-hint">
+                <template v-if="isCalendar">已选 {{ selectedRangeText }} · 共 {{ messageCount }} 条消息</template>
+                <template v-else>将生成 {{ messageCount }} 条消息的故事概要</template>
+            </div>
+
+            <!-- 底部按钮 -->
+            <template #footer>
+                <button type="button" class="ac-btn ac-btn-secondary" @click="$emit('close')">取消</button>
+                <button type="button" class="ac-btn ac-btn-primary summary-range-btn-confirm"
+                    :disabled="!canConfirm"
+                    :class="{ 'is-disabled': !canConfirm }"
+                    @click="onConfirm">
+                    生成概要
+                </button>
+            </template>
+        </AcModal>
     `,
 };
 

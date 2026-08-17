@@ -1,0 +1,2442 @@
+/**
+ * 日记 / 样式入口
+ *
+ * 全部选择器挂在 `.app-shell[data-app-id="diary"]` 下 —— 不污染其他 app。
+ *
+ * 引入方式（项目约定）：`index.html` 里加一行
+ *   <link rel="stylesheet" href="/css/apps/diary/index.css?v=1" />
+ *
+ * ★ 子文件 @import 带 `?v=` 版本号，改子文件就 bump 一下，避免浏览器吃旧缓存。
+ *
+ * ── 文件分工 ──────────────────────────────────────────────
+ *   _theme.css   六套莫兰迪主题的全部 `--dy-*` token。**颜色的唯一真相**，
+ *                其他文件只允许 `var(--dy-*)`，JS 里一个 hex 都没有。
+ *   _base.css    根布局 / tab 栏 / 卡片 / 按钮 / 表单 / 空状态
+ *   _today.css   今日页（时段条 / 日记 / 便利贴 / 小组件）
+ *   _cycle.css   生理期页（日历 / 打卡 / 统计）
+ *   _pages.css   配置向导 / 归档 / 计划 / 日记本切换 / 弹窗皮肤
+ *
+ * ── 风格约束 ──────────────────────────────────────────────
+ *   无印良品：不用渐变、不用投影、不用 emoji。
+ *   层次只靠 1px 细线和极小的明度差。
+ */
+
+/**
+ * 日记 · 主题 token
+ *
+ * ★ 这个文件是整个 App 的**颜色唯一真相**。
+ *   组件 CSS 只允许写 `var(--dy-*)`，JS 里一个 hex 都不许出现
+ *   （唯一例外是桌面图标 —— 它画在 app-shell 之外，CSS 变量够不着）。
+ *
+ * ★ 配色取向：莫兰迪。
+ *   低饱和、带灰调、明度接近。**禁止渐变** —— 产品要求，也是这套配色的前提：
+ *   莫兰迪色之所以耐看靠的是色块之间的微弱色差，加了渐变就全糊了。
+ *
+ * ★ 主题怎么切
+ *   `data-diary-theme` 挂在**根容器**上（不是 app-shell）——
+ *   因为每个日记本可以有自己的颜色，切换日记本时换的是这个属性。
+ *   AI 自己布置的日记本就是通过写这个属性生效的。
+ *
+ * ★ 每套主题写了**两个**选择器：根容器自身，以及任意带这个属性的后代。
+ *   后一个不是冗余 —— 主题选择器里那几张迷你预览卡靠「塞一个带 data-diary-theme
+ *   的探针 div 再 getComputedStyle」来拿到「另一套主题长什么样」。
+ *   只写自身的话探针永远匹配不上，几张预览卡会全部显示成当前主题
+ *   （dream-weaver 踩过，AGENTS2 §18）。
+ *
+ * ★ 派生规则
+ *   `-soft` / `-dim` 后缀都是同色系的低透明度版本。
+ *   新增颜色前先问一句「能不能从已有 token 派生」，能就别加新 token。
+ */
+
+/* ============================================================
+   非颜色 token —— 挂在 app-shell 上，不随主题变
+   ============================================================ */
+.app-shell[data-app-id="diary"] {
+    --dy-radius: 10px;
+    --dy-radius-sm: 6px;
+    --dy-radius-lg: 16px;
+    --dy-gap: 12px;
+    --dy-pad: 18px;
+    --dy-hair: 1px;
+    --dy-ease: cubic-bezier(0.4, 0, 0.2, 1);
+    --dy-dur: 220ms;
+
+    /* 无印良品风：字号小、字重轻、行距松 */
+    --dy-fs-xs: 11px;
+    --dy-fs-sm: 12px;
+    --dy-fs-md: 13px;
+    --dy-fs-lg: 15px;
+    --dy-fs-xl: 19px;
+    --dy-lh: 1.85;
+    --dy-track: 0.02em;
+}
+
+/* ============================================================
+   燕麦 —— 暖白与浅灰褐（默认）
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-root,
+.app-shell[data-app-id="diary"] [data-diary-theme="oat"] {
+    --dy-bg: #F4F1EB;
+    --dy-bg-alt: #EBE7DF;
+    --dy-surface: #FBF9F5;
+    --dy-surface-alt: #F2EEE7;
+    --dy-surface-dim: #E4DFD5;
+
+    --dy-primary: #8C7B6B;
+    --dy-primary-soft: rgba(140, 123, 107, 0.12);
+    --dy-primary-dim: rgba(140, 123, 107, 0.26);
+    --dy-on-primary: #FBF9F5;
+
+    --dy-text: #3D372F;
+    --dy-text-2: #6E665B;
+    --dy-text-3: #A29889;
+
+    --dy-border: rgba(61, 55, 47, 0.14);
+    --dy-border-soft: rgba(61, 55, 47, 0.07);
+    --dy-divider: rgba(61, 55, 47, 0.09);
+
+    --dy-danger: #A86A5E;
+    --dy-warn: #B29655;
+    --dy-ok: #7B8C6B;
+
+    --dy-cycle-period: #B08379;
+    --dy-cycle-predicted: rgba(176, 131, 121, 0.32);
+    --dy-cycle-fertile: rgba(140, 155, 138, 0.30);
+    --dy-cycle-none: rgba(110, 102, 91, 0.22);
+
+    --dy-status-bar: #3D372F;
+    --dy-home-indicator: rgba(61, 55, 47, 0.3);
+}
+
+/* ============================================================
+   陶土 —— 褪色的砖红
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-root[data-diary-theme="clay"],
+.app-shell[data-app-id="diary"] [data-diary-theme="clay"] {
+    --dy-bg: #F2EBE7;
+    --dy-bg-alt: #E8DED8;
+    --dy-surface: #FBF6F3;
+    --dy-surface-alt: #F1E7E1;
+    --dy-surface-dim: #E0D2CA;
+
+    --dy-primary: #A4705F;
+    --dy-primary-soft: rgba(164, 112, 95, 0.13);
+    --dy-primary-dim: rgba(164, 112, 95, 0.28);
+    --dy-on-primary: #FBF6F3;
+
+    --dy-text: #423630;
+    --dy-text-2: #74625A;
+    --dy-text-3: #A8948B;
+
+    --dy-border: rgba(66, 54, 48, 0.14);
+    --dy-border-soft: rgba(66, 54, 48, 0.07);
+    --dy-divider: rgba(66, 54, 48, 0.09);
+
+    --dy-danger: #A0584C;
+    --dy-warn: #B08B52;
+    --dy-ok: #7C8A6D;
+
+    --dy-cycle-period: #A4705F;
+    --dy-cycle-predicted: rgba(164, 112, 95, 0.30);
+    --dy-cycle-fertile: rgba(139, 152, 133, 0.28);
+    --dy-cycle-none: rgba(116, 98, 90, 0.22);
+
+    --dy-status-bar: #423630;
+    --dy-home-indicator: rgba(66, 54, 48, 0.3);
+}
+
+/* ============================================================
+   鼠尾草 —— 灰调的绿
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-root[data-diary-theme="sage"],
+.app-shell[data-app-id="diary"] [data-diary-theme="sage"] {
+    --dy-bg: #EDF0EA;
+    --dy-bg-alt: #E2E7DE;
+    --dy-surface: #F7F9F5;
+    --dy-surface-alt: #EBEFE7;
+    --dy-surface-dim: #D8DFD2;
+
+    --dy-primary: #78876C;
+    --dy-primary-soft: rgba(120, 135, 108, 0.13);
+    --dy-primary-dim: rgba(120, 135, 108, 0.28);
+    --dy-on-primary: #F7F9F5;
+
+    --dy-text: #333A2F;
+    --dy-text-2: #5F6A57;
+    --dy-text-3: #949C8B;
+
+    --dy-border: rgba(51, 58, 47, 0.14);
+    --dy-border-soft: rgba(51, 58, 47, 0.07);
+    --dy-divider: rgba(51, 58, 47, 0.09);
+
+    --dy-danger: #9C6656;
+    --dy-warn: #A99253;
+    --dy-ok: #6E8461;
+
+    --dy-cycle-period: #A0736A;
+    --dy-cycle-predicted: rgba(160, 115, 106, 0.28);
+    --dy-cycle-fertile: rgba(120, 135, 108, 0.32);
+    --dy-cycle-none: rgba(95, 106, 87, 0.22);
+
+    --dy-status-bar: #333A2F;
+    --dy-home-indicator: rgba(51, 58, 47, 0.3);
+}
+
+/* ============================================================
+   雾蓝 —— 阴天的窗
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-root[data-diary-theme="mist"],
+.app-shell[data-app-id="diary"] [data-diary-theme="mist"] {
+    --dy-bg: #ECEEF1;
+    --dy-bg-alt: #E1E5EA;
+    --dy-surface: #F6F8FA;
+    --dy-surface-alt: #EAEDF1;
+    --dy-surface-dim: #D6DBE2;
+
+    --dy-primary: #6F7E8C;
+    --dy-primary-soft: rgba(111, 126, 140, 0.13);
+    --dy-primary-dim: rgba(111, 126, 140, 0.28);
+    --dy-on-primary: #F6F8FA;
+
+    --dy-text: #2F363D;
+    --dy-text-2: #596571;
+    --dy-text-3: #8D97A2;
+
+    --dy-border: rgba(47, 54, 61, 0.14);
+    --dy-border-soft: rgba(47, 54, 61, 0.07);
+    --dy-divider: rgba(47, 54, 61, 0.09);
+
+    --dy-danger: #96635B;
+    --dy-warn: #A38E58;
+    --dy-ok: #6D8474;
+
+    --dy-cycle-period: #9B6F72;
+    --dy-cycle-predicted: rgba(155, 111, 114, 0.28);
+    --dy-cycle-fertile: rgba(111, 126, 140, 0.30);
+    --dy-cycle-none: rgba(89, 101, 113, 0.22);
+
+    --dy-status-bar: #2F363D;
+    --dy-home-indicator: rgba(47, 54, 61, 0.3);
+}
+
+/* ============================================================
+   藕荷 —— 很淡的紫灰
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-root[data-diary-theme="lilac"],
+.app-shell[data-app-id="diary"] [data-diary-theme="lilac"] {
+    --dy-bg: #EFEBEF;
+    --dy-bg-alt: #E6E0E7;
+    --dy-surface: #F9F6F9;
+    --dy-surface-alt: #EEE9EF;
+    --dy-surface-dim: #DCD4DE;
+
+    --dy-primary: #85748A;
+    --dy-primary-soft: rgba(133, 116, 138, 0.13);
+    --dy-primary-dim: rgba(133, 116, 138, 0.28);
+    --dy-on-primary: #F9F6F9;
+
+    --dy-text: #392F3C;
+    --dy-text-2: #665A6B;
+    --dy-text-3: #9B8FA0;
+
+    --dy-border: rgba(57, 47, 60, 0.14);
+    --dy-border-soft: rgba(57, 47, 60, 0.07);
+    --dy-divider: rgba(57, 47, 60, 0.09);
+
+    --dy-danger: #9E6169;
+    --dy-warn: #A78E5C;
+    --dy-ok: #75856F;
+
+    --dy-cycle-period: #A16E7C;
+    --dy-cycle-predicted: rgba(161, 110, 124, 0.28);
+    --dy-cycle-fertile: rgba(126, 140, 124, 0.28);
+    --dy-cycle-none: rgba(102, 90, 107, 0.22);
+
+    --dy-status-bar: #392F3C;
+    --dy-home-indicator: rgba(57, 47, 60, 0.3);
+}
+
+/* ============================================================
+   墨 —— 深色，夜里写字用
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-root[data-diary-theme="ink"],
+.app-shell[data-app-id="diary"] [data-diary-theme="ink"] {
+    --dy-bg: #22211F;
+    --dy-bg-alt: #1B1A19;
+    --dy-surface: #2B2A28;
+    --dy-surface-alt: #322F2D;
+    --dy-surface-dim: #3B3835;
+
+    --dy-primary: #B5A796;
+    --dy-primary-soft: rgba(181, 167, 150, 0.14);
+    --dy-primary-dim: rgba(181, 167, 150, 0.3);
+    --dy-on-primary: #22211F;
+
+    --dy-text: #E3DED6;
+    --dy-text-2: #A8A196;
+    --dy-text-3: #756F66;
+
+    --dy-border: rgba(227, 222, 214, 0.15);
+    --dy-border-soft: rgba(227, 222, 214, 0.08);
+    --dy-divider: rgba(227, 222, 214, 0.1);
+
+    --dy-danger: #C08A7E;
+    --dy-warn: #C4A96D;
+    --dy-ok: #96A986;
+
+    --dy-cycle-period: #BC8781;
+    --dy-cycle-predicted: rgba(188, 135, 129, 0.32);
+    --dy-cycle-fertile: rgba(150, 169, 134, 0.30);
+    --dy-cycle-none: rgba(168, 161, 150, 0.24);
+
+    --dy-status-bar: #E3DED6;
+    --dy-home-indicator: rgba(227, 222, 214, 0.35);
+}
+
+/* ============================================================
+   心情色 —— 独立一组，不随主题变
+   ------------------------------------------------------------
+   心情是跨日记本的语义（「平静」在哪个本子里都是平静），
+   跟着主题变会让归档页的心情色块每翻一个本子就换一套。
+   ============================================================ */
+.app-shell[data-app-id="diary"] {
+    --dy-mood-calm: #8FA3A8;
+    --dy-mood-glad: #C0A96B;
+    --dy-mood-tender: #C09BA0;
+    --dy-mood-tired: #9A9188;
+    --dy-mood-low: #7C8697;
+    --dy-mood-anxious: #B08670;
+    --dy-mood-blank: rgba(150, 145, 138, 0.5);
+}
+
+.app-shell[data-app-id="diary"] [data-mood="calm"] { --dy-mood: var(--dy-mood-calm); }
+.app-shell[data-app-id="diary"] [data-mood="glad"] { --dy-mood: var(--dy-mood-glad); }
+.app-shell[data-app-id="diary"] [data-mood="tender"] { --dy-mood: var(--dy-mood-tender); }
+.app-shell[data-app-id="diary"] [data-mood="tired"] { --dy-mood: var(--dy-mood-tired); }
+.app-shell[data-app-id="diary"] [data-mood="low"] { --dy-mood: var(--dy-mood-low); }
+.app-shell[data-app-id="diary"] [data-mood="anxious"] { --dy-mood: var(--dy-mood-anxious); }
+.app-shell[data-app-id="diary"] [data-mood="blank"] { --dy-mood: var(--dy-mood-blank); }
+
+/**
+ * 日记 · 根布局与通用控件
+ *
+ * 风格取向：无印良品。具体到规则上就是三条 ——
+ *   1. **没有渐变**（产品要求，也是莫兰迪配色的前提）
+ *   2. **没有投影**，层次靠 1px 细线和极小的明度差
+ *   3. **留白比装饰重要**，宁可空着也不填东西
+ *
+ * 所有选择器挂在 `.app-shell[data-app-id="diary"]` 下，不污染其他 app。
+ */
+
+/* ============================================================
+   SVG 兜底
+   ------------------------------------------------------------
+   ★ 内联 SVG 不带 width/height 时浏览器按 **300×150** 画，
+     能把整行布局撑爆。两层 :where() 让特异性归零，
+     任何一条真实规则都能盖过它。
+   ============================================================ */
+:where(.app-shell[data-app-id="diary"]) svg:where(:not([width]):not([height])) {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="diary"] .dy-icon {
+    display: block;
+}
+
+/* ============================================================
+   页面容器 —— 让 .dy-root 拿到一个「确定的高度」
+   ------------------------------------------------------------
+   ★ 不改这两条的话，底部 tab 栏会被挤到屏幕外面去，而且**没有任何报错**。
+     链路是这样的：
+       .app-page          position:absolute; inset:0     → 高度确定（534px）
+       .app-screen-panel  min-height:100%; height:auto   → ★ 高度不确定
+       .dy-root           height:100%                    → 对着 auto 父级算 → 退回 auto
+                                                         → 变成「内容多高就多高」
+     于是 `flex:1` 的 .dy-body 永远不会溢出、永远不产生自己的滚动条，
+     整页在 .app-page 里一起滚，`flex:0 0 auto` 的 tab 栏就被顶到 1125px
+     （可视区只有 707px）。DOM 里它在、能点、能查到 —— 就是看不见。
+
+     修法是把「确定高度」补回来：panel 给死高度，滚动权交给 .dy-body。
+     顺带清掉 panel 自带的 16px padding —— 顶栏和 tab 栏都是自绘的，
+     不需要框架再让一圈边距。
+   ============================================================ */
+.app-shell[data-app-id="diary"] .app-page {
+    /* 滚动交给 .dy-body 自己，外层不要再套一层滚动容器 */
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="diary"] .app-screen-panel {
+    height: 100%;
+    min-height: 0;
+    padding: 0;
+}
+
+/* 上面只修了「高度」，左右还差一步（AGENTS2 §18）：
+   framework 默认 .app-content { padding: 0 14px }，两侧各留 14px 的
+   app.background 色条 —— 平时颜色相近看不出来，弹窗遮罩一出来两侧
+   就有没变暗的亮边。自绘顶栏 / 底栏的 App 不需要这圈边距，清掉；
+   顺带清 .app-page-stack 的顶部圆角，否则遮罩上角会缺一小块。 */
+.app-shell[data-app-id="diary"] .app-content {
+    padding: 0;
+}
+
+.app-shell[data-app-id="diary"] .app-page-stack {
+    border-radius: 0;
+}
+
+/* ============================================================
+   根
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-root {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--dy-bg);
+    color: var(--dy-text);
+    font-size: var(--dy-fs-md);
+    line-height: var(--dy-lh);
+    letter-spacing: var(--dy-track);
+    -webkit-font-smoothing: antialiased;
+}
+
+.app-shell[data-app-id="diary"] .dy-root * {
+    box-sizing: border-box;
+}
+
+/* 状态栏浮在 app-shell 之上，自绘顶栏必须留出 54px */
+.app-shell[data-app-id="diary"] .dy-topbar {
+    flex: 0 0 auto;
+    padding: 54px var(--dy-pad) 10px;
+    background: var(--dy-bg);
+    border-bottom: var(--dy-hair) solid var(--dy-border-soft);
+}
+
+.app-shell[data-app-id="diary"] .dy-topbar__row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 30px;
+}
+
+.app-shell[data-app-id="diary"] .dy-topbar__title {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: var(--dy-fs-lg);
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="diary"] .dy-topbar__sub {
+    margin-top: 2px;
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+    letter-spacing: 0.05em;
+}
+
+/* 内容区：底部给 tab 栏和 home 条让位 */
+.app-shell[data-app-id="diary"] .dy-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    /* ★ 只开纵向。写 `overflow: auto` 会顺手打开横向滚动，
+       一个超宽的子元素就能让整页左右晃（AGENTS2 §15.3）。 */
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding: var(--dy-pad) var(--dy-pad) 28px;
+}
+
+/* 滚动条藏起来 —— 框架给 .app-page 做了同样的事，
+   我们把滚动接管过来之后得自己再做一遍，否则右侧会多出一条灰杠 */
+.app-shell[data-app-id="diary"] .dy-body,
+.app-shell[data-app-id="diary"] .dy-setup__body,
+.app-shell[data-app-id="diary"] .dy-sheet__body {
+    scrollbar-width: none;
+}
+
+.app-shell[data-app-id="diary"] .dy-body::-webkit-scrollbar,
+.app-shell[data-app-id="diary"] .dy-setup__body::-webkit-scrollbar,
+.app-shell[data-app-id="diary"] .dy-sheet__body::-webkit-scrollbar {
+    display: none;
+}
+
+/* ============================================================
+   底部 tab
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-tabbar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: stretch;
+    background: var(--dy-surface);
+    border-top: var(--dy-hair) solid var(--dy-border-soft);
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+.app-shell[data-app-id="diary"] .dy-tab {
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 9px 0 8px;
+    border: 0;
+    background: transparent;
+    color: var(--dy-text-3);
+    font-size: var(--dy-fs-xs);
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: color var(--dy-dur) var(--dy-ease);
+}
+
+.app-shell[data-app-id="diary"] .dy-tab.is-active {
+    color: var(--dy-primary);
+}
+
+.app-shell[data-app-id="diary"] .dy-tab svg {
+    width: 19px;
+    height: 19px;
+}
+
+/* ============================================================
+   卡片 / 分区
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-card {
+    background: var(--dy-surface);
+    border: var(--dy-hair) solid var(--dy-border-soft);
+    border-radius: var(--dy-radius);
+    padding: 16px;
+}
+
+.app-shell[data-app-id="diary"] .dy-card + .dy-card {
+    margin-top: var(--dy-gap);
+}
+
+.app-shell[data-app-id="diary"] .dy-card--plain {
+    background: transparent;
+    border-color: transparent;
+    padding: 0;
+}
+
+.app-shell[data-app-id="diary"] .dy-section {
+    margin-bottom: 22px;
+}
+
+.app-shell[data-app-id="diary"] .dy-section__head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.app-shell[data-app-id="diary"] .dy-section__title {
+    font-size: var(--dy-fs-sm);
+    font-weight: 500;
+    color: var(--dy-text-2);
+    letter-spacing: 0.12em;
+}
+
+.app-shell[data-app-id="diary"] .dy-section__note {
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+}
+
+.app-shell[data-app-id="diary"] .dy-section__action {
+    margin-left: auto;
+    border: 0;
+    background: transparent;
+    color: var(--dy-primary);
+    font-size: var(--dy-fs-xs);
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    padding: 2px 0;
+}
+
+/* ============================================================
+   行
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 13px 0;
+    border: 0;
+    border-bottom: var(--dy-hair) solid var(--dy-divider);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="diary"] .dy-row:last-child {
+    border-bottom: 0;
+}
+
+.app-shell[data-app-id="diary"] .dy-row--static {
+    cursor: default;
+}
+
+.app-shell[data-app-id="diary"] .dy-row__label {
+    flex: 0 0 auto;
+    color: var(--dy-text-2);
+    font-size: var(--dy-fs-md);
+}
+
+.app-shell[data-app-id="diary"] .dy-row__value {
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: right;
+    color: var(--dy-text);
+    font-size: var(--dy-fs-md);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="diary"] .dy-row__value--muted {
+    color: var(--dy-text-3);
+}
+
+.app-shell[data-app-id="diary"] .dy-row__chev {
+    flex: 0 0 auto;
+    color: var(--dy-text-3);
+}
+
+.app-shell[data-app-id="diary"] .dy-row__chev svg {
+    width: 15px;
+    height: 15px;
+}
+
+.app-shell[data-app-id="diary"] .dy-row__hint {
+    margin: -6px 0 12px;
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+    line-height: 1.7;
+}
+
+/* ============================================================
+   按钮
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 18px;
+    border: var(--dy-hair) solid var(--dy-border);
+    border-radius: var(--dy-radius-sm);
+    background: transparent;
+    color: var(--dy-text);
+    font-size: var(--dy-fs-md);
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: background var(--dy-dur) var(--dy-ease), border-color var(--dy-dur) var(--dy-ease);
+}
+
+.app-shell[data-app-id="diary"] .dy-btn:active {
+    background: var(--dy-primary-soft);
+}
+
+.app-shell[data-app-id="diary"] .dy-btn--primary {
+    background: var(--dy-primary);
+    border-color: var(--dy-primary);
+    color: var(--dy-on-primary);
+}
+
+.app-shell[data-app-id="diary"] .dy-btn--ghost {
+    border-color: transparent;
+    color: var(--dy-primary);
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+.app-shell[data-app-id="diary"] .dy-btn--danger {
+    color: var(--dy-danger);
+    border-color: var(--dy-border-soft);
+}
+
+.app-shell[data-app-id="diary"] .dy-btn--block {
+    width: 100%;
+}
+
+.app-shell[data-app-id="diary"] .dy-btn--sm {
+    padding: 6px 12px;
+    font-size: var(--dy-fs-sm);
+}
+
+.app-shell[data-app-id="diary"] .dy-btn[disabled] {
+    opacity: 0.42;
+    cursor: default;
+}
+
+.app-shell[data-app-id="diary"] .dy-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.app-shell[data-app-id="diary"] .dy-btnbar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* 图标按钮（顶栏右上角那种） */
+.app-shell[data-app-id="diary"] .dy-iconbtn {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--dy-radius-sm);
+    background: transparent;
+    color: var(--dy-text-2);
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="diary"] .dy-iconbtn:active {
+    background: var(--dy-primary-soft);
+}
+
+/* ============================================================
+   表单
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-field {
+    width: 100%;
+    padding: 10px 12px;
+    border: var(--dy-hair) solid var(--dy-border);
+    border-radius: var(--dy-radius-sm);
+    background: var(--dy-surface);
+    color: var(--dy-text);
+    font: inherit;
+    line-height: 1.7;
+    outline: none;
+    transition: border-color var(--dy-dur) var(--dy-ease);
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.app-shell[data-app-id="diary"] .dy-field:focus {
+    border-color: var(--dy-primary-dim);
+}
+
+.app-shell[data-app-id="diary"] .dy-field::placeholder {
+    color: var(--dy-text-3);
+}
+
+.app-shell[data-app-id="diary"] textarea.dy-field {
+    resize: none;
+    min-height: 88px;
+}
+
+.app-shell[data-app-id="diary"] .dy-formrow {
+    margin-bottom: 16px;
+}
+
+.app-shell[data-app-id="diary"] .dy-formrow__label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: var(--dy-fs-sm);
+    color: var(--dy-text-2);
+    letter-spacing: 0.08em;
+}
+
+.app-shell[data-app-id="diary"] .dy-formrow__hint {
+    margin-top: 5px;
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+    line-height: 1.7;
+}
+
+/* 数字步进 */
+.app-shell[data-app-id="diary"] .dy-stepper {
+    display: inline-flex;
+    align-items: center;
+    border: var(--dy-hair) solid var(--dy-border);
+    border-radius: var(--dy-radius-sm);
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="diary"] .dy-stepper__btn {
+    width: 34px;
+    height: 32px;
+    border: 0;
+    background: transparent;
+    color: var(--dy-text-2);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-shell[data-app-id="diary"] .dy-stepper__btn:active {
+    background: var(--dy-primary-soft);
+}
+
+.app-shell[data-app-id="diary"] .dy-stepper__btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.app-shell[data-app-id="diary"] .dy-stepper__value {
+    min-width: 52px;
+    text-align: center;
+    font-size: var(--dy-fs-md);
+    font-variant-numeric: tabular-nums;
+}
+
+/* 开关 —— 方形，不用圆胶囊（无印良品调子） */
+.app-shell[data-app-id="diary"] .dy-switch {
+    position: relative;
+    flex: 0 0 auto;
+    width: 40px;
+    height: 22px;
+    border: var(--dy-hair) solid var(--dy-border);
+    border-radius: 11px;
+    background: var(--dy-surface-dim);
+    cursor: pointer;
+    transition: background var(--dy-dur) var(--dy-ease), border-color var(--dy-dur) var(--dy-ease);
+    padding: 0;
+}
+
+.app-shell[data-app-id="diary"] .dy-switch.is-on {
+    background: var(--dy-primary);
+    border-color: var(--dy-primary);
+}
+
+.app-shell[data-app-id="diary"] .dy-switch__dot {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--dy-surface);
+    transition: transform var(--dy-dur) var(--dy-ease);
+}
+
+.app-shell[data-app-id="diary"] .dy-switch.is-on .dy-switch__dot {
+    transform: translateX(18px);
+}
+
+/* 选项组（横排小方块） */
+.app-shell[data-app-id="diary"] .dy-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.app-shell[data-app-id="diary"] .dy-chip {
+    padding: 6px 12px;
+    border: var(--dy-hair) solid var(--dy-border);
+    border-radius: var(--dy-radius-sm);
+    background: transparent;
+    color: var(--dy-text-2);
+    font-size: var(--dy-fs-sm);
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all var(--dy-dur) var(--dy-ease);
+}
+
+.app-shell[data-app-id="diary"] .dy-chip.is-on {
+    border-color: var(--dy-primary);
+    background: var(--dy-primary-soft);
+    color: var(--dy-primary);
+}
+
+.app-shell[data-app-id="diary"] .dy-chip--wide {
+    flex: 1 1 auto;
+    text-align: center;
+}
+
+/* ============================================================
+   空状态
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 44px 24px;
+    text-align: center;
+    color: var(--dy-text-3);
+}
+
+.app-shell[data-app-id="diary"] .dy-empty svg {
+    width: 26px;
+    height: 26px;
+    opacity: 0.55;
+}
+
+.app-shell[data-app-id="diary"] .dy-empty__text {
+    font-size: var(--dy-fs-sm);
+    line-height: 1.9;
+}
+
+/* ============================================================
+   轻提示
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-toast {
+    position: absolute;
+    left: 50%;
+    bottom: 88px;
+    transform: translateX(-50%);
+    z-index: 60;
+    max-width: 82%;
+    padding: 9px 16px;
+    border: var(--dy-hair) solid var(--dy-border);
+    border-radius: var(--dy-radius-sm);
+    background: var(--dy-surface);
+    color: var(--dy-text);
+    font-size: var(--dy-fs-sm);
+    letter-spacing: 0.06em;
+    text-align: center;
+    animation: dy-toast-in 200ms var(--dy-ease);
+}
+
+@keyframes dy-toast-in {
+    from { opacity: 0; transform: translate(-50%, 6px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* 忙碌条 —— 不用转圈，用一条慢慢走的细线 */
+.app-shell[data-app-id="diary"] .dy-busy {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 14px;
+    border: var(--dy-hair) solid var(--dy-border-soft);
+    border-radius: var(--dy-radius-sm);
+    background: var(--dy-surface-alt);
+    color: var(--dy-text-2);
+    font-size: var(--dy-fs-sm);
+}
+
+.app-shell[data-app-id="diary"] .dy-busy__track {
+    flex: 1 1 auto;
+    height: 1px;
+    background: var(--dy-border);
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="diary"] .dy-busy__bar {
+    width: 34%;
+    height: 100%;
+    background: var(--dy-primary);
+    animation: dy-busy 1500ms var(--dy-ease) infinite;
+}
+
+@keyframes dy-busy {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(340%); }
+}
+
+/* ============================================================
+   行内包装元素的块化
+   ------------------------------------------------------------
+   ★ 这些「标题 + 副标题」结构都用 <span> 包，而不是 <div> ——
+     因为它们全都长在 <button> 里，而 <button> 里塞 <div> 虽然浏览器能渲染，
+     但在部分环境下会被 HTML 解析器规范化掉（button 的内容模型是 phrasing content）。
+
+     代价是 span 默认 inline，两行文字会挤在同一行连成一句
+     （「探针日记1 篇 · 1 张便利贴」）。所以凡是要独占一行的都得显式块化。
+     这不是可选的美化，是这套结构的必要配套。
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-book__name,
+.app-shell[data-app-id="diary"] .dy-book__sub,
+.app-shell[data-app-id="diary"] .dy-arch__d,
+.app-shell[data-app-id="diary"] .dy-arch__w,
+.app-shell[data-app-id="diary"] .dy-marker__value,
+.app-shell[data-app-id="diary"] .dy-marker__unit,
+.app-shell[data-app-id="diary"] .dy-marker__title,
+.app-shell[data-app-id="diary"] .dy-marker__date,
+.app-shell[data-app-id="diary"] .dy-ctx__title,
+.app-shell[data-app-id="diary"] .dy-ctx__meta,
+.app-shell[data-app-id="diary"] .dy-cyclemini__state,
+.app-shell[data-app-id="diary"] .dy-cyclemini__sub {
+    display: block;
+}
+
+/* ============================================================
+   工具类
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-muted { color: var(--dy-text-3); }
+.app-shell[data-app-id="diary"] .dy-small { font-size: var(--dy-fs-xs); }
+.app-shell[data-app-id="diary"] .dy-nums { font-variant-numeric: tabular-nums; }
+.app-shell[data-app-id="diary"] .dy-hr {
+    height: var(--dy-hair);
+    background: var(--dy-divider);
+    margin: 16px 0;
+    border: 0;
+}
+.app-shell[data-app-id="diary"] .dy-stack > * + * { margin-top: var(--dy-gap); }
+
+/**
+ * 日记 · 今日页
+ *
+ * 版面顺序是产品逻辑的直接映射：
+ *   时段条 → 今天这一篇 → 便利贴 → 生理期 → 纪念日/倒计时
+ *
+ * 时段条排在最上面，是因为「现在写的到底是日记还是便利贴」
+ * 是用户每次进来第一个要知道的事 —— 藏在下面的话，
+ * 他会写完一段才发现存成了便利贴。
+ */
+
+/* ============================================================
+   日期头
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-dateline {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.app-shell[data-app-id="diary"] .dy-dateline__day {
+    font-size: 30px;
+    font-weight: 300;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="diary"] .dy-dateline__rest {
+    font-size: var(--dy-fs-sm);
+    color: var(--dy-text-3);
+    letter-spacing: 0.1em;
+}
+
+/* ============================================================
+   写作时段条
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-window {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 10px 13px;
+    margin-bottom: 16px;
+    border: var(--dy-hair) solid var(--dy-border-soft);
+    border-radius: var(--dy-radius-sm);
+    background: var(--dy-surface-alt);
+    font-size: var(--dy-fs-sm);
+    color: var(--dy-text-2);
+}
+
+/* 时段开着的时候左边加一道竖线，是整页唯一的"强调" */
+.app-shell[data-app-id="diary"] .dy-window.is-open {
+    border-left: 2px solid var(--dy-primary);
+    background: var(--dy-primary-soft);
+    color: var(--dy-text);
+}
+
+.app-shell[data-app-id="diary"] .dy-window svg {
+    width: 15px;
+    height: 15px;
+    color: var(--dy-text-3);
+}
+
+.app-shell[data-app-id="diary"] .dy-window.is-open svg {
+    color: var(--dy-primary);
+}
+
+.app-shell[data-app-id="diary"] .dy-window__main {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="diary"] .dy-window__time {
+    flex: 0 0 auto;
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.06em;
+}
+
+/* ============================================================
+   今天这一篇
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-entry {
+    border: var(--dy-hair) solid var(--dy-border-soft);
+    border-radius: var(--dy-radius);
+    background: var(--dy-surface);
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="diary"] .dy-entry__head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border-bottom: var(--dy-hair) solid var(--dy-divider);
+}
+
+.app-shell[data-app-id="diary"] .dy-entry__kind {
+    font-size: var(--dy-fs-xs);
+    letter-spacing: 0.16em;
+    color: var(--dy-text-3);
+}
+
+.app-shell[data-app-id="diary"] .dy-entry__mood {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-2);
+}
+
+.app-shell[data-app-id="diary"] .dy-entry__mood::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--dy-mood, var(--dy-text-3));
+}
+
+.app-shell[data-app-id="diary"] .dy-entry__by {
+    margin-left: auto;
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+}
+
+.app-shell[data-app-id="diary"] .dy-entry__body {
+    padding: 16px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 2;
+    font-size: var(--dy-fs-md);
+}
+
+/* 横线纸 / 方格纸：只在正文区生效，不影响其他卡片 */
+.app-shell[data-app-id="diary"] .dy-root[data-diary-layout="ruled"] .dy-entry__body {
+    background-image: repeating-linear-gradient(
+        to bottom,
+        transparent,
+        transparent calc(2em - var(--dy-hair)),
+        var(--dy-border-soft) calc(2em - var(--dy-hair)),
+        var(--dy-border-soft) 2em
+    );
+    background-position: 0 16px;
+}
+
+.app-shell[data-app-id="diary"] .dy-root[data-diary-layout="grid"] .dy-entry__body {
+    background-image:
+        repeating-linear-gradient(to bottom, transparent, transparent calc(2em - var(--dy-hair)), var(--dy-border-soft) calc(2em - var(--dy-hair)), var(--dy-border-soft) 2em),
+        repeating-linear-gradient(to right, transparent, transparent calc(2em - var(--dy-hair)), var(--dy-border-soft) calc(2em - var(--dy-hair)), var(--dy-border-soft) 2em);
+    background-position: 0 16px;
+}
+
+.app-shell[data-app-id="diary"] .dy-root[data-diary-scale="sm"] .dy-entry__body { font-size: var(--dy-fs-sm); }
+.app-shell[data-app-id="diary"] .dy-root[data-diary-scale="lg"] .dy-entry__body { font-size: var(--dy-fs-lg); }
+
+.app-shell[data-app-id="diary"] .dy-entry__foot {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 10px;
+    border-top: var(--dy-hair) solid var(--dy-divider);
+    background: var(--dy-surface-alt);
+}
+
+.app-shell[data-app-id="diary"] .dy-entry__foot .dy-btn {
+    border-color: transparent;
+    padding: 6px 10px;
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-2);
+}
+
+.app-shell[data-app-id="diary"] .dy-entry__foot .dy-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.app-shell[data-app-id="diary"] .dy-entry__foot .dy-btn--danger { color: var(--dy-danger); }
+.app-shell[data-app-id="diary"] .dy-entry__spacer { margin-left: auto; }
+
+/* 空白态：一张什么都没有的纸 */
+.app-shell[data-app-id="diary"] .dy-entry__blank {
+    padding: 30px 16px;
+    text-align: center;
+    color: var(--dy-text-3);
+    font-size: var(--dy-fs-sm);
+    line-height: 2;
+}
+
+/* ============================================================
+   编辑器
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-composer {
+    border: var(--dy-hair) solid var(--dy-border);
+    border-radius: var(--dy-radius);
+    background: var(--dy-surface);
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="diary"] .dy-composer__input {
+    width: 100%;
+    min-height: 150px;
+    padding: 16px;
+    border: 0;
+    background: transparent;
+    color: var(--dy-text);
+    font: inherit;
+    line-height: 2;
+    resize: none;
+    outline: none;
+}
+
+.app-shell[data-app-id="diary"] .dy-composer__input::placeholder {
+    color: var(--dy-text-3);
+}
+
+.app-shell[data-app-id="diary"] .dy-composer__bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    border-top: var(--dy-hair) solid var(--dy-divider);
+    background: var(--dy-surface-alt);
+}
+
+.app-shell[data-app-id="diary"] .dy-composer__count {
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="diary"] .dy-composer__actions {
+    margin-left: auto;
+    display: flex;
+    gap: 6px;
+}
+
+/* 心情选择：一排小圆点 */
+.app-shell[data-app-id="diary"] .dy-moods {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px 12px;
+    border-top: var(--dy-hair) solid var(--dy-divider);
+}
+
+.app-shell[data-app-id="diary"] .dy-mood-pick {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border: var(--dy-hair) solid transparent;
+    border-radius: var(--dy-radius-sm);
+    background: transparent;
+    color: var(--dy-text-3);
+    font-size: var(--dy-fs-xs);
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="diary"] .dy-mood-pick::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--dy-mood, var(--dy-text-3));
+    opacity: 0.4;
+}
+
+.app-shell[data-app-id="diary"] .dy-mood-pick.is-on {
+    border-color: var(--dy-border);
+    color: var(--dy-text);
+}
+
+.app-shell[data-app-id="diary"] .dy-mood-pick.is-on::before {
+    opacity: 1;
+}
+
+/* ============================================================
+   便利贴
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-notes {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="diary"] .dy-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 11px 13px;
+    border: var(--dy-hair) solid var(--dy-border-soft);
+    border-radius: var(--dy-radius-sm);
+    background: var(--dy-surface);
+}
+
+/* 便利贴左上角折一个小角 —— 不用图片，一个三角形伪元素就够 */
+.app-shell[data-app-id="diary"] .dy-note::before {
+    content: '';
+    flex: 0 0 auto;
+    width: 0;
+    height: 0;
+    margin-top: 4px;
+    border-left: 5px solid var(--dy-primary-dim);
+    border-top: 5px solid var(--dy-primary-dim);
+    border-right: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+}
+
+.app-shell[data-app-id="diary"] .dy-note__text {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: var(--dy-fs-sm);
+    line-height: 1.85;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.app-shell[data-app-id="diary"] .dy-note__meta {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="diary"] .dy-note__del {
+    border: 0;
+    background: transparent;
+    color: var(--dy-text-3);
+    cursor: pointer;
+    padding: 0;
+    display: inline-flex;
+}
+
+.app-shell[data-app-id="diary"] .dy-note__del svg {
+    width: 13px;
+    height: 13px;
+}
+
+/* 便利贴快写框 */
+.app-shell[data-app-id="diary"] .dy-quicknote {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    padding: 9px 10px;
+    border: var(--dy-hair) solid var(--dy-border);
+    border-radius: var(--dy-radius-sm);
+    background: var(--dy-surface);
+}
+
+.app-shell[data-app-id="diary"] .dy-quicknote__input {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 34px;
+    max-height: 100px;
+    border: 0;
+    background: transparent;
+    color: var(--dy-text);
+    font: inherit;
+    font-size: var(--dy-fs-sm);
+    line-height: 1.8;
+    resize: none;
+    outline: none;
+}
+
+/* ============================================================
+   小组件区：纪念日 / 倒计时
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-widgets {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.app-shell[data-app-id="diary"] .dy-widget {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 13px 14px;
+    border: var(--dy-hair) solid var(--dy-border-soft);
+    border-radius: var(--dy-radius-sm);
+    background: var(--dy-surface);
+    text-align: left;
+    cursor: pointer;
+    color: inherit;
+    font: inherit;
+}
+
+.app-shell[data-app-id="diary"] .dy-widget__title {
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-2);
+    letter-spacing: 0.08em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="diary"] .dy-widget__num {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    color: var(--dy-primary);
+}
+
+.app-shell[data-app-id="diary"] .dy-widget__value {
+    font-size: 24px;
+    font-weight: 300;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="diary"] .dy-widget__unit {
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+}
+
+.app-shell[data-app-id="diary"] .dy-widget__date {
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+    font-variant-numeric: tabular-nums;
+}
+
+/* 今天就是这个日子 —— 整块反白 */
+.app-shell[data-app-id="diary"] .dy-widget.is-today {
+    background: var(--dy-primary);
+    border-color: var(--dy-primary);
+}
+
+.app-shell[data-app-id="diary"] .dy-widget.is-today .dy-widget__title,
+.app-shell[data-app-id="diary"] .dy-widget.is-today .dy-widget__date,
+.app-shell[data-app-id="diary"] .dy-widget.is-today .dy-widget__unit,
+.app-shell[data-app-id="diary"] .dy-widget.is-today .dy-widget__num {
+    color: var(--dy-on-primary);
+}
+
+/* ============================================================
+   今日生理期小卡
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-cyclemini {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 15px;
+    border: var(--dy-hair) solid var(--dy-border-soft);
+    border-radius: var(--dy-radius);
+    background: var(--dy-surface);
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+    color: inherit;
+    font: inherit;
+}
+
+.app-shell[data-app-id="diary"] .dy-cyclemini__dot {
+    flex: 0 0 auto;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--dy-cycle-period);
+}
+
+.app-shell[data-app-id="diary"] .dy-cyclemini__dot[data-state="safe"],
+.app-shell[data-app-id="diary"] .dy-cyclemini__dot[data-state="unknown"] {
+    background: var(--dy-cycle-none);
+}
+
+.app-shell[data-app-id="diary"] .dy-cyclemini__dot[data-state="pre"],
+.app-shell[data-app-id="diary"] .dy-cyclemini__dot[data-state="due"] {
+    background: var(--dy-cycle-predicted);
+    border: var(--dy-hair) solid var(--dy-cycle-period);
+}
+
+.app-shell[data-app-id="diary"] .dy-cyclemini__main {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="diary"] .dy-cyclemini__state {
+    font-size: var(--dy-fs-md);
+}
+
+.app-shell[data-app-id="diary"] .dy-cyclemini__sub {
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+    margin-top: 1px;
+}
+
+.app-shell[data-app-id="diary"] .dy-cyclemini__quick {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 5px;
+}
+
+/**
+ * 日记 · 生理期页
+ *
+ * 日历上的四种标记语义（颜色全部来自 `_theme.css`）：
+ *   period    实测「来了」          实心
+ *   none      实测「明确没来」       小横杠 —— 必须和「还没记」看得出区别
+ *   predicted 推算的经期            虚线圈
+ *   fertile   推算的排卵窗口         淡底
+ *
+ * 「实测永远盖过推算」这条规则在 `cycle-service.buildCalendarMarks` 里，
+ * 这里只负责把语义画出来。
+ */
+
+/* ============================================================
+   状态大卡
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-cyclehero {
+    padding: 22px 18px;
+    border: var(--dy-hair) solid var(--dy-border-soft);
+    border-radius: var(--dy-radius);
+    background: var(--dy-surface);
+    text-align: center;
+}
+
+.app-shell[data-app-id="diary"] .dy-cyclehero__state {
+    font-size: 26px;
+    font-weight: 300;
+    line-height: 1.3;
+    letter-spacing: 0.02em;
+}
+
+.app-shell[data-app-id="diary"] .dy-cyclehero__sub {
+    margin-top: 6px;
+    font-size: var(--dy-fs-sm);
+    color: var(--dy-text-3);
+    line-height: 1.8;
+}
+
+.app-shell[data-app-id="diary"] .dy-cyclehero__flag {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 3px 10px;
+    border: var(--dy-hair) solid var(--dy-border);
+    border-radius: var(--dy-radius-sm);
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-2);
+    letter-spacing: 0.08em;
+}
+
+.app-shell[data-app-id="diary"] .dy-cyclehero__quick {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.app-shell[data-app-id="diary"] .dy-cyclehero__quick .dy-btn {
+    flex: 1 1 0;
+}
+
+/* ============================================================
+   日历
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-cal__head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.app-shell[data-app-id="diary"] .dy-cal__month {
+    flex: 1 1 auto;
+    text-align: center;
+    font-size: var(--dy-fs-md);
+    letter-spacing: 0.1em;
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="diary"] .dy-cal__week {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    margin-bottom: 4px;
+}
+
+.app-shell[data-app-id="diary"] .dy-cal__wd {
+    text-align: center;
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+    letter-spacing: 0.06em;
+}
+
+.app-shell[data-app-id="diary"] .dy-cal__grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 2px;
+}
+
+.app-shell[data-app-id="diary"] .dy-cal__cell {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    border: var(--dy-hair) solid transparent;
+    border-radius: var(--dy-radius-sm);
+    background: transparent;
+    color: var(--dy-text-2);
+    font-size: var(--dy-fs-sm);
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    padding: 0;
+}
+
+.app-shell[data-app-id="diary"] .dy-cal__cell--pad {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="diary"] .dy-cal__cell.is-today {
+    border-color: var(--dy-border);
+}
+
+.app-shell[data-app-id="diary"] .dy-cal__cell.is-focus {
+    background: var(--dy-primary-soft);
+    border-color: var(--dy-primary-dim);
+}
+
+.app-shell[data-app-id="diary"] .dy-cal__cell.is-future {
+    color: var(--dy-text-3);
+}
+
+/* 四种标记 */
+.app-shell[data-app-id="diary"] .dy-cal__cell[data-mark="period"] {
+    background: var(--dy-cycle-period);
+    color: var(--dy-on-primary);
+}
+
+.app-shell[data-app-id="diary"] .dy-cal__cell[data-mark="predicted"] {
+    border-color: var(--dy-cycle-period);
+    border-style: dashed;
+    color: var(--dy-text-2);
+}
+
+.app-shell[data-app-id="diary"] .dy-cal__cell[data-mark="fertile"] {
+    background: var(--dy-cycle-fertile);
+}
+
+.app-shell[data-app-id="diary"] .dy-cal__cell[data-mark="none"]::after {
+    content: '';
+    position: absolute;
+    bottom: 5px;
+    width: 9px;
+    height: 1.5px;
+    background: var(--dy-cycle-none);
+}
+
+/* 有日记的日子：右上角一个点 */
+.app-shell[data-app-id="diary"] .dy-cal__cell[data-has-entry="1"]::before {
+    content: '';
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--dy-primary);
+}
+
+.app-shell[data-app-id="diary"] .dy-cal__cell[data-mark="period"][data-has-entry="1"]::before {
+    background: var(--dy-on-primary);
+}
+
+/* 图例 */
+.app-shell[data-app-id="diary"] .dy-cal__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 12px;
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+}
+
+.app-shell[data-app-id="diary"] .dy-cal__legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.app-shell[data-app-id="diary"] .dy-cal__swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+}
+
+.app-shell[data-app-id="diary"] .dy-cal__swatch[data-mark="period"] { background: var(--dy-cycle-period); }
+.app-shell[data-app-id="diary"] .dy-cal__swatch[data-mark="predicted"] { border: 1px dashed var(--dy-cycle-period); }
+.app-shell[data-app-id="diary"] .dy-cal__swatch[data-mark="fertile"] { background: var(--dy-cycle-fertile); }
+.app-shell[data-app-id="diary"] .dy-cal__swatch[data-mark="none"] { border-bottom: 2px solid var(--dy-cycle-none); border-radius: 0; height: 6px; }
+
+/* ============================================================
+   打卡表单
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-track {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.app-shell[data-app-id="diary"] .dy-track__group {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.app-shell[data-app-id="diary"] .dy-track__label {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    font-size: var(--dy-fs-sm);
+    color: var(--dy-text-2);
+    letter-spacing: 0.1em;
+}
+
+.app-shell[data-app-id="diary"] .dy-track__hint {
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+    letter-spacing: 0;
+}
+
+/* 分档选择（经量 / 痛经）—— 一条等分的横条 */
+.app-shell[data-app-id="diary"] .dy-scale {
+    display: flex;
+    border: var(--dy-hair) solid var(--dy-border);
+    border-radius: var(--dy-radius-sm);
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="diary"] .dy-scale__item {
+    flex: 1 1 0;
+    padding: 8px 2px;
+    border: 0;
+    border-left: var(--dy-hair) solid var(--dy-border-soft);
+    background: transparent;
+    color: var(--dy-text-3);
+    font-size: var(--dy-fs-xs);
+    cursor: pointer;
+    transition: background var(--dy-dur) var(--dy-ease), color var(--dy-dur) var(--dy-ease);
+}
+
+.app-shell[data-app-id="diary"] .dy-scale__item:first-child {
+    border-left: 0;
+}
+
+.app-shell[data-app-id="diary"] .dy-scale__item.is-on {
+    background: var(--dy-primary);
+    color: var(--dy-on-primary);
+}
+
+/* 统计 */
+.app-shell[data-app-id="diary"] .dy-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1px;
+    background: var(--dy-divider);
+    border: var(--dy-hair) solid var(--dy-border-soft);
+    border-radius: var(--dy-radius-sm);
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="diary"] .dy-stat {
+    padding: 14px 6px;
+    background: var(--dy-surface);
+    text-align: center;
+}
+
+.app-shell[data-app-id="diary"] .dy-stat__value {
+    font-size: 21px;
+    font-weight: 300;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="diary"] .dy-stat__label {
+    margin-top: 3px;
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+}
+
+/* 历次周期条 */
+.app-shell[data-app-id="diary"] .dy-history {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.app-shell[data-app-id="diary"] .dy-history__row {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-2);
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="diary"] .dy-history__date {
+    flex: 0 0 74px;
+    color: var(--dy-text-3);
+}
+
+.app-shell[data-app-id="diary"] .dy-history__bar {
+    flex: 1 1 auto;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--dy-cycle-predicted);
+}
+
+.app-shell[data-app-id="diary"] .dy-history__len {
+    flex: 0 0 46px;
+    text-align: right;
+}
+
+/**
+ * 日记 · 配置向导 / 归档 / 计划 / 日记本切换 / 弹窗皮肤
+ */
+
+/* ============================================================
+   配置向导
+   ------------------------------------------------------------
+   产品要求：日记一进去要先配置，配置完才进得了日记空间。
+   所以这一屏是**全屏接管**的，没有 tab 栏也没有返回。
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-setup {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--dy-bg);
+}
+
+.app-shell[data-app-id="diary"] .dy-setup__head {
+    flex: 0 0 auto;
+    padding: 66px var(--dy-pad) 16px;
+}
+
+.app-shell[data-app-id="diary"] .dy-setup__step {
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+    letter-spacing: 0.2em;
+    margin-bottom: 8px;
+}
+
+.app-shell[data-app-id="diary"] .dy-setup__title {
+    font-size: 22px;
+    font-weight: 300;
+    line-height: 1.5;
+    letter-spacing: 0.03em;
+}
+
+.app-shell[data-app-id="diary"] .dy-setup__desc {
+    margin-top: 8px;
+    font-size: var(--dy-fs-sm);
+    color: var(--dy-text-3);
+    line-height: 1.9;
+}
+
+.app-shell[data-app-id="diary"] .dy-setup__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 6px var(--dy-pad) 24px;
+}
+
+.app-shell[data-app-id="diary"] .dy-setup__foot {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px var(--dy-pad);
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    border-top: var(--dy-hair) solid var(--dy-border-soft);
+    background: var(--dy-surface);
+}
+
+.app-shell[data-app-id="diary"] .dy-setup__foot .dy-btn--primary {
+    flex: 1 1 auto;
+}
+
+/* 进度点 */
+.app-shell[data-app-id="diary"] .dy-dots {
+    display: flex;
+    gap: 5px;
+    margin-top: 14px;
+}
+
+.app-shell[data-app-id="diary"] .dy-dots span {
+    width: 16px;
+    height: 2px;
+    background: var(--dy-border);
+    border-radius: 1px;
+}
+
+.app-shell[data-app-id="diary"] .dy-dots span.is-on {
+    background: var(--dy-primary);
+}
+
+/* 主题选择：一排色卡 */
+.app-shell[data-app-id="diary"] .dy-themes {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.app-shell[data-app-id="diary"] .dy-theme {
+    padding: 0;
+    border: var(--dy-hair) solid var(--dy-border-soft);
+    border-radius: var(--dy-radius-sm);
+    background: transparent;
+    cursor: pointer;
+    overflow: hidden;
+    text-align: center;
+}
+
+.app-shell[data-app-id="diary"] .dy-theme.is-on {
+    border-color: var(--dy-primary);
+}
+
+/* 预览块用的是**探针主题**自己的变量 —— 这就是 `_theme.css` 里
+   每套主题都写了「任意带 data-diary-theme 的后代」那条选择器的原因 */
+.app-shell[data-app-id="diary"] .dy-theme__swatch {
+    display: flex;
+    height: 46px;
+    background: var(--dy-bg);
+}
+
+.app-shell[data-app-id="diary"] .dy-theme__swatch i {
+    flex: 1 1 0;
+    display: block;
+}
+
+.app-shell[data-app-id="diary"] .dy-theme__swatch i:nth-child(1) { background: var(--dy-surface); }
+.app-shell[data-app-id="diary"] .dy-theme__swatch i:nth-child(2) { background: var(--dy-primary); }
+.app-shell[data-app-id="diary"] .dy-theme__swatch i:nth-child(3) { background: var(--dy-surface-dim); }
+
+.app-shell[data-app-id="diary"] .dy-theme__name {
+    padding: 6px 2px;
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-2);
+    background: var(--dy-surface);
+    letter-spacing: 0.08em;
+}
+
+/* 时段滑杆 */
+.app-shell[data-app-id="diary"] .dy-windowpick {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.app-shell[data-app-id="diary"] .dy-windowpick__range {
+    flex: 1 1 auto;
+    min-width: 0;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 2px;
+    background: var(--dy-border);
+    border-radius: 1px;
+    outline: none;
+}
+
+.app-shell[data-app-id="diary"] .dy-windowpick__range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--dy-primary);
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="diary"] .dy-windowpick__range::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--dy-primary);
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="diary"] .dy-windowpick__text {
+    flex: 0 0 auto;
+    font-size: var(--dy-fs-md);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.05em;
+}
+
+/* ============================================================
+   归档
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-archive__list {
+    display: flex;
+    flex-direction: column;
+}
+
+.app-shell[data-app-id="diary"] .dy-arch {
+    display: flex;
+    gap: 14px;
+    padding: 15px 0;
+    border-bottom: var(--dy-hair) solid var(--dy-divider);
+    background: transparent;
+    border-left: 0;
+    border-right: 0;
+    border-top: 0;
+    text-align: left;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    width: 100%;
+}
+
+.app-shell[data-app-id="diary"] .dy-arch__date {
+    flex: 0 0 42px;
+    text-align: center;
+}
+
+.app-shell[data-app-id="diary"] .dy-arch__d {
+    font-size: 19px;
+    font-weight: 300;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="diary"] .dy-arch__w {
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+    margin-top: 2px;
+}
+
+.app-shell[data-app-id="diary"] .dy-arch__main {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="diary"] .dy-arch__text {
+    font-size: var(--dy-fs-sm);
+    line-height: 1.8;
+    color: var(--dy-text-2);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="diary"] .dy-arch__tags {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 5px;
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+}
+
+.app-shell[data-app-id="diary"] .dy-arch__tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.app-shell[data-app-id="diary"] .dy-arch__tag::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--dy-mood, var(--dy-text-3));
+}
+
+.app-shell[data-app-id="diary"] .dy-arch__tag--plain::before {
+    display: none;
+}
+
+/* 月份切换条 */
+.app-shell[data-app-id="diary"] .dy-monthbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 0 14px;
+}
+
+.app-shell[data-app-id="diary"] .dy-monthbar__label {
+    flex: 1 1 auto;
+    text-align: center;
+    font-size: var(--dy-fs-md);
+    letter-spacing: 0.1em;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================
+   纪念日 / 计划
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-marker {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    padding: 14px 0;
+    border-bottom: var(--dy-hair) solid var(--dy-divider);
+    width: 100%;
+    background: transparent;
+    border-left: 0;
+    border-right: 0;
+    border-top: 0;
+    text-align: left;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="diary"] .dy-marker__num {
+    flex: 0 0 auto;
+    min-width: 46px;
+    text-align: center;
+}
+
+.app-shell[data-app-id="diary"] .dy-marker__value {
+    font-size: 22px;
+    font-weight: 300;
+    line-height: 1;
+    color: var(--dy-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="diary"] .dy-marker__unit {
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+    margin-top: 3px;
+}
+
+.app-shell[data-app-id="diary"] .dy-marker__main {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="diary"] .dy-marker__title {
+    font-size: var(--dy-fs-md);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="diary"] .dy-marker__reason {
+    margin-top: 2px;
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+    line-height: 1.7;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="diary"] .dy-marker__date {
+    margin-top: 3px;
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+    font-variant-numeric: tabular-nums;
+}
+
+/* AI 记的条目标一下来源 —— 用户要能分清哪些是自己记的 */
+.app-shell[data-app-id="diary"] .dy-marker__by {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 6px;
+    border: var(--dy-hair) solid var(--dy-border);
+    border-radius: 3px;
+    font-size: 10px;
+    color: var(--dy-text-3);
+    letter-spacing: 0.08em;
+    vertical-align: 1px;
+}
+
+/* ============================================================
+   日记本切换
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-books {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="diary"] .dy-book {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    padding: 14px;
+    border: var(--dy-hair) solid var(--dy-border-soft);
+    border-radius: var(--dy-radius);
+    background: var(--dy-surface);
+    width: 100%;
+    text-align: left;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="diary"] .dy-book.is-active {
+    border-color: var(--dy-primary-dim);
+}
+
+/* 书脊：拿这个日记本自己的主题色画，一眼能区分 */
+.app-shell[data-app-id="diary"] .dy-book__spine {
+    flex: 0 0 auto;
+    width: 5px;
+    height: 38px;
+    border-radius: 2px;
+    background: var(--dy-primary);
+}
+
+.app-shell[data-app-id="diary"] .dy-book__main {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="diary"] .dy-book__name {
+    font-size: var(--dy-fs-md);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="diary"] .dy-book__sub {
+    margin-top: 2px;
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="diary"] .dy-book__state {
+    flex: 0 0 auto;
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+}
+
+/* 还没布置的本子：整块压暗，明确「进不去」 */
+.app-shell[data-app-id="diary"] .dy-book.is-locked {
+    background: var(--dy-surface-alt);
+}
+
+.app-shell[data-app-id="diary"] .dy-book.is-locked .dy-book__spine {
+    background: var(--dy-border);
+}
+
+.app-shell[data-app-id="diary"] .dy-book.is-locked .dy-book__name {
+    color: var(--dy-text-3);
+}
+
+/* ============================================================
+   弹窗皮肤（覆盖 LP.modals 的 .ac-* 默认样式）
+   ------------------------------------------------------------
+   ★ 用 `LP.modals.*` 而不是自己造弹窗：三种 renderMode 都能用，
+     移动端的三个硬约束（挂 app-shell / body 单独滚 / safe-area）
+     那一层已经兜住了。这里只换皮。
+   ============================================================ */
+.app-shell[data-app-id="diary"] .lp-overlay {
+    background: var(--dy-scrim, rgba(0, 0, 0, 0.28));
+}
+
+.app-shell[data-app-id="diary"] .lp-modal {
+    background: var(--dy-surface);
+    border: var(--dy-hair) solid var(--dy-border-soft);
+    border-radius: var(--dy-radius);
+    color: var(--dy-text);
+    box-shadow: none;
+}
+
+.app-shell[data-app-id="diary"] .lp-modal-header {
+    border-bottom: var(--dy-hair) solid var(--dy-divider);
+}
+
+.app-shell[data-app-id="diary"] .ac-modal-title {
+    font-size: var(--dy-fs-lg);
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    color: var(--dy-text);
+}
+
+.app-shell[data-app-id="diary"] .ac-modal-subtitle,
+.app-shell[data-app-id="diary"] .lp-modal-text {
+    font-size: var(--dy-fs-sm);
+    color: var(--dy-text-2);
+    line-height: 1.9;
+}
+
+.app-shell[data-app-id="diary"] .lp-modal-footer {
+    border-top: var(--dy-hair) solid var(--dy-divider);
+}
+
+.app-shell[data-app-id="diary"] .ac-btn {
+    border-radius: var(--dy-radius-sm);
+    font-size: var(--dy-fs-md);
+    letter-spacing: 0.08em;
+}
+
+.app-shell[data-app-id="diary"] .ac-btn-primary {
+    background: var(--dy-primary);
+    color: var(--dy-on-primary);
+    border-color: var(--dy-primary);
+}
+
+.app-shell[data-app-id="diary"] .ac-btn-secondary {
+    background: transparent;
+    color: var(--dy-text-2);
+    border-color: var(--dy-border);
+}
+
+.app-shell[data-app-id="diary"] .ac-btn-danger {
+    background: transparent;
+    color: var(--dy-danger);
+    border-color: var(--dy-border);
+}
+
+.app-shell[data-app-id="diary"] .lp-field {
+    background: var(--dy-bg);
+    border: var(--dy-hair) solid var(--dy-border);
+    border-radius: var(--dy-radius-sm);
+    color: var(--dy-text);
+    font-size: var(--dy-fs-md);
+}
+
+.app-shell[data-app-id="diary"] .lp-formrow__label {
+    font-size: var(--dy-fs-sm);
+    color: var(--dy-text-2);
+}
+
+.app-shell[data-app-id="diary"] .lp-toast {
+    background: var(--dy-surface);
+    border: var(--dy-hair) solid var(--dy-border);
+    color: var(--dy-text);
+    border-radius: var(--dy-radius-sm);
+    box-shadow: none;
+}
+
+/* ============================================================
+   底部抽屉（自绘，用于内容较长的编辑面板）
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-sheet {
+    position: absolute;
+    inset: 0;
+    z-index: 70;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.app-shell[data-app-id="diary"] .dy-sheet__mask {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.24);
+}
+
+.app-shell[data-app-id="diary"] .dy-sheet__panel {
+    position: relative;
+    max-height: 84%;
+    display: flex;
+    flex-direction: column;
+    background: var(--dy-surface);
+    border-top-left-radius: var(--dy-radius-lg);
+    border-top-right-radius: var(--dy-radius-lg);
+    border-top: var(--dy-hair) solid var(--dy-border-soft);
+    animation: dy-sheet-in 240ms var(--dy-ease);
+}
+
+@keyframes dy-sheet-in {
+    from { transform: translateY(14px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.app-shell[data-app-id="diary"] .dy-sheet__head {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px 10px;
+    border-bottom: var(--dy-hair) solid var(--dy-divider);
+}
+
+.app-shell[data-app-id="diary"] .dy-sheet__title {
+    flex: 1 1 auto;
+    font-size: var(--dy-fs-lg);
+    font-weight: 400;
+    letter-spacing: 0.06em;
+}
+
+.app-shell[data-app-id="diary"] .dy-sheet__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 16px;
+}
+
+.app-shell[data-app-id="diary"] .dy-sheet__foot {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    border-top: var(--dy-hair) solid var(--dy-divider);
+}
+
+.app-shell[data-app-id="diary"] .dy-sheet__foot .dy-btn {
+    flex: 1 1 0;
+}
+
+/* ============================================================
+   上下文预览（prompt 分段）
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-ctx__part {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 11px 0;
+    border-bottom: var(--dy-hair) solid var(--dy-divider);
+}
+
+.app-shell[data-app-id="diary"] .dy-ctx__main {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="diary"] .dy-ctx__title {
+    font-size: var(--dy-fs-sm);
+    color: var(--dy-text);
+}
+
+.app-shell[data-app-id="diary"] .dy-ctx__meta {
+    margin-top: 2px;
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="diary"] .dy-ctx__part.is-off .dy-ctx__title {
+    color: var(--dy-text-3);
+    text-decoration: line-through;
+    text-decoration-color: var(--dy-border);
+}
+
+.app-shell[data-app-id="diary"] .dy-ctx__pre {
+    margin: 0;
+    padding: 13px;
+    max-height: 260px;
+    overflow: auto;
+    border: var(--dy-hair) solid var(--dy-border-soft);
+    border-radius: var(--dy-radius-sm);
+    background: var(--dy-bg);
+    color: var(--dy-text-2);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    line-height: 1.75;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+

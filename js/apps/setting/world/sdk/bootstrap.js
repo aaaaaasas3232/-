@@ -17,6 +17,7 @@
 
 import { createSettingsSdk, setSettingsSdk } from './settings-sdk.js';
 import { SYSTEM_TAG_GROUPS } from './defaults.js';
+import { installPhoneClockAdapter } from '../chronology-clock.js';
 
 export async function bootstrapSettingsSdk({ toolkit }) {
     // ★ 兼容预热场景：prewarm 调用时没有 toolkit，直接用 window.myDb 构造一个最小化 wrapper
@@ -64,33 +65,49 @@ export async function bootstrapSettingsSdk({ toolkit }) {
     }
 
     // 1. 顺序 hydrate（顺序很重要：user/ai/world 先 → group/tag/geo/snapshot → profile）
-    await sdk.users.hydrate();
-    await sdk.aiPersons.hydrate();
-    await sdk.worlds.hydrate();
-    await sdk.worldGroups.hydrate();
-    await sdk.tagGroups.hydrate();
-    await sdk.tags.hydrate();
-    await sdk.places.hydrate();   // ★ 地点（箱庭地图容器）
-    await sdk.locations.hydrate();
-    await sdk.snapshot.hydrate();
-    await sdk.profile.hydrate();
-    await sdk.drafts.hydrate();
-    await sdk.diary.hydrate();   // ★ v0.18 人设日记
-    await sdk.schedule.hydrate(); // ★ v0.19 人设日程
-    await sdk.weeklySchedule.hydrate(); // ★ v0.31 每周重复日程
-    await sdk.chatMessages.hydrate();   // ★ v0.30 chat-app 真实消息
-    await sdk.chatArchive.hydrate();   // ★ v0.61 chat-app 消息归档
-    await sdk.storyArchives.hydrate();  // ★ v0.42 chat-app 故事存档
-    await sdk.chatFavorites.hydrate();  // ★ v0.43 chat-app 单条收藏
-    await sdk.appPrompts.hydrate();    // ★ v0.61.5 第三方 App Prompt 用户状态
+    //    单个模块失败（表未声明 / 磁盘异常）只跳过它自己，不能让整条链断掉——
+    //    否则后面的 setSettingsSdk / 时钟适配器全都不会执行。
+    const step = async (label, fn) => {
+        try {
+            await fn();
+        } catch (err) {
+            console.warn(`[settings-sdk.bootstrap] ${label} hydrate 失败，已跳过`, err);
+        }
+    };
+
+    await step('users', () => sdk.users.hydrate());
+    await step('aiPersons', () => sdk.aiPersons.hydrate());
+    await step('worlds', () => sdk.worlds.hydrate());
+    await step('worldGroups', () => sdk.worldGroups.hydrate());
+    await step('tagGroups', () => sdk.tagGroups.hydrate());
+    await step('tags', () => sdk.tags.hydrate());
+    await step('places', () => sdk.places.hydrate());   // ★ 地点（箱庭地图容器）
+    await step('locations', () => sdk.locations.hydrate());
+    await step('snapshot', () => sdk.snapshot.hydrate());
+    await step('profile', () => sdk.profile.hydrate());
+    await step('drafts', () => sdk.drafts.hydrate());
+    await step('diary', () => sdk.diary.hydrate());   // ★ v0.18 人设日记
+    await step('schedule', () => sdk.schedule.hydrate()); // ★ v0.19 人设日程
+    await step('weeklySchedule', () => sdk.weeklySchedule.hydrate()); // ★ v0.31 每周重复日程
+    await step('chatMessages', () => sdk.chatMessages.hydrate());   // ★ v0.30 chat-app 真实消息
+    await step('chatArchive', () => sdk.chatArchive.hydrate());   // ★ v0.61 chat-app 消息归档
+    await step('storyArchives', () => sdk.storyArchives.hydrate());  // ★ v0.42 chat-app 故事存档
+    await step('chatFavorites', () => sdk.chatFavorites.hydrate());  // ★ v0.43 chat-app 单条收藏
+    await step('appPrompts', () => sdk.appPrompts.hydrate());    // ★ v0.61.5 第三方 App Prompt 用户状态
 
     // ★ v0.23 旧嵌套 lifePhases / parOs 一次性迁移为顶级独立卡。
-    await sdk.persona.variants.migrateLegacy();
+    await step('persona.variants.migrateLegacy', () => sdk.persona.variants.migrateLegacy());
 
     setSettingsSdk(sdk);
     if (typeof window !== 'undefined') {
         window.settingsSdk = sdk;
         window.LISTEN_SYSTEM_TAG_GROUPS = SYSTEM_TAG_GROUPS;
     }
+
+    // 顶部状态栏时间的「纪时 / 时差」适配器。
+    // 必须在 window.settingsSdk 就位之后装 —— 适配器是同步的，
+    // 装早了第一次格式化会拿不到 sdk（虽然会回落成 HH:mm，但白闪一下）。
+    installPhoneClockAdapter();
+
     return sdk;
 }

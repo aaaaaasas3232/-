@@ -1769,3 +1769,194 @@
     margin: 0 8px;
 }
 
+/* ============================================
+ * 全局音乐卡片样式(预览区域也需要)
+ * ============================================ */
+
+/* 歌曲分享卡片 */
+.song-share-card {
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    width: 180px;
+    color: white;
+    transition: transform 0.2s;
+}
+
+.song-share-card:hover {
+    transform: translateY(-2px);
+}
+
+.song-share-header {
+    padding: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.song-share-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.song-share-icon {
+    width: 32px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.song-share-icon svg {
+    width: 16px;
+    height: 16px;
+    fill: white;
+}
+
+.song-share-title {
+    flex: 1;
+    min-width: 0;
+}
+
+.song-share-title > div:first-child {
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.song-share-subtitle {
+    font-size: 11px;
+    opacity: 0.8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+}
+
+.song-share-footer {
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 10px;
+}
+
+.song-share-footer svg {
+    width: 12px;
+    height: 12px;
+    fill: white;
+    vertical-align: middle;
+    margin-right: 4px;
+}
+
+/* 歌单分享卡片(复用歌曲卡片样式) */
+.playlist-share-card {
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    width: 180px;
+    color: white;
+    transition: transform 0.2s;
+}
+
+.playlist-share-card:hover {
+    transform: translateY(-2px);
+}
+
+.playlist-share-header {
+    padding: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.playlist-share-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.playlist-share-icon {
+    width: 32px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.playlist-share-icon svg {
+    width: 16px;
+    height: 16px;
+    fill: white;
+}
+
+.playlist-share-title {
+    flex: 1;
+    min-width: 0;
+}
+
+.playlist-share-title > div:first-child {
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.playlist-share-subtitle {
+    font-size: 11px;
+    opacity: 0.8;
+    margin-top: 2px;
+}
+
+.playlist-share-songs {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.playlist-share-song {
+    font-size: 11px;
+    opacity: 0.8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 2px 0;
+}
+
+.playlist-share-footer {
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 10px;
+}
+
+.playlist-share-footer svg {
+    width: 12px;
+    height: 12px;
+    fill: white;
+    vertical-align: middle;
+    margin-right: 4px;
+}
+
+/* 一起听邀请卡片 */
+.listen-together-card {
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    width: 180px;
+    color: white;
+    transition: transform 0.2s;
+}
+
+.listen-together-card:hover {
+    transform: translateY(-2px);
+}

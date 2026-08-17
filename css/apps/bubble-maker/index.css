@@ -1,0 +1,1607 @@
+/**
+ * 气泡机 / 样式入口
+ *
+ * 全部选择器挂在 `.app-shell[data-app-id="bubble-maker"]` 下 —— 不污染其他 App。
+ *
+ * 引入方式(项目约定):`index.html` 里加一行
+ *   <link rel="stylesheet" href="/css/apps/bubble-maker/index.css?v=1" />
+ *
+ * ★ 子文件 @import 带 `?v=` 版本号,改子文件就 bump 一下,避免浏览器吃旧缓存。
+ *
+ * ── 文件分工 ──────────────────────────────────────────────
+ *   _theme.css    四套配色的全部 `--bb-*` token。**颜色的唯一真相**,
+ *                 其他文件只允许 `var(--bb-*)`,JS 里一个 hex 都没有。
+ *   _base.css     根布局 / 顶栏 / 分档 / 通用控件(按钮 表单 分区 提示条)
+ *   _preview.css  预览台
+ *   _panels.css   设计 / 形状 / 气泡库 / 外观 四页的内容
+ *   _modals.css   弹窗皮肤(把 --ac-* 桥到 --bb-*)
+ *
+ * 气泡本体的样式**不在这里** —— 它由 `src/core/bubble-style.js` 以 inline style
+ * 给出,基线样式在 `css/core/88-bubble-view.css`。这是为了让气泡机和情景聊天
+ * 画出来的气泡是同一个东西。
+ */
+
+/**
+ * 气泡机 · 界面配色 token
+ *
+ * ★ 这个文件是整个 App 界面颜色的**唯一真相**。
+ *   其他 CSS 只允许写 `var(--bb-*)`,JS 里一个 hex 都不许出现。
+ *   (气泡本身的色值是用户内容,由 inline style 给出,不走这套变量。)
+ *
+ * ★ 主题怎么切
+ *   `.app-shell[data-app-id="bubble-maker"]` 上挂
+ *   `data-bb-theme="porcelain|macaron|matcha|ink"`。
+ *   用户自定义色由 JS 往同一个元素 `style.setProperty('--bb-xxx', value)` 覆盖 ——
+ *   这是**允许 JS 出现颜色值的唯一场景**:值来自用户,编译期不可能知道。
+ *
+ * ★ 每套主题写了**两个**选择器:shell 自身,以及 shell 内任意带这个属性的后代。
+ *   后一个不是冗余 —— `theme-tokens.js` 的 `readPresetColors()` 靠往 shell 里塞
+ *   一个隐藏探针 div、给它挂 `data-bb-theme` 再 `getComputedStyle` 读值,
+ *   来拿到「另一套主题长什么样」(主题卡片的迷你预览就靠这个)。
+ *   只写 shell 自身的话探针永远匹配不上,四张预览卡会**全部显示成当前主题** ——
+ *   而且它不报错,只是看起来「预览坏了」。
+ *
+ * ★ 派生规则
+ *   `-soft` / `-strong` 是同色系的浅 / 深版本,`-overlay` / `-shadow` 一律 rgba。
+ *   新增颜色前先问一句「能不能从已有 token 派生」—— token 越多,
+ *   用户配一套颜色就越痛苦。
+ *
+ * ★ 全 App 禁用渐变。所有 token 都是纯色或 rgba,没有一个 linear-gradient。
+ */
+
+/* ============================================================
+   白瓷 —— 默认。主体纯白,只用马卡龙色做点缀
+   ============================================================ */
+.app-shell[data-app-id="bubble-maker"],
+.app-shell[data-app-id="bubble-maker"][data-bb-theme="porcelain"],
+.app-shell[data-app-id="bubble-maker"] [data-bb-theme="porcelain"] {
+    /* 底与面 */
+    --bb-bg: #FBFAF9;
+    --bb-surface: #FFFFFF;
+    --bb-surface-2: #F6F4F3;
+    --bb-sunken: #F1EEED;
+    --bb-divider: rgba(74, 66, 71, 0.08);
+    --bb-border: rgba(74, 66, 71, 0.12);
+
+    /* 文字 */
+    --bb-text: #4A4247;
+    --bb-text-secondary: #7C7278;
+    --bb-text-tertiary: #A9A0A5;
+    --bb-text-inverse: #FFFFFF;
+
+    /* 主色 */
+    --bb-primary: #F2A9BE;
+    --bb-primary-soft: rgba(242, 169, 190, 0.16);
+    --bb-primary-strong: #E28AA4;
+    --bb-on-primary: #FFFFFF;
+    --bb-accent: #9BCFC4;
+    --bb-accent-soft: rgba(155, 207, 196, 0.18);
+
+    /* 控件 */
+    --bb-input-bg: #FFFFFF;
+    --bb-input-border: rgba(74, 66, 71, 0.14);
+    --bb-input-focus: rgba(242, 169, 190, 0.32);
+    --bb-placeholder: #BCB3B8;
+    --bb-track: #EDE8E9;
+    --bb-thumb: #F2A9BE;
+    --bb-switch-off: #DFD9DB;
+    --bb-switch-on: #9BCFC4;
+
+    /* 按钮 */
+    --bb-btn-bg: #FFFFFF;
+    --bb-btn-border: rgba(74, 66, 71, 0.14);
+    --bb-btn-text: #5C5257;
+    --bb-btn-press: #F3EFF0;
+    --bb-btn-shadow: rgba(74, 66, 71, 0.16);
+
+    /* 标签与状态 */
+    --bb-tag-bg: rgba(242, 169, 190, 0.16);
+    --bb-tag-text: #C0708B;
+    --bb-success: #6FBFA4;
+    --bb-warning: #E5B45F;
+    --bb-danger: #E28080;
+
+    /* 预览台 */
+    --bb-stage-bg: #F3F1EF;
+    --bb-stage-line: rgba(74, 66, 71, 0.07);
+    --bb-stage-label: #A9A0A5;
+
+    /* 遮罩与阴影 */
+    --bb-overlay: rgba(58, 50, 55, 0.32);
+    --bb-shadow: rgba(74, 66, 71, 0.14);
+    --bb-scrollbar: rgba(74, 66, 71, 0.18);
+
+    /* ── 以下不进色板(派生值),用户不用管 ── */
+    --bb-home-indicator: rgba(74, 66, 71, 0.28);
+}
+
+/* ============================================================
+   马卡龙 —— 奶油粉调
+   ============================================================ */
+.app-shell[data-app-id="bubble-maker"][data-bb-theme="macaron"],
+.app-shell[data-app-id="bubble-maker"] [data-bb-theme="macaron"] {
+    --bb-bg: #FFF7F4;
+    --bb-surface: #FFFFFF;
+    --bb-surface-2: #FDF0EC;
+    --bb-sunken: #FBE7E1;
+    --bb-divider: rgba(140, 90, 96, 0.10);
+    --bb-border: rgba(140, 90, 96, 0.16);
+
+    --bb-text: #6B4A50;
+    --bb-text-secondary: #97757B;
+    --bb-text-tertiary: #BD9EA3;
+    --bb-text-inverse: #FFFFFF;
+
+    --bb-primary: #F2A9BE;
+    --bb-primary-soft: rgba(242, 169, 190, 0.22);
+    --bb-primary-strong: #DE86A1;
+    --bb-on-primary: #FFFFFF;
+    --bb-accent: #F5CF8E;
+    --bb-accent-soft: rgba(245, 207, 142, 0.26);
+
+    --bb-input-bg: #FFFFFF;
+    --bb-input-border: rgba(140, 90, 96, 0.18);
+    --bb-input-focus: rgba(242, 169, 190, 0.36);
+    --bb-placeholder: #C9AFB3;
+    --bb-track: #F6E2E4;
+    --bb-thumb: #EE9BB3;
+    --bb-switch-off: #EBD5D8;
+    --bb-switch-on: #9BCFC4;
+
+    --bb-btn-bg: #FFFFFF;
+    --bb-btn-border: rgba(140, 90, 96, 0.18);
+    --bb-btn-text: #7A585E;
+    --bb-btn-press: #FBEDEF;
+    --bb-btn-shadow: rgba(190, 130, 145, 0.28);
+
+    --bb-tag-bg: rgba(245, 207, 142, 0.3);
+    --bb-tag-text: #A9793A;
+    --bb-success: #6FBFA4;
+    --bb-warning: #E0A85C;
+    --bb-danger: #E07E86;
+
+    --bb-stage-bg: #FBEEE9;
+    --bb-stage-line: rgba(140, 90, 96, 0.08);
+    --bb-stage-label: #BD9EA3;
+
+    --bb-overlay: rgba(90, 55, 62, 0.32);
+    --bb-shadow: rgba(160, 105, 118, 0.20);
+    --bb-scrollbar: rgba(160, 105, 118, 0.24);
+
+    --bb-home-indicator: rgba(107, 74, 80, 0.28);
+}
+
+/* ============================================================
+   抹茶 —— 清浅绿意
+   ============================================================ */
+.app-shell[data-app-id="bubble-maker"][data-bb-theme="matcha"],
+.app-shell[data-app-id="bubble-maker"] [data-bb-theme="matcha"] {
+    --bb-bg: #F7FAF6;
+    --bb-surface: #FFFFFF;
+    --bb-surface-2: #EFF5EC;
+    --bb-sunken: #E6EFE1;
+    --bb-divider: rgba(70, 96, 76, 0.10);
+    --bb-border: rgba(70, 96, 76, 0.16);
+
+    --bb-text: #40564A;
+    --bb-text-secondary: #6D8377;
+    --bb-text-tertiary: #9AAB9F;
+    --bb-text-inverse: #FFFFFF;
+
+    --bb-primary: #8FC6A4;
+    --bb-primary-soft: rgba(143, 198, 164, 0.2);
+    --bb-primary-strong: #6FAE88;
+    --bb-on-primary: #FFFFFF;
+    --bb-accent: #E9C98A;
+    --bb-accent-soft: rgba(233, 201, 138, 0.26);
+
+    --bb-input-bg: #FFFFFF;
+    --bb-input-border: rgba(70, 96, 76, 0.18);
+    --bb-input-focus: rgba(143, 198, 164, 0.36);
+    --bb-placeholder: #A8B8AC;
+    --bb-track: #E3EBDF;
+    --bb-thumb: #8FC6A4;
+    --bb-switch-off: #D9E2D5;
+    --bb-switch-on: #8FC6A4;
+
+    --bb-btn-bg: #FFFFFF;
+    --bb-btn-border: rgba(70, 96, 76, 0.18);
+    --bb-btn-text: #52685A;
+    --bb-btn-press: #EDF3EA;
+    --bb-btn-shadow: rgba(90, 128, 102, 0.24);
+
+    --bb-tag-bg: rgba(143, 198, 164, 0.22);
+    --bb-tag-text: #4F8767;
+    --bb-success: #6FBFA4;
+    --bb-warning: #DCA95A;
+    --bb-danger: #D9807C;
+
+    --bb-stage-bg: #EEF4EA;
+    --bb-stage-line: rgba(70, 96, 76, 0.08);
+    --bb-stage-label: #9AAB9F;
+
+    --bb-overlay: rgba(45, 66, 52, 0.32);
+    --bb-shadow: rgba(70, 96, 76, 0.16);
+    --bb-scrollbar: rgba(70, 96, 76, 0.2);
+
+    --bb-home-indicator: rgba(64, 86, 74, 0.28);
+}
+
+/* ============================================================
+   夜阑 —— 深色
+   ============================================================ */
+.app-shell[data-app-id="bubble-maker"][data-bb-theme="ink"],
+.app-shell[data-app-id="bubble-maker"] [data-bb-theme="ink"] {
+    --bb-bg: #1E1B1F;
+    --bb-surface: #2A262C;
+    --bb-surface-2: #332E35;
+    --bb-sunken: #221F24;
+    --bb-divider: rgba(255, 255, 255, 0.08);
+    --bb-border: rgba(255, 255, 255, 0.14);
+
+    --bb-text: #EDE7EA;
+    --bb-text-secondary: #B4A9B0;
+    --bb-text-tertiary: #857C83;
+    --bb-text-inverse: #221F24;
+
+    --bb-primary: #E9A0B7;
+    --bb-primary-soft: rgba(233, 160, 183, 0.2);
+    --bb-primary-strong: #F3B8CB;
+    --bb-on-primary: #2A1E24;
+    --bb-accent: #8FC6BA;
+    --bb-accent-soft: rgba(143, 198, 186, 0.2);
+
+    --bb-input-bg: #221F24;
+    --bb-input-border: rgba(255, 255, 255, 0.16);
+    --bb-input-focus: rgba(233, 160, 183, 0.36);
+    --bb-placeholder: #7A7178;
+    --bb-track: #3B353D;
+    --bb-thumb: #E9A0B7;
+    --bb-switch-off: #443E47;
+    --bb-switch-on: #8FC6BA;
+
+    --bb-btn-bg: #332E35;
+    --bb-btn-border: rgba(255, 255, 255, 0.14);
+    --bb-btn-text: #DCD4D9;
+    --bb-btn-press: #3D3740;
+    --bb-btn-shadow: rgba(0, 0, 0, 0.5);
+
+    --bb-tag-bg: rgba(233, 160, 183, 0.18);
+    --bb-tag-text: #F0B9CA;
+    --bb-success: #7FC8AE;
+    --bb-warning: #E3B872;
+    --bb-danger: #E58E8E;
+
+    --bb-stage-bg: #262229;
+    --bb-stage-line: rgba(255, 255, 255, 0.06);
+    --bb-stage-label: #857C83;
+
+    --bb-overlay: rgba(10, 8, 11, 0.6);
+    --bb-shadow: rgba(0, 0, 0, 0.5);
+    --bb-scrollbar: rgba(255, 255, 255, 0.18);
+
+    --bb-home-indicator: rgba(237, 231, 234, 0.3);
+}
+
+/**
+ * 气泡机 · 根布局 + 通用控件
+ *
+ * 全部选择器挂 `.app-shell[data-app-id="bubble-maker"]` 下 —— 不污染其他 App。
+ * **这里一个 hex 都没有**,颜色走 `var(--bb-*)`(定义在 `_theme.css`)。
+ *
+ * 设计基调:主体白色、简洁,圆角给足(动森那种 q 弹感来自大圆角 + 硬边落影,
+ * 不来自渐变)。全 App 没有一处 linear-gradient。
+ */
+
+/* ============================================================
+   尺寸 / 动效常量(非配色,不进色板)
+   ============================================================ */
+.app-shell[data-app-id="bubble-maker"] {
+    --bb-r-sm: 10px;
+    --bb-r: 16px;
+    --bb-r-lg: 22px;
+    --bb-r-xl: 28px;
+    --bb-r-pill: 999px;
+    --bb-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --bb-bounce: cubic-bezier(0.34, 1.4, 0.64, 1);
+    /* 状态栏浮在 shell 之上,自绘内容要让开 */
+    --bb-top-safe: 54px;
+
+    background: var(--bb-bg);
+    color: var(--bb-text);
+}
+
+/* 和框架容器的接线:顶栏和分档都自己画,把框架内边距抵消掉 */
+.app-shell[data-app-id="bubble-maker"] .app-content,
+.app-shell[data-app-id="bubble-maker"] .app-screen-panel {
+    padding: 0;
+}
+.app-shell[data-app-id="bubble-maker"] .app-page {
+    overflow: hidden;   /* 滚动收回 App 内部,避免两层滚动抢手势 */
+}
+.app-shell[data-app-id="bubble-maker"] .app-screen-panel {
+    position: relative;
+    height: 100%;       /* ★ 框架只给了 min-height,子元素的 height:100% 无处可依 */
+}
+.app-shell[data-app-id="bubble-maker"] .app-page-stack {
+    border-radius: 0;
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-root {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bb-bg);
+    color: var(--bb-text);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+/* ============================================================
+   滚动条 + SVG 兜底
+   ============================================================ */
+.app-shell[data-app-id="bubble-maker"] *::-webkit-scrollbar { width: 4px; height: 4px; }
+.app-shell[data-app-id="bubble-maker"] *::-webkit-scrollbar-thumb {
+    background: var(--bb-scrollbar);
+    border-radius: var(--bb-r-pill);
+}
+.app-shell[data-app-id="bubble-maker"] *::-webkit-scrollbar-track { background: transparent; }
+.app-shell[data-app-id="bubble-maker"] * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--bb-scrollbar) transparent;
+}
+
+/*
+ * SVG 没有 width/height 又没配对 CSS 时,浏览器按规范画成 300×150,整张卡直接撑爆。
+ * 两层 `:where()` 把特异性压到 (0,0,1),任何具名规则都能盖过它 ——
+ * 只写一层的话 `svg:not([width]):not([height])` 本身是 (0,2,1),会反过来盖掉
+ * `.bb-icon svg` 这种 (0,1,1) 的规则。
+ */
+:where(.app-shell[data-app-id="bubble-maker"]) svg:where(:not([width]):not([height])) {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+/* ============================================================
+   顶栏 / 分档 / 滚动区
+   ============================================================ */
+.app-shell[data-app-id="bubble-maker"] .bb-topbar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    /*
+     * ★ 顶部让满 54px。状态栏和灵动岛画在整个手机屏最上层,不在 App 的文档流里,
+     *   少让一点就会被那颗黑药丸压到。这一块还必须是实色 ——
+     *   内容从底下滚过去时透出来会和时间叠在一起。
+     */
+    padding: var(--bb-top-safe) 16px 10px;
+    background: var(--bb-surface);
+    border-bottom: 1px solid var(--bb-divider);
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-topbar-title {
+    flex: 1 1 auto;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    color: var(--bb-text);
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-topbar-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--bb-btn-border);
+    border-radius: var(--bb-r);
+    background: var(--bb-btn-bg);
+    color: var(--bb-btn-text);
+    cursor: pointer;
+    transition: transform 0.18s var(--bb-bounce), background 0.18s var(--bb-ease);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-topbar-btn:active { transform: scale(0.92); }
+.app-shell[data-app-id="bubble-maker"] .bb-topbar-btn.is-active {
+    background: var(--bb-primary);
+    border-color: var(--bb-primary);
+    color: var(--bb-on-primary);
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-tabs {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 6px;
+    padding: 10px 14px 8px;
+    background: var(--bb-bg);
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-tab {
+    flex: 1 1 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 9px 4px;
+    border: 1px solid var(--bb-border);
+    border-radius: var(--bb-r);
+    background: var(--bb-surface);
+    color: var(--bb-text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.18s var(--bb-bounce), background 0.18s var(--bb-ease), color 0.18s var(--bb-ease);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-tab:active { transform: scale(0.96); }
+.app-shell[data-app-id="bubble-maker"] .bb-tab.is-active {
+    background: var(--bb-primary);
+    border-color: var(--bb-primary);
+    color: var(--bb-on-primary);
+    box-shadow: 0 3px 0 var(--bb-btn-shadow);
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    /* 底部指示条那 40px 由框架给,自己让开一次就够 */
+    padding: 0 14px calc(24px + var(--app-safe-bottom, 0px));
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-panel-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-top: 4px;
+}
+
+/* ============================================================
+   图标
+   ============================================================ */
+.app-shell[data-app-id="bubble-maker"] .bb-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-icon svg {
+    width: var(--bb-icon-size, 16px);
+    height: var(--bb-icon-size, 16px);
+}
+
+/* ============================================================
+   按钮
+   ============================================================ */
+.app-shell[data-app-id="bubble-maker"] .bb-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border: 1px solid var(--bb-btn-border);
+    border-radius: var(--bb-r-pill);
+    background: var(--bb-btn-bg);
+    color: var(--bb-btn-text);
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.2;
+    cursor: pointer;
+    /* 硬边落影 = 动森那种「按下去会弹」的手感来源,不用渐变 */
+    box-shadow: 0 2px 0 var(--bb-btn-shadow);
+    transition: transform 0.16s var(--bb-bounce), box-shadow 0.16s var(--bb-ease), background 0.16s var(--bb-ease);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-btn:active:not(:disabled) {
+    transform: translateY(2px);
+    box-shadow: 0 0 0 var(--bb-btn-shadow);
+    background: var(--bb-btn-press);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-btn--primary {
+    background: var(--bb-primary);
+    border-color: var(--bb-primary);
+    color: var(--bb-on-primary);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-btn--ghost {
+    background: var(--bb-primary-soft);
+    border-color: var(--bb-primary);
+    color: var(--bb-primary-strong);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-btn--line {
+    background: transparent;
+    border-style: dashed;
+    box-shadow: none;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-btn--danger {
+    background: var(--bb-surface);
+    border-color: var(--bb-danger);
+    color: var(--bb-danger);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-btn--sm { padding: 6px 11px; font-size: 11.5px; }
+.app-shell[data-app-id="bubble-maker"] .bb-btn--lg { padding: 11px 20px; font-size: 14px; }
+.app-shell[data-app-id="bubble-maker"] .bb-btn.is-block { width: 100%; }
+.app-shell[data-app-id="bubble-maker"] .bb-btn.is-icon-only { padding: 8px; width: 34px; }
+.app-shell[data-app-id="bubble-maker"] .bb-btn--sm.is-icon-only { padding: 6px; width: 28px; }
+
+/* 小方块按钮 —— 卡片角落的「用 / 改 / 名 / 删」 */
+.app-shell[data-app-id="bubble-maker"] .bb-mini {
+    padding: 4px 9px;
+    border: 1px solid var(--bb-border);
+    border-radius: var(--bb-r-sm);
+    background: var(--bb-surface);
+    color: var(--bb-text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.16s var(--bb-bounce);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-mini:active { transform: scale(0.92); }
+.app-shell[data-app-id="bubble-maker"] .bb-mini.is-on {
+    background: var(--bb-primary-soft);
+    border-color: var(--bb-primary);
+    color: var(--bb-primary-strong);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-mini.is-danger { color: var(--bb-danger); border-color: var(--bb-danger); }
+
+/* ============================================================
+   表单
+   ============================================================ */
+.app-shell[data-app-id="bubble-maker"] .bb-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-field-label {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--bb-text-secondary);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-field-hint {
+    font-size: 10.5px;
+    color: var(--bb-text-tertiary);
+    line-height: 1.5;
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-input,
+.app-shell[data-app-id="bubble-maker"] .bb-textarea,
+.app-shell[data-app-id="bubble-maker"] .bb-select {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--bb-input-border);
+    border-radius: var(--bb-r);
+    background: var(--bb-input-bg);
+    color: var(--bb-text);
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.16s var(--bb-ease), box-shadow 0.16s var(--bb-ease);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-input:focus,
+.app-shell[data-app-id="bubble-maker"] .bb-textarea:focus,
+.app-shell[data-app-id="bubble-maker"] .bb-select:focus {
+    border-color: var(--bb-primary);
+    box-shadow: 0 0 0 3px var(--bb-input-focus);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-input::placeholder,
+.app-shell[data-app-id="bubble-maker"] .bb-textarea::placeholder {
+    color: var(--bb-placeholder);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-textarea {
+    resize: vertical;
+    line-height: 1.6;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-textarea.is-mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+}
+
+/* 分段选择 */
+.app-shell[data-app-id="bubble-maker"] .bb-seg {
+    display: inline-flex;
+    gap: 3px;
+    padding: 3px;
+    border-radius: var(--bb-r-pill);
+    background: var(--bb-sunken);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-seg.is-block { display: flex; width: 100%; }
+.app-shell[data-app-id="bubble-maker"] .bb-seg-item {
+    flex: 1 1 0;
+    padding: 6px 10px;
+    border: none;
+    border-radius: var(--bb-r-pill);
+    background: transparent;
+    color: var(--bb-text-secondary);
+    font-size: 11.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.16s var(--bb-ease), color 0.16s var(--bb-ease);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-seg-item.is-active {
+    background: var(--bb-surface);
+    color: var(--bb-text);
+    box-shadow: 0 1px 3px var(--bb-shadow);
+}
+
+/* 开关 */
+.app-shell[data-app-id="bubble-maker"] .bb-switch {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-switch-text {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-switch-label { font-size: 12.5px; font-weight: 600; }
+.app-shell[data-app-id="bubble-maker"] .bb-switch-hint { font-size: 10.5px; color: var(--bb-text-tertiary); }
+.app-shell[data-app-id="bubble-maker"] .bb-switch-input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-switch-track {
+    flex: 0 0 auto;
+    position: relative;
+    width: 42px;
+    height: 24px;
+    border-radius: var(--bb-r-pill);
+    background: var(--bb-switch-off);
+    transition: background 0.2s var(--bb-ease);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-switch-thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--bb-surface);
+    box-shadow: 0 1px 3px var(--bb-shadow);
+    transition: transform 0.22s var(--bb-bounce);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-switch-input:checked ~ .bb-switch-track { background: var(--bb-switch-on); }
+.app-shell[data-app-id="bubble-maker"] .bb-switch-input:checked ~ .bb-switch-track .bb-switch-thumb { transform: translateX(18px); }
+.app-shell[data-app-id="bubble-maker"] .bb-switch.is-disabled { opacity: 0.5; pointer-events: none; }
+
+/* 滑块 */
+.app-shell[data-app-id="bubble-maker"] .bb-slider { display: flex; flex-direction: column; gap: 4px; }
+.app-shell[data-app-id="bubble-maker"] .bb-slider-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-slider-label { font-size: 11.5px; font-weight: 600; color: var(--bb-text-secondary); }
+.app-shell[data-app-id="bubble-maker"] .bb-slider-value {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 1px;
+    font-size: 11px;
+    color: var(--bb-text-tertiary);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-slider-num {
+    width: 46px;
+    padding: 2px 4px;
+    border: 1px solid transparent;
+    border-radius: var(--bb-r-sm);
+    background: var(--bb-sunken);
+    color: var(--bb-text);
+    font-size: 11px;
+    font-weight: 600;
+    text-align: right;
+    font-family: inherit;
+    outline: none;
+    -moz-appearance: textfield;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-slider-num::-webkit-outer-spin-button,
+.app-shell[data-app-id="bubble-maker"] .bb-slider-num::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-slider-num:focus { border-color: var(--bb-primary); }
+
+.app-shell[data-app-id="bubble-maker"] .bb-slider-input {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 5px;
+    border-radius: var(--bb-r-pill);
+    background: var(--bb-track);
+    outline: none;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-slider-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 17px;
+    height: 17px;
+    border: 2px solid var(--bb-surface);
+    border-radius: 50%;
+    background: var(--bb-thumb);
+    box-shadow: 0 1px 3px var(--bb-shadow);
+    cursor: pointer;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-slider-input::-moz-range-thumb {
+    width: 15px;
+    height: 15px;
+    border: 2px solid var(--bb-surface);
+    border-radius: 50%;
+    background: var(--bb-thumb);
+    cursor: pointer;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-slider.is-compact .bb-slider-label { font-size: 10.5px; }
+
+/* 一行颜色 */
+.app-shell[data-app-id="bubble-maker"] .bb-color-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-color-meta {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-color-label {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--bb-text-secondary);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-color-flag {
+    margin-left: 5px;
+    padding: 0 5px;
+    border-radius: var(--bb-r-pill);
+    background: var(--bb-tag-bg);
+    color: var(--bb-tag-text);
+    font-size: 9px;
+    font-style: normal;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-color-token {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 9.5px;
+    color: var(--bb-text-tertiary);
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-color-swatch {
+    flex: 0 0 auto;
+    width: 30px;
+    height: 26px;
+    padding: 2px;
+    border: 1px solid var(--bb-input-border);
+    border-radius: var(--bb-r-sm);
+    background: var(--bb-input-bg);
+    cursor: pointer;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-color-hex {
+    flex: 0 0 auto;
+    width: 96px;
+    padding: 5px 8px;
+    border: 1px solid var(--bb-input-border);
+    border-radius: var(--bb-r-sm);
+    background: var(--bb-input-bg);
+    color: var(--bb-text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 10.5px;
+    outline: none;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-color-hex:focus { border-color: var(--bb-primary); }
+.app-shell[data-app-id="bubble-maker"] .bb-color-reset {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: var(--bb-r-sm);
+    background: transparent;
+    color: var(--bb-text-tertiary);
+    cursor: pointer;
+}
+
+/* ============================================================
+   结构:分区 / 空态 / 载入 / 标签 / 提示条
+   ============================================================ */
+.app-shell[data-app-id="bubble-maker"] .bb-section {
+    border: 1px solid var(--bb-border);
+    border-radius: var(--bb-r-lg);
+    background: var(--bb-surface);
+    overflow: hidden;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-section-head {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 11px 14px;
+    color: var(--bb-text);
+    font-size: 13px;
+    font-weight: 700;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-section-head.is-clickable { cursor: pointer; }
+.app-shell[data-app-id="bubble-maker"] .bb-section-title { flex: 0 0 auto; }
+.app-shell[data-app-id="bubble-maker"] .bb-section-hint {
+    flex: 1 1 auto;
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--bb-text-tertiary);
+    text-align: right;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-section-extra { flex: 0 0 auto; }
+.app-shell[data-app-id="bubble-maker"] .bb-section-caret { color: var(--bb-text-tertiary); }
+.app-shell[data-app-id="bubble-maker"] .bb-section-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 0 14px 14px;
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-row-between {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-divider {
+    height: 1px;
+    background: var(--bb-divider);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-sub-title {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    color: var(--bb-text-tertiary);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-note {
+    margin: 0;
+    font-size: 10.5px;
+    line-height: 1.6;
+    color: var(--bb-text-tertiary);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-note.is-danger { color: var(--bb-danger); }
+
+.app-shell[data-app-id="bubble-maker"] .bb-banner {
+    margin: 8px 14px 0;
+    padding: 9px 12px;
+    border-radius: var(--bb-r);
+    font-size: 11.5px;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-banner.is-danger {
+    background: var(--bb-primary-soft);
+    color: var(--bb-danger);
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 26px 16px;
+    text-align: center;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-empty-icon { color: var(--bb-text-tertiary); --bb-icon-size: 26px; }
+.app-shell[data-app-id="bubble-maker"] .bb-empty-text { margin: 0; font-size: 12.5px; font-weight: 600; color: var(--bb-text-secondary); }
+.app-shell[data-app-id="bubble-maker"] .bb-empty-hint { margin: 0; font-size: 10.5px; color: var(--bb-text-tertiary); }
+.app-shell[data-app-id="bubble-maker"] .bb-empty-action { margin-top: 6px; }
+
+.app-shell[data-app-id="bubble-maker"] .bb-spinner {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-spinner-ring {
+    width: 26px;
+    height: 26px;
+    border: 3px solid var(--bb-track);
+    border-top-color: var(--bb-primary);
+    border-radius: 50%;
+    animation: bb-spin 0.8s linear infinite;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-spinner-label { font-size: 11.5px; color: var(--bb-text-tertiary); }
+@keyframes bb-spin { to { transform: rotate(360deg); } }
+
+.app-shell[data-app-id="bubble-maker"] .bb-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: var(--bb-r-pill);
+    background: var(--bb-tag-bg);
+    color: var(--bb-tag-text);
+    font-size: 10px;
+    font-weight: 600;
+}
+
+/* ============================================================
+   提示条(toast)
+   ============================================================ */
+.app-shell[data-app-id="bubble-maker"] .bb-toast {
+    position: absolute;
+    left: 50%;
+    bottom: calc(26px + var(--app-safe-bottom, 0px));
+    transform: translateX(-50%);
+    z-index: 80;
+    margin: 0;
+    max-width: 84%;
+    padding: 9px 16px;
+    border-radius: var(--bb-r-pill);
+    background: var(--bb-text);
+    color: var(--bb-bg);
+    font-size: 11.5px;
+    font-weight: 600;
+    text-align: center;
+    box-shadow: 0 6px 20px var(--bb-shadow);
+}
+.bb-toast-enter-active, .bb-toast-leave-active { transition: opacity 0.24s ease, transform 0.24s var(--bb-bounce); }
+.bb-toast-enter-from, .bb-toast-leave-to { opacity: 0; transform: translate(-50%, 10px); }
+
+/**
+ * 气泡机 · 预览台
+ *
+ * 常驻在顶栏下方,不随分档切走 —— 调颜色时看不到气泡等于闭着眼睛调。
+ * 底纹只是给半透明气泡一个参照,不进任何存档。
+ *
+ * ★ 这里**不能**给气泡容器加 `overflow: hidden`:尾巴是绝对定位、
+ *   故意露在气泡外面的,裁掉就全没了。
+ */
+
+.app-shell[data-app-id="bubble-maker"] .bb-preview {
+    flex: 0 0 auto;
+    padding: 12px 14px 0;
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-preview-stage {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 14px;
+    min-height: 132px;
+    padding: 18px 16px;
+    border: 1px solid var(--bb-border);
+    border-radius: var(--bb-r-xl);
+    background: var(--bb-stage-bg);
+}
+
+/* 四种底纹。都是纯色或重复图案,没有渐变 */
+.app-shell[data-app-id="bubble-maker"] .bb-preview-stage[data-backdrop="paper"] {
+    background: var(--bb-stage-bg);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-preview-stage[data-backdrop="sky"] {
+    background-color: #DCEAF4;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-preview-stage[data-backdrop="dusk"] {
+    background-color: #46404E;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-preview-stage[data-backdrop="grid"] {
+    background-color: var(--bb-surface);
+    background-image:
+        linear-gradient(var(--bb-stage-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--bb-stage-line) 1px, transparent 1px);
+    background-size: 14px 14px;
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-preview-row {
+    display: flex;
+    transition: opacity 0.2s var(--bb-ease);
+}
+/* 对面那一条压暗一点,免得抢走注意力 */
+.app-shell[data-app-id="bubble-maker"] .bb-preview-row.is-dim { opacity: 0.55; }
+
+.app-shell[data-app-id="bubble-maker"] .bb-preview-row .bubble-view {
+    width: 100%;
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-preview-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 2px 0;
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-preview-backdrops {
+    display: flex;
+    gap: 6px;
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-backdrop-dot {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: 2px solid var(--bb-border);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.16s var(--bb-bounce), border-color 0.16s var(--bb-ease);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-backdrop-dot:active { transform: scale(0.88); }
+.app-shell[data-app-id="bubble-maker"] .bb-backdrop-dot.is-active {
+    border-color: var(--bb-primary);
+    transform: scale(1.12);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-backdrop-dot[data-backdrop="paper"] { background: #F3F1EF; }
+.app-shell[data-app-id="bubble-maker"] .bb-backdrop-dot[data-backdrop="sky"] { background: #DCEAF4; }
+.app-shell[data-app-id="bubble-maker"] .bb-backdrop-dot[data-backdrop="dusk"] { background: #46404E; }
+.app-shell[data-app-id="bubble-maker"] .bb-backdrop-dot[data-backdrop="grid"] { background: #FFFFFF; }
+
+.app-shell[data-app-id="bubble-maker"] .bb-preview-tools {
+    display: flex;
+    gap: 6px;
+}
+
+/**
+ * 气泡机 · 三个面板的内容区
+ *
+ * 设计 / 形状 / 气泡库 + 外观页。全部走 `var(--bb-*)`,没有一处 hex。
+ */
+
+/* ============================================================
+   设计页 —— 标题行
+   ============================================================ */
+.app-shell[data-app-id="bubble-maker"] .bb-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 2px 2px 0;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-title-main {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--bb-text);
+    cursor: pointer;
+    text-align: left;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-title-name {
+    overflow: hidden;
+    font-size: 15px;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-title-main .bb-icon { color: var(--bb-text-tertiary); --bb-icon-size: 13px; }
+
+/* ============================================================
+   渐变色标
+   ============================================================ */
+.app-shell[data-app-id="bubble-maker"] .bb-stops {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px;
+    border-radius: var(--bb-r);
+    background: var(--bb-sunken);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-stop {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--bb-divider);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-stop:last-of-type { border-bottom: none; padding-bottom: 0; }
+.app-shell[data-app-id="bubble-maker"] .bb-stop-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-stop-row .bb-slider { flex: 1 1 auto; }
+
+/* ============================================================
+   四角圆角 / 阴影四项 —— 两列网格
+   ============================================================ */
+.app-shell[data-app-id="bubble-maker"] .bb-corner-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 12px;
+}
+
+/* ============================================================
+   形状选择(内置 + 我画的)
+   ============================================================ */
+.app-shell[data-app-id="bubble-maker"] .bb-shape-picks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-shape-pick {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    padding: 8px;
+    border: 1px solid var(--bb-border);
+    border-radius: var(--bb-r);
+    background: var(--bb-surface);
+    color: var(--bb-text-secondary);
+    cursor: pointer;
+    transition: transform 0.16s var(--bb-bounce), border-color 0.16s var(--bb-ease);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-shape-pick:active { transform: scale(0.9); }
+.app-shell[data-app-id="bubble-maker"] .bb-shape-pick.is-active {
+    border-color: var(--bb-primary);
+    background: var(--bb-primary-soft);
+    color: var(--bb-primary-strong);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-shape-pick-art {
+    display: block;
+    width: 100%;
+    height: 100%;
+    line-height: 0;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-shape-pick-art svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* ============================================================
+   尾巴列表
+   ============================================================ */
+.app-shell[data-app-id="bubble-maker"] .bb-tail-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-tail-chip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 9px;
+    border: 1px solid var(--bb-border);
+    border-radius: var(--bb-r);
+    background: var(--bb-surface);
+    color: var(--bb-text-secondary);
+    cursor: pointer;
+    transition: transform 0.16s var(--bb-bounce);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-tail-chip:active { transform: scale(0.92); }
+.app-shell[data-app-id="bubble-maker"] .bb-tail-chip.is-active {
+    border-color: var(--bb-primary);
+    background: var(--bb-primary-soft);
+    color: var(--bb-primary-strong);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-tail-chip.is-off { opacity: 0.4; }
+.app-shell[data-app-id="bubble-maker"] .bb-tail-chip-art { display: block; width: 100%; height: 100%; line-height: 0; }
+.app-shell[data-app-id="bubble-maker"] .bb-tail-chip-art svg { width: 100%; height: 100%; }
+.app-shell[data-app-id="bubble-maker"] .bb-tail-chip-no {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 15px;
+    height: 15px;
+    padding: 0 3px;
+    border-radius: var(--bb-r-pill);
+    background: var(--bb-text-tertiary);
+    color: var(--bb-text-inverse);
+    font-size: 9px;
+    font-weight: 700;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-tail-chip.is-active .bb-tail-chip-no { background: var(--bb-primary); }
+
+.app-shell[data-app-id="bubble-maker"] .bb-tail-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    padding: 12px;
+    border: 1px dashed var(--bb-border);
+    border-radius: var(--bb-r-lg);
+    background: var(--bb-sunken);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-tail-editor .bb-row-between .bb-input { flex: 1 1 auto; }
+
+/* ============================================================
+   形状页 —— 预览台 + 形状库
+   ============================================================ */
+.app-shell[data-app-id="bubble-maker"] .bb-svg-stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 140px;
+    padding: 16px;
+    border: 1px solid var(--bb-border);
+    border-radius: var(--bb-r-lg);
+    background-color: var(--bb-surface);
+    background-image:
+        linear-gradient(var(--bb-stage-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--bb-stage-line) 1px, transparent 1px);
+    background-size: 14px 14px;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-svg-art {
+    width: 108px;
+    height: 108px;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-svg-art svg { width: 100%; height: 100%; }
+.app-shell[data-app-id="bubble-maker"] .bb-svg-hint {
+    margin: 0;
+    font-size: 11.5px;
+    color: var(--bb-text-tertiary);
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-shape-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+    gap: 9px;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-shape-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 9px 6px;
+    border: 1px solid var(--bb-border);
+    border-radius: var(--bb-r);
+    background: var(--bb-surface);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-shape-card-art {
+    width: 40px;
+    height: 40px;
+    color: var(--bb-text-secondary);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-shape-card-art svg { width: 100%; height: 100%; }
+.app-shell[data-app-id="bubble-maker"] .bb-shape-card-name {
+    max-width: 100%;
+    overflow: hidden;
+    font-size: 10px;
+    color: var(--bb-text-secondary);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-shape-card-acts {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 3px;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-shape-card-acts .bb-mini { padding: 2px 6px; font-size: 10px; }
+
+/* ============================================================
+   气泡库
+   ============================================================ */
+.app-shell[data-app-id="bubble-maker"] .bb-preset-list {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-preset-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 11px;
+    border: 1px solid var(--bb-border);
+    border-radius: var(--bb-r-lg);
+    background: var(--bb-surface-2);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-preset-art {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: var(--bb-r);
+    background: var(--bb-stage-bg);
+    font-size: 11px;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-preset-meta {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-preset-name { font-size: 12.5px; font-weight: 700; }
+.app-shell[data-app-id="bubble-maker"] .bb-preset-desc { font-size: 10.5px; color: var(--bb-text-tertiary); }
+.app-shell[data-app-id="bubble-maker"] .bb-preset-acts { display: flex; gap: 6px; }
+
+.app-shell[data-app-id="bubble-maker"] .bb-lib-list {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-lib-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 11px;
+    border: 1px solid var(--bb-border);
+    border-radius: var(--bb-r-lg);
+    background: var(--bb-surface);
+    transition: border-color 0.16s var(--bb-ease);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-lib-card.is-active {
+    border-color: var(--bb-primary);
+    box-shadow: 0 0 0 3px var(--bb-primary-soft);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-lib-art {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: var(--bb-r);
+    background: var(--bb-stage-bg);
+    font-size: 11px;
+    cursor: pointer;
+    text-align: left;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-lib-meta {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-lib-name {
+    overflow: hidden;
+    font-size: 12.5px;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-lib-sub { flex: 0 0 auto; font-size: 10px; color: var(--bb-text-tertiary); }
+.app-shell[data-app-id="bubble-maker"] .bb-lib-acts { display: flex; gap: 6px; }
+
+/* ============================================================
+   外观页 —— 主题卡 / 迷你预览 / 逐项调色
+   ============================================================ */
+.app-shell[data-app-id="bubble-maker"] .bb-theme-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 9px;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-theme-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 9px;
+    border: 1px solid var(--bb-border);
+    border-radius: var(--bb-r-lg);
+    background: var(--bb-surface);
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.16s var(--bb-ease), transform 0.16s var(--bb-bounce);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-theme-card:active { transform: scale(0.97); }
+.app-shell[data-app-id="bubble-maker"] .bb-theme-card.is-active {
+    border-color: var(--bb-primary);
+    box-shadow: 0 0 0 3px var(--bb-primary-soft);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-theme-name { font-size: 12px; font-weight: 700; color: var(--bb-text); }
+.app-shell[data-app-id="bubble-maker"] .bb-theme-desc { font-size: 10px; color: var(--bb-text-tertiary); }
+
+/* 迷你界面预览:里面的元素照常吃 var(--bb-*),
+   色表由 JS 挂在这个容器的 inline style 上 —— 所以「预览 == 应用后」是物理保证 */
+.app-shell[data-app-id="bubble-maker"] .bb-theme-preview {
+    padding: 10px;
+    border-radius: var(--bb-r);
+    background: var(--bb-bg);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-tp-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px;
+    border: 1px solid var(--bb-border);
+    border-radius: var(--bb-r);
+    background: var(--bb-surface);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-tp-title { font-size: 12px; font-weight: 700; color: var(--bb-text); }
+.app-shell[data-app-id="bubble-maker"] .bb-tp-sub { font-size: 10px; color: var(--bb-text-secondary); }
+.app-shell[data-app-id="bubble-maker"] .bb-tp-row { display: flex; gap: 6px; }
+.app-shell[data-app-id="bubble-maker"] .bb-tp-btn {
+    padding: 4px 10px;
+    border: 1px solid var(--bb-btn-border);
+    border-radius: var(--bb-r-pill);
+    background: var(--bb-btn-bg);
+    color: var(--bb-btn-text);
+    font-size: 10px;
+    font-weight: 600;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-tp-btn.is-primary {
+    background: var(--bb-primary);
+    border-color: var(--bb-primary);
+    color: var(--bb-on-primary);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-tp-input {
+    height: 20px;
+    border: 1px solid var(--bb-input-border);
+    border-radius: var(--bb-r-sm);
+    background: var(--bb-input-bg);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-theme-preview.is-compact { padding: 6px; }
+.app-shell[data-app-id="bubble-maker"] .bb-theme-preview.is-compact .bb-tp-card { gap: 4px; padding: 7px; }
+.app-shell[data-app-id="bubble-maker"] .bb-theme-preview.is-compact .bb-tp-title { font-size: 10px; }
+.app-shell[data-app-id="bubble-maker"] .bb-theme-preview.is-compact .bb-tp-sub { font-size: 8.5px; }
+.app-shell[data-app-id="bubble-maker"] .bb-theme-preview.is-compact .bb-tp-btn { padding: 2px 7px; font-size: 8.5px; }
+.app-shell[data-app-id="bubble-maker"] .bb-theme-preview.is-compact .bb-tp-input { height: 13px; }
+
+.app-shell[data-app-id="bubble-maker"] .bb-color-cat { border-bottom: 1px solid var(--bb-divider); }
+.app-shell[data-app-id="bubble-maker"] .bb-color-cat:last-child { border-bottom: none; }
+.app-shell[data-app-id="bubble-maker"] .bb-color-cat-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 9px 0;
+    border: none;
+    background: transparent;
+    color: var(--bb-text);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-color-cat-head span { flex: 1 1 auto; }
+.app-shell[data-app-id="bubble-maker"] .bb-color-cat-head em {
+    font-size: 10px;
+    font-style: normal;
+    color: var(--bb-text-tertiary);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-color-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    padding: 2px 0 12px;
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-theme-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-theme-chip {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--bb-border);
+    border-radius: var(--bb-r-pill);
+    background: var(--bb-surface);
+    overflow: hidden;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-theme-chip.is-active {
+    border-color: var(--bb-primary);
+    background: var(--bb-primary-soft);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-theme-chip-main {
+    padding: 5px 10px;
+    border: none;
+    background: transparent;
+    color: var(--bb-text);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-theme-chip-del {
+    padding: 5px 9px 5px 4px;
+    border: none;
+    background: transparent;
+    color: var(--bb-text-tertiary);
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+/* 已存配色的「改名 / 覆盖」 */
+.app-shell[data-app-id="bubble-maker"] .bb-theme-chip-act {
+    border: none;
+    background: none;
+    padding: 3px 5px;
+    color: var(--bb-text-tertiary, #9a9aa6);
+    font-family: inherit;
+    font-size: 10px;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-theme-chip-act:disabled { opacity: 0.35; cursor: default; }
+
+/**
+ * 气泡机 · 弹窗皮肤
+ *
+ * 把框架 `AcModal` 的 `--ac-*` 桥到本 App 的 `--bb-*`,这样换配色时弹窗跟着变。
+ *
+ * ⚠️ `class="bb-modal"` 落在**根元素 `.ac-overlay`** 上,不是 `.ac-modal`。
+ *    所以业务钩子一律写后代选择器:`.bb-modal .ac-modal-body` ✓
+ *                                  `.bb-modal.ac-modal`      ✗
+ *
+ * ⚠️ `.ac-modal` 永远不加 `overflow: hidden` —— 关闭按钮用 `top:-10px`
+ *    故意露在弹窗外面(本 App 关掉了那个叉,但别给后来人留坑)。
+ */
+
+.app-shell[data-app-id="bubble-maker"] .bb-modal .ac-modal {
+    --ac-color-primary: var(--bb-primary);
+    --ac-color-primary-dark: var(--bb-primary-strong);
+    --ac-color-primary-soft: var(--bb-primary-soft);
+    --ac-shadow-primary: var(--bb-btn-shadow);
+    --ac-shadow-secondary: var(--bb-primary-soft);
+
+    background: var(--bb-surface);
+    color: var(--bb-text);
+    border-radius: var(--bb-r-xl);
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-modal .ac-modal-title {
+    color: var(--bb-text);
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-modal .ac-modal-subtitle {
+    color: var(--bb-text-tertiary);
+    font-size: 11px;
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-modal .ac-modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    color: var(--bb-text);
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-modal .ac-modal-footer {
+    display: flex;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-modal .ac-btn {
+    flex: 1 1 0;
+    padding: 9px 12px;
+    border: 1px solid var(--bb-btn-border);
+    border-radius: var(--bb-r-pill);
+    background: var(--bb-btn-bg);
+    color: var(--bb-btn-text);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 0 var(--bb-btn-shadow);
+    transition: transform 0.16s var(--bb-bounce), box-shadow 0.16s var(--bb-ease);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-modal .ac-btn:active {
+    transform: translateY(2px);
+    box-shadow: 0 0 0 var(--bb-btn-shadow);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-modal .ac-btn-primary {
+    background: var(--bb-primary);
+    border-color: var(--bb-primary);
+    color: var(--bb-on-primary);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-modal .ac-btn-danger {
+    background: var(--bb-danger);
+    border-color: var(--bb-danger);
+    color: var(--bb-text-inverse);
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-modal-text {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--bb-text-secondary);
+}
+

@@ -1,0 +1,2700 @@
+/**
+ * 候鸟（旅游 App）· 样式（单文件，本文件即全部真相）
+ *
+ * ── 颜色规矩 ──────────────────────────────────────────────────────
+ *   本文件开头的 token 段是**颜色的唯一真相**。
+ *   其余所有规则只允许 var(--tv-*)；JS 里一个 hex 都没有
+ *   （唯一例外是桌面图标和 appConfig 首帧兜底 —— 它们在 app-shell 外/前）。
+ *
+ * ── 风格约束（产品要求）──────────────────────────────────────────
+ *   清爽淡蓝；**禁用渐变**（全文件没有一个 gradient）；禁 emoji；
+ *   不堆阴影 —— 层次靠 1px 细线和很小的明度差。
+ *
+ * ── 主题怎么切 ────────────────────────────────────────────────────
+ *   `.app-shell[data-app-id="travel"]` 挂 `data-tv-theme="sky|tide"`。
+ *   每套主题写两个选择器：shell 自身 + shell 内任意后代 ——
+ *   后者是给 theme.js 的探针 div 和配色页迷你预览用的，删了预览会全坏。
+ *   用户自定义色由 JS setProperty 覆盖（值来自用户，不算硬编码）。
+ */
+
+/* ============================================================
+   token · 晴空（浅色，默认）
+   ============================================================ */
+.app-shell[data-app-id="travel"],
+.app-shell[data-app-id="travel"][data-tv-theme="sky"],
+.app-shell[data-app-id="travel"] [data-tv-theme="sky"] {
+    --tv-bg: #F2F7FB;
+    --tv-bg-soft: #FFFFFF;
+    --tv-surface: #FFFFFF;
+    --tv-surface-2: #EAF1F7;
+    --tv-elevated: #FFFFFF;
+
+    --tv-primary: #5E97C4;
+    --tv-primary-soft: #DDEBF7;
+    --tv-primary-strong: #3A6B96;
+    --tv-on-primary: #FFFFFF;
+
+    --tv-accent: #D99E6B;
+    --tv-accent-soft: #F7EDE0;
+    --tv-on-accent: #FFFFFF;
+
+    --tv-text: #283A4A;
+    --tv-text-2: #5D7183;
+    --tv-text-3: #93A5B4;
+    --tv-text-inverse: #FFFFFF;
+
+    --tv-line: #DFE9F1;
+    --tv-line-soft: #EAF1F7;
+    --tv-line-strong: #C6D6E3;
+    --tv-card: #FFFFFF;
+    --tv-card-hover: #F5F9FC;
+    --tv-shadow: rgba(40, 58, 74, 0.07);
+
+    --tv-price: #C57B54;
+    --tv-coin: #B9924A;
+    --tv-ticket-bg: #FBFDFF;
+    --tv-ticket-line: #BCD4E8;
+    --tv-ticket-accent: #5E97C4;
+
+    --tv-narration-bg: rgba(255, 255, 255, 0.88);
+    --tv-narration-text: #4A6076;
+    --tv-bubble-user-bg: #5E97C4;
+    --tv-bubble-user-text: #FFFFFF;
+    --tv-bubble-ai-bg: #FFFFFF;
+    --tv-bubble-ai-text: #283A4A;
+    --tv-chat-scrim: rgba(242, 247, 251, 0.42);
+
+    --tv-success: #4E8C6C;
+    --tv-warning: #B9924A;
+    --tv-danger: #C05B54;
+    --tv-info: #5E97C4;
+
+    --tv-input-bg: #F1F6FA;
+    --tv-input-line: #DCE7F0;
+    --tv-input-focus: rgba(94, 151, 196, 0.25);
+
+    --tv-tag-bg: #EDF3F8;
+    --tv-tag-text: #5D7183;
+    --tv-tag-line: #DCE7F0;
+
+    --tv-nav-bg: rgba(255, 255, 255, 0.93);
+    --tv-nav-line: #E5EEF4;
+    --tv-nav-icon: #93A5B4;
+    --tv-nav-active: #3A6B96;
+
+    --tv-overlay: rgba(40, 58, 74, 0.34);
+    --tv-skeleton: #E6EEF4;
+}
+
+/* ============================================================
+   token · 夜潮（深色）
+   ------------------------------------------------------------
+   不是浅色反过来：深底下淡蓝会发灰，主色明度提上去；
+   强调色换成更暖的砂色，否则在深底上显脏。
+   ============================================================ */
+.app-shell[data-app-id="travel"][data-tv-theme="tide"],
+.app-shell[data-app-id="travel"] [data-tv-theme="tide"] {
+    --tv-bg: #16202B;
+    --tv-bg-soft: #1B2733;
+    --tv-surface: #1E2A37;
+    --tv-surface-2: #263443;
+    --tv-elevated: #223140;
+
+    --tv-primary: #6FA5CE;
+    --tv-primary-soft: #24384A;
+    --tv-primary-strong: #92BFDF;
+    --tv-on-primary: #10202E;
+
+    --tv-accent: #D9A26B;
+    --tv-accent-soft: #3A3226;
+    --tv-on-accent: #241B12;
+
+    --tv-text: #DCE7F0;
+    --tv-text-2: #9FB2C2;
+    --tv-text-3: #6C8092;
+    --tv-text-inverse: #16202B;
+
+    --tv-line: #2C3B4A;
+    --tv-line-soft: #243240;
+    --tv-line-strong: #3C4F61;
+    --tv-card: #1E2A37;
+    --tv-card-hover: #243240;
+    --tv-shadow: rgba(0, 0, 0, 0.38);
+
+    --tv-price: #E0A184;
+    --tv-coin: #D9B872;
+    --tv-ticket-bg: #1E2A37;
+    --tv-ticket-line: #3A5A78;
+    --tv-ticket-accent: #6FA5CE;
+
+    --tv-narration-bg: rgba(30, 42, 55, 0.88);
+    --tv-narration-text: #AFC2D2;
+    --tv-bubble-user-bg: #4C7FA9;
+    --tv-bubble-user-text: #F2F7FB;
+    --tv-bubble-ai-bg: #243240;
+    --tv-bubble-ai-text: #DCE7F0;
+    --tv-chat-scrim: rgba(22, 32, 43, 0.55);
+
+    --tv-success: #7FBF9A;
+    --tv-warning: #D9B872;
+    --tv-danger: #DE8A83;
+    --tv-info: #6FA5CE;
+
+    --tv-input-bg: #243240;
+    --tv-input-line: #334457;
+    --tv-input-focus: rgba(111, 165, 206, 0.3);
+
+    --tv-tag-bg: #263443;
+    --tv-tag-text: #9FB2C2;
+    --tv-tag-line: #334457;
+
+    --tv-nav-bg: rgba(22, 32, 43, 0.93);
+    --tv-nav-line: #263443;
+    --tv-nav-icon: #6C8092;
+    --tv-nav-active: #92BFDF;
+
+    --tv-overlay: rgba(0, 0, 0, 0.55);
+    --tv-skeleton: #243240;
+}
+
+/* ============================================================
+   和框架容器的接线
+   ------------------------------------------------------------
+   框架默认两层内边距会吃掉 44px；.app-screen-panel 只有 min-height，
+   根节点 height:100% 会静默退化成 auto、底栏掉出屏幕。
+   所以：清 padding、滚动收回 App 内部、给 panel 确定高度、根绝对铺满。
+   ============================================================ */
+.app-shell[data-app-id="travel"] .app-content { padding: 0; }
+.app-shell[data-app-id="travel"] .app-page-stack { border-radius: 0; }
+.app-shell[data-app-id="travel"] .app-page { overflow: hidden; }
+.app-shell[data-app-id="travel"] .app-screen-panel {
+    position: relative;
+    height: 100%;
+    min-height: 100%;
+    padding: 0;
+}
+
+/* 滚动条一律不显示 */
+.app-shell[data-app-id="travel"] * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.app-shell[data-app-id="travel"] *::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
+/* 内联 SVG 不带宽高时浏览器按 300×150 画。两层 :where() 把特异性压到 0,0,1 */
+:where(.app-shell[data-app-id="travel"]) svg:where(:not([width]):not([height])) {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+/* ============================================================
+   根布局
+   ============================================================ */
+.app-shell[data-app-id="travel"] .tv-root {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--tv-bg);
+    color: var(--tv-text);
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+}
+
+.app-shell[data-app-id="travel"] .tv-root * { box-sizing: border-box; }
+
+.app-shell[data-app-id="travel"] .tv-icon { display: inline-flex; }
+
+/* 顶栏：状态栏画在整个手机屏最上层，自绘内容要让出 54px 且底下是实色 */
+.app-shell[data-app-id="travel"] .tv-top {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 58px 18px 10px;
+    background: var(--tv-bg);
+    border-bottom: 1px solid var(--tv-line-soft);
+}
+
+.app-shell[data-app-id="travel"] .tv-top__mark {
+    display: inline-flex;
+    color: var(--tv-primary);
+}
+
+.app-shell[data-app-id="travel"] .tv-top__title {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 620;
+    letter-spacing: 0.2px;
+    color: var(--tv-text);
+}
+
+.app-shell[data-app-id="travel"] .tv-top__sub {
+    margin: 1px 0 0;
+    font-size: 11px;
+    color: var(--tv-text-3);
+}
+
+.app-shell[data-app-id="travel"] .tv-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="travel"] .tv-page {
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+    padding: 14px 16px 20px;
+}
+
+.app-shell[data-app-id="travel"] .tv-blocked {
+    height: 100%;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+}
+
+.app-shell[data-app-id="travel"] .tv-center-block {
+    display: grid;
+    place-items: center;
+    padding: 36px 20px;
+}
+
+.app-shell[data-app-id="travel"] .tv-pagedesc {
+    margin: 0 0 14px;
+    padding: 10px 13px;
+    border-radius: 11px;
+    background: var(--tv-surface-2);
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--tv-text-2);
+}
+
+.app-shell[data-app-id="travel"] .tv-muted {
+    margin: 8px 0 0;
+    font-size: 11.5px;
+    color: var(--tv-text-3);
+    line-height: 1.65;
+}
+
+/* ============================================================
+   底栏
+   ============================================================ */
+.app-shell[data-app-id="travel"] .tv-tabbar {
+    flex: 0 0 auto;
+    display: flex;
+    background: var(--tv-nav-bg);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-top: 1px solid var(--tv-nav-line);
+    padding-bottom: var(--app-safe-bottom, 0px);
+}
+
+.app-shell[data-app-id="travel"] .tv-tabbar__item {
+    flex: 1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 8px 0 7px;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    color: var(--tv-nav-icon);
+    transition: color 0.18s ease;
+}
+
+.app-shell[data-app-id="travel"] .tv-tabbar__item.is-on { color: var(--tv-nav-active); }
+
+.app-shell[data-app-id="travel"] .tv-tabbar__icon { display: inline-flex; }
+
+.app-shell[data-app-id="travel"] .tv-tabbar__label {
+    font-size: 10px;
+    letter-spacing: 0.3px;
+}
+
+.app-shell[data-app-id="travel"] .tv-tabbar__item.is-on .tv-tabbar__label { font-weight: 560; }
+
+.app-shell[data-app-id="travel"] .tv-tabbar__dot {
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    margin-left: 9px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--tv-accent);
+}
+
+/* ============================================================
+   toast
+   ============================================================ */
+.app-shell[data-app-id="travel"] .tv-toast {
+    position: absolute;
+    left: 50%;
+    bottom: calc(78px + var(--app-safe-bottom, 0px));
+    transform: translateX(-50%);
+    max-width: 80%;
+    padding: 9px 16px;
+    border-radius: 18px;
+    background: var(--tv-text);
+    color: var(--tv-text-inverse);
+    font-size: 12.5px;
+    z-index: 70;
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="travel"] .tv-toast-enter-active,
+.app-shell[data-app-id="travel"] .tv-toast-leave-active {
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.app-shell[data-app-id="travel"] .tv-toast-enter-from,
+.app-shell[data-app-id="travel"] .tv-toast-leave-to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(6px);
+}
+
+/* ============================================================
+   按钮 / 图标按钮
+   ============================================================ */
+.app-shell[data-app-id="travel"] .tv-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 14px;
+    height: 36px;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    background: transparent;
+    color: var(--tv-text);
+    font-size: 13px;
+    font-weight: 520;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.16s ease, border-color 0.16s ease, opacity 0.16s ease, transform 0.12s ease;
+}
+
+.app-shell[data-app-id="travel"] .tv-btn:active:not(:disabled) { transform: scale(0.975); }
+.app-shell[data-app-id="travel"] .tv-btn:disabled { opacity: 0.42; cursor: not-allowed; }
+.app-shell[data-app-id="travel"] .tv-btn.is-block { flex: 1; width: 100%; }
+
+.app-shell[data-app-id="travel"] .tv-btn--primary {
+    background: var(--tv-primary);
+    color: var(--tv-on-primary);
+}
+.app-shell[data-app-id="travel"] .tv-btn--primary:active:not(:disabled) { background: var(--tv-primary-strong); }
+
+.app-shell[data-app-id="travel"] .tv-btn--soft {
+    background: var(--tv-primary-soft);
+    color: var(--tv-primary-strong);
+}
+
+.app-shell[data-app-id="travel"] .tv-btn--line {
+    border-color: var(--tv-line-strong);
+    color: var(--tv-text-2);
+}
+
+.app-shell[data-app-id="travel"] .tv-btn--ghost { color: var(--tv-text-2); padding: 0 10px; }
+.app-shell[data-app-id="travel"] .tv-btn--ghost:active:not(:disabled) { background: var(--tv-surface-2); }
+
+.app-shell[data-app-id="travel"] .tv-btn--danger {
+    background: var(--tv-danger);
+    color: var(--tv-text-inverse);
+}
+
+.app-shell[data-app-id="travel"] .tv-btn--sm { height: 30px; padding: 0 11px; font-size: 12px; border-radius: 9px; }
+.app-shell[data-app-id="travel"] .tv-btn--md { height: 36px; }
+.app-shell[data-app-id="travel"] .tv-btn--lg { height: 46px; font-size: 15px; border-radius: 13px; }
+
+.app-shell[data-app-id="travel"] .tv-btn__spin {
+    width: 13px;
+    height: 13px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: tvSpin 0.7s linear infinite;
+}
+
+@keyframes tvSpin { to { transform: rotate(360deg); } }
+
+.app-shell[data-app-id="travel"] .tv-iconbtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--tv-text-2);
+    cursor: pointer;
+    flex: 0 0 auto;
+}
+.app-shell[data-app-id="travel"] .tv-iconbtn:active { background: var(--tv-surface-2); }
+.app-shell[data-app-id="travel"] .tv-iconbtn.is-accent { color: var(--tv-accent); }
+
+.app-shell[data-app-id="travel"] .tv-row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin: 10px 0 0;
+}
+
+/* ============================================================
+   分段器 / 标签 / chip
+   ============================================================ */
+.app-shell[data-app-id="travel"] .tv-seg {
+    display: inline-flex;
+    padding: 3px;
+    margin-bottom: 12px;
+    border-radius: 11px;
+    background: var(--tv-surface-2);
+}
+
+.app-shell[data-app-id="travel"] .tv-seg__btn {
+    padding: 6px 18px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--tv-text-3);
+    font-size: 12.5px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.16s ease;
+}
+
+.app-shell[data-app-id="travel"] .tv-seg__btn.is-on {
+    background: var(--tv-surface);
+    color: var(--tv-text);
+    font-weight: 580;
+    box-shadow: 0 1px 3px var(--tv-shadow);
+}
+
+.app-shell[data-app-id="travel"] .tv-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border: 1px solid var(--tv-tag-line);
+    border-radius: 6px;
+    background: var(--tv-tag-bg);
+    color: var(--tv-tag-text);
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.app-shell[data-app-id="travel"] .tv-tag.is-known {
+    border-color: var(--tv-primary);
+    background: var(--tv-primary-soft);
+    color: var(--tv-primary-strong);
+}
+
+.app-shell[data-app-id="travel"] .tv-tag.is-visited {
+    border-color: var(--tv-accent);
+    background: var(--tv-accent-soft);
+    color: var(--tv-accent);
+}
+
+.app-shell[data-app-id="travel"] .tv-picks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+.app-shell[data-app-id="travel"] .tv-pick {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid var(--tv-line);
+    border-radius: 16px;
+    background: var(--tv-surface);
+    color: var(--tv-text-2);
+    font-size: 12.5px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.app-shell[data-app-id="travel"] .tv-pick.is-on {
+    border-color: var(--tv-primary);
+    background: var(--tv-primary-soft);
+    color: var(--tv-primary-strong);
+    font-weight: 560;
+}
+
+/* ============================================================
+   表单
+   ============================================================ */
+.app-shell[data-app-id="travel"] .tv-field { margin-bottom: 12px; }
+
+.app-shell[data-app-id="travel"] .tv-field__head { margin-bottom: 6px; }
+
+.app-shell[data-app-id="travel"] .tv-field__label {
+    font-size: 12.5px;
+    font-weight: 560;
+    color: var(--tv-text-2);
+}
+
+.app-shell[data-app-id="travel"] .tv-field__hint {
+    margin: 5px 0 0;
+    font-size: 11.5px;
+    color: var(--tv-text-3);
+}
+
+.app-shell[data-app-id="travel"] .tv-input,
+.app-shell[data-app-id="travel"] .tv-textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--tv-input-line);
+    border-radius: 10px;
+    background: var(--tv-input-bg);
+    color: var(--tv-text);
+    font-size: 13.5px;
+    font-family: inherit;
+    line-height: 1.55;
+    outline: none;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.app-shell[data-app-id="travel"] .tv-input:focus,
+.app-shell[data-app-id="travel"] .tv-textarea:focus {
+    border-color: var(--tv-primary);
+    box-shadow: 0 0 0 3px var(--tv-input-focus);
+}
+
+.app-shell[data-app-id="travel"] .tv-input::placeholder,
+.app-shell[data-app-id="travel"] .tv-textarea::placeholder { color: var(--tv-text-3); }
+
+.app-shell[data-app-id="travel"] .tv-textarea { resize: none; }
+
+.app-shell[data-app-id="travel"] .tv-range {
+    width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--tv-line-strong);
+    outline: none;
+}
+
+.app-shell[data-app-id="travel"] .tv-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--tv-primary);
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="travel"] .tv-range::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--tv-primary);
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="travel"] .tv-hidden-input { display: none; }
+
+.app-shell[data-app-id="travel"] .tv-stepper {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--tv-line);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="travel"] .tv-stepper button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    background: var(--tv-surface);
+    color: var(--tv-text-2);
+    font-size: 16px;
+    font-family: inherit;
+    cursor: pointer;
+}
+.app-shell[data-app-id="travel"] .tv-stepper button:active:not(:disabled) { background: var(--tv-surface-2); }
+.app-shell[data-app-id="travel"] .tv-stepper button:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.app-shell[data-app-id="travel"] .tv-stepper__value {
+    min-width: 52px;
+    text-align: center;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    color: var(--tv-text);
+}
+
+/* ============================================================
+   分区 / 空态 / 骨架
+   ============================================================ */
+.app-shell[data-app-id="travel"] .tv-section { margin-bottom: 20px; }
+
+.app-shell[data-app-id="travel"] .tv-section__head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 9px;
+}
+
+.app-shell[data-app-id="travel"] .tv-section__title {
+    margin: 0;
+    font-size: 13.5px;
+    font-weight: 620;
+    color: var(--tv-text);
+}
+
+.app-shell[data-app-id="travel"] .tv-section__sub {
+    font-size: 11.5px;
+    color: var(--tv-text-3);
+}
+
+.app-shell[data-app-id="travel"] .tv-section__spacer { flex: 1; }
+
+.app-shell[data-app-id="travel"] .tv-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    padding: 36px 24px;
+    text-align: center;
+}
+
+.app-shell[data-app-id="travel"] .tv-empty__mark {
+    display: inline-flex;
+    color: var(--tv-text-3);
+    opacity: 0.7;
+    margin-bottom: 3px;
+}
+
+.app-shell[data-app-id="travel"] .tv-empty__title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 560;
+    color: var(--tv-text-2);
+}
+
+.app-shell[data-app-id="travel"] .tv-empty__desc {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--tv-text-3);
+    max-width: 250px;
+    line-height: 1.65;
+}
+
+.app-shell[data-app-id="travel"] .tv-empty__slot:not(:empty) { margin-top: 10px; }
+
+/* 骨架：不用渐变流光，用透明度呼吸 */
+.app-shell[data-app-id="travel"] .tv-skeleton { display: grid; gap: 11px; }
+
+.app-shell[data-app-id="travel"] .tv-skeleton__item {
+    height: 96px;
+    border-radius: 13px;
+    background: var(--tv-skeleton);
+    animation: tvBreathe 1.5s ease-in-out infinite;
+}
+
+@keyframes tvBreathe {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+}
+
+/* ============================================================
+   加载动画：纸飞机沿虚线飘
+   ============================================================ */
+.app-shell[data-app-id="travel"] .tv-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="travel"] .tv-loading__stage {
+    position: relative;
+    width: 120px;
+    height: 34px;
+}
+
+.app-shell[data-app-id="travel"] .tv-loading__trail {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    border-top: 1.5px dashed var(--tv-line-strong);
+}
+
+.app-shell[data-app-id="travel"] .tv-loading__plane {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    color: var(--tv-primary);
+    animation: tvFly 1.8s ease-in-out infinite;
+}
+
+@keyframes tvFly {
+    0% { transform: translate(0, -50%) rotate(4deg); }
+    50% { transform: translate(96px, -62%) rotate(-4deg); }
+    100% { transform: translate(0, -50%) rotate(4deg); }
+}
+
+.app-shell[data-app-id="travel"] .tv-loading__text {
+    margin: 0;
+    font-size: 13px;
+    color: var(--tv-text-2);
+    animation: tvFadeSwap 2.4s ease-in-out infinite;
+}
+
+@keyframes tvFadeSwap {
+    0%, 8% { opacity: 0; transform: translateY(3px); }
+    18%, 88% { opacity: 1; transform: none; }
+    100% { opacity: 0; transform: translateY(-3px); }
+}
+
+.app-shell[data-app-id="travel"] .tv-loading__slow {
+    margin: 0;
+    font-size: 11.5px;
+    color: var(--tv-text-3);
+    max-width: 240px;
+    text-align: center;
+}
+
+/* ============================================================
+   头像
+   ============================================================ */
+.app-shell[data-app-id="travel"] .tv-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--tv-primary-soft);
+    color: var(--tv-primary-strong);
+    overflow: hidden;
+    flex: 0 0 auto;
+}
+
+.app-shell[data-app-id="travel"] .tv-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.app-shell[data-app-id="travel"] .tv-avatar__initial {
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 600;
+}
+
+/* ============================================================
+   探索页：候选卡
+   ============================================================ */
+.app-shell[data-app-id="travel"] .tv-feedbar {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+    margin-bottom: 14px;
+    border-radius: 12px;
+    background: var(--tv-surface-2);
+}
+
+.app-shell[data-app-id="travel"] .tv-feedbar__note {
+    margin: 0;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--tv-text-3);
+}
+.app-shell[data-app-id="travel"] .tv-feedbar__note b { color: var(--tv-text-2); font-weight: 560; }
+
+.app-shell[data-app-id="travel"] .tv-grid { display: grid; gap: 10px; }
+
+.app-shell[data-app-id="travel"] .tv-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding: 14px 15px;
+    border: 1px solid var(--tv-line);
+    border-radius: 14px;
+    background: var(--tv-card);
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+}
+
+.app-shell[data-app-id="travel"] .tv-card:active {
+    background: var(--tv-card-hover);
+    transform: scale(0.993);
+}
+
+.app-shell[data-app-id="travel"] .tv-card__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="travel"] .tv-card__titles { min-width: 0; }
+
+.app-shell[data-app-id="travel"] .tv-card__place {
+    margin: 0 0 1px;
+    font-size: 11px;
+    color: var(--tv-primary-strong);
+}
+
+.app-shell[data-app-id="travel"] .tv-card__location {
+    margin: 0;
+    font-size: 15.5px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--tv-text);
+}
+
+.app-shell[data-app-id="travel"] .tv-card__blurb {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--tv-text-2);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="travel"] .tv-card__foot {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.app-shell[data-app-id="travel"] .tv-fav {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--tv-text-3);
+    cursor: pointer;
+    transition: color 0.16s ease, transform 0.16s ease;
+}
+
+.app-shell[data-app-id="travel"] .tv-fav.is-on { color: var(--tv-accent); }
+.app-shell[data-app-id="travel"] .tv-fav:active { transform: scale(0.88); }
+
+/* ============================================================
+   错误条
+   ============================================================ */
+.app-shell[data-app-id="travel"] .tv-errorbar {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-top: 12px;
+    padding: 10px 13px;
+    border-radius: 10px;
+    border: 1px solid var(--tv-line);
+    background: var(--tv-surface-2);
+}
+
+.app-shell[data-app-id="travel"] .tv-errorbar p {
+    flex: 1;
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--tv-danger);
+}
+
+.app-shell[data-app-id="travel"] .tv-errorbar button {
+    border: 0;
+    background: none;
+    padding: 0 4px;
+    color: var(--tv-text-3);
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    flex: 0 0 auto;
+}
+
+.app-shell[data-app-id="travel"] .tv-errorbar.is-chat {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 118px;
+    z-index: 6;
+    background: var(--tv-elevated);
+}
+
+/* ============================================================
+   覆盖页通用（详情 / 准备 / 对话 / 配色）
+   ============================================================ */
+.app-shell[data-app-id="travel"] .tv-overlay-page {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--tv-bg);
+    animation: tvPageIn 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+    overflow: hidden;
+}
+
+@keyframes tvPageIn {
+    from { transform: translateX(14px); opacity: 0; }
+    to { transform: none; opacity: 1; }
+}
+
+.app-shell[data-app-id="travel"] .tv-pagebar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 56px 12px 8px;
+    border-bottom: 1px solid var(--tv-line-soft);
+    background: var(--tv-bg);
+    position: relative;
+    z-index: 5;
+}
+
+.app-shell[data-app-id="travel"] .tv-pagebar__title {
+    flex: 1;
+    min-width: 0;
+    font-size: 14px;
+    font-weight: 580;
+    color: var(--tv-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="travel"] .tv-pagebar__mid {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-shell[data-app-id="travel"] .tv-pagebar__mid .tv-pagebar__title { flex: none; }
+
+.app-shell[data-app-id="travel"] .tv-pagebar__sub {
+    font-size: 10.5px;
+    color: var(--tv-text-3);
+}
+
+.app-shell[data-app-id="travel"] .tv-pagebar__right { width: 32px; flex: 0 0 auto; }
+
+.app-shell[data-app-id="travel"] .tv-overlay-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+    padding: 14px 16px 20px;
+}
+
+.app-shell[data-app-id="travel"] .tv-overlay-foot {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 9px;
+    padding: 11px 16px;
+    padding-bottom: calc(14px + var(--app-safe-bottom, 0px));
+    border-top: 1px solid var(--tv-line);
+    background: var(--tv-elevated);
+}
+
+/* ============================================================
+   详情页
+   ============================================================ */
+.app-shell[data-app-id="travel"] .tv-detail__hero {
+    padding-bottom: 14px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--tv-line-soft);
+}
+
+.app-shell[data-app-id="travel"] .tv-detail__place {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0 0 3px;
+    font-size: 12px;
+    color: var(--tv-primary-strong);
+}
+
+.app-shell[data-app-id="travel"] .tv-detail__name {
+    margin: 0 0 6px;
+    font-size: 21px;
+    font-weight: 640;
+    line-height: 1.35;
+    color: var(--tv-text);
+}
+
+.app-shell[data-app-id="travel"] .tv-detail__blurb {
+    margin: 0 0 10px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--tv-text-2);
+}
+
+.app-shell[data-app-id="travel"] .tv-para {
+    margin: 0 0 10px;
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--tv-text-2);
+}
+.app-shell[data-app-id="travel"] .tv-para:last-child { margin-bottom: 0; }
+.app-shell[data-app-id="travel"] .tv-para.is-muted { color: var(--tv-text-3); font-size: 12.5px; }
+
+.app-shell[data-app-id="travel"] .tv-list {
+    margin: 0;
+    padding: 0 0 0 2px;
+    list-style: none;
+    display: grid;
+    gap: 7px;
+}
+
+.app-shell[data-app-id="travel"] .tv-list li {
+    position: relative;
+    padding-left: 14px;
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--tv-text-2);
+}
+
+.app-shell[data-app-id="travel"] .tv-list li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 8px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--tv-primary);
+}
+
+.app-shell[data-app-id="travel"] .tv-detail__facts {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 18px;
+}
+
+.app-shell[data-app-id="travel"] .tv-fact {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 11px 13px;
+    border: 1px solid var(--tv-line);
+    border-radius: 12px;
+    background: var(--tv-surface);
+    min-width: 0;
+}
+
+.app-shell[data-app-id="travel"] .tv-fact__k { font-size: 10.5px; color: var(--tv-text-3); }
+.app-shell[data-app-id="travel"] .tv-fact__v { font-size: 12.5px; font-weight: 560; color: var(--tv-text); }
+
+/* ── 机票卡：整页唯一的「特殊物」，票根用虚线裁开 ── */
+.app-shell[data-app-id="travel"] .tv-ticket {
+    display: flex;
+    width: 100%;
+    margin: 4px 0 6px;
+    padding: 0;
+    border: 1.5px solid var(--tv-ticket-line);
+    border-radius: 14px;
+    background: var(--tv-ticket-bg);
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    overflow: hidden;
+    transition: transform 0.12s ease, border-color 0.15s ease;
+}
+
+.app-shell[data-app-id="travel"] .tv-ticket:active {
+    transform: scale(0.985);
+    border-color: var(--tv-ticket-accent);
+}
+
+.app-shell[data-app-id="travel"] .tv-ticket__main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 15px 14px;
+}
+
+.app-shell[data-app-id="travel"] .tv-ticket__route {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="travel"] .tv-ticket__from,
+.app-shell[data-app-id="travel"] .tv-ticket__to {
+    font-size: 15px;
+    font-weight: 640;
+    color: var(--tv-text);
+}
+
+.app-shell[data-app-id="travel"] .tv-ticket__plane {
+    display: inline-flex;
+    color: var(--tv-ticket-accent);
+}
+
+.app-shell[data-app-id="travel"] .tv-ticket__meta {
+    font-size: 11px;
+    color: var(--tv-text-3);
+}
+
+.app-shell[data-app-id="travel"] .tv-ticket__stub {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 12px 14px;
+    border-left: 1.5px dashed var(--tv-ticket-line);
+    background: var(--tv-ticket-bg);
+    min-width: 96px;
+}
+
+.app-shell[data-app-id="travel"] .tv-ticket__price {
+    display: flex;
+    align-items: baseline;
+    gap: 3px;
+    color: var(--tv-price);
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="travel"] .tv-ticket__price i {
+    font-size: 19px;
+    font-weight: 660;
+    font-style: normal;
+}
+
+.app-shell[data-app-id="travel"] .tv-ticket__price {
+    font-size: 11px;
+}
+
+.app-shell[data-app-id="travel"] .tv-ticket__cta {
+    padding: 3px 10px;
+    border-radius: 9px;
+    background: var(--tv-ticket-accent);
+    color: var(--tv-on-primary);
+    font-size: 11px;
+    font-weight: 560;
+}
+
+.app-shell[data-app-id="travel"] .tv-detail__tools {
+    display: flex;
+    gap: 6px;
+    padding-top: 10px;
+    border-top: 1px solid var(--tv-line-soft);
+    margin-top: 12px;
+}
+
+/* ============================================================
+   行程页
+   ============================================================ */
+.app-shell[data-app-id="travel"] .tv-trip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 14px;
+    margin-bottom: 9px;
+    border: 1px solid var(--tv-line);
+    border-radius: 13px;
+    background: var(--tv-surface);
+    cursor: pointer;
+}
+.app-shell[data-app-id="travel"] .tv-trip:active { background: var(--tv-card-hover); }
+.app-shell[data-app-id="travel"] .tv-trip.is-done { opacity: 0.88; }
+
+.app-shell[data-app-id="travel"] .tv-trip__main { flex: 1; min-width: 0; }
+
+.app-shell[data-app-id="travel"] .tv-trip__title {
+    margin: 0 0 2px;
+    font-size: 14px;
+    font-weight: 580;
+    color: var(--tv-text);
+}
+
+.app-shell[data-app-id="travel"] .tv-trip__sub {
+    margin: 0;
+    font-size: 11.5px;
+    color: var(--tv-text-3);
+}
+
+.app-shell[data-app-id="travel"] .tv-trip__x {
+    flex: 0 0 auto;
+    border: 1px solid var(--tv-line-strong);
+    border-radius: 9px;
+    background: transparent;
+    padding: 5px 10px;
+    color: var(--tv-text-2);
+    font-size: 11.5px;
+    font-family: inherit;
+    cursor: pointer;
+}
+.app-shell[data-app-id="travel"] .tv-trip__x:active { color: var(--tv-danger); border-color: var(--tv-danger); }
+
+.app-shell[data-app-id="travel"] .tv-trip__badge {
+    flex: 0 0 auto;
+    padding: 3px 9px;
+    border-radius: 8px;
+    background: var(--tv-surface-2);
+    color: var(--tv-text-2);
+    font-size: 11px;
+}
+
+.app-shell[data-app-id="travel"] .tv-progress {
+    margin-top: 8px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--tv-surface-2);
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="travel"] .tv-progress__bar {
+    display: block;
+    height: 100%;
+    border-radius: 2px;
+    background: var(--tv-primary);
+    transition: width 0.3s ease;
+}
+
+.app-shell[data-app-id="travel"] .tv-progress.is-chat {
+    margin: 0;
+    height: 3px;
+    border-radius: 0;
+    background: var(--tv-line-soft);
+    position: relative;
+    z-index: 5;
+}
+
+/* ============================================================
+   准备板
+   ============================================================ */
+.app-shell[data-app-id="travel"] .tv-prep__days {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.app-shell[data-app-id="travel"] .tv-prep__duration {
+    font-size: 13px;
+    color: var(--tv-text-2);
+}
+
+/* 小剧场（剧本排版：说话人一列、台词一列 —— 不做聊天气泡） */
+.app-shell[data-app-id="travel"] .tv-theater {
+    border: 1px solid var(--tv-line);
+    border-radius: 13px;
+    background: var(--tv-surface);
+    padding: 13px 14px;
+}
+
+.app-shell[data-app-id="travel"] .tv-theater__title {
+    width: 100%;
+    padding: 2px 0 6px;
+    border: 0;
+    border-bottom: 1px dashed transparent;
+    background: transparent;
+    color: var(--tv-text);
+    font-size: 17px;
+    font-weight: 640;
+    font-family: inherit;
+    outline: none;
+}
+.app-shell[data-app-id="travel"] .tv-theater__title:focus { border-bottom-color: var(--tv-line-strong); }
+
+.app-shell[data-app-id="travel"] .tv-theater__scene { margin: 12px 0; }
+
+.app-shell[data-app-id="travel"] .tv-theater__scenehead {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin: 0 0 6px;
+    font-size: 12px;
+    color: var(--tv-text-3);
+}
+
+.app-shell[data-app-id="travel"] .tv-theater__no {
+    padding: 1px 7px;
+    border-radius: 5px;
+    background: var(--tv-primary-soft);
+    color: var(--tv-primary-strong);
+    font-size: 10.5px;
+    font-weight: 600;
+}
+
+.app-shell[data-app-id="travel"] .tv-theater__narration {
+    width: 100%;
+    padding: 8px 11px;
+    margin-bottom: 8px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: var(--tv-surface-2);
+    color: var(--tv-text-2);
+    font-size: 12.5px;
+    font-family: inherit;
+    font-style: italic;
+    line-height: 1.7;
+    resize: none;
+    outline: none;
+}
+.app-shell[data-app-id="travel"] .tv-theater__narration:focus {
+    border-color: var(--tv-primary);
+    background: var(--tv-surface);
+}
+
+.app-shell[data-app-id="travel"] .tv-theater__line {
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    align-items: start;
+    gap: 8px;
+    margin-bottom: 7px;
+}
+
+.app-shell[data-app-id="travel"] .tv-theater__who {
+    padding-top: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--tv-primary-strong);
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="travel"] .tv-theater__text {
+    width: 100%;
+    padding: 5px 8px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--tv-text);
+    font-size: 13px;
+    font-family: inherit;
+    line-height: 1.65;
+    resize: none;
+    outline: none;
+    field-sizing: content;
+}
+.app-shell[data-app-id="travel"] .tv-theater__text:focus {
+    border-color: var(--tv-primary);
+    background: var(--tv-surface-2);
+}
+
+.app-shell[data-app-id="travel"] .tv-theater__closing {
+    margin: 12px 0 0;
+    padding: 10px 12px;
+    border-left: 2px solid var(--tv-accent);
+    border-radius: 0 10px 10px 0;
+    background: var(--tv-accent-soft);
+    font-size: 12.5px;
+    line-height: 1.75;
+    color: var(--tv-text-2);
+}
+
+/* prompt 分段预览 */
+.app-shell[data-app-id="travel"] .tv-ctx { margin-top: 10px; }
+
+.app-shell[data-app-id="travel"] .tv-ctx__stat {
+    margin: 0 0 6px;
+    font-size: 11px;
+    color: var(--tv-text-3);
+}
+
+.app-shell[data-app-id="travel"] .tv-ctx__part {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--tv-line-soft);
+}
+.app-shell[data-app-id="travel"] .tv-ctx__part:last-child { border-bottom: 0; }
+
+.app-shell[data-app-id="travel"] .tv-ctx__part.is-off { opacity: 0.5; }
+.app-shell[data-app-id="travel"] .tv-ctx__part.is-off .tv-ctx__title { text-decoration: line-through; }
+
+.app-shell[data-app-id="travel"] .tv-ctx__main { flex: 1; min-width: 0; }
+
+.app-shell[data-app-id="travel"] .tv-ctx__title {
+    display: block;
+    font-size: 12.5px;
+    color: var(--tv-text);
+}
+
+.app-shell[data-app-id="travel"] .tv-ctx__meta {
+    display: block;
+    margin-top: 1px;
+    font-size: 10.5px;
+    color: var(--tv-text-3);
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="travel"] .tv-ctx__lock {
+    flex: 0 0 auto;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--tv-primary-soft);
+    color: var(--tv-primary-strong);
+    font-size: 10px;
+}
+
+/* ============================================================
+   旅行对话页
+   ============================================================ */
+.app-shell[data-app-id="travel"] .tv-chat { background: var(--tv-bg); }
+
+/* 背景层：inset 负值让模糊边缘不露白边 */
+.app-shell[data-app-id="travel"] .tv-chat__bg {
+    position: absolute;
+    inset: -24px;
+    background-size: cover;
+    background-position: center;
+    z-index: 0;
+}
+
+.app-shell[data-app-id="travel"] .tv-chat__scrim {
+    position: absolute;
+    inset: 0;
+    background: var(--tv-chat-scrim);
+    z-index: 1;
+}
+
+.app-shell[data-app-id="travel"] .tv-chat .tv-pagebar {
+    background: var(--tv-nav-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.app-shell[data-app-id="travel"] .tv-chat__scroll {
+    position: relative;
+    z-index: 2;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+    padding: 14px 14px 18px;
+}
+
+.app-shell[data-app-id="travel"] .tv-chat__hello {
+    margin: 20px auto;
+    max-width: 270px;
+    padding: 13px 15px;
+    border-radius: 13px;
+    background: var(--tv-narration-bg);
+    text-align: center;
+}
+
+.app-shell[data-app-id="travel"] .tv-chat__hello p {
+    margin: 0 0 6px;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--tv-narration-text);
+}
+.app-shell[data-app-id="travel"] .tv-chat__hello p:last-child { margin: 0; }
+.app-shell[data-app-id="travel"] .tv-chat__hello .is-sub { font-size: 11px; color: var(--tv-text-3); }
+
+/* ── 消息 ── */
+.app-shell[data-app-id="travel"] .tv-msg {
+    position: relative;
+    margin-bottom: 12px;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.app-shell[data-app-id="travel"] .tv-msg__more {
+    position: absolute;
+    top: -4px;
+    right: -2px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border: 1px solid var(--tv-line);
+    border-radius: 50%;
+    background: var(--tv-elevated);
+    color: var(--tv-text-3);
+    cursor: pointer;
+    z-index: 2;
+}
+
+.app-shell[data-app-id="travel"] .tv-msg:hover .tv-msg__more,
+.app-shell[data-app-id="travel"] .tv-msg:active .tv-msg__more { display: inline-flex; }
+
+/* 旁白：居中 */
+.app-shell[data-app-id="travel"] .tv-msg__narration {
+    max-width: 88%;
+    margin: 0 auto;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: var(--tv-narration-bg);
+    text-align: center;
+}
+
+.app-shell[data-app-id="travel"] .tv-msg__stage {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0 0 4px;
+    font-size: 10.5px;
+    color: var(--tv-text-3);
+}
+
+.app-shell[data-app-id="travel"] .tv-msg__ntext {
+    margin: 0;
+    font-size: 12.8px;
+    line-height: 1.8;
+    color: var(--tv-narration-text);
+    text-align: left;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* 气泡（用户右 / AI 左） */
+.app-shell[data-app-id="travel"] .tv-msg__bubblewrap {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    max-width: 88%;
+}
+
+.app-shell[data-app-id="travel"] .tv-msg__bubblewrap.is-right {
+    margin-left: auto;
+    justify-content: flex-end;
+}
+
+.app-shell[data-app-id="travel"] .tv-msg__aiside { min-width: 0; }
+
+.app-shell[data-app-id="travel"] .tv-msg__aname {
+    margin: 0 0 3px 4px;
+    font-size: 10.5px;
+    color: var(--tv-text-3);
+}
+
+.app-shell[data-app-id="travel"] .tv-msg__bubble {
+    padding: 9px 13px;
+    border-radius: 14px;
+    font-size: 13.5px;
+    line-height: 1.65;
+}
+
+.app-shell[data-app-id="travel"] .tv-msg__bubble p {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.app-shell[data-app-id="travel"] .tv-msg__bubble.is-user {
+    background: var(--tv-bubble-user-bg);
+    color: var(--tv-bubble-user-text);
+    border-bottom-right-radius: 4px;
+}
+
+.app-shell[data-app-id="travel"] .tv-msg__bubble.is-ai {
+    background: var(--tv-bubble-ai-bg);
+    color: var(--tv-bubble-ai-text);
+    border: 1px solid var(--tv-line-soft);
+    border-bottom-left-radius: 4px;
+}
+
+.app-shell[data-app-id="travel"] .tv-chat__typing {
+    display: grid;
+    place-items: center;
+    padding: 8px 0;
+}
+
+.app-shell[data-app-id="travel"] .tv-chat__end {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 18px 0 8px;
+}
+
+.app-shell[data-app-id="travel"] .tv-chat__endline {
+    flex: 1;
+    border-top: 1px dashed var(--tv-line-strong);
+}
+
+.app-shell[data-app-id="travel"] .tv-chat__end p {
+    margin: 0;
+    max-width: 220px;
+    font-size: 11px;
+    line-height: 1.7;
+    color: var(--tv-text-3);
+    text-align: center;
+}
+
+/* ── 输入区 ── */
+.app-shell[data-app-id="travel"] .tv-chat__composer {
+    position: relative;
+    z-index: 3;
+    flex: 0 0 auto;
+    padding: 8px 12px;
+    padding-bottom: calc(10px + var(--app-safe-bottom, 0px));
+    border-top: 1px solid var(--tv-nav-line);
+    background: var(--tv-nav-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+.app-shell[data-app-id="travel"] .tv-chat__quick {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+}
+
+.app-shell[data-app-id="travel"] .tv-chat__narrate {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    border: 1px solid var(--tv-primary);
+    border-radius: 15px;
+    background: var(--tv-primary-soft);
+    color: var(--tv-primary-strong);
+    font-size: 12px;
+    font-weight: 560;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    flex: 0 0 auto;
+}
+.app-shell[data-app-id="travel"] .tv-chat__narrate:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.app-shell[data-app-id="travel"] .tv-chat__aichip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 11px 4px 5px;
+    border: 1px solid var(--tv-line);
+    border-radius: 15px;
+    background: var(--tv-surface);
+    color: var(--tv-text-2);
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    flex: 0 0 auto;
+}
+.app-shell[data-app-id="travel"] .tv-chat__aichip:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.app-shell[data-app-id="travel"] .tv-chat__inputrow {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="travel"] .tv-chat__input {
+    flex: 1;
+    min-width: 0;
+    max-height: 96px;
+    padding: 9px 12px;
+    border: 1px solid var(--tv-input-line);
+    border-radius: 18px;
+    background: var(--tv-input-bg);
+    color: var(--tv-text);
+    font-size: 13.5px;
+    font-family: inherit;
+    line-height: 1.5;
+    resize: none;
+    outline: none;
+}
+.app-shell[data-app-id="travel"] .tv-chat__input:focus { border-color: var(--tv-primary); }
+
+.app-shell[data-app-id="travel"] .tv-chat__send {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--tv-primary);
+    color: var(--tv-on-primary);
+    cursor: pointer;
+}
+.app-shell[data-app-id="travel"] .tv-chat__send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.app-shell[data-app-id="travel"] .tv-chat__closedbar {
+    position: relative;
+    z-index: 3;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 13px 16px;
+    padding-bottom: calc(14px + var(--app-safe-bottom, 0px));
+    border-top: 1px solid var(--tv-nav-line);
+    background: var(--tv-nav-bg);
+    color: var(--tv-text-3);
+    font-size: 12px;
+}
+
+/* ============================================================
+   足迹页
+   ============================================================ */
+.app-shell[data-app-id="travel"] .tv-foot {
+    padding: 13px 14px;
+    margin-bottom: 11px;
+    border: 1px solid var(--tv-line);
+    border-radius: 13px;
+    background: var(--tv-surface);
+}
+
+.app-shell[data-app-id="travel"] .tv-foot__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="travel"] .tv-foot__titles { min-width: 0; }
+
+.app-shell[data-app-id="travel"] .tv-foot__title {
+    margin: 0 0 2px;
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--tv-text);
+}
+
+.app-shell[data-app-id="travel"] .tv-foot__meta {
+    margin: 0;
+    font-size: 11.5px;
+    color: var(--tv-text-3);
+}
+
+.app-shell[data-app-id="travel"] .tv-foot__note {
+    margin: 9px 0 0;
+    padding: 8px 11px;
+    border-left: 2px solid var(--tv-accent);
+    border-radius: 0 9px 9px 0;
+    background: var(--tv-accent-soft);
+    font-size: 12.5px;
+    line-height: 1.65;
+    color: var(--tv-text-2);
+    white-space: pre-wrap;
+}
+
+.app-shell[data-app-id="travel"] .tv-foot__summary {
+    margin: 9px 0 0;
+    padding: 9px 11px;
+    border-radius: 9px;
+    background: var(--tv-surface-2);
+}
+
+.app-shell[data-app-id="travel"] .tv-foot__summary-k {
+    margin: 0 0 3px;
+    font-size: 10.5px;
+    color: var(--tv-text-3);
+}
+
+.app-shell[data-app-id="travel"] .tv-foot__summary-v {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--tv-text-2);
+}
+
+.app-shell[data-app-id="travel"] .tv-foot__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 10px;
+    padding-top: 9px;
+    border-top: 1px solid var(--tv-line-soft);
+}
+
+/* ============================================================
+   经历页
+   ============================================================ */
+.app-shell[data-app-id="travel"] .tv-exp {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 11px 12px;
+    margin-bottom: 8px;
+    border: 1px solid var(--tv-line);
+    border-radius: 12px;
+    background: var(--tv-surface);
+}
+
+.app-shell[data-app-id="travel"] .tv-exp__main { flex: 1; min-width: 0; cursor: pointer; }
+
+.app-shell[data-app-id="travel"] .tv-exp__title {
+    margin: 0 0 2px;
+    font-size: 13.5px;
+    font-weight: 560;
+    color: var(--tv-text);
+}
+
+.app-shell[data-app-id="travel"] .tv-exp__meta {
+    margin: 0;
+    font-size: 11px;
+    color: var(--tv-text-3);
+}
+
+.app-shell[data-app-id="travel"] .tv-exp__summary {
+    margin: 6px 0 0;
+    font-size: 12px;
+    line-height: 1.65;
+    color: var(--tv-text-2);
+}
+
+/* ============================================================
+   我的
+   ============================================================ */
+.app-shell[data-app-id="travel"] .tv-idcard {
+    padding: 16px 17px 14px;
+    margin-bottom: 16px;
+    border: 1px solid var(--tv-line);
+    border-radius: 16px;
+    background: var(--tv-surface);
+}
+
+.app-shell[data-app-id="travel"] .tv-idcard__head {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    margin-bottom: 12px;
+}
+
+.app-shell[data-app-id="travel"] .tv-idcard__name {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 620;
+    color: var(--tv-text);
+}
+
+.app-shell[data-app-id="travel"] .tv-idcard__world {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: 2px 0 0;
+    font-size: 11.5px;
+    color: var(--tv-text-3);
+}
+
+.app-shell[data-app-id="travel"] .tv-idcard__balance {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.app-shell[data-app-id="travel"] .tv-idcard__num {
+    font-size: 32px;
+    font-weight: 660;
+    letter-spacing: -0.5px;
+    font-variant-numeric: tabular-nums;
+    color: var(--tv-coin);
+}
+
+.app-shell[data-app-id="travel"] .tv-idcard__unit { font-size: 13px; color: var(--tv-text-3); }
+
+.app-shell[data-app-id="travel"] .tv-idcard__note {
+    margin: 6px 0 0;
+    font-size: 11.5px;
+    line-height: 1.6;
+    color: var(--tv-text-3);
+}
+
+.app-shell[data-app-id="travel"] .tv-idcard__stats {
+    display: flex;
+    gap: 8px;
+    margin-top: 13px;
+    padding-top: 12px;
+    border-top: 1px solid var(--tv-line-soft);
+}
+
+.app-shell[data-app-id="travel"] .tv-idcard__stat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="travel"] .tv-idcard__stat b {
+    font-size: 15px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--tv-text);
+}
+
+.app-shell[data-app-id="travel"] .tv-idcard__stat i {
+    font-size: 10.5px;
+    font-style: normal;
+    color: var(--tv-text-3);
+}
+
+.app-shell[data-app-id="travel"] .tv-entries {
+    border: 1px solid var(--tv-line);
+    border-radius: 14px;
+    background: var(--tv-surface);
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="travel"] .tv-entry {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 13px 15px;
+    border: 0;
+    border-bottom: 1px solid var(--tv-line-soft);
+    background: transparent;
+    text-align: left;
+    font-family: inherit;
+    cursor: pointer;
+    color: var(--tv-text-3);
+    transition: background 0.15s ease;
+}
+.app-shell[data-app-id="travel"] .tv-entry:last-child { border-bottom: 0; }
+.app-shell[data-app-id="travel"] .tv-entry:active { background: var(--tv-surface-2); }
+
+.app-shell[data-app-id="travel"] .tv-entry__icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: var(--tv-primary-soft);
+    color: var(--tv-primary-strong);
+}
+
+.app-shell[data-app-id="travel"] .tv-entry__main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.app-shell[data-app-id="travel"] .tv-entry__label {
+    font-size: 13.5px;
+    font-weight: 540;
+    color: var(--tv-text);
+}
+
+.app-shell[data-app-id="travel"] .tv-entry__hint { font-size: 11.5px; color: var(--tv-text-3); }
+
+/* ============================================================
+   配色页
+   ============================================================ */
+.app-shell[data-app-id="travel"] .tv-theme-picks {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.app-shell[data-app-id="travel"] .tv-theme-pick {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 11px;
+    border: 1.5px solid var(--tv-line);
+    border-radius: 13px;
+    background: var(--tv-bg);
+    text-align: left;
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color 0.16s ease;
+}
+.app-shell[data-app-id="travel"] .tv-theme-pick.is-on { border-color: var(--tv-primary); }
+
+/* 迷你预览用主题自己的变量画（探针选择器就是为它准备的） */
+.app-shell[data-app-id="travel"] .tv-theme-pick__mini {
+    position: relative;
+    display: block;
+    height: 54px;
+    border-radius: 9px;
+    background: var(--tv-bg);
+    border: 1px solid var(--tv-line);
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="travel"] .tv-theme-pick__bar {
+    position: absolute;
+    top: 7px;
+    left: 8px;
+    width: 40%;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--tv-text);
+    opacity: 0.75;
+}
+
+.app-shell[data-app-id="travel"] .tv-theme-pick__card {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    height: 24px;
+    border-radius: 7px;
+    background: var(--tv-surface);
+    border: 1px solid var(--tv-line);
+}
+
+.app-shell[data-app-id="travel"] .tv-theme-pick__dot {
+    position: absolute;
+    right: 12px;
+    bottom: 13px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--tv-primary);
+}
+
+.app-shell[data-app-id="travel"] .tv-theme-pick__name { font-size: 13px; font-weight: 580; color: var(--tv-text); }
+.app-shell[data-app-id="travel"] .tv-theme-pick__desc { font-size: 10.5px; color: var(--tv-text-3); }
+
+.app-shell[data-app-id="travel"] .tv-theme-chips {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.app-shell[data-app-id="travel"] .tv-theme-chip {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 7px;
+    border: 1px solid var(--tv-line);
+    border-radius: 11px;
+    background: var(--tv-surface);
+}
+
+.app-shell[data-app-id="travel"] .tv-theme-chip.is-active { border-color: var(--tv-primary); }
+
+.app-shell[data-app-id="travel"] .tv-theme-chip__main {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: none;
+    padding: 4px 6px;
+    color: var(--tv-text);
+    font-size: 13px;
+    font-weight: 560;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="travel"] .tv-theme-chip__act {
+    flex: 0 0 auto;
+    border: 0;
+    background: var(--tv-surface-2);
+    border-radius: 7px;
+    padding: 4px 9px;
+    color: var(--tv-text-2);
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+}
+.app-shell[data-app-id="travel"] .tv-theme-chip__act:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.app-shell[data-app-id="travel"] .tv-theme-chip__del {
+    flex: 0 0 auto;
+    border: 0;
+    background: none;
+    padding: 4px 7px;
+    color: var(--tv-text-3);
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+}
+.app-shell[data-app-id="travel"] .tv-theme-chip__del:active { color: var(--tv-danger); }
+
+.app-shell[data-app-id="travel"] .tv-swatch-group {
+    border: 1px solid var(--tv-line);
+    border-radius: 11px;
+    margin-bottom: 8px;
+    overflow: hidden;
+    background: var(--tv-surface);
+}
+
+.app-shell[data-app-id="travel"] .tv-swatch-group__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 10px 13px;
+    border: 0;
+    background: transparent;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 560;
+    color: var(--tv-text);
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="travel"] .tv-swatch-group__count { font-size: 11px; color: var(--tv-text-3); }
+
+.app-shell[data-app-id="travel"] .tv-swatch-group__body {
+    padding: 4px 13px 11px;
+    border-top: 1px solid var(--tv-line-soft);
+}
+
+.app-shell[data-app-id="travel"] .tv-swatch {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--tv-line-soft);
+}
+.app-shell[data-app-id="travel"] .tv-swatch:last-child { border-bottom: 0; }
+
+.app-shell[data-app-id="travel"] .tv-swatch__chip {
+    position: relative;
+    flex: 0 0 auto;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    border: 1px solid var(--tv-line-strong);
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="travel"] .tv-swatch__fill {
+    position: absolute;
+    inset: 0;
+}
+
+.app-shell[data-app-id="travel"] .tv-swatch__picker {
+    position: absolute;
+    inset: -4px;
+    width: calc(100% + 8px);
+    height: calc(100% + 8px);
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    opacity: 0;
+}
+
+.app-shell[data-app-id="travel"] .tv-swatch__main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.app-shell[data-app-id="travel"] .tv-swatch__label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    color: var(--tv-text);
+}
+
+.app-shell[data-app-id="travel"] .tv-swatch__changed {
+    padding: 0 5px;
+    border-radius: 4px;
+    background: var(--tv-primary-soft);
+    color: var(--tv-primary-strong);
+    font-size: 9.5px;
+    font-style: normal;
+}
+
+.app-shell[data-app-id="travel"] .tv-swatch__token {
+    font-size: 9.5px;
+    color: var(--tv-text-3);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="travel"] .tv-swatch__value {
+    flex: 0 0 auto;
+    width: 108px;
+    padding: 4px 7px;
+    border: 1px solid var(--tv-input-line);
+    border-radius: 6px;
+    background: var(--tv-input-bg);
+    color: var(--tv-text-2);
+    font-size: 10.5px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    outline: none;
+}
+
+.app-shell[data-app-id="travel"] .tv-swatch__reset {
+    flex: 0 0 auto;
+    border: 0;
+    background: none;
+    padding: 4px 5px;
+    color: var(--tv-text-3);
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+/* ============================================================
+   引导页
+   ============================================================ */
+.app-shell[data-app-id="travel"] .tv-ob {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: var(--tv-bg);
+}
+
+.app-shell[data-app-id="travel"] .tv-ob__stage {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    touch-action: pan-y;
+    padding: 22px 26px 12px;
+}
+
+.app-shell[data-app-id="travel"] .tv-ob__center {
+    display: grid;
+    place-items: center;
+}
+
+.app-shell[data-app-id="travel"] .tv-ob__hero {
+    display: grid;
+    place-items: center;
+    padding: 20px 0 14px;
+    color: var(--tv-primary);
+}
+
+.app-shell[data-app-id="travel"] .tv-ob__title {
+    margin: 0 0 7px;
+    font-size: 24px;
+    font-weight: 640;
+    letter-spacing: -0.2px;
+    line-height: 1.3;
+    color: var(--tv-text);
+    text-align: center;
+}
+
+.app-shell[data-app-id="travel"] .tv-ob__desc {
+    margin: 0 0 20px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--tv-text-2);
+    text-align: center;
+}
+
+.app-shell[data-app-id="travel"] .tv-ob__panel { display: grid; gap: 9px; }
+
+.app-shell[data-app-id="travel"] .tv-ob__pill {
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+    padding: 12px 15px;
+    border-radius: 13px;
+    background: var(--tv-surface);
+    border: 1px solid var(--tv-line);
+}
+
+.app-shell[data-app-id="travel"] .tv-ob__pill-k { font-size: 12px; color: var(--tv-text-3); flex: 0 0 auto; }
+.app-shell[data-app-id="travel"] .tv-ob__pill-v { font-size: 15px; font-weight: 600; color: var(--tv-text); }
+.app-shell[data-app-id="travel"] .tv-ob__pill-v.is-coin { color: var(--tv-coin); }
+
+.app-shell[data-app-id="travel"] .tv-ob__summary {
+    padding: 13px 15px;
+    border-radius: 13px;
+    background: var(--tv-surface-2);
+}
+
+.app-shell[data-app-id="travel"] .tv-ob__summary-text {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.75;
+    color: var(--tv-text-2);
+    white-space: pre-wrap;
+}
+
+.app-shell[data-app-id="travel"] .tv-ob__summary-empty {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--tv-text-3);
+}
+
+.app-shell[data-app-id="travel"] .tv-ob__group {
+    margin: 8px 0 0;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    color: var(--tv-text-3);
+}
+
+.app-shell[data-app-id="travel"] .tv-ob__none {
+    padding: 16px;
+    border-radius: 13px;
+    background: var(--tv-surface-2);
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--tv-text-3);
+}
+
+.app-shell[data-app-id="travel"] .tv-ob__card {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--tv-line);
+    border-radius: 13px;
+    background: var(--tv-surface);
+    text-align: left;
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+.app-shell[data-app-id="travel"] .tv-ob__card.is-on {
+    border-color: var(--tv-primary);
+    background: var(--tv-primary-soft);
+}
+
+.app-shell[data-app-id="travel"] .tv-ob__tick {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    border: 1.6px solid var(--tv-line-strong);
+    border-radius: 6px;
+    position: relative;
+    transition: all 0.16s ease;
+}
+
+.app-shell[data-app-id="travel"] .tv-ob__card.is-on .tv-ob__tick {
+    border-color: var(--tv-primary);
+    background: var(--tv-primary);
+}
+
+.app-shell[data-app-id="travel"] .tv-ob__card.is-on .tv-ob__tick::after {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 1.5px;
+    width: 4px;
+    height: 8px;
+    border: solid var(--tv-on-primary);
+    border-width: 0 1.8px 1.8px 0;
+    transform: rotate(42deg);
+}
+
+.app-shell[data-app-id="travel"] .tv-ob__card-main {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="travel"] .tv-ob__card-title {
+    font-size: 13.5px;
+    font-weight: 560;
+    color: var(--tv-text);
+}
+
+.app-shell[data-app-id="travel"] .tv-ob__card-path {
+    font-size: 10.5px;
+    color: var(--tv-primary-strong);
+    opacity: 0.85;
+}
+
+.app-shell[data-app-id="travel"] .tv-ob__card-sub {
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--tv-text-3);
+}
+
+.app-shell[data-app-id="travel"] .tv-ob__failed {
+    margin: 8px 0 0;
+    padding: 9px 12px;
+    border-radius: 10px;
+    background: var(--tv-surface-2);
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--tv-danger);
+}
+
+.app-shell[data-app-id="travel"] .tv-ob__foot {
+    flex: 0 0 auto;
+    padding: 12px 26px 18px;
+    padding-bottom: calc(18px + var(--app-safe-bottom, 0px));
+    border-top: 1px solid var(--tv-line-soft);
+    background: var(--tv-bg);
+}
+
+.app-shell[data-app-id="travel"] .tv-ob__dots {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.app-shell[data-app-id="travel"] .tv-ob__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--tv-line-strong);
+    transition: all 0.22s ease;
+}
+
+.app-shell[data-app-id="travel"] .tv-ob__dot.is-on { width: 18px; background: var(--tv-primary); }
+
+.app-shell[data-app-id="travel"] .tv-ob__actions {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+/* ============================================================
+   弹窗（AcModal 换皮 + 本 App 的弹窗内件）
+   ------------------------------------------------------------
+   基线样式在 css/main.css 的 .ac-*（裸 class 低特异性），
+   这里只覆盖颜色和圆角，全部走 token。
+   ============================================================ */
+.app-shell[data-app-id="travel"] .tv-modal .ac-modal {
+    background: var(--tv-elevated);
+    color: var(--tv-text);
+    border: 1px solid var(--tv-line);
+    box-shadow: 0 14px 40px var(--tv-shadow);
+}
+
+.app-shell[data-app-id="travel"] .tv-modal.ac-overlay { background: var(--tv-overlay); }
+
+.app-shell[data-app-id="travel"] .tv-modal .ac-modal-title {
+    color: var(--tv-text);
+    font-size: 16px;
+    font-weight: 620;
+}
+
+.app-shell[data-app-id="travel"] .tv-modal .ac-modal-subtitle {
+    color: var(--tv-text-3);
+    font-size: 11.5px;
+}
+
+.app-shell[data-app-id="travel"] .tv-modal .ac-btn {
+    border-radius: 11px;
+    font-family: inherit;
+    font-size: 13px;
+}
+
+.app-shell[data-app-id="travel"] .tv-modal .ac-btn-primary {
+    background: var(--tv-primary);
+    border-color: var(--tv-primary);
+    color: var(--tv-on-primary);
+}
+
+.app-shell[data-app-id="travel"] .tv-modal .ac-btn-secondary {
+    background: transparent;
+    border-color: var(--tv-line-strong);
+    color: var(--tv-text-2);
+}
+
+.app-shell[data-app-id="travel"] .tv-modal .ac-btn-danger {
+    background: var(--tv-danger);
+    border-color: var(--tv-danger);
+    color: var(--tv-text-inverse);
+}
+
+.app-shell[data-app-id="travel"] .tv-modal .ac-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.app-shell[data-app-id="travel"] .tv-modal-text {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.75;
+    color: var(--tv-text-2);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* 机票确认里的三个数：像一道算式 */
+.app-shell[data-app-id="travel"] .tv-buy__row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+    font-size: 12.5px;
+    color: var(--tv-text-3);
+}
+
+.app-shell[data-app-id="travel"] .tv-buy__row b {
+    font-size: 13.5px;
+    color: var(--tv-text);
+    font-weight: 600;
+    text-align: right;
+}
+
+.app-shell[data-app-id="travel"] .tv-buy__math {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    padding: 12px 10px;
+    border: 1px solid var(--tv-line);
+    border-radius: 12px;
+    background: var(--tv-surface);
+}
+
+.app-shell[data-app-id="travel"] .tv-buy__cell {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="travel"] .tv-buy__cell i {
+    font-size: 10.5px;
+    font-style: normal;
+    color: var(--tv-text-3);
+}
+
+.app-shell[data-app-id="travel"] .tv-buy__cell b {
+    font-size: 16px;
+    font-weight: 640;
+    font-variant-numeric: tabular-nums;
+    color: var(--tv-text);
+}
+
+.app-shell[data-app-id="travel"] .tv-buy__cell b.is-out { color: var(--tv-price); }
+.app-shell[data-app-id="travel"] .tv-buy__cell b.is-bad { color: var(--tv-danger); }
+
+.app-shell[data-app-id="travel"] .tv-buy__op {
+    flex: 0 0 auto;
+    font-size: 14px;
+    color: var(--tv-text-3);
+    padding-top: 12px;
+}
+
+.app-shell[data-app-id="travel"] .tv-buy__unit {
+    margin: 8px 0 0;
+    text-align: center;
+    font-size: 10.5px;
+    color: var(--tv-text-3);
+}
+
+.app-shell[data-app-id="travel"] .tv-buy__warn {
+    margin: 9px 0 0;
+    padding: 8px 11px;
+    border-radius: 9px;
+    background: var(--tv-accent-soft);
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--tv-danger);
+}
+
+.app-shell[data-app-id="travel"] .tv-buy__note {
+    margin: 9px 0 0;
+    font-size: 11.5px;
+    line-height: 1.6;
+    color: var(--tv-text-3);
+}
+
+/* 消息操作面板 */
+.app-shell[data-app-id="travel"] .tv-actlist {
+    display: grid;
+    gap: 4px;
+}
+
+.app-shell[data-app-id="travel"] .tv-actlist__item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 12px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--tv-text);
+    font-size: 13px;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.app-shell[data-app-id="travel"] .tv-actlist__item:active { background: var(--tv-surface-2); }
+.app-shell[data-app-id="travel"] .tv-actlist__item:disabled { opacity: 0.4; cursor: not-allowed; }
+.app-shell[data-app-id="travel"] .tv-actlist__item.is-danger { color: var(--tv-danger); }
+
+/* 背景设置 */
+.app-shell[data-app-id="travel"] .tv-bgset__preview {
+    position: relative;
+    height: 110px;
+    margin-bottom: 12px;
+    border: 1px solid var(--tv-line);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--tv-surface-2);
+    display: grid;
+    place-items: center;
+}
+
+.app-shell[data-app-id="travel"] .tv-bgset__img {
+    position: absolute;
+    inset: -12px;
+    background-size: cover;
+    background-position: center;
+}
+
+.app-shell[data-app-id="travel"] .tv-bgset__none {
+    margin: 0;
+    font-size: 12px;
+    color: var(--tv-text-3);
+}
+
+.app-shell[data-app-id="travel"] .tv-bgset__row {
+    display: flex;
+    gap: 7px;
+    margin-bottom: 12px;
+}
+
+/* Nook 登记结果 */
+.app-shell[data-app-id="travel"] .tv-nookdone__ids {
+    margin-top: 10px;
+    padding: 9px 11px;
+    border-radius: 9px;
+    background: var(--tv-surface-2);
+}
+
+.app-shell[data-app-id="travel"] .tv-nookdone__ids p {
+    margin: 0 0 4px;
+    font-size: 11.5px;
+    color: var(--tv-text-2);
+}
+.app-shell[data-app-id="travel"] .tv-nookdone__ids p:last-child { margin: 0; }
+
+.app-shell[data-app-id="travel"] .tv-nookdone__ids code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10.5px;
+    color: var(--tv-primary-strong);
+    word-break: break-all;
+}

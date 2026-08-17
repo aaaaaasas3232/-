@@ -1,0 +1,206 @@
+============================================
+小听框架 · js/framework 目录结构说明
+============================================
+
+一、概述
+============================================
+js/framework 是小听项目的核心框架层，负责整个模拟器的系统级功能。
+它基于 Vue 3 Composition API 实现，采用组合式函数（Composition）架构，
+各模块职责单一，通过组合形成完整系统。
+
+
+二、文件清单与职责
+============================================
+
+【入口与基础】
+---------------------------------------------------------------------------
+index.js               框架总入口，统一导出所有模块；同时做兼容层，把 ESM
+                      函数挂到 window 上供老代码使用。
+
+utils.js              通用工具：UI_CONSTANTS（手势阈值、卡片尺寸等常量）、
+                      ISLAND_CLOSE_REASONS（灵动岛关闭原因枚举）、
+                      getTime()、createEmptyIslandContent()、createModalState()
+                      等状态工厂函数。
+
+【系统级 Hook（核心功能）】
+---------------------------------------------------------------------------
+use-system-clock.js    系统时钟：每秒自动更新 systemTime ref，供状态栏等
+                      地方显示实时时间。
+
+use-dynamic-island.js 灵动岛状态机：
+                      - 形态：idle / info（mini/medium/large）/ notification
+                      - 展开/收起、生命周期计时
+                      - 持有者栈：被顶替时快照入栈，延迟恢复
+                      - 关闭收口：所有关岛路径统一走 closeIsland(reason)
+
+use-app-navigation.js  App 导航核心：
+                      - 打开/关闭 App：openApp() / closeApp()
+                      - 页面栈：switchRootPage()、openDetailPage()
+                      - 模态框：openModal() / closeModal()
+                      - 栏渲染上下文生成
+                      - 异步 renderer 支持（解决 IndexedDB 读取时
+                        "loading 中死循环"问题）
+                      - 状态栏颜色自动适配（深色背景用白字）
+
+use-card-mode.js       卡片模式（iOS 风格桌面卡片交互）：
+                      - Home Indicator 上滑 → 进入卡片模式
+                      - 卡片拖拽：甩出关闭 / 点击恢复全屏
+                      - 桌面模糊效果
+                      - 阶段状态机：
+                        FULL → INDICATOR_DRAGGING → CARD_ENTERING
+                        → CARD_IDLE → CARD_DRAGGING → CARD_DISMISSING
+
+use-desktop-edit.js     桌面编辑：
+                      - 长按进入编辑模式、图标抖动
+                      - 拖拽重排（rAF 高频优化，跨页自动翻页）
+                      - 桌面分页（4 列网格，支持多页滑动）
+                      - Widget 支持（S/M/L 尺寸占用不同格子）
+                      - Dock 栏编辑：拖入/移除/重排 Dock 项
+                      - widget picker：从灵动岛拉起选择面板
+
+use-widget-picker.js    小组件选择器：编辑模式下从灵动岛拉起的浮层，
+                      列出所有已注册的 widget，点击即添加到桌面。
+
+
+【系统总装】
+---------------------------------------------------------------------------
+core-shim.js           Vue 总装入口，拼装整个系统 Vue app 的 setup()：
+                      - 组合所有 hook（island、navigation、card、
+                        desktop、picker）
+                      - 管理 Dock 栏渲染、widget 桌面持久化
+                      - 处理外观设置（手机壳颜色、状态栏）的加载与同步
+                      - 暴露 __navigationForDebug、__appTopbarOverride
+                        等调试 API
+
+app-renderer-bridge.js 三模式渲染桥（framework ↔ app-renderer）：
+                      - 对接 template / hybrid / vue 三种渲染模式
+                      - 监控 currentPageView / currentDetailView 变化
+                      - template 模式：v-html 自然响应
+                      - hybrid/vue 模式：接管 mountInto / unmountFrom
+                      - 处理 scroll 位置保留
+
+
+【启动与持久化】
+---------------------------------------------------------------------------
+boot-loader.js          启动日志，分阶段打印：
+                      ① IndexedDB 就绪
+                      ② 桌面配置加载完成
+                      ③ Settings SDK hydrate 完成
+                      ④ 所有 App 注册完成
+                      ⑤ 桌面渲染完成
+
+prewarm.js             Settings SDK 预热：
+                      - 在 framework mount 之前就异步启动 SDK
+                      - fire-and-forget，不阻塞渲染
+                      - 解决"冷启动时 chat 等 app 看不到真实数据"
+
+desktop-config.js       桌面配置存储（localStorage 持久化）：
+                      - 桌面网格、页面 App 列表、Dock 配置
+                      - Widget 列表、手机壳/状态栏外观
+                      - 从旧存储迁移数据
+
+
+【栏预设系统（Phase 1-3）—— 顶栏 & 底栏视觉定制】
+---------------------------------------------------------------------------
+bar-presets.js          预设定义：
+                      顶栏预设：default（透明背景居中标题）/ search / largeTitle
+
+                      底栏预设：
+                      - default      标准毛玻璃 + 图标 + 文字
+                      - liquid       App Store 风格液球弹性动画
+                      - wave         音乐 App 风格波浪 + 音符飘落
+                      - indicator    iOS 滑动粉色小 pill 指示器
+                      - minimal      极简风格，仅图标无文字
+
+bar-preset-loader.js   CSS/JS 懒加载，按需加载预设的样式和交互脚本。
+
+bar-config-normalizer.js 旧配置迁移：
+                      - headerActions → rightButtons
+                      - pages[] → buttons[]
+                      - 简化 title 字符串 → 对象
+
+bar-renderer.js         按钮/栏 HTML 渲染：
+                      - renderTopbar() / renderTabbar()
+                      - renderTopbarButton() / renderNavButton()
+                      - 支持异步 render 钩子
+
+bar-context.js          render 钩子的上下文数据结构：
+                      - createTopbarContext() / createNavContext()
+                      - validateTopbarContext() / validateNavContext()
+                      - safeRender()（安全执行 render 函数）
+
+
+【特殊交互】
+---------------------------------------------------------------------------
+appstore-liquid-tab.js  App Store 专属液球动画：
+                      - 用 MutationObserver 监听 .active 切换
+                      - 接管成 liquid 弹性动画
+                      - 退出 App Store 时自动清理，下次进入重新初始化
+
+
+三、App topbar / tabbar 在哪里
+============================================
+
+【配置定义】每个 App 自己定义 app.topbar / app.nav 对象
+
+【渲染入口】index.html 的 .app-topbar / .app-tab-bar 模板
+
+【渲染逻辑】js/framework/bar-renderer.js
+           - renderTopbar()
+           - renderTabbar()
+
+【视觉样式】css/framework/bar/
+           - _liquid.css    液球动画
+           - _wave.css     波浪动画
+           - _indicator.css 滑动指示器
+           - _minimal.css  极简风格
+           - _variables.css CSS 变量
+
+
+四、依赖加载顺序
+============================================
+utils.js
+    ↓
+use-system-clock.js
+    ↓
+use-dynamic-island.js
+    ↓
+use-app-navigation.js
+    ↓
+use-desktop-edit.js
+    ↓
+use-card-mode.js
+    ↓
+use-widget-picker.js
+    ↓
+core-shim.js（总装入口）
+    ↓
+bootstrapSystemData()（挂载 Vue app 到 #phone）
+
+
+五、关键设计决策
+============================================
+
+1. Composition API 架构
+   所有功能以 useXxx() 组合式函数提供，按需组合，避免 Mixin 冲突。
+
+2. 响应式与性能平衡
+   - 高频路径（卡片拖拽、桌面图标拖动）用 rAF + 普通变量，不走 Vue ref
+   - 低频状态用 Vue ref/computed 响应式管理
+
+3. 关闭收口原则
+   灵动岛所有关闭路径统一走 closeIsland(reason)，禁止直接调 setIdle。
+
+4. 渲染缓存 + tick 机制
+   detailRenderTick 作为强制重渲染信号，解决业务代码直接 mutate
+   plain-object 时 Vue 不可感知的问题。
+
+5. 栏预设解耦
+   CSS / JS / 配置三层分离，新增预设只需注册预设 + 写 CSS，
+   不改 JS 逻辑。
+
+
+============================================
+文档版本：v1.0
+最后更新：2026-08-11
+============================================

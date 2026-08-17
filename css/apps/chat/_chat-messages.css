@@ -128,17 +128,7 @@
     /* 网格头像已有边框,不再重复添加 */
 }
 
-/* ---- 在线状态点 (chat.js: 右下角绿点) ---- */
-.app-shell[data-app-id="chat"] .chat-messages .chat-online-dot {
-    position: absolute;
-    bottom: 2px;
-    right: 2px;
-    width: 12px;
-    height: 12px;
-    background: #4ade80;
-    border-radius: 50%;
-    border: 2px solid white;
-}
+/* ---- ★ 已删除:在线状态点(chat-online-dot)。chat-app 不再展示"在线/离线"绿点 ---- */
 
 /* ---- 未读角标 (chat.js: .avatar-unread-badge 右上角粉角标) ---- */
 .app-shell[data-app-id="chat"] .chat-messages .chat-unread-badge {

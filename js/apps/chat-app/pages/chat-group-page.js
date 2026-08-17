@@ -25,7 +25,8 @@ import { escapeHtml } from '@/src/core/escape.js';
 import { renderMessage } from '../components/message-renderer.js';
 import { renderTextBubble } from '../components/text-bubble.js';
 import { renderEmojiPickerPanel } from '../components/emoji-picker-panel.js';
-import { getAiMeta } from '../aiMeta.js';
+import { getAiMeta, resolveAiAvatar, resolveUserAvatar, DEFAULT_AI_AVATAR_BG } from '../aiMeta.js';
+import { getRunningGame, GAME_META } from '../games/index.js';
 
 /**
  * 解析 SDK chatMessages.add 期望的 aiPersonId / mode / conversationType 字段。
@@ -44,16 +45,20 @@ function parseConvId(groupId) {
  * 从 SDK 实时读 AI 成员 meta(优先 aiPersons.get,失败走 group.members 快照)
  */
 function getMemberMeta(aiPersonId, fallbackMembers = []) {
-    const meta = getAiMeta(aiPersonId);
-    if (meta.exists) return meta;
+    // ★ v0.71 统一 AI 头像来源:走 aiMeta.resolveAiAvatar(数据源唯一)
+    const av = resolveAiAvatar(aiPersonId);
+    const full = getAiMeta(aiPersonId);
+    if (full.exists) {
+        return { ...full, avatar: av.url, avatarBg: av.bg };
+    }
     // 兜底:从 group.members 找名字
     const fb = (fallbackMembers || []).find((m) => (m.id || m.aiPersonId) === aiPersonId);
     if (fb) {
         return {
             exists: false,
             nickname: fb.name || fb.displayName || aiPersonId,
-            avatar: fb.avatar || '',
-            avatarBg: fb.avatarBg || '#A8C8EC',
+            avatar: fb.avatar || av.url,
+            avatarBg: fb.avatarBg || av.bg,
             background: '',
             patSetting: '',
             initial: (fb.name || fb.displayName || aiPersonId || '?').charAt(0),
@@ -62,12 +67,40 @@ function getMemberMeta(aiPersonId, fallbackMembers = []) {
     return {
         exists: false,
         nickname: aiPersonId,
-        avatar: '',
-        avatarBg: '#A8C8EC',
+        avatar: av.url,
+        avatarBg: av.bg,
         background: '',
         patSetting: '',
         initial: (aiPersonId || '?').charAt(0),
     };
+}
+
+/**
+ * 「这个群里有一局在打」的回条。
+ *
+ * ★ 这一条是「切出游戏界面不会断」这件事在用户侧的另一半。
+ *   引擎在后台照跑没问题，但用户回到群聊时如果看不到任何痕迹，
+ *   他会以为那一局已经没了 —— 得先想起来去点工具栏的「游戏」，
+ *   再从大厅点「继续」，两步之后才回得去。
+ *   直接在群聊顶部挂一条，一点就回对局。
+ */
+function renderRunningGameBar(groupId) {
+    const session = getRunningGame(groupId);
+    if (!session) return '';
+    const meta = GAME_META[session.gameId] || {};
+    const waiting = !!session.pending;
+    return `
+        <button type="button" class="chat-game-bar" data-tone="${escapeHtml(meta.tone || 'blue')}"
+                ${waiting ? 'data-waiting="1"' : ''}
+                data-app-action='{"action":"detail","appId":"chat","pageId":"game-play-${escapeHtml(groupId)}"}'>
+            <span class="chat-game-bar__dot" aria-hidden="true"></span>
+            <span class="chat-game-bar__text">
+                <b>${escapeHtml(meta.name || '小游戏')}</b>
+                ${escapeHtml(session.phaseLabel || '进行中')}
+            </span>
+            <span class="chat-game-bar__cta">${waiting ? '轮到你了' : '回到对局'}</span>
+        </button>
+    `;
 }
 
 /**
@@ -84,7 +117,7 @@ function renderGroupAvatar(members, size = 42) {
             const member = members[i];
             const meta = getMemberMeta(member.id || member.aiPersonId, members);
             const char = (meta.nickname || '?').charAt(0);
-            const bg = meta.avatarBg || '#E8E8E8';
+            const bg = meta.avatarBg || DEFAULT_AI_AVATAR_BG;
             const inner = meta.avatar
                 ? `<img src="${escapeHtml(meta.avatar)}" alt="" style="width:100%;height:100%;object-fit:cover;" />`
                 : escapeHtml(char);
@@ -128,13 +161,17 @@ function renderGroupTextBubble(msg, ctx = {}) {
     const inner = renderTextBubble(msg, {
         name: senderLabel,
         avatar: memberMeta?.avatar || '',
-        avatarBg: memberMeta?.avatarBg || '#A8C8EC',
+        avatarBg: memberMeta?.avatarBg || DEFAULT_AI_AVATAR_BG,
         aiPersonId,
     }, {
         aiPersonId,
         mode: msg.mode || ctx.mode || 'calendar',
         userAvatar: ctx.userAvatar,
         userAvatarBg: ctx.userAvatarBg,
+        // ★ v0.72 群聊标识:让重roll 按钮 action 知道是 group,重roll 时走对应分支
+        conversationType: 'group',
+        // ★ v0.85 群聊时显示"发送给AI"按钮
+        showSendToAi: true,
     });
 
     // ★ 注入 group 上下文:
@@ -174,28 +211,9 @@ function renderGroupTextBubble(msg, ctx = {}) {
  */
 function renderGroupMessageList(messages, ctx = {}) {
     if (!messages || messages.length === 0) {
-        return `
-            <div class="group-welcome">
-                <div class="group-welcome-icon">
-                    <svg viewBox="0 0 24 24">
-                        <circle cx="9" cy="7" r="4"/>
-                        <circle cx="15" cy="7" r="4"/>
-                        <path d="M3 21v-2c0-2.21 3.58-4 8-4s8 1.79 8 4v2"/>
-                    </svg>
-                </div>
-                <div class="group-welcome-title">欢迎来到群聊</div>
-                <div class="group-welcome-subtitle">发送第一条消息开始聊天</div>
-                <div class="group-welcome-hint">
-                    <svg viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
-                        <circle cx="12" cy="12" r="1" fill="currentColor"/>
-                        <circle cx="12" cy="6" r="1" fill="currentColor"/>
-                        <circle cx="12" cy="18" r="1" fill="currentColor"/>
-                    </svg>
-                    <span>群聊使用长按发送模式</span>
-                </div>
-            </div>
-        `;
+        // ★ v0.85 移除群聊空消息欢迎卡片(欢迎来到群聊 / 发送第一条消息 / 群聊使用长按发送模式)
+        //   - 用户反馈:不需要这种引导文案,空状态保持空白即可
+        return '';
     }
 
     const out = [];
@@ -232,7 +250,7 @@ function renderGroupMessageList(messages, ctx = {}) {
             const bubbleContact = {
                 name: m.senderName || (memberMeta?.nickname || aiPersonId || '未知'),
                 avatar: memberMeta?.avatar || '',
-                avatarBg: memberMeta?.avatarBg || '#A8C8EC',
+                avatarBg: memberMeta?.avatarBg || DEFAULT_AI_AVATAR_BG,
                 aiPersonId,
             };
             const bubbleHtml = renderMessage(m, bubbleContact, {
@@ -267,15 +285,88 @@ function renderGroupMessageList(messages, ctx = {}) {
 /**
  * 渲染群聊工具栏按钮
  */
-function renderGroupToolbarButton(action, label, iconSvg, iconBg) {
+function renderGroupToolbarButton(action, label, iconSvg) {
     return `
-        <button class="group-toolbar-btn" data-action="${escapeHtml(action)}">
-            <div class="group-toolbar-btn-icon" style="background: ${iconBg};">
+        <button class="toolbar-btn" data-action="${escapeHtml(action)}">
+            <div class="toolbar-btn-icon">
                 ${iconSvg}
             </div>
-            <span class="group-toolbar-btn-label">${escapeHtml(label)}</span>
+            <span class="toolbar-btn-label">${escapeHtml(label)}</span>
         </button>
     `;
+}
+
+/**
+ * ★ v0.85 群聊当日过滤：和私聊保持一致，只显示当天消息和当天的日期分割线
+ *   - 与私聊 filterTodayMessages 同款,避免群聊显示 8.7 及更早的旧消息
+ *   - 配合 sdk.chatArchive.archive 自动归档旧消息
+ */
+function isTodayMessage(msg) {
+    if (!msg) return false;
+
+    if (msg.timestamp) {
+        const msgDate = new Date(Number(msg.timestamp));
+        const today = new Date();
+        return msgDate.toDateString() === today.toDateString();
+    }
+
+    if (msg.type === 'system' && msg.content) {
+        const content = msg.content;
+        if (content.startsWith('今天')) return true;
+        if (content.startsWith('昨天')) return false;
+        if (/^\d+天前/.test(content)) return false;
+        const match = content.match(/^(\d{1,2})\/(\d{1,2})/);
+        if (match) {
+            const month = parseInt(match[1]);
+            const day = parseInt(match[2]);
+            const today = new Date();
+            return month === today.getMonth() + 1 && day === today.getDate();
+        }
+    }
+
+    return false;
+}
+
+function filterTodayMessages(messages) {
+    if (!Array.isArray(messages)) return [];
+
+    const result = [];
+    let seenTodayDivider = false;
+
+    for (const msg of messages) {
+        if (msg.type === 'system') {
+            const content = msg.content || '';
+            if (content.startsWith('今天') && !seenTodayDivider) {
+                result.push(msg);
+                seenTodayDivider = true;
+            } else {
+                const match = content.match(/^(\d{1,2})\/(\d{1,2})/);
+                if (match) {
+                    const month = parseInt(match[1]);
+                    const day = parseInt(match[2]);
+                    const today = new Date();
+                    if (month === today.getMonth() + 1 && day === today.getDate()) {
+                        if (!seenTodayDivider) {
+                            result.push(msg);
+                            seenTodayDivider = true;
+                        }
+                    }
+                }
+            }
+        } else if (isTodayMessage(msg)) {
+            if (!seenTodayDivider) {
+                result.push({
+                    id: 'today-divider-' + Date.now(),
+                    type: 'system',
+                    content: '今天',
+                });
+                seenTodayDivider = true;
+            }
+            result.push(msg);
+        }
+    }
+
+    return result;
 }
 
 /**
@@ -315,30 +406,47 @@ export function renderGroupChatPage(app, groupId) {
     const displayName = displayGroup.name || '未知群聊';
     const displayMemberCount = (displayGroup.members || displayMembers || []).length;
 
-    // ★ v0.62 群聊 SDK 写盘后,fallback 也要兼容老 groupId (demo 群)
-    let displayMessages = realMessages;
-    if (!useReal && (!displayMessages || displayMessages.length === 0)) {
-        // demo 群:用 DEMO_GROUP_MESSAGES(老路径)
-        const demoGroup = DEMO_GROUPS[groupId];
-        if (demoGroup) {
-            displayMessages = DEMO_GROUP_MESSAGES;
-            displayMembers.push(...demoGroup.members);
-        }
-    }
-    displayMessages = displayMessages || [];
+    // ★ v0.80 移除 demo fallback — 没有真实群聊就直接空消息,不展示占位示例
+    let displayMessages = realMessages || [];
 
-    // ★ 读 user 头像(给 user 消息用)
-    let userAvatar = '';
-    let userAvatarBg = '';
+    // ★ v0.85 跟私聊保持一致:只显示当天消息,隐藏 8.7 及之前的旧消息
+    //   - 过滤规则复用私聊的 filterTodayMessages
+    //   - 配合下方自动归档,把旧消息搬到 chatArchiveMessages
+    displayMessages = filterTodayMessages(displayMessages);
+
+    // ★ v0.85 群聊也接入自动归档:把当天以前的消息搬到 chatArchiveMessages
+    //   - 跟私聊一致,fire-and-forget 不阻塞 renderPage
     try {
         const sdk = window.settingsSdk;
-        const activeUser = sdk?.users?.getActive?.();
-        if (activeUser) {
-            const chatProfile = activeUser.socialProfiles?.chat || {};
-            userAvatar = chatProfile.avatar || activeUser.avatar || '';
-            userAvatarBg = chatProfile.avatarBg || activeUser.avatarBg || '';
+        if (sdk?.chatArchive?.archive) {
+            sdk.chatArchive.archive(groupId, mode, {
+                now: Date.now(),
+                conversationType: 'group',
+            }).then((res) => {
+                if (res && res.archivedCount > 0) {
+                    const daySummary = Object.entries(res.byDay || {})
+                        .map(([d, n]) => `${d} ${n}条`).join('、');
+                    try {
+                        window.__phoneIsland?.notify?.('info',
+                            `群聊已归档 ${res.archivedCount} 条历史消息`,
+                            daySummary || '');
+                    } catch (_) {}
+                    try {
+                        window.__appRendererBridge?.syncNow?.({ force: true });
+                    } catch (_) {}
+                }
+            }).catch((err) => {
+                console.warn('[chat-group-page] archive pass failed', err);
+            });
         }
     } catch (_) {}
+
+    // ★ 读 user 头像(给 user 消息用)
+    // ★ v0.62 读 user 头像(给 user 消息气泡用)
+    // ★ v0.71 统一改成走 aiMeta.resolveUserAvatar()
+    const userAv = resolveUserAvatar();
+    const userAvatar = userAv.url;
+    const userAvatarBg = userAv.bg;
 
     // ★ v0.62 跟私聊对齐:读 chat action state(replyingTo)用于动态渲染 reply-preview
     let replyingTo = null;
@@ -356,11 +464,24 @@ export function renderGroupChatPage(app, groupId) {
         }
     } catch (_) {}
 
+    // 群昵称：渲染时现查，**覆盖**消息里存着的 senderName。
+    //
+    // 消息里的 senderName 是发送那一刻的快照。群昵称是「这个人在这个群里现在叫什么」，
+    // 改了昵称之后整段历史都该跟着改口 —— 否则同一个人在上半屏叫本名、
+    // 下半屏叫新昵称，看起来像两个人。
+    const sdkForNick = window.settingsSdk;
+    const nickUser = sdkForNick?.defaultUserCard?.getDefault?.() || sdkForNick?.users?.getActive?.();
+    const resolveGroupNick = (memberId) => {
+        if (!realGroup || !sdkForNick?.chatGroups?.getNickname) return '';
+        return sdkForNick.chatGroups.getNickname(realGroup, memberId) || '';
+    };
+
     // ★ v0.62 把消息做 normalize(补 time / senderName,跟私聊一致)
     const normalizedMessages = (displayMessages || []).map((m) => {
         if (!m) return m;
         const ts = Number(m.timestamp) || Date.now();
-        let senderName = m.senderName || '';
+        const nick = resolveGroupNick(m.sender === 'user' ? (nickUser?.id || '') : (m.senderId || ''));
+        let senderName = nick || m.senderName || '';
         if (!senderName && m.sender !== 'user') {
             const meta = getMemberMeta(m.senderId, displayMembers);
             senderName = meta.nickname || m.senderId || 'AI';
@@ -464,14 +585,43 @@ export function renderGroupChatPage(app, groupId) {
         : '';
     const replyPreviewStyle = replyingTo ? '' : ' style="display:none"';
 
-    // 群聊工具栏 (6个按钮)
+    // ★ v0.69 群聊工具栏 — 与私聊对齐(2 行 × 4 列,左右切换页)
+    //   Page 1: 图片 / 语音 / 自定义 / 位置 / 红包 / 转账 / 通话 / 收藏
+    //   Page 2: @成员 / 公告 / 成员 / 名片 / 拍一拍 / 游戏 / 留空 / 留空
+    //   跟私聊完全对齐可发送的 8 种特殊消息类型,群聊独有功能在第二页
+    const page1 = `
+        ${renderGroupToolbarButton('image', '图片', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/><polyline points="21 15 16 10 5 21"/></svg>')}
+        ${renderGroupToolbarButton('voice', '语音', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>')}
+        ${renderGroupToolbarButton('custom', '自定义', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11h.01"/><path d="M14 6h.01"/><path d="M18 6h.01"/><path d="M6.5 13.1h.01"/><path d="M22 5c0 9-4 12-6 12s-6-3-6-12c0-2 2-3 6-3s6 1 6 3"/><path d="M17.4 9.9c-.8.8-2 .8-2.8 0"/><path d="M10.1 7.1C9 7.2 7.7 7.7 6 8.6c-3.5 2-4.7 3.9-3.7 5.6 4.5 7.8 9.5 8.4 11.2 7.4.9-.5 1.9-2.1 1.9-4.7"/><path d="M9.1 16.5c.3-1.1 1.4-1.7 2.4-1.4"/></svg>')}
+        ${renderGroupToolbarButton('location', '位置', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>')}
+        ${renderGroupToolbarButton('redpacket', '红包', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 17h3v2a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-3a3.16 3.16 0 0 0 2-2h1a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1h-1a5 5 0 0 0-2-4V3a4 4 0 0 0-3.2 1.6l-.3.4H11a6 6 0 0 0-6 6v1a5 5 0 0 0 2 4v3a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1z"/><path d="M16 10h.01"/><path d="M2 8v1a2 2 0 0 0 2 2h1"/></svg>')}
+        ${renderGroupToolbarButton('transfer', '转账', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/></svg>')}
+        ${renderGroupToolbarButton('call', '通话', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>')}
+        ${renderGroupToolbarButton('favorite', '收藏', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>')}
+    `;
+    const page2 = `
+        ${renderGroupToolbarButton('mention', '@成员', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/><path d="M12 14v8M8 18h8"/></svg>')}
+        ${renderGroupToolbarButton('announcement', '公告', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>')}
+        ${renderGroupToolbarButton('members', '成员', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>')}
+        ${renderGroupToolbarButton('card', '名片', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><line x1="14" y1="10" x2="18" y2="10" stroke-linecap="round"/><line x1="14" y1="13" x2="18" y2="13" stroke-linecap="round"/></svg>')}
+        ${renderGroupToolbarButton('pat', '拍一拍', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12V6a2 2 0 0 1 2-2h2v8M9 8l8 4-2 6-8-2z"/><path d="M11 8L7 4" stroke-linecap="round"/></svg>')}
+        ${renderGroupToolbarButton('game', '游戏', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M12 6v12M7 10v4M17 10v4" stroke-linecap="round"/></svg>')}
+        <div class="toolbar-btn toolbar-btn--placeholder"></div>
+        <div class="toolbar-btn toolbar-btn--placeholder"></div>
+    `;
     const toolbarButtons = `
-        ${renderGroupToolbarButton('image', '图片', '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" fill="none" stroke="#5A6B7D" stroke-width="2"/><circle cx="8.5" cy="8.5" r="1.5" fill="#5A6B7D"/><polyline points="21 15 16 10 5 21" fill="none" stroke="#5A6B7D" stroke-width="2"/></svg>', '#E4E8ED')}
-        ${renderGroupToolbarButton('voice', '语音', '<svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" fill="none" stroke="#5A6B7D" stroke-width="2"/><path d="M17 10v2c0 2.76-2.24 5-5 5s-5-2.24-5-5v-2" fill="none" stroke="#5A6B7D" stroke-width="2"/><line x1="12" y1="19" x2="12" y2="23" stroke="#5A6B7D" stroke-width="2"/><line x1="8" y1="23" x2="16" y2="23" stroke="#5A6B7D" stroke-width="2"/></svg>', '#E4E8ED')}
-        ${renderGroupToolbarButton('mention', '@成员', '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" fill="#4A6FA5"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2" stroke="#4A6FA5" stroke-width="2"/><path d="M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41" stroke="#4A6FA5" stroke-width="2"/></svg>', '#D6E4FF')}
-        ${renderGroupToolbarButton('announcement', '公告', '<svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" fill="none" stroke="#D97706" stroke-width="2"/><path d="M13.73 21a2 2 0 0 1-3.46 0" fill="none" stroke="#D97706" stroke-width="2"/></svg>', '#FEF3C7')}
-        ${renderGroupToolbarButton('members', '成员', '<svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" fill="none" stroke="#5A6B7D" stroke-width="2"/><circle cx="9" cy="7" r="4" fill="none" stroke="#5A6B7D" stroke-width="2"/><path d="M23 21v-2a4 4 0 0 0-3-3.87" fill="none" stroke="#5A6B7D" stroke-width="2"/><path d="M16 3.13a4 4 0 0 1 0 7.75" fill="none" stroke="#5A6B7D" stroke-width="2"/></svg>', '#E4E8ED')}
-        ${renderGroupToolbarButton('game', '游戏', '<svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2" fill="none" stroke="#4A6FA5" stroke-width="2"/><path d="M12 6v12M7 10v4M17 10v4" stroke="#4A6FA5" stroke-width="2" stroke-linecap="round"/></svg>', '#D6E4FF')}
+        <div class="toolbar-pages">
+            <div class="toolbar-page toolbar-page--active" data-page="0">
+                <div class="toolbar-grid">${page1}</div>
+            </div>
+            <div class="toolbar-page" data-page="1">
+                <div class="toolbar-grid">${page2}</div>
+            </div>
+        </div>
+        <div class="toolbar-page-indicator">
+            <span class="toolbar-dot toolbar-dot--active" data-page-target="0"></span>
+            <span class="toolbar-dot" data-page-target="1"></span>
+        </div>
     `;
 
     return `
@@ -487,7 +637,8 @@ export function renderGroupChatPage(app, groupId) {
                     ${groupAvatarHtml}
                     <div class="chat-header-info">
                         <div class="chat-header-name">${escapeHtml(displayName)} (${displayMemberCount})</div>
-                        <div class="chat-header-status" data-status="trigger">
+                        <!-- ★ chat-header-status → chat-header-subtitle:原"长按发送触发回复"提示 -->
+                        <div class="chat-header-subtitle">
                             <span class="status-hint">长按发送触发回复</span>
                         </div>
                     </div>
@@ -511,6 +662,8 @@ export function renderGroupChatPage(app, groupId) {
                     </div>
                 </div>
             </div>
+
+            ${renderRunningGameBar(groupId)}
 
             <!-- 多选模式浮层 -->
             <div class="multi-select-bar" aria-label="多选操作"${multiSelectBarStyle}>
@@ -571,11 +724,14 @@ export function renderGroupChatPage(app, groupId) {
             </div>
 
             <!-- 工具组 (从输入栏下方展开,默认收起) -->
+            <!-- ★ FIX:不要在外层再套一个 .toolbar-grid -->
+            <!--   .toolbar-pages 内部每页已经自带 .toolbar-grid(4列 × 2行) -->
+            <!--   外层如果再套 .toolbar-grid,会把 .toolbar-pages / .toolbar-page-indicator 拆成两个 cell -->
+            <!--   → 整个分页结构被压成 4 列 grid 的第 1 个 cell,按钮全被挤扁 -->
+            <!--   ★ v0.69 群聊工具栏 — 2 行 × 4 列 + 左右翻页(8 + 6 按钮分两页) -->
             <div class="input-toolbar" id="inputToolbar">
                 <div class="toolbar-content">
-                    <div class="group-toolbar-grid">
-                        ${toolbarButtons}
-                    </div>
+                    ${toolbarButtons}
                 </div>
             </div>
 
@@ -595,106 +751,6 @@ function formatTime(ts) {
     const mm = String(d.getMinutes()).padStart(2, '0');
     return `${hh}:${mm}`;
 }
-
-// Demo 群聊数据(老路径兼容)
-const DEMO_GROUPS = {
-    'group-1': {
-        id: 'group-1',
-        name: '游戏群',
-        memberCount: 4,
-        members: [
-            { id: 'ai-1', name: '小美', avatarBg: '#FF9ECD' },
-            { id: 'ai-2', name: '小明', avatarBg: '#A8C8EC' },
-            { id: 'ai-3', name: '小蓝', avatarBg: '#B8E6CF' },
-        ]
-    },
-    'group-2': {
-        id: 'group-2',
-        name: '学习小组',
-        memberCount: 3,
-        members: [
-            { id: 'ai-1', name: '小美', avatarBg: '#FF9ECD' },
-            { id: 'ai-2', name: '小明', avatarBg: '#A8C8EC' },
-        ]
-    },
-};
-
-// Demo 群聊消息数据
-const DEMO_GROUP_MESSAGES = [
-    {
-        id: 'gm1',
-        senderId: 'ai-1',
-        senderName: '小美',
-        sender: 'ai',
-        type: 'text',
-        content: '大家好！今天我们一起玩狼人杀吧～',
-        time: '14:00',
-        timestamp: Date.now() - 7 * 60 * 1000,
-    },
-    {
-        id: 'gm2',
-        sender: 'user',
-        type: 'text',
-        content: '好呀好呀！我要当预言家！',
-        time: '14:01',
-        timestamp: Date.now() - 6 * 60 * 1000,
-    },
-    {
-        id: 'gm3',
-        senderId: 'ai-2',
-        senderName: '小明',
-        sender: 'ai',
-        type: 'text',
-        content: '那我当猎人好了，你们别冤枉我',
-        time: '14:02',
-        timestamp: Date.now() - 5 * 60 * 1000,
-    },
-    {
-        id: 'gm4',
-        senderId: 'ai-3',
-        senderName: '小蓝',
-        sender: 'ai',
-        type: 'text',
-        content: '哈哈哈，那我当平民吧～',
-        time: '14:03',
-        timestamp: Date.now() - 4 * 60 * 1000,
-    },
-    {
-        id: 'gm5',
-        sender: 'system',
-        type: 'system',
-        content: '今天 14:05',
-        timestamp: Date.now() - 2 * 60 * 1000,
-    },
-    {
-        id: 'gm6',
-        sender: 'user',
-        type: 'text',
-        content: '开始吧！第一晚谁睁眼？',
-        time: '14:05',
-        timestamp: Date.now() - 1 * 60 * 1000,
-    },
-    {
-        id: 'gm7',
-        senderId: 'ai-1',
-        senderName: '小美',
-        sender: 'ai',
-        type: 'text',
-        content: '预言家请睁眼～ @小明 你想验谁？',
-        time: '14:06',
-        timestamp: Date.now() - 30 * 1000,
-    },
-    {
-        id: 'gm8',
-        senderId: 'ai-2',
-        senderName: '小明',
-        sender: 'ai',
-        type: 'text',
-        content: '验一下小蓝吧',
-        time: '14:07',
-        timestamp: Date.now() - 10 * 1000,
-    },
-];
 
 /**
  * ★ v0.49 渲染群聊表情选择器 HTML

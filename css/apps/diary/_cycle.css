@@ -1,0 +1,321 @@
+/**
+ * 日记 · 生理期页
+ *
+ * 日历上的四种标记语义（颜色全部来自 `_theme.css`）：
+ *   period    实测「来了」          实心
+ *   none      实测「明确没来」       小横杠 —— 必须和「还没记」看得出区别
+ *   predicted 推算的经期            虚线圈
+ *   fertile   推算的排卵窗口         淡底
+ *
+ * 「实测永远盖过推算」这条规则在 `cycle-service.buildCalendarMarks` 里，
+ * 这里只负责把语义画出来。
+ */
+
+/* ============================================================
+   状态大卡
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-cyclehero {
+    padding: 22px 18px;
+    border: var(--dy-hair) solid var(--dy-border-soft);
+    border-radius: var(--dy-radius);
+    background: var(--dy-surface);
+    text-align: center;
+}
+
+.app-shell[data-app-id="diary"] .dy-cyclehero__state {
+    font-size: 26px;
+    font-weight: 300;
+    line-height: 1.3;
+    letter-spacing: 0.02em;
+}
+
+.app-shell[data-app-id="diary"] .dy-cyclehero__sub {
+    margin-top: 6px;
+    font-size: var(--dy-fs-sm);
+    color: var(--dy-text-3);
+    line-height: 1.8;
+}
+
+.app-shell[data-app-id="diary"] .dy-cyclehero__flag {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 3px 10px;
+    border: var(--dy-hair) solid var(--dy-border);
+    border-radius: var(--dy-radius-sm);
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-2);
+    letter-spacing: 0.08em;
+}
+
+.app-shell[data-app-id="diary"] .dy-cyclehero__quick {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.app-shell[data-app-id="diary"] .dy-cyclehero__quick .dy-btn {
+    flex: 1 1 0;
+}
+
+/* ============================================================
+   日历
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-cal__head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.app-shell[data-app-id="diary"] .dy-cal__month {
+    flex: 1 1 auto;
+    text-align: center;
+    font-size: var(--dy-fs-md);
+    letter-spacing: 0.1em;
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="diary"] .dy-cal__week {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    margin-bottom: 4px;
+}
+
+.app-shell[data-app-id="diary"] .dy-cal__wd {
+    text-align: center;
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+    letter-spacing: 0.06em;
+}
+
+.app-shell[data-app-id="diary"] .dy-cal__grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 2px;
+}
+
+.app-shell[data-app-id="diary"] .dy-cal__cell {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    border: var(--dy-hair) solid transparent;
+    border-radius: var(--dy-radius-sm);
+    background: transparent;
+    color: var(--dy-text-2);
+    font-size: var(--dy-fs-sm);
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    padding: 0;
+}
+
+.app-shell[data-app-id="diary"] .dy-cal__cell--pad {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.app-shell[data-app-id="diary"] .dy-cal__cell.is-today {
+    border-color: var(--dy-border);
+}
+
+.app-shell[data-app-id="diary"] .dy-cal__cell.is-focus {
+    background: var(--dy-primary-soft);
+    border-color: var(--dy-primary-dim);
+}
+
+.app-shell[data-app-id="diary"] .dy-cal__cell.is-future {
+    color: var(--dy-text-3);
+}
+
+/* 四种标记 */
+.app-shell[data-app-id="diary"] .dy-cal__cell[data-mark="period"] {
+    background: var(--dy-cycle-period);
+    color: var(--dy-on-primary);
+}
+
+.app-shell[data-app-id="diary"] .dy-cal__cell[data-mark="predicted"] {
+    border-color: var(--dy-cycle-period);
+    border-style: dashed;
+    color: var(--dy-text-2);
+}
+
+.app-shell[data-app-id="diary"] .dy-cal__cell[data-mark="fertile"] {
+    background: var(--dy-cycle-fertile);
+}
+
+.app-shell[data-app-id="diary"] .dy-cal__cell[data-mark="none"]::after {
+    content: '';
+    position: absolute;
+    bottom: 5px;
+    width: 9px;
+    height: 1.5px;
+    background: var(--dy-cycle-none);
+}
+
+/* 有日记的日子：右上角一个点 */
+.app-shell[data-app-id="diary"] .dy-cal__cell[data-has-entry="1"]::before {
+    content: '';
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--dy-primary);
+}
+
+.app-shell[data-app-id="diary"] .dy-cal__cell[data-mark="period"][data-has-entry="1"]::before {
+    background: var(--dy-on-primary);
+}
+
+/* 图例 */
+.app-shell[data-app-id="diary"] .dy-cal__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 12px;
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+}
+
+.app-shell[data-app-id="diary"] .dy-cal__legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.app-shell[data-app-id="diary"] .dy-cal__swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+}
+
+.app-shell[data-app-id="diary"] .dy-cal__swatch[data-mark="period"] { background: var(--dy-cycle-period); }
+.app-shell[data-app-id="diary"] .dy-cal__swatch[data-mark="predicted"] { border: 1px dashed var(--dy-cycle-period); }
+.app-shell[data-app-id="diary"] .dy-cal__swatch[data-mark="fertile"] { background: var(--dy-cycle-fertile); }
+.app-shell[data-app-id="diary"] .dy-cal__swatch[data-mark="none"] { border-bottom: 2px solid var(--dy-cycle-none); border-radius: 0; height: 6px; }
+
+/* ============================================================
+   打卡表单
+   ============================================================ */
+.app-shell[data-app-id="diary"] .dy-track {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.app-shell[data-app-id="diary"] .dy-track__group {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.app-shell[data-app-id="diary"] .dy-track__label {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    font-size: var(--dy-fs-sm);
+    color: var(--dy-text-2);
+    letter-spacing: 0.1em;
+}
+
+.app-shell[data-app-id="diary"] .dy-track__hint {
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+    letter-spacing: 0;
+}
+
+/* 分档选择（经量 / 痛经）—— 一条等分的横条 */
+.app-shell[data-app-id="diary"] .dy-scale {
+    display: flex;
+    border: var(--dy-hair) solid var(--dy-border);
+    border-radius: var(--dy-radius-sm);
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="diary"] .dy-scale__item {
+    flex: 1 1 0;
+    padding: 8px 2px;
+    border: 0;
+    border-left: var(--dy-hair) solid var(--dy-border-soft);
+    background: transparent;
+    color: var(--dy-text-3);
+    font-size: var(--dy-fs-xs);
+    cursor: pointer;
+    transition: background var(--dy-dur) var(--dy-ease), color var(--dy-dur) var(--dy-ease);
+}
+
+.app-shell[data-app-id="diary"] .dy-scale__item:first-child {
+    border-left: 0;
+}
+
+.app-shell[data-app-id="diary"] .dy-scale__item.is-on {
+    background: var(--dy-primary);
+    color: var(--dy-on-primary);
+}
+
+/* 统计 */
+.app-shell[data-app-id="diary"] .dy-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1px;
+    background: var(--dy-divider);
+    border: var(--dy-hair) solid var(--dy-border-soft);
+    border-radius: var(--dy-radius-sm);
+    overflow: hidden;
+}
+
+.app-shell[data-app-id="diary"] .dy-stat {
+    padding: 14px 6px;
+    background: var(--dy-surface);
+    text-align: center;
+}
+
+.app-shell[data-app-id="diary"] .dy-stat__value {
+    font-size: 21px;
+    font-weight: 300;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="diary"] .dy-stat__label {
+    margin-top: 3px;
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-3);
+}
+
+/* 历次周期条 */
+.app-shell[data-app-id="diary"] .dy-history {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.app-shell[data-app-id="diary"] .dy-history__row {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: var(--dy-fs-xs);
+    color: var(--dy-text-2);
+    font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-app-id="diary"] .dy-history__date {
+    flex: 0 0 74px;
+    color: var(--dy-text-3);
+}
+
+.app-shell[data-app-id="diary"] .dy-history__bar {
+    flex: 1 1 auto;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--dy-cycle-predicted);
+}
+
+.app-shell[data-app-id="diary"] .dy-history__len {
+    flex: 0 0 46px;
+    text-align: right;
+}

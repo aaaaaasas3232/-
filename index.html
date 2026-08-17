@@ -14,16 +14,47 @@
          */
         -->
         <script src="/js/vendor/vue.global.prod.js"></script>
-        <link rel="stylesheet" href="/css/main.css?v=3" />
-        <link rel="stylesheet" href="/css/settings.css?v=3" />
-        <link rel="stylesheet" href="/css/color-picker.css?v=1" />
-        <link rel="stylesheet" href="/css/survey.css?v=1" />
+        <!--
+         * ⚠️ main.css 里是一串 @import,被 import 的那些文件**没有**版本参数。
+         * 所以改了 core/*.css 之后必须把这里的 ?v= 往上加一 ——
+         * 只改内容不改 URL 的话,浏览器可能一直用缓存里那份,
+         * 表现为「代码明明改了，页面纹丝不动」。
+         -->
+        <link rel="stylesheet" href="/css/main.css?v=6" />
+        <link rel="stylesheet" href="/css/settings.css?v=11" />
+        <!--
+         * ⚠️ css/settings.css 里没有任何 @import，css/settings/_*.css 那一批
+         * 曾经是死文件（改了没反应）。世界观视觉重构统一放在下面这个文件里，
+         * 排在 settings.css 之后加载，覆盖 settings.css 内部的旧世界观样式。
+         -->
+        <link rel="stylesheet" href="/css/settings/_world-refactor.css?v=6" />
+        <link rel="stylesheet" href="/css/apps/app-maker/index.css?v=1" />
         <link rel="stylesheet" href="/css/weather-app.css?v=1" />
         <link rel="stylesheet" href="/css/appstore.css?v=1" />
-        <link rel="stylesheet" href="/css/apps/chat/index.css?v=1" />
+        <link rel="stylesheet" href="/css/apps/chat/index.css?v=13" />
         <link rel="stylesheet" href="/css/apps/chat/_chat-forward.css?v=1" />
         <link rel="stylesheet" href="/css/apps/chat/_chat-forward-modal.css?v=1" />
         <link rel="stylesheet" href="/css/apps/chat/_chat-new-group.css?v=1" />
+        <link rel="stylesheet" href="/css/apps/music/index.css?v=1" />
+        <link rel="stylesheet" href="/css/apps/cover-designer/index.css?v=1" />
+        <link rel="stylesheet" href="/css/apps/relax/index.css?v=7" />
+        <link rel="stylesheet" href="/css/apps/dream-weaver/index.css?v=1" />
+        <link rel="stylesheet" href="/css/apps/shop/index.css?v=1" />
+        <link rel="stylesheet" href="/css/apps/job/index.css?v=1" />
+        <link rel="stylesheet" href="/css/apps/persona-lab/index.css?v=1" />
+        <link rel="stylesheet" href="/css/apps/galgame/index.css?v=1" />
+        <link rel="stylesheet" href="/css/apps/bubble-maker/index.css?v=1" />
+        <link rel="stylesheet" href="/css/apps/scene-play/index.css?v=1" />
+        <link rel="stylesheet" href="/css/apps/diary/index.css?v=2" />
+        <link rel="stylesheet" href="/css/apps/travel/index.css?v=1" />
+        <link rel="stylesheet" href="/css/apps/youtube/index.css?v=2" />
+        <link rel="stylesheet" href="/css/apps/blog/index.css?v=2" />
+        <link rel="stylesheet" href="/css/apps/actor/index.css?v=3" />
+        <link rel="stylesheet" href="/css/apps/esports-forum/index.css?v=1" />
+        <link rel="stylesheet" href="/css/apps/esports-game/index.css?v=1" />
+        <link rel="stylesheet" href="/css/apps/starlit/index.css?v=1" />
+        <link rel="stylesheet" href="/css/apps/oddity/index.css?v=1" />
+        <link rel="stylesheet" href="/css/framework/presence-center.css?v=2" />
     </head>
 
     <body>
@@ -35,13 +66,9 @@
                         <div class="statusBarLeft text-black leading-none tracking-[0.01em]" :style="{ color: currentTimeColor }">{{systemTime}}</div>
 
                         <div class="statusBarRight flex items-center gap-[6px]">
-                            <div class="signal flex items-end h-3 gap-[2px]">
-                                <div class="signal-bar w-[3px] rounded-[1px] h-1" :style="{ background: currentSignalColor }"></div>
-                                <div class="signal-bar w-[3px] rounded-[1px] h-[7px]" :style="{ background: currentSignalColor }"></div>
-                                <div class="signal-bar w-[3px] rounded-[1px] h-[10px]" :style="{ background: currentSignalColor }"></div>
-                                <div class="signal-bar w-[3px] rounded-[1px] h-3" :style="{ background: currentSignalColor }"></div>
-                            </div>
-
+                            <!-- 信号格已于 2026-08-13 完全移除（只保留 时间 / 5G / 电池）。
+                                 相关的 currentSignalColor computed、statusBarSignalColor 设置项
+                                 也一并删掉了，不要再加回来。 -->
                             <div class="ml-[2px] text-[12px] font-bold leading-none" :style="{ color: currentFiveGColor }">{{ currentFiveGLabel }}</div>
 
                             <div class="status-battery relative w-[26px] h-3 rounded-[4px] bg-[#BDBDBD]">
@@ -51,7 +78,9 @@
                         </div>
                     </div>
 
-                    <div v-if="islandMode === 'info' && ['medium', 'large'].includes(islandSize)" class="fixed inset-0 z-[900]" @click="handleOutsideClick"></div>
+                    <!-- 灵动岛的"点击外部收起"由 core-shim 的 document 级监听实现。
+                         这里不能放全屏遮罩:遮罩会挡住滚动和 App 内所有点击。 -->
+                    
                     <div class="dynamic-island" :class="[
                         islandMode !== 'idle' ? islandSize : '',
                         islandActive ? 'active' : '',
@@ -63,6 +92,7 @@
                     @pointerup.stop="onIslandPointerUp($event)"
                     @pointercancel.stop="onIslandPointerCancel($event)"
                     @click.stop="handleIslandClick">
+                        <!-- 移除内部的 backdrop -->
                         <div
                             v-if="islandMode === 'info' && hasIslandTemplate"
                             :key="`island-template-${islandSize}-${islandTemplateVersion}`"
@@ -77,7 +107,7 @@
                                 <div v-for="(slot, idx) in islandContent.widgetSlots" :key="`island-widget-${idx}`"
                                      class="dynamic-island-mini-widgets-icon"
                                      :style="{ background: slot.iconBg || currentState.bg, color: slot.color || currentState.color }"
-                                     v-html="slot.icon || currentIcon"></div>
+                                     v-html="safeSlotIcon(slot)"></div>
                             </div>
                             <div class="dynamic-island-mini-text text-[14px] font-semibold text-white overflow-hidden text-ellipsis whitespace-nowrap">{{ islandContent.title }}</div>
                         </div>
@@ -89,8 +119,24 @@
                             <div class="dynamic-island-mini-text text-[14px] font-semibold text-white overflow-hidden text-ellipsis whitespace-nowrap">{{ islandContent.title }}</div>
                         </div>
 
-                        <div v-if="islandMode === 'info' && islandSize === 'medium'"
-                             class="dynamic-island-content dynamic-island-medium-info !opacity-100">
+                    <div v-else-if="islandMode === 'info' && !hasIslandTemplate && islandSize === 'compact'"
+                         class="dynamic-island-content dynamic-island-compact-info !opacity-100 !pointer-events-auto">
+                            <div class="dynamic-island-notif">
+                                <div class="dynamic-island-notif-avatar"
+                                    :style="{ background: currentState.bg, color: currentState.color }">
+                                    <span class="dynamic-island-notif-avatar-icon" v-html="currentIcon"></span>
+                                </div>
+                                <div class="dynamic-island-notif-body">
+                                    <div class="dynamic-island-notif-line1">
+                                        <span class="dynamic-island-notif-name">{{ islandContent.title }}</span>
+                                    </div>
+                                    <div class="dynamic-island-notif-msg">{{ islandContent.message }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                    <div v-if="islandMode === 'info' && !hasIslandTemplate && islandSize === 'medium'"
+                         class="dynamic-island-content dynamic-island-medium-info !opacity-100 !pointer-events-auto">
                             <div class="dynamic-island-medium-icon"
                                 :style="{ background: currentState.bg, color: currentState.color }"
                                 v-html="currentIcon"></div>
@@ -100,7 +146,7 @@
                             </div>
                         </div>
 
-                        <div v-if="islandMode === 'info' && islandSize === 'large'" class="dynamic-island-content !opacity-100 !pointer-events-auto">
+                        <div v-if="islandMode === 'info' && !hasIslandTemplate && islandSize === 'large'" class="dynamic-island-content !opacity-100 !pointer-events-auto">
                             <div class="pt-1">
                                 <div class="flex items-center mb-3">
                                     <div class="w-11 h-11 rounded-[14px] flex items-center justify-center mr-4 shrink-0 text-[20px]"
@@ -121,8 +167,14 @@
                         <div v-if="islandMode === 'notification'" class="dynamic-island-content !opacity-100">
                             <div class="dynamic-island-notif">
                                 <div class="dynamic-island-notif-avatar"
-                                    :style="islandContent.avatarBg ? { background: islandContent.avatarBg } : { background: currentState.bg }">
-                                    <span class="dynamic-island-notif-avatar-text">{{ islandContent.senderAvatar || currentIcon }}</span>
+                                    :style="islandContent.avatarBg ? { background: islandContent.avatarBg } : { background: currentState.bg, color: currentState.color }">
+                                    <span class="dynamic-island-notif-avatar-text"
+                                        v-if="islandAvatarText"
+                                    >{{ islandAvatarText }}</span>
+                                    <span class="dynamic-island-notif-avatar-icon"
+                                        v-else
+                                        v-html="islandAvatarHtml"
+                                    ></span>
                                 </div>
                                 <div class="dynamic-island-notif-body">
                                     <div class="dynamic-island-notif-line1">
@@ -312,7 +364,7 @@
                             v-show="activeApp"
                             class="app-shell"
                             ref="cardShellElement"
-                            :class="{ card: appViewMode === 'card', 'dragging-card': isDraggingCard }"
+                            :class="{ card: appViewMode === 'card', 'dragging-card': isDraggingCard, 'app-fullscreen': !!(activeApp && activeApp.fullscreen) }"
                             :style="activeAppShellStyle"
                             :data-app-id="activeApp?.id || ''"
                             @click.stop="handleAppShellClick"
@@ -335,12 +387,27 @@
 
                                     <!-- 搜索框 -->
                                     <template v-else-if="(activeAppTopbar?.type || 'standard') === 'search'">
-                                        <div class="app-topbar-search">
+                                        <div class="app-topbar-search" :class="{ 'is-interactive': activeAppTopbar?.interactive }">
                                             <svg class="app-topbar-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                                 <circle cx="11" cy="11" r="8"/>
                                                 <line x1="21" y1="21" x2="16.65" y2="16.65"/>
                                             </svg>
-                                            <span class="app-topbar-search-placeholder">{{ activeAppTopbar?.searchPlaceholder || '搜索' }}</span>
+                                            <!-- 静态占位（默认 visual 模式） -->
+                                            <span v-if="!activeAppTopbar?.interactive" class="app-topbar-search-placeholder">{{ activeAppTopbar?.searchPlaceholder || '搜索' }}</span>
+                                            <!-- 可交互 input:输入触发 app 的 appMethod,框架 v-html 重画不会清掉(走 window 级监听) -->
+                                            <input v-else
+                                                   class="app-topbar-search-input"
+                                                   type="text"
+                                                   :placeholder="activeAppTopbar?.searchPlaceholder || '搜索'"
+                                                   :value="activeAppTopbar?.searchValue || ''"
+                                                   :data-app-action="JSON.stringify({ action: 'appMethod', appId: activeApp?.id, method: activeAppTopbar?.onSearchInputMethod || 'onTopbarSearchInput' })"
+                                                   @click.stop
+                                                   @input.stop="onTopbarSearchInput($event, activeAppTopbar?.onSearchInputMethod || 'onTopbarSearchInput')"
+                                                   @keydown.stop
+                                                   autocomplete="off"
+                                                   autocorrect="off"
+                                                   autocapitalize="off"
+                                                   spellcheck="false" />
                                         </div>
                                     </template>
 
@@ -356,9 +423,23 @@
                                         <div class="app-topbar-large-title">{{ activeAppTitle }}</div>
                                     </template>
 
-                                    <!-- 仅按钮（中间用 pill 占位） -->
+                                    <!-- 纯按钮组：不放标题，整条顶栏就是一排功能按钮。
+                                         按钮来自 topbar.headerActions；带 label 的会画成「图标 + 文字」的宽按钮。
+                                         showPill 默认关（这个类型的用意就是不要标题占位）。 -->
                                     <template v-else-if="(activeAppTopbar?.type || 'standard') === 'buttons-only'">
-                                        <div v-if="activeAppTopbar?.showPill !== false" class="app-topbar-pill" :data-pg-pill="activeAppTopbar?.pillAction || ''">{{ activeAppTopbar?.pillText || activeApp?.name }}</div>
+                                        <div v-if="activeAppTopbar?.showPill === true" class="app-topbar-pill" :data-pg-pill="activeAppTopbar?.pillAction || ''">{{ activeAppTopbar?.pillText || activeApp?.name }}</div>
+                                        <div v-if="activeAppTopbar?.headerActions?.length" class="app-topbar-buttons">
+                                            <button v-for="(act, i) in activeAppTopbar.headerActions"
+                                                    :key="i"
+                                                    class="app-topbar-button"
+                                                    :class="[act.variant ? `app-topbar-button--${act.variant}` : '', { 'is-active': act.active }]"
+                                                    :data-app-action="JSON.stringify(Object.assign({}, act.action, { appId: activeApp?.id }))"
+                                                    :aria-label="act.ariaLabel || act.label || ''"
+                                                    :title="act.ariaLabel || act.label || ''">
+                                                <span v-if="act.iconHtml" class="app-topbar-button__icon" v-html="act.iconHtml"></span>
+                                                <span v-if="act.label" class="app-topbar-button__label">{{ act.label }}</span>
+                                            </button>
+                                        </div>
                                     </template>
 
                                     <!-- standard（默认） -->
@@ -370,8 +451,9 @@
                                     </template>
 
                                     <!-- ★ headerActions:顶栏右侧按钮组(每个按钮支持自定义 svg + action),
-                                         框架级能力,所有 app 都可用;有就替代 pill 渲染在 topbar 右侧 -->
-                                    <div v-if="activeAppTopbar?.headerActions?.length" class="app-topbar-actions">
+                                         框架级能力,所有 app 都可用;有就替代 pill 渲染在 topbar 右侧。
+                                         buttons-only 类型上面已经自己画过一排了，这里跳过，不然会出现两组。 -->
+                                    <div v-if="activeAppTopbar?.headerActions?.length && (activeAppTopbar?.type || 'standard') !== 'buttons-only'" class="app-topbar-actions">
                                         <button v-for="(act, i) in activeAppTopbar.headerActions"
                                                 :key="i"
                                                 class="app-topbar-action"
@@ -381,7 +463,7 @@
                                                 :title="act.ariaLabel || ''"
                                                 v-html="act.iconHtml"></button>
                                     </div>
-                                    <div v-else-if="activeAppTopbar?.showPill !== false" class="app-topbar-pill" :data-pg-pill="activeAppTopbar?.pillAction || ''">{{ activeAppTopbar?.pillText || activeApp?.name }}</div>
+                                    <div v-else-if="activeAppTopbar?.showPill !== false && (activeAppTopbar?.type || 'standard') !== 'buttons-only'" class="app-topbar-pill" :data-pg-pill="activeAppTopbar?.pillAction || ''">{{ activeAppTopbar?.pillText || activeApp?.name }}</div>
                                 </div>
 
                                 <div class="app-content" :class="{ 'detail-active': !!currentDetailView }" @click="handleAppContentClick">
@@ -412,7 +494,7 @@
                                 </div>
 
                                 <div v-if="showAppNav" class="app-nav" :data-app-id="activeApp?.id || ''">
-                                    <div v-if="activeAppNavType === 'tab'" class="app-tab-bar" :data-app-id="activeApp?.id || ''">
+                                    <div v-if="activeAppNavType === 'tab'" class="app-tab-bar" :data-app-id="activeApp?.id || ''" :style="navStyle">
                                         <div
                                             v-for="tab in navigationPages"
                                             :key="tab.id"
@@ -466,6 +548,7 @@
                                         @share="emitChatComponentEvent('onShare')"
                                         @favorite="emitChatComponentEvent('onFavorite')"
                                         @confirm="(result) => { emitChatComponentEvent('onConfirm', result); closeModal(); }"
+                                        @clear="(payload) => emitChatComponentEvent('onClear', payload)"
                                     ></component>
                                 </template>
                                 <!-- 标准弹窗类型 -->

@@ -26,6 +26,72 @@ export { useCardMode } from './use-card-mode.js';
 export { useWidgetPicker } from './use-widget-picker.js';
 export { bootstrapSystemData } from './core-shim.js';
 
+// 栏预设系统 (Phase 1)
+export {
+    TOPBAR_PRESETS,
+    TABBAR_PRESETS,
+    extendPreset,
+    registerTopbarPreset,
+    registerTabbarPreset,
+    getTopbarPreset,
+    getTabbarPreset,
+    hasPreset,
+    applyPresetToConfig,
+    listPresets,
+} from './bar-presets.js';
+
+export {
+    loadPresetCSS,
+    loadPresetModule,
+    initPreset,
+    initPresetByName,
+    initAppBarPreset,
+    markPresetInitialized,
+    isPresetInitialized,
+    getLoadedPresets,
+    preloadPresets,
+} from './bar-preset-loader.js';
+
+// 栏配置规范化器 (Phase 2)
+export {
+    normalizeTopbarConfig,
+    normalizeNavConfig,
+    mergeTopbarConfig,
+    mergeNavConfig,
+    getDefaultTopbarConfig,
+    getDefaultNavConfig,
+    validateTopbarConfig,
+    validateNavConfig,
+} from './bar-config-normalizer.js';
+
+// 栏按钮渲染器 (Phase 2 + Phase 3)
+export {
+    renderButtonIcon,
+    renderNavButtonIcon,
+    renderTopbarButton,
+    renderTopbarButtons,
+    renderNavButton,
+    renderNavButtons,
+    renderTopbar,
+    renderTabbar,
+    renderTopbarAsync,
+    renderTabbarAsync,
+    getPresetClass,
+    applyPresetStyles,
+    hasCustomRender,
+    getRenderMode,
+} from './bar-renderer.js';
+
+// 栏渲染上下文 (Phase 3)
+export {
+    createTopbarContext,
+    createNavContext,
+    validateTopbarContext,
+    validateNavContext,
+    safeRender,
+    mergeContexts,
+} from './bar-context.js';
+
 // ★ v0.28 顶层预热:fire-and-forget 启动 settings-sdk
 //  import 副作用会让 settingsSdk 在 framework mount 之前就开始 hydrate,
 //  业务 app 打开 detail 时大概率已经就绪

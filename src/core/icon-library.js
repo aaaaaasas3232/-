@@ -4,7 +4,14 @@
 // ============================================
 
 import { UI_ICONS, UI_SYMBOLS } from './icons.js';
-import { createActionObject, createDetailAction, createModalAction, createAppMethodAction, createShareRecordAction } from './actions.js';
+import {
+    createActionObject,
+    createContentCardAction,
+    createDetailAction,
+    createModalAction,
+    createAppMethodAction,
+    createShareRecordAction,
+} from './actions.js';
 import { renderSettingsGroup } from './renderers.js';
 
 function createPresetIconLibrary() {
@@ -84,6 +91,9 @@ export function createSettingsPageBuilder(appId = '') {
         },
         share(targetAppId, entityType, entityId, payload = {}) {
             return createShareRecordAction(targetAppId, entityType, entityId, payload);
+        },
+        contentCard(targetAppId, entityType, entityId, payload = {}) {
+            return createContentCardAction(targetAppId, entityType, entityId, payload);
         },
         row(config = {}) {
             return createRowPreset(config, appId);

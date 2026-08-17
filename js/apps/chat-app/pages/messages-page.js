@@ -14,7 +14,8 @@
 import { escapeHtml } from '@/src/core/escape.js';
 import { createDetailAction, createActionAttr } from '@/src/core/actions.js';
 import { getChatRecordMode, getModeConfig } from '../chat-mode.js';
-import { getAiMeta, resolveContactDisplay } from '../aiMeta.js';
+import { getAiMeta, resolveContactDisplay, resolveAiAvatar, DEFAULT_AI_AVATAR_BG } from '../aiMeta.js';
+import { SNAIL_EMPTY_SVG } from '../snail-icon.js';
 
 /**
  * 当 settingsSdk 未就绪时,订阅 settings-sdk-ready 事件,SDK 一就绪就触发 framework 重画。
@@ -22,6 +23,7 @@ import { getAiMeta, resolveContactDisplay } from '../aiMeta.js';
  * 幂等:多次调用也只挂一次监听。
  */
 let _sdkReadyListenerBound = false;
+let _messageSentListenerBound = false;
 export function ensureSdkReadyThenRefresh(app) {
     if (_sdkReadyListenerBound) return;
     _sdkReadyListenerBound = true;
@@ -38,44 +40,22 @@ export function ensureSdkReadyThenRefresh(app) {
     window.addEventListener('settings-sdk-ready', handler, { once: true });
 }
 
-// 在线状态管理
-let _chatsStatusMap = new Map();
-let _statusListenerBound = false;
+// ★ 已删除:在线状态相关代码(status / 绿点 / chat:online-status-updated 监听)
+//   不再展示"在线/离线"指示,功能本身保留在 social-profile.js 里供外部调用,
+//   chat-app 这一侧不再读写。
 
-/**
- * 绑定在线状态监听（仅执行一次）
- */
-function bindStatusListener() {
-    if (_statusListenerBound) return;
-    _statusListenerBound = true;
+// ★ v0.30 监听聊天消息发送事件,在消息列表原地更新该联系人的预览/时间
+//   不走 framework 整体重画(会闪),只动这一行 DOM
+function bindMessageSentListener() {
+    if (_messageSentListenerBound) return;
+    _messageSentListenerBound = true;
 
-    window.addEventListener('chat:online-status-updated', (e) => {
-        const { contactId, isOnline } = e.detail || {};
-        if (contactId !== undefined) {
-            _chatsStatusMap.set(contactId, isOnline);
-            // 触发 UI 刷新
-            const container = document.querySelector('.app-shell[data-app-id="chat"] .chat-messages');
-            if (container) {
-                const item = container.querySelector(`[data-chat-id="${escapeHtml(contactId)}"]`);
-                if (item) {
-                    const dot = item.querySelector('.chat-online-dot');
-                    if (isOnline) {
-                        if (!dot) {
-                            const avatarWrap = item.querySelector('.chat-avatar-wrap');
-                            if (avatarWrap) avatarWrap.insertAdjacentHTML('beforeend', '<div class="chat-online-dot"></div>');
-                        }
-                    } else {
-                        dot?.remove();
-                    }
-                }
-            }
-        }
-    });
-
-    // ★ v0.30 监听聊天消息发送事件,在消息列表原地更新该联系人的预览/时间
-    //   不走 framework 整体重画(会闪),只动这一行 DOM
     window.addEventListener('chat:message-sent', (e) => {
-        const { aiPersonId, mode: evtMode, message } = e.detail || {};
+        const detail = e.detail || {};
+        // ★ 群聊事件里字段名是 groupId,这里统一处理
+        const aiPersonId = detail.aiPersonId || detail.groupId;
+        const evtMode = detail.mode;
+        const message = detail.message;
         if (!aiPersonId || !message) return;
         const currentMode = getChatRecordMode();
         // 只在同 mode 下更新预览
@@ -113,61 +93,18 @@ function bindStatusListener() {
 
         // 3. 把这条 row 顶到最前(如果不是置顶状态)
         if (!item.classList.contains('chat-item--pinned')) {
-            // 把所有非置顶的同类 row 先收集起来,把这条放最前
             const allUnpinned = Array.from(container.querySelectorAll('.chat-item:not(.chat-item--pinned)'));
-            // 移除其它不置顶项,再 append 当前项到容器末尾前置
-            // 简单做法: 直接 prepend
             container.insertBefore(item, container.firstChild);
         }
     });
 }
 
-/**
- * 获取联系人在线状态
- */
-function getContactOnlineStatus(contactId) {
-    // 先尝试从缓存获取
-    if (_chatsStatusMap.has(contactId)) {
-        return _chatsStatusMap.get(contactId);
-    }
+// ★ v0.80 移除默认聊天兜底数据 — 没有真实聊天记录就展示空状态,
+//   不再展示「小美（示例）」这类占位联系人。
 
-    // 尝试从 window.__socialProfile 获取
-    const socialProfile = window.__socialProfile;
-    if (socialProfile?.getContactOnlineStatusSync) {
-        const result = socialProfile.getContactOnlineStatusSync(contactId);
-        _chatsStatusMap.set(contactId, result.isOnline);
-        return result.isOnline;
-    }
-
-    // 默认在线
-    return true;
-}
-
-// 默认聊天数据（仅在 sdk.chatContacts 完全没数据时兜底）
-// 注意：v0.23 之后所有联系人都是「独立副本」存放在 chatContacts 表
-const DEMO_CHATS_FALLBACK = [
-    {
-        id: 'demo-1',
-        type: 'ai',
-        aiPersonId: 'ai-1',
-        displayName: '小美（示例）',
-        lastMessage: { content: '今天天气真好呀~', timestamp: Date.now() - 300000 },
-        unreadCount: 2,
-        isPinned: true,
-        status: 'online',
-    },
-];
-
-// 头像颜色数组
-const AVATAR_COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F8B500', '#6C5CE7', '#A29BFE'];
-
-function getAvatarColor(id) {
-    let index = 0;
-    for (let i = 0; i < id.length; i++) {
-        index += id.charCodeAt(i);
-    }
-    return AVATAR_COLORS[index % AVATAR_COLORS.length];
-}
+// ★ v0.71 头像色统一改用 aiMeta.resolveAiAvatar().bg
+//   之前这里有一份 getAvatarColor(id) 哈希 + AVATAR_COLORS 调色板,删除
+//   列表项兜底:走 aiMeta(社媒头像背景) → 缺失就 DEFAULT_AI_AVATAR_BG
 
 /**
  * 渲染群聊头像 (2x2 网格拼接)
@@ -181,10 +118,17 @@ function renderGroupListAvatar(members, size = 44) {
     for (let i = 0; i < 4; i++) {
         if (i < gridSize) {
             const member = members[i];
-            const char = member.name?.charAt(0) || '?';
-            const bg = member.avatarBg || getAvatarColor(member.id || member.name || i);
+            // ★ v0.71 群成员头像统一从 aiMeta.resolveAiAvatar 拿(优先 member 已有,缺失就 aiMeta)
+            const av = resolveAiAvatar(member.id || member.name || '');
+            const bg = member.avatarBg || av.bg;
+            // ★ 首字母:member.name 优先,aiMeta fallback
+            const char = (member.name || av.text || '?').charAt(0);
             const fontSize = Math.round(size * 0.28);
-            cellsHtml += `<div style="background:${bg};display:flex;align-items:center;justify-content:center;font-size:${fontSize}px;color:white;font-weight:500;">${escapeHtml(char)}</div>`;
+            // ★ 头像 URL 优先,没有就显示首字母
+            const inner = member.avatar
+                ? `<img src="${escapeHtml(member.avatar)}" alt="" style="width:100%;height:100%;object-fit:cover;" />`
+                : escapeHtml(char);
+            cellsHtml += `<div style="background:${bg};display:flex;align-items:center;justify-content:center;font-size:${fontSize}px;color:white;font-weight:500;">${inner}</div>`;
         } else {
             cellsHtml += `<div style="background:#E8E8E8;"></div>`;
         }
@@ -220,7 +164,8 @@ function renderChatItem(item, index) {
     // ★ v0.31 实时读 aiPerson.socialProfiles.chat.*(网名/头像/背景),
     //   故事模式和日历模式都用同一个 aiPerson 数据。备注仍 per-mode 优先。
     const display = !isGroup ? resolveContactDisplay(item, item.aiPersonId || item.id) : null;
-    const bgColor = (display?.avatarBg) || getAvatarColor(item.id);
+    // ★ v0.71 头像色统一:display.avatarBg (aiMeta 实时) → 缺失后用 aiMeta.resolveAiAvatar 默认色
+    const bgColor = (display?.avatarBg) || resolveAiAvatar(item.id || '').bg;
     // ★ v0.31 联系人名字优先显示备注(每个 mode 独立备注),
     //   否则走 aiPerson.socialProfiles.chat.nickname(实时)
     const displayName = display?.nickname || item.displayName || item.name || item.id;
@@ -259,11 +204,8 @@ function renderChatItem(item, index) {
            </svg>`
         : '';
 
-    // 在线状态 - 从配置读取
-    const onlineStatus = !isGroup ? getContactOnlineStatus(item.id) : false;
-    const onlineDot = !isGroup && onlineStatus
-        ? `<div class="chat-online-dot"></div>`
-        : '';
+    // ★ 已删除:在线状态绿点(chat-online-dot),chat-app 不再展示在线/离线
+    const onlineDot = '';
 
     // 未读角标
     const unreadBadge = unreadCount > 0
@@ -280,13 +222,9 @@ function renderChatItem(item, index) {
     let avatarHtml;
     if (isGroup) {
         // 群聊:使用 2x2 网格头像
+        // ★ v0.88 members 已是解析后的对象数组(含 avatar/avatarBg)
         const groupMembers = item.members || [];
-        const avatarMembers = groupMembers.map((id, i) => ({
-            id,
-            name: id.replace('ai-', '小').replace(/(\d+)/, (n) => '零一二三四五六七八九'[parseInt(n)] || n),
-            avatarBg: getAvatarColor(id)
-        }));
-        avatarHtml = renderGroupListAvatar(avatarMembers, 52);
+        avatarHtml = renderGroupListAvatar(groupMembers, 52);
     } else {
         // 私聊:使用圆形头像
         const aiAvatarUrl = display?.avatar || '';
@@ -294,7 +232,7 @@ function renderChatItem(item, index) {
             ? `<img src="${escapeHtml(aiAvatarUrl)}" alt="" class="chat-avatar-img" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">`
             : escapeHtml((displayName || '?').charAt(0));
         avatarHtml = `
-            <div class="chat-avatar" data-color="${bgColor}">
+            <div class="chat-avatar" data-color="${bgColor}" style="background:${bgColor};">
                 ${avatarInner}
             </div>
         `;
@@ -312,7 +250,7 @@ function renderChatItem(item, index) {
                     <div class="chat-name-row">
                         ${pinIcon}
                         <span class="chat-name">${escapeHtml(displayName)}</span>
-                        ${isGroup ? `<span class="chat-tag">${item.members.length}人</span>` : ''}
+                        ${isGroup ? `<span class="chat-tag">${item.members.length + 1}人</span>` : ''}
                     </div>
                     <span class="chat-time">${timeText}</span>
                 </div>
@@ -332,11 +270,7 @@ function renderChatItem(item, index) {
 function renderEmptyState() {
     return `
         <div class="chat-empty">
-            <div class="chat-empty-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                </svg>
-            </div>
+            <div class="chat-empty-icon">${SNAIL_EMPTY_SVG}</div>
             <div class="chat-empty-title">暂无聊天</div>
             <div class="chat-empty-sub">点击右下角按钮开始聊天</div>
         </div>
@@ -390,34 +324,56 @@ function loadContactsForMode(mode) {
         ? sdk.chatGroups.list(currentUser, mode)
         : [];
 
-    const groupChats = groupList.map((g) => ({
-        id: g.id,
-        type: 'group',
-        aiPersonId: '', // 群聊没有 aiPersonId
-        name: g.name || g.id,
-        remark: g.remark || '',
-        recordMode: mode,
-        avatar: g.avatar || '',
-        avatarBg: '',
-        members: g.members || [],
-        lastMessage: g.lastMessage,
-        unreadCount: g.unreadCount || 0,
-        isPinned: !!g.isPinned,
-        lastMessageAt: g.lastMessageAt || g.updatedAt || 0,
-    }));
+    // ★ v0.88 群聊成员头像:将 ID 数组解析为包含头像信息的对象
+    //   修复:群聊成员设置头像后,消息列表的群聊头像仍然显示默认色的 bug
+    //   群聊设置页已正确解析成员(members 对象含 avatar/avatarBg),
+    //   但消息列表只获取了 ID 数组,现在改为同步解析头像信息
+    const resolvedGroupMembers = {};
+    const _resolveGroupMemberInfo = (memberId) => {
+        if (resolvedGroupMembers[memberId]) return resolvedGroupMembers[memberId];
+        const aiMeta = getAiMeta(memberId);
+        const info = {
+            id: memberId,
+            name: aiMeta.exists ? aiMeta.nickname : memberId.replace('ai-', '小'),
+            avatar: aiMeta.avatar || '',
+            avatarBg: aiMeta.avatarBg || aiMeta.bg || DEFAULT_AI_AVATAR_BG,
+        };
+        resolvedGroupMembers[memberId] = info;
+        return info;
+    };
+
+    const groupChats = groupList.map((g) => {
+        // 解析每个成员的头像信息
+        const memberIds = g.members || [];
+        const resolvedMembers = memberIds.map((id) => _resolveGroupMemberInfo(id));
+        return {
+            id: g.id,
+            type: 'group',
+            aiPersonId: '', // 群聊没有 aiPersonId
+            name: g.name || g.id,
+            remark: g.remark || '',
+            recordMode: mode,
+            avatar: g.avatar || '',
+            avatarBg: '',
+            // ★ v0.88 改为解析后的成员对象数组,包含头像信息
+            members: resolvedMembers,
+            lastMessage: g.lastMessage,
+            unreadCount: g.unreadCount || 0,
+            isPinned: !!g.isPinned,
+            lastMessageAt: g.lastMessageAt || g.updatedAt || 0,
+        };
+    });
 
     // 合并私聊和群聊
     out.chats = [...chats, ...groupChats];
 
-    if (out.chats.length === 0) {
-        out.chats = DEMO_CHATS_FALLBACK;
-    }
+    // ★ v0.80 移除 demo fallback — 没有真实聊天就保留空数组,UI 走空状态
     return out;
 }
 
 export function renderMessagesPage(app) {
-    // 绑定在线状态监听
-    bindStatusListener();
+    // 绑定聊天消息监听（消息列表原地更新预览/时间）
+    bindMessageSentListener();
 
     const mode = getChatRecordMode();
     const modeCfg = getModeConfig(mode);
@@ -441,12 +397,7 @@ export function renderMessagesPage(app) {
     } else if (isEmptyWorld) {
         bodyHtml = `
             <div class="chat-empty">
-                <div class="chat-empty-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <circle cx="12" cy="12" r="10"/>
-                        <line x1="12" y1="8" x2="12" y2="16"/>
-                    </svg>
-                </div>
+                <div class="chat-empty-icon">${SNAIL_EMPTY_SVG}</div>
                 <div class="chat-empty-title">尚未绑定世界观</div>
                 <div class="chat-empty-sub">请先去「设置 → 人设」给默认用户卡绑定世界观，再添加联系人</div>
             </div>

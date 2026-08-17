@@ -13,6 +13,8 @@ import {
 import { externalAppRegistry } from '../../src/core/app-registry.js';
 import {
     APP_INSTALLATION_CHANGED_EVENT,
+    WORLD_AVAILABILITY_CHANGED_EVENT,
+    installWorldAvailabilityRefresh,
     listLaunchableApps,
 } from '../../src/core/app-installation.js';
 import {
@@ -23,7 +25,7 @@ import {
 import { useSystemClock } from './use-system-clock.js';
 import { useDynamicIsland, exposeDynamicIsland } from './use-dynamic-island.js';
 import { useAppNavigation } from './use-app-navigation.js';
-import { useDesktopEdit } from './use-desktop-edit.js';
+import { useDesktopEdit, desktopHydration } from './use-desktop-edit.js';
 import { useCardMode } from './use-card-mode.js';
 import { useWidgetPicker } from './use-widget-picker.js';
 import { bindAppRendererBridge } from './app-renderer-bridge.js';
@@ -130,6 +132,12 @@ export function bootstrapSystemData() {
     }
 
     function saveWidgetBoard(items) {
+        // 桌面布局水合完成前不落盘：此时 boardItems 还是半成品，
+        // 写回去会把用户上次保存的 widget 位置覆盖掉（甚至覆盖成空数组）。
+        if (!desktopHydration.ready) {
+            console.log('[core-shim] saveWidgetBoard: 桌面尚未水合完成，跳过本次保存');
+            return;
+        }
         // 只保存纯数据，不保存函数引用
         // ★ 修复：保留 widget 已有的 boardIndex（use-desktop-edit 已经标记好了），
         // 不再用数组索引覆盖（那会让 boardIndex 变成 0,1,2... 而不是在混排桌面里的真实位置）
@@ -169,31 +177,69 @@ export function bootstrapSystemData() {
             const appDetailPanel = Vue.ref(null);
             
             // ★ 定义 syncRegisteredApps（在监听器之前声明）
+            //
+            // 保持现有 apps.value 的顺序不变（用户在桌面上排过的顺序不能被一次刷新打乱），
+            // 只做三件事：更新对象引用、追加新出现的、**移除已经消失的**。
+            //
+            // 第三件事以前是没有的 —— 只更新和追加，从不删。表现是：
+            // 在 nook 里删掉一个插件 App，registry 里确实没了，桌面上那个图标却还在，
+            // 点它会进一个空壳（activeApp 找不到对应配置）。刷新页面才会消失。
+            // 「卸载」这个功能因此从来没真正работал过。
             const syncRegisteredApps = () => {
                 const newLaunchableApps = listLaunchableApps(externalAppRegistry.apps);
-                
-                // ★ 关键修复：保持用户拖拽后的顺序，而不是用注册时的原始顺序覆盖
-                // 1. 先创建 newLaunchableApps 的 id -> app 映射
-                const appById = new Map(newLaunchableApps.map(a => [a.id, a]));
-                
-                // 2. 保留 apps.value 中仍然可启动的 app（保持顺序）
-                const preserved = apps.value.filter(a => appById.has(a.id));
-                
-                // 3. 把新增的 app 加到末尾（而不是插入中间）
-                const existingIds = new Set(preserved.map(a => a.id));
-                const newApps = newLaunchableApps.filter(a => !existingIds.has(a.id));
-                
-                apps.value = [...preserved, ...newApps];
-                console.log('[core-shim] syncRegisteredApps: preserved=' + preserved.length + ', new=' + newApps.length);
+                const newAppById = new Map(newLaunchableApps.map(a => [a.id, a]));
+
+                // 1. 更新引用 + 剔除已经不在注册表里的
+                let hasChanges = false;
+                const updatedApps = [];
+                for (const existingApp of apps.value) {
+                    const fresh = newAppById.get(existingApp.id);
+                    if (!fresh) { hasChanges = true; continue; }
+                    if (fresh !== existingApp) hasChanges = true;
+                    updatedApps.push(fresh);
+                }
+
+                // 2. 追加新出现的
+                const existingIds = new Set(apps.value.map(a => a.id));
+                const trulyNewApps = newLaunchableApps.filter(a => !existingIds.has(a.id));
+
+                if (hasChanges || trulyNewApps.length > 0) {
+                    const removed = apps.value.length - updatedApps.length;
+                    apps.value = [...updatedApps, ...trulyNewApps];
+                    console.log(`[core-shim] syncRegisteredApps: 更新=${hasChanges ? 'yes' : 'no'}, 新增=${trulyNewApps.length}, 移除=${removed}`);
+                }
+            };
+
+            // ★ 启动时恢复已安装 App 的 distribution.installed 状态
+            // 修复：从 localStorage 读取安装状态，确保刷新后下载状态不丢失
+            const restoreInstalledState = () => {
+                try {
+                    const storageKey = 'xiaoting::installed-apps-v1';
+                    const raw = localStorage.getItem(storageKey);
+                    if (!raw) return;
+                    const stored = JSON.parse(raw);
+                    if (!stored || typeof stored !== 'object') return;
+
+                    for (const app of externalAppRegistry.apps) {
+                        if (app?.distribution?.requiresInstall && stored[app.id] === true) {
+                            app.distribution.installed = true;
+                        }
+                    }
+                    console.log('[core-shim] 已从 localStorage 恢复 App 安装状态');
+                } catch (e) {
+                    console.warn('[core-shim] 恢复安装状态失败:', e);
+                }
             };
             
             // ★ Dock 布局需要在 apps 注册完成后才能 hydrate
             // 监听 phone:apps-registered 事件（由 js/apps/index.js 派发）
             if (typeof window !== 'undefined') {
                 window.addEventListener('phone:apps-registered', () => {
-                    console.log('[core-shim] Apps 注册完成，同步 apps 顺序 + hydrate Dock 布局');
-                    // ★ 修复：注册完成后立即触发 syncRegisteredApps，
-                    // 让 apps.value 从 desktop-config 恢复用户拖拽后的顺序
+                    console.log('[core-shim] Apps 注册完成，恢复安装状态 + 同步 apps 顺序 + hydrate Dock 布局');
+                    // ★ 关键修复：在 apps 注册完成后立即恢复安装状态，
+                    // 确保新注册的 app 能读取到 distribution.installed = true
+                    restoreInstalledState();
+                    // 恢复状态后再同步，让 listLaunchableApps 能正确识别已安装的 app
                     syncRegisteredApps();
                     hydrateDockLayout(externalAppRegistry.apps);
                 }, { once: true });
@@ -247,7 +293,6 @@ export function bootstrapSystemData() {
                         if (window.__phoneStatusBarConfig) {
                             window.__phoneStatusBarConfig.showStatusBar = themeRaw.showStatusBar !== false;
                             window.__phoneStatusBarConfig.statusBarTimeColor = themeRaw.statusBarTimeColor || '#000000';
-                            window.__phoneStatusBarConfig.statusBarSignalColor = themeRaw.statusBarSignalColor || '#000000';
                             window.__phoneStatusBarConfig.statusBarFiveGColor = themeRaw.statusBarFiveGColor || '#000000';
                             window.__phoneStatusBarConfig.statusBarFiveGLabel = themeRaw.statusBarFiveGLabel || '';
                             window.dispatchEvent(new CustomEvent('settings:statusbar-updated'));
@@ -306,24 +351,48 @@ export function bootstrapSystemData() {
                 window.__phoneConfirm = { request: requestConfirm, close: closeConfirm };
             }
 
-            // ★ 加载持久化的 widget 桌面（延后到 desktop-config 就绪后）
-            // 避免 loadWidgetBoard 时 desktop-config 还没迁移完旧数据
+            // ★ 加载持久化的 widget 桌面
+            // 必须等两件事都完成，否则 widget 会落在错误的位置上：
+            //   1. boot:desktop-config-ready —— 否则读到的是迁移前的旧数据
+            //   2. phone:apps-registered —— widget 的 render 函数挂在 window.APP_WIDGETS 上（app
+            //      注册时才写入）；而且 widget 的 boardIndex 是「在 app+widget 混排列表里的下标」，
+            //      要等完整的 app 列表进了 boardItems 才能插到正确的格子。
+            // 旧实现用的是 100ms 定时兜底，而 app 注册要等一串 IndexedDB 升级，几乎必然更慢，
+            // 于是 widget 总是先被塞进空的 boardItems，随后又被 app 顺序恢复整个冲掉。
             if (!widgetsBootstrapped) {
                 widgetsBootstrapped = true;
-                // 监听 boot:desktop-config-ready 事件，确保迁移完成
-                const loadWidgetsAfterConfigReady = () => {
-                    console.log('[core-shim] desktop-config 就绪，加载 widget 桌面');
+                const WIDGET_LOAD_TIMEOUT_MS = 3000;
+                let configReady = false;
+                let appsReady = false;
+                let widgetsLoaded = false;
+
+                const loadWidgetsIfReady = (force = false) => {
+                    if (widgetsLoaded) return;
+                    if (!force && !(configReady && appsReady)) return;
+                    widgetsLoaded = true;
                     widgetBoard.value = loadWidgetBoard();
+                    // 告诉水合门闸：widget 这一批数据到齐了，可以开始落盘了
+                    desktopHydration.markWidgetsReady();
                 };
+
                 if (typeof window !== 'undefined') {
-                    window.addEventListener('boot:desktop-config-ready', loadWidgetsAfterConfigReady, { once: true });
+                    window.addEventListener('boot:desktop-config-ready', () => {
+                        configReady = true;
+                        loadWidgetsIfReady();
+                    }, { once: true });
+                    window.addEventListener('phone:apps-registered', () => {
+                        appsReady = true;
+                        loadWidgetsIfReady();
+                    }, { once: true });
+                    // 兜底：任一事件没派发时也要把 widget 显示出来，不能让桌面永远缺组件
+                    setTimeout(() => {
+                        if (!widgetsLoaded) {
+                            console.warn('[core-shim] widget 加载等待超时，强制加载',
+                                `(config=${configReady}, apps=${appsReady})`);
+                            loadWidgetsIfReady(true);
+                        }
+                    }, WIDGET_LOAD_TIMEOUT_MS);
                 }
-                // 如果事件已触发（极端情况），立即加载
-                setTimeout(() => {
-                    if (widgetBoard.value.length === 0) {
-                        loadWidgetsAfterConfigReady();
-                    }
-                }, 100);
             }
 
             const dockApps = Vue.computed(() => {
@@ -359,6 +428,8 @@ export function bootstrapSystemData() {
                     window.__navigationForDebug = navigation;
                     // ★ 关键：在 setup 内立即暴露 __appTopbarOverride，外部 setup 还在等异步资源
                     window.__appTopbarOverride = navigation.appTopbarOverride;
+                    // ★ 暴露 __appNavigation,让 chat-app 弹窗组件能直接调 closeModal/openModal/emitChatComponentEvent
+                    window.__appNavigation = navigation;
                     console.log('[framework/core-shim] __appTopbarOverride EXPOSED-INSIDE-SETUP:', !!window.__appTopbarOverride, 'value:', window.__appTopbarOverride && window.__appTopbarOverride.value);
                 }
             } catch (e) {
@@ -379,6 +450,8 @@ export function bootstrapSystemData() {
 
             window.refreshPhoneApps = syncRegisteredApps;
             window.addEventListener(APP_INSTALLATION_CHANGED_EVENT, syncRegisteredApps);
+            window.addEventListener(WORLD_AVAILABILITY_CHANGED_EVENT, syncRegisteredApps);
+            const stopWorldAvailabilityRefresh = installWorldAvailabilityRefresh();
             // Dock 字段变化（visible / order）也要触发 dockApps computed 重排。
             // apps.value 没变，但 dockApps 排序依赖 dock 字段的 mutation。
             // 用一个内部 tick 强制重算 dockApps。
@@ -392,6 +465,8 @@ export function bootstrapSystemData() {
             const dockTickValue = Vue.computed(() => dockTickRef.value);
             Vue.onBeforeUnmount(() => {
                 window.removeEventListener(APP_INSTALLATION_CHANGED_EVENT, syncRegisteredApps);
+                window.removeEventListener(WORLD_AVAILABILITY_CHANGED_EVENT, syncRegisteredApps);
+                stopWorldAvailabilityRefresh();
             });
             // 注册 widget 注册表变化时刷新 picker
             window.refreshPhoneWidgets = () => {
@@ -749,11 +824,22 @@ export function bootstrapSystemData() {
                 navigation.openApp(appId);
             }
 
+            /**
+             * 点 App 窗口的遮罩 → 卡片态先恢复全屏，否则关 App。
+             *
+             * ⚠️ 这里原来调的是 `card.handleWindowOverlayClick(...)`，
+             *    而 use-card-mode.js 导出的名字是 `handleOverlayClick` ——
+             *    对不上，所以每点一次遮罩就抛一次
+             *    `TypeError: card.handleWindowOverlayClick is not a function`，
+             *    App 根本关不掉。因为它抛在 Vue 的事件处理器里、
+             *    只在控制台留一行红字，界面上就是「点了没反应」。
+             *
+             *    顺带：老代码还判断了 `result === 'closeModal'`，
+             *    但 handleOverlayClick 两条分支都只返回 'handled'，
+             *    那个分支从来不可能成立 —— 一并去掉，别留假逻辑。
+             */
             function handleWindowOverlayClick() {
-                const result = card.handleWindowOverlayClick(navigation.appModal);
-                if (result === 'closeModal') {
-                    navigation.closeModal();
-                }
+                card.handleOverlayClick?.();
             }
 
             // === 灵动岛在编辑态下的拦截器 ===
@@ -788,6 +874,7 @@ export function bootstrapSystemData() {
             //   - medium/large：不响应
             //   - notification：不响应
             let islandLongPressTimer = null;
+            let islandLastChangeAt = 0;
             let islandLongPressFired = false;
             const ISLAND_LONG_PRESS_MS = UI_CONSTANTS?.LONG_PRESS_MS || 460;
             function onIslandPointerDown(event) {
@@ -839,6 +926,9 @@ export function bootstrapSystemData() {
             Vue.watch(
                 () => [island.islandMode.value, island.islandSize.value, island.islandTemplateVersion.value, island.renderedIslandTemplate.value],
                 async () => {
+                    // 记录岛最近一次变化的时间:用于忽略"触发开岛的那一次点击"的冒泡,
+                    // 否则点播放 → 开岛 → 同一次点击冒泡到 document → 立刻把岛收掉
+                    islandLastChangeAt = Date.now();
                     if (!island.hasIslandTemplate.value) {
                         return;
                     }
@@ -849,6 +939,28 @@ export function bootstrapSystemData() {
                 },
                 { flush: 'post' }
             );
+
+            // === 点击岛外部 → 收起一档 ===
+            // 用 document 监听而不是全屏遮罩:遮罩会挡住页面滚动和 App 内的所有点击。
+            // .dynamic-island 上有 @click.stop,所以能冒泡到这里的都是"岛外部"的点击。
+            function onDocumentClickForIsland(event) {
+                if (island.islandMode.value === 'idle') return;
+                // 岛刚变化(开岛/换档)时,忽略同一批次的点击
+                if (Date.now() - islandLastChangeAt < 350) return;
+                // 双保险:点在岛内部就不处理
+                const target = event?.target;
+                if (target && typeof target.closest === 'function' && target.closest('.dynamic-island')) {
+                    return;
+                }
+                island.handleOutsideClick();
+            }
+
+            Vue.onMounted(() => {
+                document.addEventListener('click', onDocumentClickForIsland, true);
+            });
+            Vue.onBeforeUnmount(() => {
+                document.removeEventListener('click', onDocumentClickForIsland, true);
+            });
 
             exposeDynamicIsland(island);
 
@@ -895,6 +1007,7 @@ export function bootstrapSystemData() {
                 activeAppSubtitle: navigation.activeAppSubtitle,
                 activeAppTopbar: navigation.activeAppTopbar,
                 topbarStyle: navigation.topbarStyle,
+                navStyle: navigation.navStyle,
                 activeAppBackgroundStyle: navigation.activeAppBackgroundStyle,
                 currentPageContent: navigation.currentPageContent,
                 currentPageView: navigation.currentPageView,
@@ -908,7 +1021,6 @@ export function bootstrapSystemData() {
                 // 状态栏细分（由 settings app 的 phone-statusbar 模块同步到 window.__phoneStatusBarConfig）
                 statusBarVisible: navigation.statusBarVisible,
                 currentTimeColor: navigation.currentTimeColor,
-                currentSignalColor: navigation.currentSignalColor,
                 currentFiveGColor: navigation.currentFiveGColor,
                 currentFiveGLabel: navigation.currentFiveGLabel,
                 desktopLayerStyle: card.desktopLayerStyle,
@@ -940,6 +1052,32 @@ export function bootstrapSystemData() {
                 closeModal: navigation.closeModal,
                 confirmAppModal: navigation.confirmAppModal,
                 emitChatComponentEvent: navigation.emitChatComponentEvent,
+                // ★ 顶栏搜索框 input 事件转发:把当前输入派发给对应 app 的方法
+                //   用法:activeAppTopbar.onSearchInputMethod = 'onTopbarSearchInput'
+                //   app 必须在自己的 methods 上注册该方法(framework 调用 externalAppRegistry.invokeMethod)
+                onTopbarSearchInput(event, methodName) {
+                    if (!event || !event.target) return;
+                    const value = event.target.value || '';
+                    const app = navigation.activeApp.value;
+                    const topbar = navigation.activeAppTopbar.value;
+                    if (!app) return;
+                    const finalMethod = methodName || topbar?.onSearchInputMethod || 'onTopbarSearchInput';
+                    try {
+                        // 同步 appTopbarOverride.searchValue,让 input :value 跟随输入(框架 v-html 重画也不会清掉)
+                        if (navigation.appTopbarOverride && typeof navigation.appTopbarOverride.value === 'object') {
+                            const ov = navigation.appTopbarOverride.value || {};
+                            navigation.appTopbarOverride.value = Object.assign({}, ov, { searchValue: value });
+                        } else if (typeof window !== 'undefined' && window.__appTopbarOverride) {
+                            const ov = window.__appTopbarOverride.value || {};
+                            window.__appTopbarOverride.value = Object.assign({}, ov, { searchValue: value });
+                        }
+                    } catch (_) { /* override 不一定存在,忽略 */ }
+                    try {
+                        externalAppRegistry.invokeMethod(app.id, finalMethod, { value, eventType: 'input' });
+                    } catch (err) {
+                        console.warn('[framework] onTopbarSearchInput dispatch failed', err);
+                    }
+                },
                 handleWindowOverlayClick,
                 handleAppShellClick: card.handleAppShellClick,
                 onHomeIndicatorMouseDown: card.onHomeIndicatorMouseDown,

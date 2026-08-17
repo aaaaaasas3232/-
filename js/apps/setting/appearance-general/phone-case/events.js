@@ -25,7 +25,6 @@ import {
     normalizeHex,
     parseGradient,
 } from './state.js';
-import { buildGradient, buildMultiGradient } from './state.js';
 import { renderPreview, renderTypeToggle, renderColorPanel } from './renderer.js';
 
 // ============================================

@@ -1,0 +1,142 @@
+/* ============================================
+ * cover-designer / _panel-modules.css
+ * toolbar-panel-modules.js 中使用的内联样式迁移
+ * ============================================ */
+
+/* 文字样式面板 - 标签间距 */
+.app-shell[data-app-id="cover-designer"] .cd-sub-label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-sub-label-top {
+    display: block;
+    margin-bottom: 5px;
+    margin-top: 10px;
+}
+
+/* 通用面板 section 容器 */
+.app-shell[data-app-id="cover-designer"] .cd-panel-section {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 8px;
+}
+
+/* 通用面板标签 */
+.app-shell[data-app-id="cover-designer"] .cd-panel-label {
+    font-size: 12px;
+    color: #888;
+}
+
+/* 通用行布局 */
+.app-shell[data-app-id="cover-designer"] .cd-panel-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+/* 颜色面板行布局 */
+.app-shell[data-app-id="cover-designer"] .cd-color-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+/* 头像单选框行 */
+.app-shell[data-app-id="cover-designer"] .cd-avatar-radio-row {
+    display: flex;
+    gap: 12px;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-radio-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+}
+
+/* 颜色预览方块 */
+.app-shell[data-app-id="cover-designer"] .cd-color-preview-inline {
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    border: 1px solid #e8e5e1;
+}
+
+/* 隐藏面板 (边框/阴影控件默认隐藏) */
+.app-shell[data-app-id="cover-designer"] .cd-panel-hidden {
+    display: none;
+}
+
+/* 字体预览文字样式 */
+.app-shell[data-app-id="cover-designer"] .cd-font-preview-serif {
+    font-family: 'Noto Serif SC', serif;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-font-preview-sans {
+    font-family: 'Noto Sans SC', sans-serif;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-font-preview-cursive-ks {
+    font-family: 'Ma Shan Zheng', cursive;
+}
+
+.app-shell[data-app-id="cover-designer"] .cd-font-preview-cursive-lc {
+    font-family: 'Long Cang', cursive;
+}
+
+/* 颜色色块 */
+.app-shell[data-app-id="cover-designer"] .cd-swatch-black { background-color: #000; }
+.app-shell[data-app-id="cover-designer"] .cd-swatch-white { background-color: #fff; }
+.app-shell[data-app-id="cover-designer"] .cd-swatch-cream { background-color: #cbc5bb; }
+.app-shell[data-app-id="cover-designer"] .cd-swatch-rose { background-color: #b86f6f; }
+.app-shell[data-app-id="cover-designer"] .cd-swatch-teal { background-color: #69a0a4; }
+.app-shell[data-app-id="cover-designer"] .cd-swatch-tan { background-color: #d4a373; }
+.app-shell[data-app-id="cover-designer"] .cd-swatch-light { background-color: #f0ede8; }
+.app-shell[data-app-id="cover-designer"] .cd-swatch-dark { background-color: #454545; }
+.app-shell[data-app-id="cover-designer"] .cd-swatch-black-solid { background: #000; }
+.app-shell[data-app-id="cover-designer"] .cd-swatch-dark-solid { background: #454545; }
+
+/* 阴影色块 */
+.app-shell[data-app-id="cover-designer"] .cd-swatch-shadow-1 { background: rgba(0, 0, 0, 0.1); }
+.app-shell[data-app-id="cover-designer"] .cd-swatch-shadow-2 { background: rgba(0, 0, 0, 0.2); }
+.app-shell[data-app-id="cover-designer"] .cd-swatch-shadow-3 { background: rgba(155, 149, 139, 0.2); }
+.app-shell[data-app-id="cover-designer"] .cd-swatch-shadow-4 { background: rgba(184, 111, 111, 0.2); }
+
+/* 头像颜色色块 */
+.app-shell[data-app-id="cover-designer"] .cd-avatar-swatch-cream { background-color: #cbc5bb; }
+.app-shell[data-app-id="cover-designer"] .cd-avatar-swatch-rose { background-color: #b86f6f; }
+.app-shell[data-app-id="cover-designer"] .cd-avatar-swatch-teal { background-color: #69a0a4; }
+.app-shell[data-app-id="cover-designer"] .cd-avatar-swatch-tan { background-color: #d4a373; }
+.app-shell[data-app-id="cover-designer"] .cd-avatar-swatch-dark { background-color: #454545; }
+.app-shell[data-app-id="cover-designer"] .cd-avatar-swatch-gray { background-color: #a8a098; }
+
+/* 透明度行 */
+.app-shell[data-app-id="cover-designer"] .cd-opacity-row {
+    margin-top: 8px;
+}
+
+/* 头像颜色网格 */
+.app-shell[data-app-id="cover-designer"] .cd-avatar-color-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+/* 气泡预览默认样式 */
+.app-shell[data-app-id="cover-designer"] .cd-bubble-preview {
+    backdrop-filter: blur(8px);
+    background: rgba(223, 230, 233, 0.3);
+}
+
+/* 背景缩略图使用 CSS 变量设置背景图 */
+.app-shell[data-app-id="cover-designer"] .cd-bg-preset-thumb {
+    background-image: var(--bg-url);
+}
+
+/* 文字颜色预览使用 CSS 变量设置背景色 */
+.app-shell[data-app-id="cover-designer"] .cd-color-preview-dynamic {
+    background-color: var(--color-value, transparent);
+}

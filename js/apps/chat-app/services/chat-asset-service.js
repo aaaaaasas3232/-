@@ -18,8 +18,6 @@
  *   - 调用方负责拿到结果后做「消息写入数据库 + 重画」
  */
 
-import { escapeHtml } from '@/src/core/escape.js';
-
 const MS = {
     redpacket: {
         send: 'sendRedpacket',
@@ -413,8 +411,15 @@ export async function userReturnTransfer({ aiPersonId, mode = 'calendar', msgId,
 
 /**
  * User 发红包给 AI
+ * @param {object} options
+ * @param {string} options.aiPersonId
+ * @param {string} [options.mode='calendar']
+ * @param {number} options.amount
+ * @param {string} [options.message]
+ * @param {string} [options.sender]      ★ v1.0 swap 模式: 写盘时使用的 sender 字段(默认 'user',swap 时传 'ai')
+ * @param {string} [options.senderName]  ★ v1.0 swap 模式: 写盘时使用的 senderName(默认 userMeta.name,swap 时传 AI 名字)
  */
-export async function userSendRedpacket({ aiPersonId, mode = 'calendar', amount, message }) {
+export async function userSendRedpacket({ aiPersonId, mode = 'calendar', amount, message, sender, senderName }) {
     const sdk = await _waitSdk();
     if (!sdk) return { ok: false, error: 'SDK 未就绪' };
     if (!aiPersonId || typeof amount !== 'number') return { ok: false, error: '参数缺失' };
@@ -422,6 +427,10 @@ export async function userSendRedpacket({ aiPersonId, mode = 'calendar', amount,
     const userMeta = _userMeta(sdk);
     const aiMeta = _aiMeta(sdk, aiPersonId);
     if (!aiMeta) return { ok: false, error: 'AI 人设不存在' };
+
+    // ★ v1.0 swap 模式可改写盘 sender/senderName
+    const writeSender = (sender === 'ai' || sender === 'user') ? sender : 'user';
+    const writeSenderName = (typeof senderName === 'string' && senderName) ? senderName : userMeta.name;
 
     // 1) 检查 user 余额
     const userBalance = sdk.assetFlow?.getBalance?.('user', userMeta.userId) || 0;
@@ -446,8 +455,8 @@ export async function userSendRedpacket({ aiPersonId, mode = 'calendar', amount,
     try {
         savedMsg = await sdk.chatMessages.add(userMeta.user, aiPersonId, mode, {
             id: msgId,
-            sender: 'user',
-            senderName: userMeta.name,
+            sender: writeSender,
+            senderName: writeSenderName,
             type: 'redpacket',
             content: '[红包]',
             redpacketCard: {
@@ -521,8 +530,15 @@ export async function aiReceiveRedpacket({ aiPersonId, mode = 'calendar', msgId,
 
 /**
  * User 发转账给 AI
+ * @param {object} options
+ * @param {string} options.aiPersonId
+ * @param {string} [options.mode='calendar']
+ * @param {number} options.amount
+ * @param {string} [options.note]
+ * @param {string} [options.sender]      ★ v1.0 swap 模式: 写盘时使用的 sender 字段(默认 'user',swap 时传 'ai')
+ * @param {string} [options.senderName]  ★ v1.0 swap 模式: 写盘时使用的 senderName
  */
-export async function userSendTransfer({ aiPersonId, mode = 'calendar', amount, note }) {
+export async function userSendTransfer({ aiPersonId, mode = 'calendar', amount, note, sender, senderName }) {
     const sdk = await _waitSdk();
     if (!sdk) return { ok: false, error: 'SDK 未就绪' };
     if (!aiPersonId || typeof amount !== 'number') return { ok: false, error: '参数缺失' };
@@ -530,6 +546,10 @@ export async function userSendTransfer({ aiPersonId, mode = 'calendar', amount, 
     const userMeta = _userMeta(sdk);
     const aiMeta = _aiMeta(sdk, aiPersonId);
     if (!aiMeta) return { ok: false, error: 'AI 人设不存在' };
+
+    // ★ v1.0 swap 模式可改写盘 sender/senderName
+    const writeSender = (sender === 'ai' || sender === 'user') ? sender : 'user';
+    const writeSenderName = (typeof senderName === 'string' && senderName) ? senderName : userMeta.name;
 
     // 1) 余额检查
     const userBalance = sdk.assetFlow?.getBalance?.('user', userMeta.userId) || 0;
@@ -554,8 +574,8 @@ export async function userSendTransfer({ aiPersonId, mode = 'calendar', amount, 
     try {
         savedMsg = await sdk.chatMessages.add(userMeta.user, aiPersonId, mode, {
             id: msgId,
-            sender: 'user',
-            senderName: userMeta.name,
+            sender: writeSender,
+            senderName: writeSenderName,
             type: 'transfer',
             content: '[转账]',
             transferCard: {
@@ -622,4 +642,125 @@ export async function aiReceiveTransfer({ aiPersonId, mode = 'calendar', msgId, 
     } catch (err) { console.warn('[chat-asset] aiReceiveTransfer update message failed', err); }
 
     return { ok: true, aiBalance: aiFlow?.balance };
+}
+
+// ============================================================
+// ★ v0.79 AI 发朋友圈(由 ai-service.js 解析 [发朋友圈:内容] token 时调用)
+//   流程:
+//     1) 写完整朋友圈原文到 aiPerson.moments[]  (sdk.moments.add)
+//     2) 写一条 type='action_notify' 系统消息(让 AI 知道自己刚发了朋友圈)
+//     3) 后台异步调 LLM 生成概要 → sdk.moments.setSummary 回填
+//        (概要生成失败时 summary 留空,后续可手动重生成或忽略)
+// ============================================================
+
+/**
+ * AI 发朋友圈(AI 在回复中输出 [发朋友圈:内容] 时由 ai-service 解析调用)
+ * @param {object} opts
+ * @param {string} opts.aiPersonId
+ * @param {'calendar'|'story'} [opts.mode='calendar']
+ * @param {string} opts.content   朋友圈正文(必填)
+ * @param {string[]} [opts.images] 真实图片 URL 数组(可选)
+ * @param {string} [opts.location] 位置(可选)
+ * @param {Array} [opts.aiImages] AI 描述图(可选)
+ * @returns {Promise<{ok, moment?, error?}>}
+ */
+export async function aiSendMoment({
+    aiPersonId,
+    mode = 'calendar',
+    content,
+    images,
+    location,
+    aiImages,
+}) {
+    const sdk = await _waitSdk();
+    if (!sdk) return { ok: false, error: 'SDK 未就绪' };
+    if (!aiPersonId) return { ok: false, error: '缺少 aiPersonId' };
+    if (!content || !String(content).trim()) return { ok: false, error: '朋友圈内容为空' };
+
+    const text = String(content).trim();
+
+    // 1) 写完整朋友圈到 aiPerson.moments[](原文 + 空 summary,等后台生成)
+    let moment = null;
+    try {
+        moment = await sdk.moments?.add?.(aiPersonId, {
+            content: text,
+            images: Array.isArray(images) ? images.slice() : [],
+            location: String(location || ''),
+            aiImages: Array.isArray(aiImages) ? aiImages.slice() : [],
+            timestamp: Date.now(),
+        });
+    } catch (err) {
+        console.warn('[chat-asset] aiSendMoment moments.add failed', err);
+    }
+    if (!moment) return { ok: false, error: '写入朋友圈失败' };
+
+    // 2) 写一条 type='action_notify' 系统消息,让 AI 自己看到「我刚发了朋友圈」
+    //    (跟 chat.js 旧版行为对齐,系统消息给当前 AI 作为「我方动态」回执)
+    try {
+        const userMeta = _userMeta(sdk);
+        const aiMeta = _aiMeta(sdk, aiPersonId);
+        await sdk.chatMessages.add(userMeta, aiPersonId, mode, {
+            id: _newMessageId('mnote'),
+            sender: 'ai',
+            type: 'action_notify',
+            content: `[AI 发了一条朋友圈] ${text.slice(0, 60)}${text.length > 60 ? '…' : ''}`,
+            // 用于朋友圈列表页识别「这是 AI 自己发的」回执
+            metadata: { kind: 'moment-self-notify', momentId: moment.id },
+            timestamp: Date.now(),
+        });
+    } catch (err) {
+        console.warn('[chat-asset] aiSendMoment chatMessages.add failed', err);
+    }
+
+    // 3) 后台异步生成概要(不阻塞主流程;失败回退到空 summary)
+    //    概要生成走 ai-service._generateMomentSummary(若提供),或直接 fire-and-forget
+    try {
+        const { _generateMomentSummary } = await import('./ai-service.js');
+        if (typeof _generateMomentSummary === 'function') {
+            // 不 await,后台异步
+            _generateMomentSummary({
+                aiPersonId,
+                momentId: moment.id,
+                content: text,
+                mode,
+            }).catch((err) => {
+                console.warn('[chat-asset] aiSendMoment _generateMomentSummary failed', err);
+            });
+        }
+    } catch (_) {
+        // ai-service.js 没有提供 _generateMomentSummary 是预期行为(本期不实现 AI 概要生成),
+        // summary 留空,prompt 注入只取已有 summary
+    }
+
+    return { ok: true, moment };
+}
+
+/**
+ * 手动重生成某条朋友圈的概要(给 AI 设置页「重新生成概要」按钮调用)
+ * @param {string} aiPersonId
+ * @param {string} momentId
+ * @returns {Promise<{ok, summary?, error?}>}
+ */
+export async function regenerateMomentSummary({ aiPersonId, momentId }) {
+    const sdk = await _waitSdk();
+    if (!sdk) return { ok: false, error: 'SDK 未就绪' };
+    if (!aiPersonId || !momentId) return { ok: false, error: '参数缺失' };
+    const moment = sdk.moments?.get?.(aiPersonId, momentId);
+    if (!moment) return { ok: false, error: '朋友圈不存在' };
+    try {
+        const { _generateMomentSummary } = await import('./ai-service.js');
+        if (typeof _generateMomentSummary !== 'function') {
+            return { ok: false, error: 'AI 概要生成未实现' };
+        }
+        const result = await _generateMomentSummary({
+            aiPersonId,
+            momentId,
+            content: moment.content,
+            mode: 'calendar',
+        });
+        return { ok: true, summary: result?.summary || '' };
+    } catch (err) {
+        console.warn('[chat-asset] regenerateMomentSummary failed', err);
+        return { ok: false, error: err?.message || String(err) };
+    }
 }

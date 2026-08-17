@@ -21,7 +21,6 @@
 
 import {
     DEFAULT_CASE_STATE,
-    getCaseBackground,
     normalizeHex,
 } from './case-state.js';
 
@@ -162,11 +161,6 @@ function applyThemeToCssVars(theme) {
         root.style.setProperty('--status-bar-time-color', theme.statusBarTimeColor);
     } else {
         root.style.removeProperty('--status-bar-time-color');
-    }
-    if (typeof theme?.statusBarSignalColor === 'string' && theme.statusBarSignalColor) {
-        root.style.setProperty('--status-bar-signal-color', theme.statusBarSignalColor);
-    } else {
-        root.style.removeProperty('--status-bar-signal-color');
     }
     if (typeof theme?.statusBarFiveGColor === 'string' && theme.statusBarFiveGColor) {
         root.style.setProperty('--status-bar-fivg-color', theme.statusBarFiveGColor);
@@ -547,7 +541,6 @@ function applyStatusBarConfigTo(target, theme) {
     if (!target) return;
     target.showStatusBar = theme?.showStatusBar !== false;
     target.statusBarTimeColor = (typeof theme?.statusBarTimeColor === 'string') ? theme.statusBarTimeColor : DEFAULT_STATUS_BAR_STATE.statusBarTimeColor;
-    target.statusBarSignalColor = (typeof theme?.statusBarSignalColor === 'string') ? theme.statusBarSignalColor : DEFAULT_STATUS_BAR_STATE.statusBarSignalColor;
     target.statusBarFiveGColor = (typeof theme?.statusBarFiveGColor === 'string') ? theme.statusBarFiveGColor : DEFAULT_STATUS_BAR_STATE.statusBarFiveGColor;
     target.statusBarFiveGLabel = (typeof theme?.statusBarFiveGLabel === 'string' && theme.statusBarFiveGLabel)
         ? theme.statusBarFiveGLabel
@@ -738,9 +731,6 @@ if (typeof window !== 'undefined') {
         // 状态栏细分字段
         if (typeof themeRaw?.statusBarTimeColor === 'string' && themeRaw.statusBarTimeColor) {
             root.style.setProperty('--status-bar-time-color', themeRaw.statusBarTimeColor);
-        }
-        if (typeof themeRaw?.statusBarSignalColor === 'string' && themeRaw.statusBarSignalColor) {
-            root.style.setProperty('--status-bar-signal-color', themeRaw.statusBarSignalColor);
         }
         if (typeof themeRaw?.statusBarFiveGColor === 'string' && themeRaw.statusBarFiveGColor) {
             root.style.setProperty('--status-bar-fivg-color', themeRaw.statusBarFiveGColor);

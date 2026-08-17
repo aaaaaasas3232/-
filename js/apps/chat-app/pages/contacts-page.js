@@ -13,72 +13,29 @@
 import { escapeHtml } from '@/src/core/escape.js';
 import { getChatRecordMode } from '../chat-mode.js';
 import { ensureSdkReadyThenRefresh } from './messages-page.js';
+import { resolveAiAvatar, resolveContactDisplay } from '../aiMeta.js';
+import { SNAIL_EMPTY_SVG } from '../snail-icon.js';
 
 // 默认联系人数据(只在 SDK 完全空时兜底)
-const DEMO_CONTACTS = [
-    {
-        id: 'demo-main-1',
-        type: 'main',
-        name: '示例角色',
-        remark: '示例',
-        personality: '用于演示的占位角色 — 添加新朋友后会看到真实 AI 卡',
-        avatar: null,
-        status: 'online',
-    },
-];
+// ★ v0.80:移除占位联系人(示例角色) — 真实联系人全部走 SDK,没数据就空。
+const DEMO_CONTACTS = [];
 
-// 好友申请数据(演示用)
-const DEMO_PENDING_REQUESTS = [
-    {
-        id: 'req-1',
-        aiId: 'ai-pending-1',
-        aiName: '小明',
-        aiAvatar: null,
-        message: '想和你成为好友~',
-        timestamp: Date.now() - 86400000,
-    },
-];
+// ★ v0.80:移除演示用的好友申请数据 — 真实好友申请全部走 SDK。
+const DEMO_PENDING_REQUESTS = [];
 
-function getAvatarColor(id) {
-    const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F8B500', '#6C5CE7', '#A29BFE'];
-    let index = 0;
-    for (let i = 0; i < id.length; i++) {
-        index += id.charCodeAt(i);
-    }
-    return colors[index % colors.length];
-}
+// ★ v0.71 头像背景色已统一到 aiMeta.resolveAiAvatar,删除本地 getAvatarColor 重复实现
 
 function renderCategoryLabel(type) {
-    const configs = {
-        main: {
-            label: '主角色',
-            icon: '<svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="white"/></svg>',
-            bgClass: 'category-icon--main',
-        },
-        supporting: {
-            label: '配角',
-            icon: '<svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" fill="white"/></svg>',
-            bgClass: 'category-icon--supporting',
-        },
-        npc: {
-            label: 'NPC',
-            icon: '<span class="category-icon-emoji">&#x1F3AD;</span>',
-            bgClass: 'category-icon--npc',
-        },
-    };
-    const cfg = configs[type] || configs.npc;
-    return `
-        <div class="contacts-category-label">
-            <span class="contacts-category-icon ${cfg.bgClass}">
-                ${cfg.icon}
-            </span>
-            <span>${cfg.label}</span>
-        </div>
-    `;
+    // ★ 已删除:通讯录页面不再显示「主角色/配角/NPC」分类标签
+    //   理由:联系人只有"主角色"一类,不需要标签。
+    //   保留这个函数以兼容旧调用,直接返回空字符串。
+    void type;
+    return '';
 }
 
 function renderContactItem(contact, index) {
-    const bgColor = getAvatarColor(contact.id);
+    // ★ v0.71 头像背景:aiMeta.resolveAiAvatar (社媒头像背景) → 缺失用 aiMeta 默认
+    const bgColor = (contact.avatarBg || resolveAiAvatar(contact.id).bg);
     const avatarContent = contact.avatar
         ? `<img src="${escapeHtml(contact.avatar)}" alt="" class="contact-avatar-img">`
         : escapeHtml((contact.name || '?').charAt(0));
@@ -99,7 +56,7 @@ function renderContactItem(contact, index) {
                     ${escapeHtml(contact.name)}
                     ${contact.remark ? `<span class="contact-remark">(${escapeHtml(contact.remark)})</span>` : ''}
                 </div>
-                <div class="contact-signature">${escapeHtml((contact.personality || '暂无个性签名').substring(0, 25))}</div>
+                <div class="contact-signature">${escapeHtml((contact.personality || '暂无个性签名').substring(0, 50))}</div>
             </div>
             <div class="contact-arrow">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -123,7 +80,8 @@ function renderFriendRequestEntry(requests) {
         <div class="friend-request-entry">
             <div class="friend-request-avatar-stack">
                 ${requests.slice(0, 3).map((req) => {
-                    const color = getAvatarColor(req.aiId || req.id);
+                    // ★ v0.71 好友请求头像:aiMeta.resolveAiAvatar 背景
+                    const color = resolveAiAvatar(req.aiId || req.id).bg;
                     return `
                         <div class="friend-request-avatar">
                             ${req.aiAvatar
@@ -151,14 +109,7 @@ function renderFriendRequestEntry(requests) {
 function renderEmptyState() {
     return `
         <div class="contacts-empty">
-            <div class="contacts-empty-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                    <circle cx="9" cy="7" r="4"/>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                </svg>
-            </div>
+            <div class="contacts-empty-icon">${SNAIL_EMPTY_SVG}</div>
             <div class="contacts-empty-title">暂无联系人</div>
             <div class="contacts-empty-sub">在系统配置中添加AI角色</div>
         </div>
@@ -189,26 +140,62 @@ function loadContactsForMode(mode) {
         ? sdk.chatFriends.list(currentUser, mode)
         : [];
 
-    out.contacts = list.map((c) => ({
-        id: c.aiPersonId,                // ★ v0.27:pageId 用 aiPersonId 而非副本 id
-        aiPersonId: c.aiPersonId,
-        recordMode: mode,
-        type: 'main',
-        name: c.displayName || c.aiPersonId,
-        remark: c.recordMode === 'story' ? '故事模式' : '',
-        personality: '',
-        avatar: c.avatar || '',
-        avatarBg: c.avatarBg || '',
-        status: 'online',
-    }));
+    out.contacts = list.map((c) => {
+        // ★ v0.81 使用 resolveContactDisplay 统一获取 AI 的显示信息（包括签名）
+        const display = resolveContactDisplay(c, c.aiPersonId);
+        return {
+            id: c.aiPersonId,                // ★ v0.27:pageId 用 aiPersonId 而非副本 id
+            aiPersonId: c.aiPersonId,
+            recordMode: mode,
+            type: 'main',
+            name: display.nickname,            // 优先备注 > 社媒名 > 副本快照
+            remark: c.remark || (mode === 'story' ? '故事模式' : ''),
+            personality: display.signature || '', // 网络签名显示在个性签名位置
+            avatar: display.avatar,
+            avatarBg: display.avatarBg,
+            status: 'online',
+        };
+    });
 
     if (out.contacts.length === 0) out.contacts = DEMO_CONTACTS;
     return out;
 }
 
-export function renderContactsPage(app) {
+/**
+ * 按关键词过滤联系人(大小写不敏感,匹配 name / remark / aiPersonId)
+ */
+function filterContactsByKeyword(contacts, keyword) {
+    if (!keyword) return contacts;
+    const kw = String(keyword).toLowerCase().trim();
+    if (!kw) return contacts;
+    return contacts.filter((c) => {
+        const hay = [c.name, c.remark, c.aiPersonId, c.id]
+            .filter(Boolean)
+            .map((s) => String(s).toLowerCase())
+            .join(' ');
+        return hay.includes(kw);
+    });
+}
+
+/**
+ * 渲染通讯录空结果(被搜索关键词过滤后没有命中)
+ */
+function renderNoSearchResult(keyword) {
+    return `
+        <div class="contacts-empty contacts-empty--search">
+            <div class="contacts-empty-icon">${SNAIL_EMPTY_SVG}</div>
+            <div class="contacts-empty-title">未找到匹配的联系人</div>
+            <div class="contacts-empty-sub">没有匹配「${escapeHtml(keyword)}」的联系人</div>
+        </div>
+    `;
+}
+
+export function renderContactsPage(app, options = {}) {
     const mode = getChatRecordMode();
-    const { contacts, isEmptyWorld, isEmptySdk } = loadContactsForMode(mode);
+    const { contacts: rawContacts, isEmptyWorld, isEmptySdk } = loadContactsForMode(mode);
+    // ★ 顶栏搜索框关键词:framework 把 input 事件转发到 chat-app 的 onTopbarSearchInput,
+    //   方法把 keyword 写到 app.state.chat.contacts.searchKeyword,这里读取并过滤
+    const searchKeyword = (app?.state?.chat?.contacts?.searchKeyword || '').trim();
 
     if (isEmptySdk) ensureSdkReadyThenRefresh(app);
 
@@ -219,19 +206,17 @@ export function renderContactsPage(app) {
     } else if (isEmptyWorld) {
         bodyHtml = `
             <div class="contacts-empty">
-                <div class="contacts-empty-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <circle cx="12" cy="12" r="10"/>
-                        <line x1="12" y1="8" x2="12" y2="16"/>
-                    </svg>
-                </div>
+                <div class="contacts-empty-icon">${SNAIL_EMPTY_SVG}</div>
                 <div class="contacts-empty-title">默认用户卡未绑定世界观</div>
                 <div class="contacts-empty-sub">请先去「设置 → 人设」给默认用户卡绑定世界观，通讯录才会显示可添加的 AI 人设</div>
             </div>
         `;
     } else {
-        bodyHtml = renderCategoryLabel('main') +
-            contacts.map((c) => renderContactItem(c)).join('');
+        // ★ 已删除:通讯录不再显示「主角色」分类标签,直接渲染联系人列表
+        const filtered = filterContactsByKeyword(rawContacts, searchKeyword);
+        bodyHtml = filtered.length > 0
+            ? filtered.map((c) => renderContactItem(c)).join('')
+            : renderNoSearchResult(searchKeyword || rawContacts[0]?.name || '');
     }
 
     return `

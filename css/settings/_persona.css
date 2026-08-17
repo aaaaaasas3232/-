@@ -30,6 +30,7 @@
     font-weight: 700;
     flex-shrink: 0;
     letter-spacing: -0.01em;
+    overflow: hidden;
 }
 
 .persona-overview__body {
@@ -215,8 +216,9 @@
 }
 
 .persona-btn--ghost {
-    background: rgba(10, 132, 255, 0.1);
+    background: #FFFFFF;
     color: #0A84FF;
+    border: 1px solid #0A84FF;
 }
 
 .persona-btn--danger {
@@ -310,6 +312,7 @@
     font-weight: 700;
     flex-shrink: 0;
     letter-spacing: -0.01em;
+    overflow: hidden;
 }
 
 .persona-card__name {

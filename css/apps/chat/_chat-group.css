@@ -115,7 +115,8 @@
     margin: 0;
 }
 
-.app-shell[data-app-id="chat"] .chat-group .chat-header-status {
+/* ★ chat-group 群聊页「长按发送触发回复」提示(原 chat-header-status → chat-header-subtitle) */
+.app-shell[data-app-id="chat"] .chat-group .chat-header-subtitle {
     font-size: 11px;
     color: #FF9500;
 }
@@ -147,51 +148,98 @@
     font-weight: 500;
 }
 
-/* ---- 群聊工具栏 ---- */
-.app-shell[data-app-id="chat"] .chat-group .group-toolbar-grid {
+/* ---- 群聊工具栏 — 与私聊对齐(2 行 × 4 列 + 左右翻页) ---- */
+.app-shell[data-app-id="chat"] .chat-group .toolbar-pages {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+}
+.app-shell[data-app-id="chat"] .chat-group .toolbar-page {
+    display: none;
+    width: 100%;
+}
+.app-shell[data-app-id="chat"] .chat-group .toolbar-page--active {
+    display: block;
+}
+.app-shell[data-app-id="chat"] .chat-group .toolbar-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 8px;
+}
+.app-shell[data-app-id="chat"] .chat-group .toolbar-page-indicator {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    height: 12px;
+}
+.app-shell[data-app-id="chat"] .chat-group .toolbar-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #C7CCD1;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+.app-shell[data-app-id="chat"] .chat-group .toolbar-dot--active {
+    background: #4A6FA5;
+    width: 16px;
+    border-radius: 3px;
+}
+.app-shell[data-app-id="chat"] .chat-group .toolbar-btn--placeholder {
+    background: transparent !important;
+    cursor: default !important;
+    pointer-events: none;
+    padding: 0 !important;
 }
 
-.app-shell[data-app-id="chat"] .chat-group .group-toolbar-btn {
+/* 沿用私聊的 .toolbar-btn 样式(已通过 chat-input.css 选择器自动应用到 .chat-group) */
+.app-shell[data-app-id="chat"] .chat-group .toolbar-btn {
     background: #F0F2F5;
     border: none;
-    padding: 12px 8px;
+    padding: 10px 6px;
     border-radius: 10px;
     cursor: pointer;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     transition: all 0.2s;
 }
-
-.app-shell[data-app-id="chat"] .chat-group .group-toolbar-btn:hover {
+.app-shell[data-app-id="chat"] .chat-group .toolbar-btn:hover {
     background: #E4E8ED;
 }
-
-.app-shell[data-app-id="chat"] .chat-group .group-toolbar-btn:active {
+.app-shell[data-app-id="chat"] .chat-group .toolbar-btn:active {
     transform: scale(0.95);
 }
-
-.app-shell[data-app-id="chat"] .chat-group .group-toolbar-btn-icon {
-    width: 36px;
-    height: 36px;
+.app-shell[data-app-id="chat"] .chat-group .toolbar-btn-icon {
+    width: 32px;
+    height: 32px;
     border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
+    background: transparent;
 }
-
-.app-shell[data-app-id="chat"] .chat-group .group-toolbar-btn-icon svg {
-    width: 18px;
-    height: 18px;
+.app-shell[data-app-id="chat"] .chat-group .toolbar-btn-icon svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: #2C4A7A;
+    color: #2C4A7A;
+    stroke-width: 2;
 }
-
-.app-shell[data-app-id="chat"] .chat-group .group-toolbar-btn-label {
+.app-shell[data-app-id="chat"] .chat-group .toolbar-btn-label {
     font-size: 10px;
-    color: #5A6B7D;
+    color: #2C4A7A;
+    font-weight: 500;
+}
+
+/* ---- 旧 .group-toolbar-grid 兼容(避免遗留样式冲突) ---- */
+.app-shell[data-app-id="chat"] .chat-group .group-toolbar-grid {
+    display: none; /* 已切到 .toolbar-grid */
 }
 
 /* ---- 群聊发送按钮样式 ---- */

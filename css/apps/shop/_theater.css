@@ -1,0 +1,141 @@
+/* 四叶草 · 小剧场
+ *
+ * 台词的排版刻意像剧本而不像聊天：说话人在左边一列、台词在右边。
+ * 聊天气泡那种形态会让人期待「能回复」，而这是已经演完的一段 ——
+ * 用户在这里的动作是**改**，不是**说**。
+ */
+
+.app-shell[data-app-id="shop"] .sp-theater__title {
+    width: 100%;
+    padding: 4px 0 6px;
+    border: 0;
+    border-bottom: 1px dashed transparent;
+    background: transparent;
+    color: var(--sp-text);
+    font-size: 20px;
+    font-weight: 640;
+    font-family: inherit;
+    outline: none;
+}
+.app-shell[data-app-id="shop"] .sp-theater__title:focus { border-bottom-color: var(--sp-line-strong); }
+
+.app-shell[data-app-id="shop"] .sp-theater__meta {
+    margin: 0 0 18px;
+    font-size: 11.5px;
+    color: var(--sp-text-3);
+}
+
+.app-shell[data-app-id="shop"] .sp-scene { margin-bottom: 22px; }
+
+.app-shell[data-app-id="shop"] .sp-scene__head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 7px;
+}
+
+.app-shell[data-app-id="shop"] .sp-scene__no {
+    padding: 1px 7px;
+    border-radius: 5px;
+    background: var(--sp-primary-soft);
+    color: var(--sp-primary-strong);
+    font-size: 10.5px;
+    font-weight: 600;
+}
+
+.app-shell[data-app-id="shop"] .sp-scene__place { font-size: 12px; color: var(--sp-text-3); }
+
+.app-shell[data-app-id="shop"] .sp-scene__narration {
+    width: 100%;
+    padding: 9px 12px;
+    margin-bottom: 10px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: var(--sp-surface-2);
+    color: var(--sp-text-2);
+    font-size: 12.5px;
+    font-family: inherit;
+    font-style: italic;
+    line-height: 1.75;
+    resize: none;
+    outline: none;
+}
+.app-shell[data-app-id="shop"] .sp-scene__narration:focus { border-color: var(--sp-primary); background: var(--sp-surface); }
+
+.app-shell[data-app-id="shop"] .sp-lines { display: grid; gap: 9px; }
+
+.app-shell[data-app-id="shop"] .sp-line {
+    display: grid;
+    grid-template-columns: 58px 1fr auto;
+    align-items: start;
+    gap: 9px;
+}
+
+.app-shell[data-app-id="shop"] .sp-line__who {
+    padding-top: 2px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--sp-primary-strong);
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="shop"] .sp-line__text {
+    margin: 0;
+    padding: 2px 4px;
+    border-radius: 7px;
+    font-size: 13.5px;
+    line-height: 1.75;
+    color: var(--sp-text);
+    cursor: text;
+    transition: background 0.15s ease;
+}
+.app-shell[data-app-id="shop"] .sp-line__text:active { background: var(--sp-surface-2); }
+
+.app-shell[data-app-id="shop"] .sp-line__edit {
+    width: 100%;
+    padding: 5px 8px;
+    border: 1px solid var(--sp-primary);
+    border-radius: 8px;
+    background: var(--sp-surface);
+    color: var(--sp-text);
+    font-size: 13.5px;
+    font-family: inherit;
+    line-height: 1.7;
+    resize: none;
+    outline: none;
+}
+
+.app-shell[data-app-id="shop"] .sp-line__x {
+    border: 0;
+    background: none;
+    padding: 2px 4px;
+    color: var(--sp-text-3);
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+    opacity: 0.5;
+}
+.app-shell[data-app-id="shop"] .sp-line__x:active { opacity: 1; color: var(--sp-danger); }
+
+.app-shell[data-app-id="shop"] .sp-theater__closing {
+    margin: 0 0 22px;
+    padding: 12px 14px;
+    border-left: 2px solid var(--sp-accent);
+    border-radius: 0 10px 10px 0;
+    background: var(--sp-accent-soft);
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--sp-text-2);
+}
+
+.app-shell[data-app-id="shop"] .sp-theater__summary {
+    margin: 0;
+    padding: 11px 13px;
+    border-radius: 10px;
+    background: var(--sp-surface-2);
+    font-size: 12.5px;
+    line-height: 1.75;
+    color: var(--sp-text-2);
+}

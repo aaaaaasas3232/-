@@ -110,17 +110,9 @@ async function _callAiRawOnce({ apiKey, systemPrompt, userPrompt, maxTokens = 80
     const isAnthropic = apiKey.provider === 'anthropic';
     const endpoint = isAnthropic ? 'messages' : 'chat/completions';
     const baseUrl = (apiKey.baseUrl || 'https://api.openai.com/v1').replace(/\/$/, '');
-    const url = `${baseUrl}/${endpoint}`;
-    const headers = { 'Content-Type': 'application/json' };
     if (isAnthropic) {
-        headers['x-api-key'] = apiKey.apiKey;
-        headers['anthropic-version'] = '2023-06-01';
         body.max_tokens = Math.max(maxTokens, 1024);
         body.messages = [{ role: 'user', content: `${systemPrompt}\n\n${userPrompt}` }];
-    } else if (apiKey.provider === 'gemini') {
-        headers['x-goog-api-key'] = apiKey.apiKey;
-    } else {
-        headers['Authorization'] = `Bearer ${apiKey.apiKey}`;
     }
 
     console.log('[space-ai] callAiRaw start', {
@@ -131,38 +123,37 @@ async function _callAiRawOnce({ apiKey, systemPrompt, userPrompt, maxTokens = 80
         promptChars: String(userPrompt || '').length + String(systemPrompt || '').length,
     });
 
-    let response;
+    let apiResult;
     try {
-        response = await fetch(url, {
+        const apiSdk = getApiSdk();
+        if (typeof apiSdk?.executeApiRequest !== 'function') {
+            throw new Error('API 执行器未就绪');
+        }
+        apiResult = await apiSdk.executeApiRequest({
+            apiKeyId: apiKey.id,
+            endpoint,
             method: 'POST',
-            headers,
-            body: JSON.stringify(body),
+            body,
+            timeout: (apiKey.timeout || 60) * 1000,
+            source: 'settings',
+            note: '人设空间生成',
         });
     } catch (networkErr) {
-        console.error('[space-ai] callAiRaw fetch 失败', networkErr);
+        console.error('[space-ai] callAiRaw 请求失败', networkErr);
         throw new Error(`网络错误: ${networkErr?.message || String(networkErr)}`);
     }
 
-    if (!response.ok) {
-        const txt = await response.text().catch(() => '');
+    if (!apiResult?.success) {
         console.error('[space-ai] callAiRaw HTTP 非 2xx', {
-            status: response.status,
-            statusText: response.statusText,
-            bodyPreview: txt.slice(0, 400),
+            status: apiResult?.statusCode || 0,
+            error: apiResult?.error || '',
         });
-        throw new Error(`API 请求失败 (${response.status}): ${txt.slice(0, 200)}`);
+        throw new Error(`API 请求失败 (${apiResult?.statusCode || 0}): ${String(apiResult?.error || '').slice(0, 200)}`);
     }
 
-    let result;
-    try {
-        result = await response.json();
-    } catch (jsonErr) {
-        const rawText = await response.text().catch(() => '');
-        console.error('[space-ai] callAiRaw JSON 解析失败', {
-            err: jsonErr?.message,
-            rawTextPreview: rawText.slice(0, 400),
-        });
-        throw new Error(`API 返回非 JSON: ${(rawText || '').slice(0, 120)}`);
+    const result = apiResult.data;
+    if (!result || typeof result !== 'object') {
+        throw new Error(`API 返回非 JSON: ${String(result || '').slice(0, 120)}`);
     }
 
     let content = '';
@@ -182,7 +173,7 @@ async function _callAiRawOnce({ apiKey, systemPrompt, userPrompt, maxTokens = 80
     const usage = result?.usage || result?.usage_metadata || null;
     const topError = result?.error?.message || result?.error || null;
     console.log('[space-ai] callAiRaw done', {
-        status: response.status,
+        status: apiResult.statusCode,
         contentLength: String(content || '').length,
         finishReason,
         usage,

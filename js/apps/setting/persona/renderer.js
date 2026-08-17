@@ -28,14 +28,12 @@
  */
 
 import { escapeHtml } from '@/src/core/escape.js';
-import { renderGroup, renderRow, renderSwitch } from '../ui-components.js';
-import { T } from '../tokens.js';
 import {
     getPersonaGroups,
     VISIBILITY,
-    parseFieldValue,
     MBTI_OPTIONS,
 } from '../world/sdk/profile-schema.js';
+import { renderPersonaAvatarContent } from './avatar.js';
 import { renderResourcesSectionSync } from './resources-section.js';
 
 /**
@@ -93,7 +91,8 @@ function fieldDisplayValue(field, raw) {
 function readField(persona, fieldKey, groupKey) {
     if (!persona) return null;
     // 如果 groupKey 存在且是一个模块，则从嵌套对象读取
-    if (groupKey && groupKey !== 'meta' && persona[groupKey] && typeof persona[groupKey] === 'object') {
+    if (groupKey && groupKey !== 'base' && groupKey !== 'meta'
+        && persona[groupKey] && typeof persona[groupKey] === 'object') {
         return persona[groupKey][fieldKey];
     }
     return persona[fieldKey];
@@ -279,7 +278,7 @@ export function renderPersonaGroup(group, persona, entityType, profileLevel = 'd
     }
     const visibleFields = group.fields.filter(f => isFieldVisibleInMode(f, profileLevel));
     const fieldsHtml = visibleFields.map(field =>
-        renderField(field, readField(persona, field.key), { entityType, groupKey: group.key })
+        renderField(field, readField(persona, field.key, group.key), { entityType, groupKey: group.key })
     ).join('');
 
     // 顶部 toggle 行：始终可点
@@ -335,7 +334,6 @@ function getVariantCards(persona, entityType, variantType) {
 function renderVariantCard(card, source, entityType, variantType, app) {
     const sdk = window.settingsSdk;
     const isPhase = variantType === 'lifePhase';
-    const initial = (card.name || card.id || '?').trim().charAt(0).toUpperCase();
     const phase = card.phaseMeta || {};
     const age = (phase.age ?? card.age);
     const phaseLabel = isPhase && phase.name ? phase.name : '';
@@ -358,7 +356,7 @@ function renderVariantCard(card, source, entityType, variantType, app) {
         <div class="persona-card persona-variant-card persona-variant-card--${isPhase ? 'phase' : 'paro'} ${isActive ? 'is-active' : ''} ${isPressed ? 'is-pressed' : ''}" data-variant-edit-id="${escapeHtml(variantKey)}">
             <div class="persona-card__main persona-variant-card__main">
                 <div class="persona-card__head">
-                    <div class="persona-card__avatar">${escapeHtml(initial)}</div>
+                    <div class="persona-card__avatar">${renderPersonaAvatarContent(card)}</div>
                     <div class="persona-card__name">${escapeHtml(card.name || card.id)}</div>
                 </div>
                 <div class="persona-card__meta">${meta}</div>

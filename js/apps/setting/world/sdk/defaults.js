@@ -28,11 +28,16 @@ export const DEFAULT_WORLD_INSTANCE = Object.freeze({
     id: 'world0',
     name: '默认世界观',
     summary: '一个待补充的世界观。先写一句话主旨，再用要点列出设定。',
+    // 专属体验模式：决定桌面 App 可见性与默认职业，不再靠各 App 猜标签。
+    experienceMode: 'general',
     keyPoints: [],
     timeline: '',
     notes: '',
     tagRefs: [],
     locations: [],
+    // 地点地图背景（世界级，例如中国地图）；各地点自己的 mapImageUrl
+    // 用作场所地图背景（地区级，例如浙江地图）。
+    mapImageUrl: '',
 
     // 时间线 + 锚点
     timelines: {
@@ -72,6 +77,19 @@ export const DEFAULT_WORLD_INSTANCE = Object.freeze({
         // 日期录入时哪些周期字段可见（默认全部显示）。
         //   v0.17：仅剩 year / month / day
         dateFieldVisibility: { year: true, month: true, day: true },
+
+        // ── 时差系统（2026-08-13 新增）────────────────────────────
+        // 和上面的「纪时映射」是**两套并行**的东西，不要混：
+        //   · 纪时映射（enabled）：用户和 AI 在**两个不同的世界**，
+        //     时间单位本身就不一样（12:33 → 辰时）。
+        //   · 时差（timeOffsetEnabled）：用户和 AI 在**同一个世界的不同地区**，
+        //     单位一样，只是钟点差几个小时（东都 9:00 = 西陆 3:00）。
+        // 两个都开时，先算时差再套纪时（时差是「几点」，纪时是「怎么叫」）。
+        timeOffsetEnabled: false,
+        userRegionName: '',        // 用户所在地区名（如「东都」）
+        userOffsetHours: 0,        // 用户相对世界标准时的偏移（小时，可负、可 0.5）
+        aiRegionName: '',          // AI 默认所在地区名（如「西陆」）
+        aiOffsetHours: 0,          // AI 相对世界标准时的偏移
     },
 
     holidays: [],

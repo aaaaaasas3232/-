@@ -18,7 +18,6 @@ import {
     getCurrentPhase,
     getCurrentLocationBySchedule,
     isSleepPhase,
-    frequencyToLabel,
     validateScheduleAgainstRhythm,
     validateScheduleAgainstWeekly,
 } from './space-sdk.js';

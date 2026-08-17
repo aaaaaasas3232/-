@@ -280,6 +280,70 @@
 .settings-app .wv-map__pin-dist { color: var(--settings-color-tertiary); font-size: 9px; }
 .settings-app .wv-map__pin.is-center .wv-map__pin-dist { color: rgba(255,255,255,0.85); }
 
+/* 新地标：描边圆球 + 旁边描边词，互不包裹 */
+.settings-app .wv-map__mark {
+    position: absolute;
+    transform: translate(-50%, -50%) scale(var(--pin-scale, 1));
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    z-index: 2;
+    max-width: none;
+}
+.settings-app .wv-map__orb {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--mark-bg, #E8F1FF);
+    border: 1.5px solid var(--mark-stroke, #0A84FF);
+    color: var(--mark-stroke, #0A84FF);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 1px 3px rgba(10, 132, 255, 0.18);
+}
+.settings-app .wv-map__orb svg {
+    width: 12px;
+    height: 12px;
+    display: block;
+}
+.settings-app .wv-map__word {
+    font-size: 11px;
+    font-weight: 650;
+    letter-spacing: 0.02em;
+    color: #1d1d1f;
+    -webkit-text-stroke: 0.55px #ffffff;
+    paint-order: stroke fill;
+    text-shadow: 0 0 2px #fff, 0 1px 0 #fff;
+    white-space: nowrap;
+}
+.settings-app .wv-map__mark.is-center .wv-map__orb {
+    box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.18);
+}
+.settings-app .wv-map__mark.is-restricted .wv-map__orb {
+    --mark-stroke: #FF3B30;
+}
+.settings-app .wv-place-item__icon--orb {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--mark-bg, #E8F1FF);
+    border: 1.5px solid #0A84FF;
+    color: #0A84FF;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.settings-app .wv-place-item__icon--orb svg {
+    width: 12px;
+    height: 12px;
+}
+
 /* 天气 badge */
 .settings-app .wv-map__pin-weather {
     font-size: 9px;

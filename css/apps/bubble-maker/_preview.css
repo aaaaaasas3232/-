@@ -1,0 +1,92 @@
+/**
+ * 气泡机 · 预览台
+ *
+ * 常驻在顶栏下方,不随分档切走 —— 调颜色时看不到气泡等于闭着眼睛调。
+ * 底纹只是给半透明气泡一个参照,不进任何存档。
+ *
+ * ★ 这里**不能**给气泡容器加 `overflow: hidden`:尾巴是绝对定位、
+ *   故意露在气泡外面的,裁掉就全没了。
+ */
+
+.app-shell[data-app-id="bubble-maker"] .bb-preview {
+    flex: 0 0 auto;
+    padding: 12px 14px 0;
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-preview-stage {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 14px;
+    min-height: 132px;
+    padding: 18px 16px;
+    border: 1px solid var(--bb-border);
+    border-radius: var(--bb-r-xl);
+    background: var(--bb-stage-bg);
+}
+
+/* 四种底纹。都是纯色或重复图案,没有渐变 */
+.app-shell[data-app-id="bubble-maker"] .bb-preview-stage[data-backdrop="paper"] {
+    background: var(--bb-stage-bg);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-preview-stage[data-backdrop="sky"] {
+    background-color: #DCEAF4;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-preview-stage[data-backdrop="dusk"] {
+    background-color: #46404E;
+}
+.app-shell[data-app-id="bubble-maker"] .bb-preview-stage[data-backdrop="grid"] {
+    background-color: var(--bb-surface);
+    background-image:
+        linear-gradient(var(--bb-stage-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--bb-stage-line) 1px, transparent 1px);
+    background-size: 14px 14px;
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-preview-row {
+    display: flex;
+    transition: opacity 0.2s var(--bb-ease);
+}
+/* 对面那一条压暗一点,免得抢走注意力 */
+.app-shell[data-app-id="bubble-maker"] .bb-preview-row.is-dim { opacity: 0.55; }
+
+.app-shell[data-app-id="bubble-maker"] .bb-preview-row .bubble-view {
+    width: 100%;
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-preview-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 2px 0;
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-preview-backdrops {
+    display: flex;
+    gap: 6px;
+}
+
+.app-shell[data-app-id="bubble-maker"] .bb-backdrop-dot {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: 2px solid var(--bb-border);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.16s var(--bb-bounce), border-color 0.16s var(--bb-ease);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-backdrop-dot:active { transform: scale(0.88); }
+.app-shell[data-app-id="bubble-maker"] .bb-backdrop-dot.is-active {
+    border-color: var(--bb-primary);
+    transform: scale(1.12);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-backdrop-dot[data-backdrop="paper"] { background: #F3F1EF; }
+.app-shell[data-app-id="bubble-maker"] .bb-backdrop-dot[data-backdrop="sky"] { background: #DCEAF4; }
+.app-shell[data-app-id="bubble-maker"] .bb-backdrop-dot[data-backdrop="dusk"] { background: #46404E; }
+.app-shell[data-app-id="bubble-maker"] .bb-backdrop-dot[data-backdrop="grid"] { background: #FFFFFF; }
+
+.app-shell[data-app-id="bubble-maker"] .bb-preview-tools {
+    display: flex;
+    gap: 6px;
+}

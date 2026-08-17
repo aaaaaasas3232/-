@@ -20,7 +20,14 @@
  *   - type='call_system', sender='system', isSystemDesc=true, content='[环境描述]'
  */
 
-import { escapeHtml } from '@/src/core/escape.js';
+import { readContextPreview } from './context-preview.js';
+
+async function _executeManagedApi(options) {
+    const execute = window.__apiSdk?.executeApiRequest
+        || (await import('../../setting/api-manager/api-key-sdk.js')).executeApiRequest;
+    if (typeof execute !== 'function') throw new Error('API 执行器未就绪');
+    return execute(options);
+}
 
 // ============================================
 // 状态常量
@@ -49,6 +56,29 @@ function _emit() {
     for (const cb of _listeners) {
         try { cb(_state); } catch (err) { console.warn('[call-manager] listener failed', err); }
     }
+}
+
+/**
+ * ★ v0.68 联动 context-mode —— 通话状态切换时同步更新全局上下文模式
+ *   - 通话中 → voice / video
+ *   - 通话结束(挂断/未接通) → 回到 chat
+ */
+function _syncContextMode(callType) {
+    try {
+        if (typeof window.__chatContextMode?.setMode === 'function') {
+            // callType: 'voice' | 'video' | 'game' | 'chat' | 其他
+            // ★ 兜底:未知 mode 时不切(避免静默切错),但保证 cache 至少是 chat
+            const target = ['voice', 'video', 'game'].includes(callType) ? callType : 'chat';
+            window.__chatContextMode.setMode(target);
+        }
+    } catch (_) {}
+}
+function _syncContextModeBack() {
+    try {
+        if (typeof window.__chatContextMode?.forceMode === 'function') {
+            window.__chatContextMode.forceMode('chat');
+        }
+    } catch (_) {}
 }
 
 function _newId(prefix = 'call') {
@@ -137,6 +167,8 @@ export const callManager = {
             messages: [],
         };
         _emit();
+        // ★ v0.68 切换上下文模式
+        _syncContextMode(callType);
 
         // 模拟 1.5 秒后接通
         setTimeout(() => {
@@ -144,6 +176,22 @@ export const callManager = {
                 _state.state = CALL_STATE.CONNECTED;
                 _state.connectTime = Date.now();
                 _emit();
+                // ★ v0.68 控制台打印:通话接通时的 AI 上下文模式 + 当前 mode prompt
+                try {
+                    const cm = window.__chatContextMode;
+                    const payload = {
+                        aiPersonId: _state.aiPersonId,
+                        callType: _state.callType,
+                        mode: _state.mode,
+                        isIncoming: _state.isIncoming,
+                        currentMode: cm?.getCurrentMode?.(),
+                        modePromptText: cm?.getCurrentModePrompt?.() || null,
+                        modeAllowed: cm?.isCurrentModeAllowed?.() ?? null,
+                    };
+                    console.log('[CALL-CONNECTED] ====== START ======');
+                    console.log('[CALL-CONNECTED]', payload);
+                    console.log('[CALL-CONNECTED] ====== END ======');
+                } catch (_) {}
             }
         }, 1500);
 
@@ -158,6 +206,24 @@ export const callManager = {
         _state.state = CALL_STATE.CONNECTED;
         _state.connectTime = Date.now();
         _emit();
+        // ★ v0.68 上下文模式保持 video/voice
+        _syncContextMode(_state.callType);
+        // ★ v0.68 控制台打印:接通时的 AI 上下文
+        try {
+            const cm = window.__chatContextMode;
+            const payload = {
+                aiPersonId: _state.aiPersonId,
+                callType: _state.callType,
+                mode: _state.mode,
+                isIncoming: _state.isIncoming,
+                currentMode: cm?.getCurrentMode?.(),
+                modePromptText: cm?.getCurrentModePrompt?.() || null,
+                modeAllowed: cm?.isCurrentModeAllowed?.() ?? null,
+            };
+            console.log('[CALL-CONNECTED] ====== START ======');
+            console.log('[CALL-CONNECTED]', payload);
+            console.log('[CALL-CONNECTED] ====== END ======');
+        } catch (_) {}
         return true;
     },
 
@@ -169,6 +235,8 @@ export const callManager = {
         _state.state = CALL_STATE.IDLE;
         _state.endTime = Date.now();
         _emit();
+        // ★ v0.68 切回 chat
+        _syncContextModeBack();
         return true;
     },
 
@@ -205,6 +273,8 @@ export const callManager = {
                 _state.state = CALL_STATE.IDLE;
                 _state.endTime = Date.now();
                 _emit();
+                // ★ v0.68 切回 chat
+                _syncContextModeBack();
                 // 灵动岛提示
                 if (window.__phoneIsland?.notify) {
                     window.__phoneIsland.notify('info', '来电已挂断', aiMeta.name);
@@ -301,34 +371,64 @@ export const callManager = {
         // 合并
         const recentMessages = [...chatHistory, ...callMsgs];
 
-        // 拼 systemPrompt(走 prompt-builder)
-        let systemPrompt = '';
+        // 读取 prompt-manager 已经生成好的最终 pre。
+        // context-mode 切换时会更新 pre 中那张「当前模式」卡，但不会额外拼接任何文本。
+        // 先无头重跑一次拼装：通话经常是用户没进过「回复提示词」页就直接拨的，
+        // 不刷新的话下面会直接 return（"当前上下文尚未生成"），整通电话 AI 都不说话。
         try {
-            const builder = window.__chatPromptBuilder;
-            if (builder && typeof builder.build === 'function') {
-                const buildRes = await builder.build({
-                    aiPersonId: _state.aiPersonId,
-                    mode: _state.mode,
-                    historyLimit: 8,
-                    callContext: {
-                        callType: _state.callType,
-                        callTypeName,
-                        isIncoming: _state.isIncoming,
-                    },
-                });
-                systemPrompt = buildRes?.systemPrompt || '';
-                if (_state.callType === 'video') {
-                    systemPrompt += `\n\n【当前状态】你正在和用户进行${callTypeName}。回复请简短口语化,1-3 句话。如果想描述环境,请用括号标注,如(背景是咖啡厅)。`;
-                } else {
-                    systemPrompt += `\n\n【当前状态】你正在和用户进行${callTypeName}。回复请简短口语化,1-3 句话。如果想描述声音环境,请用括号标注,如(声音有些沙哑)。`;
-                }
-            } else {
-                systemPrompt = `你是${aiName},正在和用户${callTypeName}。请简短回复,1-3 句话。`;
-            }
+            await window.__chatRefreshContextPreview?.({
+                aiPersonId: _state.aiPersonId,
+                mode: _state.mode,
+            });
+        } catch (_) { /* 刷新失败就用缓存那份 */ }
+
+        let systemPrompt = '';
+        let promptSource = '';
+        try {
+            systemPrompt = readContextPreview({
+                aiPersonId: _state.aiPersonId,
+                mode: _state.mode,
+            }) || '';
+            promptSource = 'prompt-manager-pre';
         } catch (err) {
-            console.warn('[call-manager] build prompt failed', err);
-            systemPrompt = `你是${aiName},正在和用户${callTypeName}。请简短回复。`;
+            console.warn('[call-manager] read context preview failed', err);
         }
+
+        // 没有 pre 就不调用 AI；禁止临时伪造另一份 systemPrompt。
+        if (!systemPrompt) {
+            console.warn('[call-manager] prompt-manager pre is empty, skip AI request');
+            try {
+                window.__phoneIsland?.notify?.(
+                    'warning',
+                    '当前上下文尚未生成',
+                    '请先打开回复提示词页面确认 pre 内容',
+                );
+            } catch (_) {}
+            return;
+        }
+
+        // ★ v0.70 控制台完整打印 systemPrompt(跟 ai-service.js 的 fullContext 日志对齐)
+        try {
+            console.log('[CALL-AI-CONTEXT] ====== START ======');
+            console.log('[CALL-AI-CONTEXT] systemPrompt ====== START ======');
+            console.log(systemPrompt);
+            console.log('[CALL-AI-CONTEXT] systemPrompt ====== END (length=' + systemPrompt.length + ') ======');
+            console.log('[CALL-AI-CONTEXT] fullContext ====== START ======');
+            console.log({
+                aiPersonId: _state.aiPersonId,
+                aiName,
+                callType: _state.callType,
+                callTypeName,
+                isIncoming: _state.isIncoming,
+                currentMode: window.__chatContextMode?.getCurrentMode?.(),
+                promptSource,
+                systemPromptLength: systemPrompt.length,
+                recentMessagesCount: recentMessages.length,
+                recentMessages: recentMessages.slice(-6),
+            });
+            console.log('[CALL-AI-CONTEXT] fullContext ====== END ======');
+            console.log('[CALL-AI-CONTEXT] ====== END ======');
+        } catch (_) {}
 
         // 找 API key
         const apiSdk = window.__apiSdk;
@@ -347,40 +447,42 @@ export const callManager = {
             return;
         }
 
-        // 调 API
-        let resp;
+        // 统一走 API 管理执行器：认证、代理、分组策略与调用统计都由这里处理。
+        let apiResult;
         try {
-            resp = await fetch(enabledKey.baseUrl + '/chat/completions', {
+            apiResult = await _executeManagedApi({
+                apiKeyId: enabledKey.id,
+                endpoint: 'chat/completions',
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${enabledKey.apiKey}`,
-                },
-                body: JSON.stringify({
-                    model: enabledKey.model,
+                body: {
                     messages: [
                         { role: 'system', content: systemPrompt },
                         ...recentMessages,
                     ],
                     max_tokens: 200,
                     temperature: 0.85,
-                }),
-                signal: AbortSignal.timeout((enabledKey.timeout || 30) * 1000),
+                },
+                timeout: (enabledKey.timeout || 30) * 1000,
+                source: 'chat-app',
+                note: '通话回复',
             });
         } catch (err) {
-            console.warn('[call-manager] fetch failed', err);
+            console.warn('[call-manager] API request failed', err);
             this._addCallAIMessage('嗯,这边信号不太好~');
             return;
         }
 
-        if (!resp.ok) {
+        if (!apiResult?.success) {
             this._addCallAIMessage('嗯,稍等一下~');
             return;
         }
 
         try {
-            const data = await resp.json();
-            let reply = data?.choices?.[0]?.message?.content || '';
+            const data = apiResult.data;
+            let reply = data?.choices?.[0]?.message?.content
+                || data?.content?.[0]?.text
+                || data?.candidates?.[0]?.content?.parts?.[0]?.text
+                || '';
             // 去掉特殊标记
             reply = reply.replace(/\[通话中\]/g, '').replace(/\[.*?\]/g, '').trim();
             // 截断过长
@@ -526,6 +628,8 @@ export const callManager = {
             endTime: Date.now(),
             messages: [],
         };
+        // ★ v0.68 切回 chat
+        _syncContextModeBack();
         _emit();
 
         return { ok: true, ...snapshot };
@@ -559,26 +663,32 @@ export const callManager = {
         const summaryPrompt = `请用 50 字以内概括以下${callTypeName}的主要内容,直接输出概括,不要任何前缀:\n\n${dialogText}`;
 
         try {
-            const resp = await fetch(enabledKey.baseUrl + '/chat/completions', {
+            const apiResult = await _executeManagedApi({
+                apiKeyId: enabledKey.id,
+                endpoint: 'chat/completions',
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${enabledKey.apiKey}`,
-                },
-                body: JSON.stringify({
-                    model: enabledKey.model,
+                body: {
                     messages: [
                         { role: 'system', content: '你是一个简洁的对话概要助手。' },
                         { role: 'user', content: summaryPrompt },
                     ],
                     max_tokens: 120,
                     temperature: 0.5,
-                }),
-                signal: AbortSignal.timeout((enabledKey.timeout || 30) * 1000),
+                },
+                timeout: (enabledKey.timeout || 30) * 1000,
+                source: 'chat-app',
+                note: '通话概要',
             });
-            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-            const data = await resp.json();
-            let summary = (data?.choices?.[0]?.message?.content || '').trim();
+            if (!apiResult?.success) {
+                throw new Error(apiResult?.error || `HTTP ${apiResult?.statusCode || 0}`);
+            }
+            const data = apiResult.data;
+            let summary = (
+                data?.choices?.[0]?.message?.content
+                || data?.content?.[0]?.text
+                || data?.candidates?.[0]?.content?.parts?.[0]?.text
+                || ''
+            ).trim();
             if (summary.length > 60) summary = summary.slice(0, 57) + '...';
             if (!summary) throw new Error('empty summary');
 

@@ -1,10 +1,15 @@
-/**
+/* ============================================
  * chat-app / 通话页面样式
  *
- * Phase 11 UI 复原
+ * 风格:跟收藏页（favorites-page）对齐的浅色风格
+ *   - 语音通话 → 浅蓝→浅粉→白 渐变（跟收藏页一致）
+ *   - 视频通话 → 浅粉→白 渐变（跟视频通话收藏卡片一致）
+ *   - 控件白色磨砂 + 浅边框（跟收藏页卡片一致）
+ *   - 文字深色（不是白色）
  *
- * 全屏深色渐变背景 + 精致通话界面
- */
+ * 注意：通话记录/视频记录详情页(call-record-detail) 不受此影响
+ *       —— 那两个页面已经是浅色风格，跟收藏页对齐
+ * ============================================ */
 
 /* ========== 通话页面容器 ========== */
 .app-shell[data-app-id="chat"] .call-page {
@@ -17,9 +22,16 @@
     flex-direction: column;
     z-index: 1000;
     overflow: hidden;
+    /* ★ 跟收藏页同款浅色背景 */
+    background: linear-gradient(180deg, #e8f2ff 0%, #fff5f7 48%, #fff 100%);
 }
 
-/* ========== 动态背景装饰 ========== */
+/* ★ 视频通话：浅粉主题（跟视频通话收藏卡片一致） */
+.app-shell[data-app-id="chat"] .call-page[data-call-type="video"] {
+    background: linear-gradient(180deg, #fff5f7 0%, #ffe4ec 48%, #fff 100%);
+}
+
+/* ========== 动态背景装饰：去掉深色浮游球，改成收藏页风格的极淡光晕 ========== */
 .app-shell[data-app-id="chat"] .call-bg-decor {
     position: absolute;
     top: 0;
@@ -42,7 +54,8 @@
     right: -100px;
     width: 300px;
     height: 300px;
-    background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
+    /* ★ 浅蓝色光晕，跟收藏页 e8f2ff 同色调 */
+    background: radial-gradient(circle, rgba(168, 200, 236, 0.25) 0%, transparent 70%);
     animation: floatBg 8s ease-in-out infinite;
 }
 
@@ -51,7 +64,7 @@
     left: -50px;
     width: 250px;
     height: 250px;
-    background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(242, 170, 203, 0.18) 0%, transparent 70%);
     animation: floatBg 10s ease-in-out infinite reverse;
 }
 
@@ -61,7 +74,7 @@
     transform: translate(-50%, -50%);
     width: 400px;
     height: 400px;
-    background: radial-gradient(circle, rgba(236, 72, 153, 0.08) 0%, transparent 60%);
+    background: radial-gradient(circle, rgba(255, 228, 236, 0.25) 0%, transparent 60%);
     animation: pulseBg 4s ease-in-out infinite;
 }
 
@@ -71,11 +84,11 @@
 }
 
 @keyframes pulseBg {
-    0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.08; }
-    50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.15; }
+    0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
+    50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.8; }
 }
 
-/* ========== 视频通话背景 ========== */
+/* ========== 视频通话背景：去掉黑色模糊 ========== */
 .app-shell[data-app-id="chat"] .call-video-bg {
     position: absolute;
     top: 0;
@@ -83,38 +96,41 @@
     right: 0;
     bottom: 0;
     z-index: 0;
+    display: none; /* ★ 视频通话不再用黑色背景 */
+}
+
+/* ★ 视频通话：保留一个浅粉的视频区域"占位"，表示正在视频中 */
+.app-shell[data-app-id="chat"] .call-page[data-call-type="video"] .call-video-bg {
+    display: block;
+    background: linear-gradient(180deg, #fff5f7 0%, #ffe4ec 100%);
 }
 
 .app-shell[data-app-id="chat"] .call-video-blur {
-    width: 100%;
-    height: 100%;
+    display: none; /* ★ 不再用模糊背景 */
 }
 
+/* ★ 视频通话顶/底渐变：去掉深色覆盖，改成浅色 */
 .app-shell[data-app-id="chat"] .call-video-gradient {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(180deg,
-        rgba(0, 0, 0, 0.5) 0%,
-        transparent 20%,
-        transparent 60%,
-        rgba(0, 0, 0, 0.7) 100%);
-    z-index: 1;
+    display: none;
 }
 
+/* ★ 本地视频小窗：保留功能，但样式改成浅色卡片 */
 .app-shell[data-app-id="chat"] .call-local-video {
     position: absolute;
-    top: 50px;
-    right: 16px;
+    top: 56px;
+    right: 14px;
     width: 90px;
     height: 130px;
-    border-radius: 20px;
+    border-radius: 16px;
     overflow: hidden;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 20px rgba(74, 111, 165, 0.15), 0 0 0 1.5px rgba(255, 255, 255, 0.7);
     z-index: 20;
-    background: #1a1a1a;
+    background: #fff;
+}
+
+/* ★ 视频通话：本地视频小窗浮在右上角（粉色主题边框） */
+.app-shell[data-app-id="chat"] .call-page[data-call-type="video"] .call-local-video {
+    box-shadow: 0 8px 20px rgba(233, 30, 99, 0.15), 0 0 0 1.5px rgba(255, 255, 255, 0.8);
 }
 
 .app-shell[data-app-id="chat"] .call-local-avatar {
@@ -123,6 +139,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    background: linear-gradient(135deg, #f2aacb, #ffcbdc) !important;
 }
 
 /* ========== 顶部信息区域 ========== */
@@ -132,25 +149,18 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 50px 20px 20px;
+    padding: 56px 20px 16px;
 }
 
-/* ========== 头像 ========== */
+/* ========== 头像：去掉深色光晕，保留圆头像卡片 ========== */
 .app-shell[data-app-id="chat"] .call-avatar-container {
     position: relative;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 }
 
+/* ★ 去掉紫色光晕 */
 .app-shell[data-app-id="chat"] .call-avatar-glow {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 140px;
-    height: 140px;
-    background: radial-gradient(circle, rgba(139, 92, 246, 0.4) 0%, transparent 70%);
-    border-radius: 50%;
-    animation: avatarPulse 3s ease-in-out infinite;
+    display: none;
 }
 
 @keyframes avatarPulse {
@@ -160,18 +170,20 @@
 
 .app-shell[data-app-id="chat"] .call-avatar {
     position: relative;
-    width: 110px;
-    height: 110px;
+    width: 84px;
+    height: 84px;
     border-radius: 50%;
     overflow: hidden;
-    box-shadow: 0 16px 50px rgba(0, 0, 0, 0.4), 0 0 0 3px rgba(255, 255, 255, 0.1);
+    /* ★ 改成收藏页同款边框/阴影 */
+    box-shadow: 0 4px 16px rgba(74, 111, 165, 0.15), 0 0 0 3px rgba(255, 255, 255, 0.9);
 }
 
-.app-shell[data-app-id="chat"] .call-avatar-video {
-    width: 80px;
-    height: 80px;
-    margin-bottom: 12px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 0 2px rgba(255, 255, 255, 0.15);
+/* ★ 视频通话头像：更大，作为视觉中心（视频通话时看不到对方视频，就靠大头像撑场） */
+.app-shell[data-app-id="chat"] .call-avatar.call-avatar-video {
+    width: 110px;
+    height: 110px;
+    margin-bottom: 0;
+    box-shadow: 0 6px 22px rgba(233, 30, 99, 0.18), 0 0 0 4px rgba(255, 255, 255, 0.9);
 }
 
 .app-shell[data-app-id="chat"] .call-avatar-inner {
@@ -180,49 +192,56 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 44px;
+    font-size: 36px;
     font-weight: 600;
     color: white;
 }
 
-/* ========== 通话信息 ========== */
+/* ★ 视频通话头像文字大一号 */
+.app-shell[data-app-id="chat"] .call-avatar.call-avatar-video .call-avatar-inner {
+    font-size: 44px;
+}
+
+/* ========== 通话信息：文字深色 ========== */
 .app-shell[data-app-id="chat"] .call-name {
-    font-size: 24px;
-    font-weight: 600;
-    color: white;
+    font-size: 18px;
+    font-weight: 650;
+    color: #344b68; /* ★ 跟收藏页一致 */
     margin-bottom: 6px;
-    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+    text-shadow: none;
 }
 
 .app-shell[data-app-id="chat"] .call-status {
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 13px;
-    color: rgba(255, 255, 255, 0.7);
+    font-size: 12px;
+    color: #8896a8; /* ★ 跟收藏页次要色一致 */
 }
 
+/* ★ 状态点：保留绿色（产品语义），稍微调小一点 */
 .app-shell[data-app-id="chat"] .call-status-dot {
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
     background: #4ade80;
     border-radius: 50%;
     animation: statusPulse 1.5s ease-in-out infinite;
-    box-shadow: 0 0 6px #4ade80;
+    box-shadow: 0 0 4px rgba(74, 222, 128, 0.5);
 }
 
 @keyframes statusPulse {
-    0%, 100% { opacity: 1; box-shadow: 0 0 6px #4ade80; }
-    50% { opacity: 0.6; box-shadow: 0 0 3px #4ade80; }
+    0%, 100% { opacity: 1; box-shadow: 0 0 4px rgba(74, 222, 128, 0.5); }
+    50% { opacity: 0.6; box-shadow: 0 0 2px rgba(74, 222, 128, 0.5); }
 }
 
+/* ★ 时钟：深色，较小（跟收藏页时间样式一致） */
 .app-shell[data-app-id="chat"] .call-duration {
-    font-size: 32px;
-    font-weight: 200;
-    color: white;
-    margin-top: 12px;
+    font-size: 22px;
+    font-weight: 500;
+    color: #4a6fa5; /* ★ 跟收藏页主色一致 */
+    margin-top: 8px;
     font-family: 'SF Mono', 'Menlo', monospace;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
     display: none;
 }
 
@@ -230,21 +249,22 @@
     display: block;
 }
 
-/* ========== 消息对话区域 ========== */
+/* ========== 消息对话区域：白色半透明卡片（跟收藏页消息列表一致） ========== */
 .app-shell[data-app-id="chat"] .call-chat-area {
     position: relative;
     z-index: 5;
     flex: 1;
     display: flex;
     flex-direction: column;
-    margin: 0 16px;
-    border-radius: 20px;
+    margin: 0 14px;
+    border-radius: 18px;
     overflow: hidden;
-    background: rgba(0, 0, 0, 0.3);
+    /* ★ 白色半透明 + 浅蓝边框 + 浅阴影，跟收藏页收藏列表同款 */
+    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid rgba(168, 200, 236, 0.22);
+    box-shadow: 0 5px 18px rgba(74, 111, 165, 0.06);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
 }
 
 .app-shell[data-app-id="chat"] .call-messages-container {
@@ -262,37 +282,42 @@
     display: none;
 }
 
+/* ★ 输入区：浅色风格（跟收藏页搜索框一致） */
 .app-shell[data-app-id="chat"] .call-input-area {
-    padding: 12px 14px;
-    background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.3));
+    padding: 10px 12px 12px;
+    /* ★ 顶部用浅边框分隔 */
+    border-top: 1px solid rgba(168, 200, 236, 0.18);
+    background: transparent;
     display: flex;
-    gap: 10px;
+    gap: 8px;
     align-items: center;
 }
 
 .app-shell[data-app-id="chat"] .call-message-input {
     flex: 1;
-    padding: 12px 18px;
-    border: none;
-    border-radius: 24px;
-    background: rgba(255, 255, 255, 0.08);
-    color: white;
-    font-size: 14px;
+    padding: 10px 14px;
+    border: 1px solid rgba(168, 200, 236, 0.32);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.86);
+    color: #3e4b5a; /* ★ 跟收藏页输入文字一致 */
+    font-size: 13px;
     outline: none;
     transition: all 0.2s;
 }
 
 .app-shell[data-app-id="chat"] .call-message-input::placeholder {
-    color: rgba(255, 255, 255, 0.5);
+    color: #a0aec0; /* ★ 跟收藏页一致 */
 }
 
 .app-shell[data-app-id="chat"] .call-message-input:focus {
-    background: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.96);
+    border-color: rgba(74, 111, 165, 0.45);
 }
 
+/* ★ 发送按钮：保留绿色（产品语义），但去掉发光，改成收藏页圆形小图标按钮 */
 .app-shell[data-app-id="chat"] .call-send-btn {
-    width: 42px;
-    height: 42px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
     background: linear-gradient(135deg, #4ade80, #22c55e);
     border: none;
@@ -301,8 +326,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 16px rgba(74, 222, 128, 0.35);
+    box-shadow: 0 3px 10px rgba(74, 222, 128, 0.3);
     transition: all 0.2s;
+    flex-shrink: 0;
 }
 
 .app-shell[data-app-id="chat"] .call-send-btn:hover {
@@ -313,35 +339,36 @@
     transform: scale(0.95);
 }
 
-/* ========== 底部控制按钮 ========== */
+/* ========== 底部控制按钮：白色磨砂卡片（跟收藏页图标风格一致） ========== */
 .app-shell[data-app-id="chat"] .call-controls-area {
     position: relative;
     z-index: 10;
-    padding: 16px 20px 40px;
+    padding: 14px 20px 32px;
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 24px;
+    gap: 18px;
 }
 
+/* ★ 普通控制按钮：白底 + 浅边框 + 蓝图标 */
 .app-shell[data-app-id="chat"] .call-control-btn {
-    width: 52px;
-    height: 52px;
+    width: 46px;
+    height: 46px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    color: white;
+    background: rgba(255, 255, 255, 0.86);
+    border: 1px solid rgba(168, 200, 236, 0.32);
+    color: #4a6fa5; /* ★ 跟收藏页主色一致 */
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 3px 10px rgba(74, 111, 165, 0.08);
     transition: all 0.2s;
 }
 
 .app-shell[data-app-id="chat"] .call-control-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.96);
+    border-color: rgba(74, 111, 165, 0.45);
     transform: scale(1.05);
 }
 
@@ -349,14 +376,18 @@
     transform: scale(0.95);
 }
 
+/* ★ 静音开启态：蓝色填充（跟收藏页 active 标签一致） */
 .app-shell[data-app-id="chat"] .call-control-btn.active {
-    background: linear-gradient(135deg, #4ade80, #22c55e);
-    border-color: #4ade80;
+    background: linear-gradient(135deg, #4a6fa5, #6b8cbe);
+    border-color: transparent;
+    color: white;
+    box-shadow: 0 4px 12px rgba(74, 111, 165, 0.3);
 }
 
+/* ★ 挂断按钮：保留红色（产品语义），稍微缩小一圈，跟控制按钮大小协调 */
 .app-shell[data-app-id="chat"] .call-end-btn {
-    width: 68px;
-    height: 68px;
+    width: 58px;
+    height: 58px;
     border-radius: 50%;
     background: linear-gradient(135deg, #ef4444, #dc2626);
     border: none;
@@ -365,15 +396,135 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
+    box-shadow: 0 6px 18px rgba(239, 68, 68, 0.35);
     transition: all 0.2s;
 }
 
 .app-shell[data-app-id="chat"] .call-end-btn:hover {
     transform: scale(1.05);
-    box-shadow: 0 10px 30px rgba(239, 68, 68, 0.5);
+    box-shadow: 0 8px 22px rgba(239, 68, 68, 0.45);
 }
 
 .app-shell[data-app-id="chat"] .call-end-btn:active {
     transform: scale(0.95);
+}
+
+/* ★ v0.68 挂断中:立即视觉反馈 */
+.app-shell[data-app-id="chat"] .call-end-btn.is-ending {
+    opacity: 0.55;
+    transform: scale(0.9);
+    cursor: not-allowed;
+    box-shadow: 0 3px 8px rgba(239, 68, 68, 0.2);
+}
+
+.app-shell[data-app-id="chat"] .call-end-btn[disabled] {
+    pointer-events: none;
+}
+
+/* ★ v0.68 通话中消息气泡(call_chat) — 改用收藏页气泡配色 */
+.app-shell[data-app-id="chat"] .call-chat-wrapper {
+    margin: 6px 12px;
+}
+
+.app-shell[data-app-id="chat"] .call-chat-tag {
+    text-align: center;
+    font-size: 11px;
+    color: #4a6fa5; /* ★ 跟收藏页主色一致 */
+    margin: 4px 0 2px;
+    font-weight: 500;
+}
+
+.app-shell[data-app-id="chat"] .call-chat-bubble {
+    /* ★ 浅蓝背景，跟收藏页消息列表一致 */
+    background: rgba(74, 111, 165, 0.06);
+    border: 1px solid rgba(74, 111, 165, 0.15);
+}
+
+.app-shell[data-app-id="chat"] .call-chat-bubble .message-bubble-text {
+    color: #344b68; /* ★ 跟收藏页一致 */
+}
+
+/* ★ v0.68 通话结束系统提示(call_end_notice) — 改用浅灰卡片 */
+.app-shell[data-app-id="chat"] .call-end-notice-wrapper {
+    display: flex;
+    justify-content: center;
+    margin: 12px 0;
+}
+
+.app-shell[data-app-id="chat"] .call-end-notice-bubble {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 14px;
+    background: rgba(74, 111, 165, 0.06);
+    color: #6b7c93; /* ★ 跟收藏页次要色一致 */
+    font-size: 12px;
+}
+
+.app-shell[data-app-id="chat"] .call-end-notice-icon {
+    font-size: 13px;
+}
+
+/* ★ v0.68 通话中消息气泡(在通话页 #call-messages-container 内显示) */
+.app-shell[data-app-id="chat"] .call-messages-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* ★ 用户消息气泡：粉色（跟收藏页用户气泡一致） */
+.app-shell[data-app-id="chat"] .call-msg {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 12px;
+    font-size: 13px;
+    line-height: 1.4;
+    max-width: 80%;
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+.app-shell[data-app-id="chat"] .call-msg--user {
+    align-self: flex-end;
+    background: #FFE4EC; /* ★ 跟收藏页用户消息气泡一致 */
+    color: #344b68;
+    flex-direction: row-reverse;
+}
+
+/* ★ AI 消息气泡：浅蓝（跟收藏页 AI 消息气泡一致） */
+.app-shell[data-app-id="chat"] .call-msg--ai {
+    align-self: flex-start;
+    background: #E8F2FF; /* ★ 跟收藏页 AI 消息气泡一致 */
+    color: #344b68;
+}
+
+.app-shell[data-app-id="chat"] .call-msg-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: #4a6fa5; /* ★ 跟收藏页主色一致 */
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .call-msg--user .call-msg-label {
+    color: #C2185B; /* ★ 视频通话的粉色主题（保持用户气泡 sender 用深粉） */
+}
+
+.app-shell[data-app-id="chat"] .call-page:not([data-call-type="video"]) .call-msg--user .call-msg-label {
+    color: #E91E63; /* ★ 语音通话也用粉色 sender 名字，跟用户气泡粉色协调 */
+}
+
+.app-shell[data-app-id="chat"] .call-msg-text {
+    flex: 1;
+}
+
+.app-shell[data-app-id="chat"] .call-msg-time {
+    font-size: 10px;
+    color: #a0aec0; /* ★ 跟收藏页时间样式一致 */
+    flex-shrink: 0;
 }

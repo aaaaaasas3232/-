@@ -149,7 +149,7 @@
     width: 38px;
     height: 38px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #A8C8EC, #95B8E0);
+    background: #A8C8EC;
     border: none;
     color: white;
     cursor: pointer;
@@ -158,13 +158,11 @@
     justify-content: center;
     transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
     flex-shrink: 0;
-    box-shadow: 0 2px 10px rgba(168, 200, 236, 0.4);
 }
 
 .app-shell[data-app-id="chat"] .chat-private .send-btn:hover, .app-shell[data-app-id="chat"] .chat-group .send-btn:hover {
     transform: scale(1.1) rotate(-5deg);
     background: #95B8E0;
-    box-shadow: 0 4px 15px rgba(168, 200, 236, 0.6);
 }
 
 .app-shell[data-app-id="chat"] .chat-private .send-btn:active, .app-shell[data-app-id="chat"] .chat-group .send-btn:active {
@@ -225,7 +223,6 @@
 /* 按下状态:整体变粉(可选,这里直接靠 ::before 覆盖) */
 .app-shell[data-app-id="chat"] .chat-private .send-btn.is-pressing,
 .app-shell[data-app-id="chat"] .chat-group .send-btn.is-pressing {
-    transform: scale(0.95);
     background: #FF9CC4;
 }
 
@@ -235,6 +232,12 @@
     background: #E94B8E;
     transform: scale(1.05);
     box-shadow: 0 4px 20px rgba(233, 75, 142, 0.5);
+    animation: send-armed-pulse 0.5s ease-in-out infinite;
+}
+
+@keyframes send-armed-pulse {
+    0%, 100% { transform: scale(1.05); box-shadow: 0 4px 20px rgba(233, 75, 142, 0.5); }
+    50% { transform: scale(1.1); box-shadow: 0 4px 30px rgba(233, 75, 142, 0.8); }
 }
 
 /* svg 在 ::before 之上 */
@@ -258,7 +261,7 @@
 
 .app-shell[data-app-id="chat"] .chat-private .input-toolbar.expanded, .app-shell[data-app-id="chat"] .chat-group .input-toolbar.expanded,
 .app-shell[data-app-id="chat"] .chat-private .input-toolbar.input-toolbar-expanded, .app-shell[data-app-id="chat"] .chat-group .input-toolbar.input-toolbar-expanded {
-    max-height: 240px;
+    max-height: 280px;
     padding: 10px 12px;
     border-top-color: #E9ECEF;
 }
@@ -313,93 +316,72 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    background: transparent !important;
 }
 
 .app-shell[data-app-id="chat"] .chat-private .toolbar-btn-icon svg, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn-icon svg {
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: #2C4A7A;
+    color: #2C4A7A;
+    stroke-width: 2;
+}
+
+.app-shell[data-app-id="chat"] .chat-private .toolbar-btn-icon svg [fill]:not([fill="none"]),
+.app-shell[data-app-id="chat"] .chat-group .toolbar-btn-icon svg [fill]:not([fill="none"]) {
+    fill: #2C4A7A;
 }
 
 .app-shell[data-app-id="chat"] .chat-private .toolbar-btn-label, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn-label {
     font-size: 10px;
-    color: #5A6B7D;
+    color: #2C4A7A;
     font-weight: 500;
 }
 
-/* ---- 工具栏图标样式 ---- */
-
-/* 图片 */
-.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="image"] .toolbar-btn-icon, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="image"] .toolbar-btn-icon {
-    background: #E4E8ED;
+/* === 身份(原「自定义」,v1.0 身份转换模式入口) === */
+.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="custom"] .toolbar-btn-label {
+    color: #2C4A7A;
 }
 
-.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="image"] svg, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="image"] svg {
-    fill: #5A6B7D;
+/* 激活状态:粉色描线(代表「身份转换模式已开启」),图标底仍透明 */
+.app-shell[data-app-id="chat"] .chat-private[data-swap-active="1"] .toolbar-btn[data-action="custom"] .toolbar-btn-icon,
+.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="custom"].is-swap-active .toolbar-btn-icon {
+    background: transparent;
 }
 
-/* 语音 */
-.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="voice"] .toolbar-btn-icon, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="voice"] .toolbar-btn-icon {
-    background: #E4E8ED;
-}
-
-.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="voice"] svg, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="voice"] svg {
-    fill: #5A6B7D;
-}
-
-/* 表情 */
-.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="sticker"] .toolbar-btn-icon, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="sticker"] .toolbar-btn-icon {
-    background: #E4E8ED;
-}
-
-.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="sticker"] svg, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="sticker"] svg {
+.app-shell[data-app-id="chat"] .chat-private[data-swap-active="1"] .toolbar-btn[data-action="custom"] svg,
+.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="custom"].is-swap-active svg {
     fill: none;
-    stroke: #5A6B7D;
+    stroke: #EC4899;
+    color: #EC4899;
     stroke-width: 2;
 }
 
-/* 位置 */
-.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="location"] .toolbar-btn-icon, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="location"] .toolbar-btn-icon {
-    background: #E4E8ED;
+.app-shell[data-app-id="chat"] .chat-private[data-swap-active="1"] .toolbar-btn[data-action="custom"] .toolbar-btn-label,
+.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="custom"].is-swap-active .toolbar-btn-label {
+    color: #EC4899;
 }
 
-.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="location"] svg, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="location"] svg {
-    fill: #5A6B7D;
+.app-shell[data-app-id="chat"] .chat-private[data-swap-active="1"] .toolbar-btn[data-action="custom"],
+.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="custom"].is-swap-active {
+    background: #FFF1F5;
 }
 
-/* 红包 */
-.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="redpacket"] .toolbar-btn-icon, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="redpacket"] .toolbar-btn-icon {
-    background: #FEE2E2;
-}
-
-.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="redpacket"] svg, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="redpacket"] svg {
-    fill: #DC2626;
-}
-
-/* 转账 */
-.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="transfer"] .toolbar-btn-icon, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="transfer"] .toolbar-btn-icon {
-    background: #FEF3C7;
-}
-
-.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="transfer"] svg, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="transfer"] svg {
-    fill: #D97706;
-}
-
-/* 通话 */
-.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="call"] .toolbar-btn-icon, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="call"] .toolbar-btn-icon {
-    background: #E4E8ED;
-}
-
-.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="call"] svg, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="call"] svg {
-    fill: #5A6B7D;
-}
-
-/* 收藏 */
-.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="favorite"] .toolbar-btn-icon, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="favorite"] .toolbar-btn-icon {
-    background: #E4E8ED;
-}
-
-.app-shell[data-app-id="chat"] .chat-private .toolbar-btn[data-action="favorite"] svg, .app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="favorite"] svg {
-    fill: #5A6B7D;
+/* 身份激活时,工具栏底部给一条粉色高亮提示条,让用户明显感知「现在发出去是 AI 身份」 */
+.app-shell[data-app-id="chat"] .chat-private[data-swap-active="1"] .input-toolbar::before {
+    content: "身份转换已开启 · 接下来发出的消息将作为 AI 发送";
+    display: block;
+    grid-column: 1 / -1;
+    font-size: 11px;
+    color: #EC4899;
+    background: #FFF1F5;
+    border: 1px solid #FBCFE8;
+    border-radius: 6px;
+    padding: 4px 8px;
+    margin-bottom: 4px;
+    text-align: center;
+    font-weight: 500;
 }
 
 /* ---- 回复预览区域 ---- */

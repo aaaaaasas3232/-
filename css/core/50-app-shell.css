@@ -199,6 +199,25 @@
     font-size: 15px;
 }
 
+/* ★ 框架级:interactive 模式的搜索框(真实 input)基础样式,具体 app 可在
+   自己的 css 里再细化(背景/边框/光标颜色等) */
+.app-topbar-search.is-interactive {
+    cursor: text;
+}
+
+.app-topbar-search-input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: inherit;
+    font-size: inherit;
+    font-family: inherit;
+    line-height: 1;
+    padding: 0;
+}
+
 .app-topbar-search-icon {
     font-size: 14px;
 }
@@ -316,6 +335,98 @@
 }
 .app-topbar-action--solid:active {
     background: rgba(74, 111, 165, 0.4);
+}
+
+/*
+ * 纯按钮组顶栏（topbar.type = 'buttons-only'）
+ * ------------------------------------------------------------------
+ * 不放标题，整条顶栏就是一排功能按钮，平分宽度。适合工具型 App ——
+ * 标题在这类 App 里是废像素，用户要的是「一眼看到能做哪几件事」。
+ *
+ * 每个按钮来自 topbar.headerActions：
+ *   { iconHtml, label?, ariaLabel?, variant?: 'solid'|'ghost', active?, action }
+ * 只给 iconHtml → 圆形图标按钮；再给 label → 图标在上、文字在下的宽按钮。
+ */
+.app-topbar[data-nav-type="buttons-only"] {
+    gap: 8px;
+}
+
+.app-topbar-buttons {
+    display: flex;
+    flex: 1;
+    align-items: stretch;
+    gap: 6px;
+    min-width: 0;
+}
+
+.app-topbar-button {
+    flex: 1 1 0;
+    min-width: 0;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 6px 4px;
+    border: none;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.44);
+    color: rgba(17, 24, 39, 0.78);
+    font: inherit;
+    font-size: 11px;
+    line-height: 1.15;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    transition: background 0.18s ease, transform 0.12s ease, color 0.18s ease;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+
+.app-topbar-button:hover { background: rgba(255, 255, 255, 0.72); }
+.app-topbar-button:active { transform: scale(0.94); background: rgba(255, 255, 255, 0.86); }
+
+.app-topbar-button__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-topbar-button__icon svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    fill: none;
+}
+
+.app-topbar-button__label {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 没有文字时收成圆形图标钮，不要拉成一条 */
+.app-topbar-button:not(:has(.app-topbar-button__label)) {
+    flex: 0 0 auto;
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    padding: 0;
+}
+
+.app-topbar-button--solid {
+    background: rgba(74, 111, 165, 0.16);
+    color: #4A6FA5;
+}
+
+.app-topbar-button--ghost {
+    background: transparent;
+    backdrop-filter: none;
+}
+
+.app-topbar-button.is-active {
+    background: rgba(74, 111, 165, 0.9);
+    color: #fff;
 }
 
 .app-content {
@@ -501,15 +612,19 @@
     padding: 10px 14px 6px;
 }
 
+/* 底栏的四个可调项走 CSS 变量，由 use-app-navigation 的 navStyle 从
+   appConfig.nav 灌进来（bg / color / activeColor / height）。
+   `bar-config-normalizer` 一直声明着这几个字段，但此前没有任何代码消费它们 ——
+   App 设了不生效，深色主题下这层半透明白就变成一块灰疙瘩。 */
 .app-tab-bar {
     display: flex;
     align-items: center;
     justify-content: space-around;
-    height: 58px;
+    height: var(--tabbar-height, 58px);
     border-radius: 22px;
-    background: rgba(255,255,255,0.46);
+    background: var(--tabbar-bg, rgba(255,255,255,0.46));
     backdrop-filter: blur(18px);
-    border: 1px solid rgba(255,255,255,0.34);
+    border: 1px solid var(--tabbar-border, rgba(255,255,255,0.34));
 }
 
 /* App Store 专属：底栏贴底扁平化（用 :has() 匹配 .app-shell 内部包含 appstore-app 的状态）*/
@@ -535,6 +650,167 @@
     display: none;
 }
 
+/* ================================================================
+   App Store 专属 · Liquid Bottom Bar
+   - 把 framework 通用 .app-tab-bar 改造成 liquid 风格:
+     激活时白色鼓包从顶部冒出 + 彩色液体球带文字浮起
+   - 用伪元素实现(不污染 framework 模板),JS 监听 .active 切换动画
+   ================================================================ */
+.app-shell:has(.appstore-app) .app-nav {
+
+}
+
+.app-shell:has(.appstore-app) .app-tab-bar {
+    position: relative;
+    border-radius: 0;
+    background: #FFFFFF;              /* 白底保留 —— 灰球在白底上更明显 */
+    border: none;
+    width: 100%;
+    height: 48px;
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+    backdrop-filter: none;
+    bottom: -15px !important;
+    -webkit-backdrop-filter: none;
+    overflow: visible;
+}
+
+.app-shell:has(.appstore-app) .app-tab-item {
+    position: relative;
+    height: 56px;
+    overflow: visible;
+    /* 默认下沉,让灰球在 tab-bar 内部;激活时上浮 */
+    transform: translateY(-2px);
+    transition: transform 0.6s cubic-bezier(0.34, 1.4, 0.64, 1),
+                color 0.18s ease;
+    color: rgba(17, 24, 39, 0);
+}
+
+.app-shell:has(.appstore-app) .app-tab-item > div:last-child {
+    /* label 文字 —— 默认不显示(用 ::after 的小灰球/液球代替) */
+    position: relative;
+    z-index: 2;
+    transition: transform 0.55s cubic-bezier(0.34, 1.4, 0.64, 1),
+                color 0.18s ease;
+    color: rgba(17, 24, 39, 0);
+}
+
+/* 白色鼓包 ::before —— 默认藏在 tab-bar 内,active 时长大包裹按钮 */
+.app-shell:has(.appstore-app) .app-tab-item::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 40%;
+    width: 56px;
+    height: 44px;
+    background: #FFFFFF;
+    border-radius: 999px;
+    /* 去掉阴影(用户要求) */
+    box-shadow: none;
+    transform: translate(-50%, -50%)
+               scaleY(0.2) scaleX(0.3);
+    transform-origin: 50% 50%;
+    z-index: 0;
+    pointer-events: none;
+    will-change: transform, border-radius;
+}
+
+/* 小灰球(默认状态) ::after —— 替代文字标签,显示为一个 10px 灰圆点 */
+.app-shell:has(.appstore-app) .app-tab-item::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #c8c8c8;              /* 默认灰色小球 */
+    color: #fff;
+    font-size: 0;                     /* 灰球无字 */
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: translate(-50%, -50%);
+    opacity: 1;
+    pointer-events: none;
+    z-index: 3;
+    will-change: width, height, border-radius, background-color, font-size;
+    text-indent: 0;
+    overflow: hidden;
+    line-height: 1;
+    transition: background-color 0.45s ease;
+}
+
+/* 激活态:item 上浮 + 小灰球放大成彩色液球(显示首字母) */
+.app-shell:has(.appstore-app) .app-tab-item.active:not(.is-liquid-active):not(.is-liquid-leaving) {
+    /* framework 默认 active 样式在 appstore 范围内不应用(由 liquid 接管) */
+    color: rgba(17, 24, 39, 0);
+    transform: translateY(8px);
+}
+
+.app-shell:has(.appstore-app) .app-tab-item.is-liquid-active {
+    transform: translateY(-22px);
+    color: rgba(17, 24, 39, 0);
+}
+
+.app-shell:has(.appstore-app) .app-tab-item.is-liquid-active > div:last-child {
+    transform: translateY(8px);       /* 文字下沉隐藏,blob 接管 */
+}
+
+/* 鼓包从隐藏到鼓起的弹性动画(早 0.12s 启动) */
+.app-shell:has(.appstore-app) .app-tab-item.is-liquid-active::before {
+    animation: appstore-liquid-shape-bump 0.6s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+    animation-delay: -0.12s;
+}
+
+@keyframes appstore-liquid-shape-bump {
+    0%   { transform: translate(-50%, -50%) scaleY(0.2) scaleX(0.3); border-radius: 999px; }
+    35%  { transform: translate(-50%, -30%) scaleY(0.55) scaleX(0.55); border-radius: 60% 60% 60% 60% / 70% 70% 40% 40%; }
+    70%  { transform: translate(-50%, -50%) scaleY(0.95) scaleX(0.95); border-radius: 999px 999px 999px 999px / 999px 999px 60% 60%; }
+    100% { transform: translate(-50%, -50%) scaleY(1.0) scaleX(1.0); border-radius: 999px; }
+}
+
+/* 小灰球 → 彩色液球的过渡 + 弹性形变(用 width/height/font-size 动画,不缩放文字) */
+.app-shell:has(.appstore-app) .app-tab-item.is-liquid-active::after {
+    content: attr(data-glyph);
+    background: var(--appstore-liquid-color, #ff5a3c);
+    animation: appstore-liquid-blob-in 0.7s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+    animation-delay: 0.05s;
+}
+
+@keyframes appstore-liquid-blob-in {
+    0%   { width: 10px;  height: 10px;  font-size: 0;    border-radius: 50%; background-color: #c8c8c8; }
+    25%  { width: 28px;  height: 28px;  font-size: 0;    border-radius: 48% 52% 50% 50% / 58% 42% 52% 48%; background-color: var(--appstore-liquid-color, #ff5a3c); }
+    55%  { width: 42px;  height: 38px;  font-size: 13px; border-radius: 55% 45% 52% 48% / 48% 55% 45% 55%; }
+    75%  { width: 44px;  height: 46px;  font-size: 14px; border-radius: 50% 50% 48% 52% / 52% 48% 55% 45%; }
+    100% { width: 44px;  height: 44px;  font-size: 15px; border-radius: 50%; }
+}
+
+/* 离开激活态:鼓包塌缩 + 液球缩回小灰球 */
+.app-shell:has(.appstore-app) .app-tab-item.is-liquid-leaving::before {
+    animation: appstore-liquid-shape-collapse 0.45s cubic-bezier(0.55, 0, 0.55, 1) forwards;
+    animation-delay: -0.12s;
+}
+.app-shell:has(.appstore-app) .app-tab-item.is-liquid-leaving::after {
+    animation: appstore-liquid-blob-out 0.45s cubic-bezier(0.55, 0, 0.85, 0.35) forwards;
+    animation-delay: -0.12s;
+}
+
+@keyframes appstore-liquid-shape-collapse {
+    0%   { transform: translate(-50%, -50%) scaleY(1.0) scaleX(1.0); border-radius: 999px; }
+    100% { transform: translate(-50%, -50%) scaleY(0.2) scaleX(0.3); border-radius: 999px; }
+}
+
+@keyframes appstore-liquid-blob-out {
+    0%   { width: 44px;  height: 44px;  font-size: 15px; border-radius: 50%; background-color: var(--appstore-liquid-color, #ff5a3c); }
+    40%  { width: 46px;  height: 42px;  font-size: 14px; border-radius: 52% 48% 50% 50% / 55% 45% 50% 50%; }
+    70%  { width: 22px;  height: 20px;  font-size: 0;    border-radius: 60% 40% 55% 45% / 50% 60% 40% 50%; background-color: #c8c8c8; }
+    100% { width: 10px;  height: 10px;  font-size: 0;    border-radius: 50%; background-color: #c8c8c8; }
+}
+
 .app-tab-item {
     display: flex;
     flex-direction: column;
@@ -543,7 +819,7 @@
     gap: 2px;
     flex: 1;
     height: 100%;
-    color: rgba(17,24,39,0.48);
+    color: var(--tabbar-color, rgba(17,24,39,0.48));
     font-size: 10px;
     font-weight: 600;
     transition: color 0.18s ease, transform 0.18s ease;
@@ -551,7 +827,7 @@
 }
 
 .app-tab-item.active {
-    color: rgba(17,24,39,0.95);
+    color: var(--tabbar-active-color, rgba(17,24,39,0.95));
     transform: translateY(-1px);
 }
 
@@ -589,6 +865,7 @@
     z-index: 2;
     flex-shrink: 0;
     padding: 2px 0 10px;
+    background: transparent;
 }
 
 .home-indicator-area {
@@ -598,6 +875,44 @@
     width: 100%;
     height: 28px;
     cursor: grab;
+    background: transparent;
+}
+
+/* ================================================================
+   全屏 App（appConfig.fullscreen === true）
+   ----------------------------------------------------------------
+   默认布局里 .app-bottom 是 .app-chrome 的 flex 子项，会**占掉** 40px
+   高度。它自己是 transparent，所以透出来的是 .app-background-layer，
+   也就是 appConfig.background 那张静态背景。
+
+   对普通 App 这没问题；但对「自己画满整屏」的 App（解压角这种舞台类）
+   就会出现：App 内容只画到 .app-content 的底边，指示条那 40px 永远是
+   appConfig.background 的颜色 —— 用户在 App 里换了背景，这一条不跟着变，
+   看上去像「贴了一条白边」。
+
+   声明 fullscreen: true 之后：
+     · .app-bottom 改为绝对定位浮在最上层，不再占布局高度
+     · .app-content 因此一直铺到 shell 底边，App 自己的背景盖满全屏
+     · --app-safe-bottom 暴露给 App，用来给自己的底部 UI（tab 栏、
+       浮动按钮）让开指示条，视觉位置和改造前保持一致
+   ================================================================ */
+.app-shell.app-fullscreen {
+    /* .app-bottom 的实际占位高度：padding 2+10 + 指示条区 28 = 40px */
+    --app-safe-bottom: 40px;
+}
+
+.app-shell.app-fullscreen .app-bottom {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 6;
+    /* 整条不吃事件，只有指示条本身可拖，否则会挡住 App 底部的按钮 */
+    pointer-events: none;
+}
+
+.app-shell.app-fullscreen .app-bottom .home-indicator-area {
+    pointer-events: auto;
 }
 
 .home-indicator {

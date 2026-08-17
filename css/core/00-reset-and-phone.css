@@ -27,11 +27,20 @@ body {
     width: 390px;
     height: 590px;
     transform-origin: center center;
+    /*
+     * 键盘弹起时整台手机往上挪一段（--phone-keyboard-lift，由 src/index.js 算）。
+     * 不写在 @media 里 —— 大屏上也可能弹出软键盘（触屏笔记本、平板）。
+     * 缩放那一层在下面的 @media 里叠上去。
+     */
+    transform: translateY(calc(-1 * var(--phone-keyboard-lift, 0px)));
+    transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 @media (max-width: 390px), (max-height: 590px) {
     #phone {
-        transform: scale(var(--phone-scale, 1));
+        /* ★ 位移必须写在 scale 前面：transform 是从右往左作用的，
+           scale 在后面时位移量不会被缩放二次放大，抬多少就是多少像素。 */
+        transform: translateY(calc(-1 * var(--phone-keyboard-lift, 0px))) scale(var(--phone-scale, 1));
     }
 }
 

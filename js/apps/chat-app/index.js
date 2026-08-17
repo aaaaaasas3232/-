@@ -13,6 +13,7 @@
  */
 
 import { renderMessagesPage } from './pages/messages-page.js';
+import { SNAIL_EMPTY_SVG } from './snail-icon.js';
 import { renderContactsPage } from './pages/contacts-page.js';
 import { renderMomentsPage } from './pages/moments-page.js';
 import { renderProfilePage, getCurrentChatUser, clearUserCache } from './pages/profile-page.js';
@@ -46,59 +47,107 @@ function snapshotToProfileUser(snap) {
     };
 }
 import { escapeHtml } from '@/src/core/escape.js';
-import { getChatRecordMode, getModeConfig, toggleChatRecordMode } from './chat-mode.js';
+
+// ★ v0.69 通话岛模板已在 framework 的 src/core/island-templates.js 里注册
+//   (window.islandTemplates['call-medium']),chat-app 直接调用即可
+import { getChatRecordMode, getModeConfig, toggleChatRecordMode, setChatRecordMode, resetChatRecordMode } from './chat-mode.js';
 import { renderPrivateChatPage } from './pages/chat-page.js';
 import { renderGroupChatPage } from './pages/chat-group-page.js';
 import { renderVoiceMessageBubble } from './pages/chat-page.js';
 import { renderTextBubble } from './components/text-bubble.js';
 import { renderChatSettingsPage } from './pages/chat-settings-page.js';
 import { renderGroupSettingsPage } from './pages/chat-group-settings-page.js';
-import { renderNewChatPage, renderNewChatPageAsync, getWorldAiPersons, getAvatarColor } from './pages/new-chat-page.js';
+import { renderGroupManagePage, MAX_GROUP_ADMIN_COUNT } from './pages/chat-group-manage-page.js'; // ★ v0.81 群成员管理页
+import { renderNewChatPage, renderNewChatPageAsync, getWorldAiPersons } from './pages/new-chat-page.js';
 import { renderNewGroupPage, renderNewGroupPageAsync } from './pages/new-group-page.js';
 import { renderCallRecordDetailPage } from './pages/call-record-detail-page.js';
 import { renderChatPostPage } from './pages/chat-post-page.js';
-import { renderCalendarViewPage, renderCalendarDayPanel, groupMessagesByDate, toDateKey } from './pages/calendar-view-page.js';
-import { renderStoryArchivePage } from './pages/story-archive-page.js';
+import { DEFAULT_AI_AVATAR_BG, DEFAULT_USER_AVATAR_BG, resolveAiAvatar } from './aiMeta.js';
+import { renderCalendarViewPage, renderCalendarDayPanel, groupMessagesByDate } from './pages/calendar-view-page.js';
+import { renderStoryManagementPage } from './pages/story-management-page.js';
 import { renderHistoryPage } from './pages/history-page.js'; // ★ v0.61.3 历史消息页(v0.65 已替换为 memory-history-page)
 import { renderPromptManagerPage } from './pages/prompt-manager-page.js';
 import { renderMemoryManagementPage } from './pages/memory-management-page.js'; // ★ v0.65 层级管理页
 import { renderMemoryHistoryPage } from './pages/memory-history-page.js'; // ★ v0.65 历史消息页(上下结构)
 // ★ v0.62.1 AI 服务层:拼 prompt → 调 AI SDK → 解析 [发红包:88:...] 等特殊动作
-import { callAiAndSplit, generateKChainSummary } from './services/ai-service.js';
+import { callAiAndSplit, recomputeContextPreviewAfterReroll, _resolveAiStickerFromHistory } from './services/ai-service.js';
+// 「对方正在输入中」：发消息给 AI 的反馈长在聊天页顶栏，不弹灵动岛
+import { beginTyping, endTyping, applyTypingToRoot } from './services/typing-indicator.js';
 import {
     buildUserPersonaContextText,
     buildAiPersonaContextText,
     defaultReplyNote,
+    refreshContextPreview,
 } from './pages/prompt-manager-page.js';
 import { renderFavoritesPage } from './pages/favorites-page.js';
 import { renderGameSelectorPage } from './pages/game-selector-page.js';
-import { renderGameLeaderboardPage } from './pages/game-leaderboard-page.js';
+import { renderGameLeaderboardPage, setLeaderboardTab } from './pages/game-leaderboard-page.js';
+// 群聊小游戏（狼人杀 / 谁是卧底 / 大富翁）
+//   引擎是纯状态机 + 模块级调度器，跟界面完全解耦 ——
+//   用户切出对局页去别的 App，流程照样往前跑（见 games/core/clock.js）
+import * as chatGames from './games/index.js';
+import {
+    renderGameSetupPage, getSetupDraft, clearSetupDraft,
+    updateSetupDraft, toggleSetupAi, toggleSetupRule,
+} from './pages/game-setup-page.js';
+import {
+    renderGameMakerPage, updateMakerDraft, setMakerStep,
+    resetMakerDraft, buildDraftPrompt, getMakerDraft,
+} from './pages/game-maker-page.js';
+import { renderGameRecordDetail } from './components/game-cards.js';
 import { renderCallPage } from './pages/call-page.js';
 import { chatModalManager, DESC_IMAGE_PRESETS } from './components/chat-modal-registry.js';
+import './components/moment-share-modal.js'; // 朋友圈分享弹窗
 import { _getCurrentSummaryEditInstance } from './components/summary-edit-modal.js';
-import { DEMO_CONTACTS } from './pages/new-chat-page.js';
 import { externalAppRegistry } from '@/src/core/app-registry.js';
-// ★ v0.50 回复提示词构造器:暴露到 window.__chatPromptBuilder,后期接 AI SDK 时直接调
-import chatPromptBuilder from './services/prompt-builder.js';
-// ★ v0.61.2 拖拽控制器(副作用:模块顶层挂 MutationObserver,见 components/prompt-drag-controller.js)
-//   导入即生效,无需手动调 init()
+// 当前上下文 pre 由 prompt-manager 生成；发送链路只读取同一份文本。
+import { readContextPreview } from './services/context-preview.js';
+// 「聊天回合」的唯一口径：1 回合 = 用户说一次 + AI 回一次
+import { takeRecentRounds, buildContextRoundsHeading } from './services/context-rounds.js';
+import { installKChainBridge, countPending as countKChainPending } from './services/k-chain-service.js';
+// 朋友圈数据层：用户动态(localStorage) + AI 动态(aiPerson.moments) 的统一读写
+import { toggleFavoriteMoment, updateMomentContent, deleteMoment } from './services/moments-service.js';
+// 拖拽控制器(副作用:模块顶层挂 MutationObserver)
 import './components/prompt-drag-controller.js';
+// 上下文模式(通话/游戏场景切换时自动改变 prompt-manager 中的「当前模式」卡)
+import './services/context-mode.js';
 // ★ v0.61.8 chat-app 自有 island:第三方 App Prompt 预览编辑器
 import { registerIslandComponent } from '@/src/core/app-renderer.js';
 import { AppPromptPreviewIsland } from './components/app-prompt-preview-island.js';
 import { renderAppPromptCardPreview } from './components/app-prompt-card.js';
 
-// ★ v0.50 把 prompt-builder 暴露到 window,方便后期接 AI SDK 时直接调:
-//   const prompt = await window.__chatPromptBuilder.build({ aiPersonId, mode });
-// 暴露 preview 单独方法,给 prompt-manager 顶部展示 prompt 摘要用
-if (typeof window !== 'undefined') {
-    window.__chatPromptBuilder = chatPromptBuilder;
-}
-
 // ★ v0.61.8.5 暴露 App Prompt 卡片预览渲染函数,供 module-level input 监听器实时重渲染预览卡片
 if (typeof window !== 'undefined' && typeof renderAppPromptCardPreview === 'function') {
     window.__renderAppPromptCardPreview = renderAppPromptCardPreview;
 }
+
+// ★ v0.87 无头刷新「当前上下文」pre 的全局入口。
+//   最终 pre 一直是 renderPromptManagerPage 的副作用,不点进那一页就永远是旧快照
+//   —— 用户原话「每次来聊天要点进回复提示词才能正确拉取当前聊天回合上下文」。
+//   这里把它暴露成全局,让「打开私聊」和「发送前」两个时机都能补一次。
+//   放全局而不是 import:ai-service 是 services/,prompt-manager 是 pages/,
+//   直接 import 会形成 pages ↔ services 的循环依赖。
+if (typeof window !== 'undefined') {
+    window.__chatRefreshContextPreview = async ({ aiPersonId, mode = 'calendar', isGroup = false, groupId = null } = {}) => {
+        try {
+            const app = externalAppRegistry.getApp('chat');
+            if (!app) return false;
+            const contactId = isGroup && groupId
+                ? `group_${groupId}-${mode}`
+                : `private-${aiPersonId}-${mode}`;
+            return await refreshContextPreview(app, contactId);
+        } catch (err) {
+            console.warn('[chat-app] refreshContextPreview 失败', err);
+            return false;
+        }
+    };
+}
+
+// ★ v0.88 K 链记忆:挂 window.__chatKChain,供 ai-service 在**发送时现算**注入。
+//   走全局而不是 import,理由和 __chatRefreshContextPreview 一样 ——
+//   ai-service 在 services/,这段逻辑要读 chatMessages 又要拼 prompt,
+//   直接 import 容易绕出循环依赖。模块顶层就装,不等 App 被打开。
+installKChainBridge();
 
 // ★ v0.61.8 chat-app 自有 island:第三方 App Prompt 预览编辑器
 //   - 在 createChatApp() 里注册到 framework
@@ -146,39 +195,12 @@ if (typeof window !== 'undefined') {
     // 兜底:SDK 已就绪时立即绑定
     if (window.settingsSdk?.appPrompts) _bindOnReady();
 
-    // ★ v0.61.5 Demo:注册一个「音乐分享」prompt(占位用)
-    //   - 仅当系统里没有真正的 music app 时注册(避免重复)
-    //   - SDK 未就绪时静默跳过
-    const _registerMusicDemo = () => {
-        const sdk = window.settingsSdk;
-        if (!sdk?.appPrompts) return;
-        // 检查是否已有 music app 注册(避免重复)
-        const existing = sdk.appPrompts.listByApp('music');
-        if (existing.length > 0) return;
-        try {
-            sdk.appPrompts.register({
-                appId: 'music',
-                promptId: 'music-share-demo',
-                label: '分享音乐卡片',
-                content: '当用户请求分享音乐时,使用 [分享音乐:歌名:歌手] 格式输出。示例:[分享音乐:晴天:周杰伦]',
-                category: 'special-action',
-                previewType: 'music-card',
-                previewData: { song: '晴天', artist: '周杰伦', cover: '' },
-                defaultActive: true,
-                defaultOrder: 10,
-            });
-        } catch (err) {
-            console.warn('[chat-app] music demo register failed', err);
-        }
-    };
-    // 等 SDK ready 后再注册,失败也无所谓(纯 demo)
-    const _tryRegisterMusicDemo = () => {
-        try { _registerMusicDemo(); } catch (err) {
-            console.warn('[chat-app] registerMusicDemo failed', err);
-        }
-    };
-    if (window.settingsSdk?.appPrompts) _tryRegisterMusicDemo();
-    else window.addEventListener('settings-sdk-ready', _tryRegisterMusicDemo, { once: true });
+    // ★ v0.87 这里原本有一段「音乐分享」demo 注册。
+    //   它只是占位:内容进不了最终 pre,音乐 App 也从不覆盖它,
+    //   于是用户在折叠区看到「分享音乐卡片 · 已启用」却对 AI 毫无影响。
+    //   现在改由音乐 App 自己 `toolkit.prompts.register(...)` 注册真货
+    //   (见 js/apps/music-app/services/app-prompts.js),demo 删除。
+    //   新 App 怎么接:docs/跨App注册Prompt指导方案.md
 }
 
 // ─── 联系人/群组名称映射 ──────────────────────────────
@@ -215,10 +237,90 @@ if (typeof window !== 'undefined' && !window.__chatFavoritesSearchListenerInstal
 }
 
 // ============================================================
-// ★ v0.48 MutationObserver 自动绑定私聊交互
-//   问题:queueMicrotask 比 mountInto(setTimeout 0)早执行,waitForElement 拿到旧节点绑 listener,
-//   然后 rootEl.innerHTML = html 把 DOM 全部替换,listener 跟旧节点一起死。
-//   修法:用 MutationObserver 监听整个 document,只要 .chat-private 出现就立刻绑定(此时 innerHTML 已完成)。
+// ★ v0.69 MutationObserver 自动绑定群聊交互
+//   历史踩坑(v0.48):queueMicrotask 比 mountInto(setTimeout 0)早执行,
+//   waitForElement 拿到旧节点绑 listener,然后 rootEl.innerHTML = html 把 DOM 全部替换,
+//   listener 跟旧节点一起死。群聊沿用旧方案导致工具栏/多选按钮全失效。
+//   修法:跟私聊一致 — 用 MutationObserver 监听 document,
+//   只要 .chat-group / .chat-post / .moments-page 出现就立刻绑定(此时 innerHTML 已完成)。
+// ============================================================
+if (typeof window !== 'undefined' && typeof MutationObserver !== 'undefined' && !window.__chatGroupObserverInstalled) {
+    window.__chatGroupObserverInstalled = true;
+    const observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+            // 监听所有添加的节点，包括后代
+            const checkAndBind = (node) => {
+                if (node.nodeType !== 1) return;
+                
+                // 检查是否是目标元素本身
+                if (node.classList && node.classList.contains('chat-group')) {
+                    console.log('[chat-app] MutationObserver: found .chat-group');
+                    if (!node.__chatGroupInteractionsBound) {
+                        const chatApp = externalAppRegistry.getApp('chat');
+                        chatApp?.methods?.initGroupChatInteractions?.(node);
+                    }
+                }
+                if (node.classList && node.classList.contains('chat-post')) {
+                    console.log('[chat-app] MutationObserver: found .chat-post');
+                    if (!node.__chatPostInteractionsBound) {
+                        const chatApp = externalAppRegistry.getApp('chat');
+                        chatApp?.methods?.initChatPostInteractions?.();
+                    }
+                }
+                if (node.classList && node.classList.contains('moments-page')) {
+                    console.log('[chat-app] MutationObserver: found .moments-page');
+                    if (!node.__momentsInteractionsBound) {
+                        const chatApp = externalAppRegistry.getApp('chat');
+                        chatApp?.methods?.initMomentsPageInteractions?.();
+                    }
+                }
+                
+                // 检查后代元素
+                if (node.querySelectorAll) {
+                    const chatGroups = node.querySelectorAll('.chat-group');
+                    chatGroups.forEach(sub => {
+                        if (!sub.__chatGroupInteractionsBound) {
+                            console.log('[chat-app] MutationObserver: found .chat-group in descendants');
+                            const chatApp = externalAppRegistry.getApp('chat');
+                            chatApp?.methods?.initGroupChatInteractions?.(sub);
+                        }
+                    });
+                    const chatPosts = node.querySelectorAll('.chat-post');
+                    chatPosts.forEach(sub => {
+                        if (!sub.__chatPostInteractionsBound) {
+                            console.log('[chat-app] MutationObserver: found .chat-post in descendants');
+                            const chatApp = externalAppRegistry.getApp('chat');
+                            chatApp?.methods?.initChatPostInteractions?.();
+                        }
+                    });
+                    const momentsPages = node.querySelectorAll('.moments-page');
+                    momentsPages.forEach(sub => {
+                        if (!sub.__momentsInteractionsBound) {
+                            console.log('[chat-app] MutationObserver: found .moments-page in descendants');
+                            const chatApp = externalAppRegistry.getApp('chat');
+                            chatApp?.methods?.initMomentsPageInteractions?.();
+                        }
+                    });
+                }
+            };
+            
+            // 检查 mutation.addedNodes
+            for (const node of mutation.addedNodes) {
+                checkAndBind(node);
+            }
+        }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    console.log('[chat-app] MutationObserver installed');
+}
+
+// ============================================================
+// ★ FIX v0.69 恢复:MutationObserver 自动绑定私聊交互
+//   之前 v0.69 改 chat-app 时**误把私聊的 MutationObserver 删掉了**,
+//   只剩群聊的 observer,导致:
+//   - 进私聊详情页 → .expand-toolbar-btn / #emojiBtn / 多选按钮 全部没绑 click handler
+//   - 工具栏按钮点击没反应 / 表情面板切不出来 / 多选模式点不动
+//   修复:加回跟群聊完全同款的 observer,watch .chat-private 出现 → 调 initPrivateChatInteractions
 // ============================================================
 if (typeof window !== 'undefined' && typeof MutationObserver !== 'undefined' && !window.__chatPrivateObserverInstalled) {
     window.__chatPrivateObserverInstalled = true;
@@ -226,14 +328,12 @@ if (typeof window !== 'undefined' && typeof MutationObserver !== 'undefined' && 
         for (const mutation of mutations) {
             for (const node of mutation.addedNodes) {
                 if (node.nodeType !== 1) continue;
-                // 检查新增节点自己是否是 .chat-private
                 if (node.classList && node.classList.contains('chat-private')) {
                     if (!node.__chatPrivateInteractionsBound) {
                         const chatApp = externalAppRegistry.getApp('chat');
                         chatApp?.methods?.initPrivateChatInteractions?.(node);
                     }
                 }
-                // 检查新增节点的子树里是否有 .chat-private
                 if (node.querySelectorAll) {
                     const subs = node.querySelectorAll('.chat-private');
                     subs.forEach(sub => {
@@ -247,8 +347,105 @@ if (typeof window !== 'undefined' && typeof MutationObserver !== 'undefined' && 
         }
     });
     observer.observe(document.body, { childList: true, subtree: true });
-    console.log('[chat-app] MutationObserver installed for .chat-private');
 }
+
+// ============================================================
+// 收藏列表:挂「左滑露出分享 / 编辑 / 删除」
+// ------------------------------------------------------------
+// 手势逻辑在框架层 src/core/components/swipe-actions.js，这里只负责
+// 「新的列表节点一出现就 attach 一次」。
+// 用 MutationObserver 而不是 queueMicrotask/setTimeout：只有它能保证
+// innerHTML 已经写完（§X.7 的结论）；用后者会绑到上一次的旧节点上，
+// 表现为「切出去再回来就滑不动了」。
+// attachSwipeActions 内部有 WeakSet 去重，重复调用是安全的。
+// ============================================================
+if (typeof window !== 'undefined' && typeof MutationObserver !== 'undefined' && !window.__chatFavSwipeObserverInstalled) {
+    window.__chatFavSwipeObserverInstalled = true;
+    const bindFavList = (el) => {
+        if (!el) return;
+        import('@/src/core/components/swipe-actions.js')
+            .then(({ attachSwipeActions }) => attachSwipeActions(el))
+            .catch((err) => console.warn('[chat-app] attach favorites swipe failed', err));
+    };
+    const observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+            for (const node of mutation.addedNodes) {
+                if (node.nodeType !== 1) continue;
+                if (node.classList?.contains('chat-favorites-list')) bindFavList(node);
+                node.querySelectorAll?.('.chat-favorites-list').forEach(bindFavList);
+            }
+        }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+}
+
+// ============================================================
+// ★ v0.88 朋友圈卡片:挂「左滑露出编辑 / 删除」
+// ------------------------------------------------------------
+// 朋友圈卡片现在使用 swipe-row 结构，需要对每个 .moments-swipe-row 绑定滑动操作。
+// 跟收藏列表类似的逻辑：MutationObserver 监听新的列表节点出现时绑定。
+// ============================================================
+if (typeof window !== 'undefined' && typeof MutationObserver !== 'undefined' && !window.__chatMomentsSwipeObserverInstalled) {
+    window.__chatMomentsSwipeObserverInstalled = true;
+    const bindMomentsSwipeRow = (el) => {
+        if (!el) return;
+        import('@/src/core/components/swipe-actions.js')
+            .then(({ attachSwipeActions }) => attachSwipeActions(el))
+            .catch((err) => console.warn('[chat-app] attach moments swipe failed', err));
+    };
+    const observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+            for (const node of mutation.addedNodes) {
+                if (node.nodeType !== 1) continue;
+                // 直接是 .moments-swipe-row
+                if (node.classList?.contains('moments-swipe-row')) {
+                    bindMomentsSwipeRow(node);
+                }
+                // 后代里的 .moments-swipe-row
+                node.querySelectorAll?.('.moments-swipe-row').forEach(bindMomentsSwipeRow);
+            }
+        }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+}
+
+// ============================================================
+// 每次打开 murmur 都回到「日历模式」
+// ------------------------------------------------------------
+// 这是**第二道保险**。第一道在 chat-mode.js 里：那个模式根本不落盘，
+// 所以刷新页面天然回到日历，不需要谁去 reset。
+//
+// 这里再补两个事件，覆盖「不刷新、只是切出去再进来」：
+//   · phone:app-opened  —— 用户重新打开 murmur
+//   · phone:app-closed  —— 用户退回桌面（下次不管从哪个入口进来都是干净的）
+// 两个事件都由 framework 的 openApp/closeApp 派发。renderPage 不行 ——
+// 它每次重画都会跑，分不出「重新打开」和「只是重画了一次」。
+// ============================================================
+if (typeof window !== 'undefined' && !window.__chatRecordModeResetInstalled) {
+    window.__chatRecordModeResetInstalled = true;
+    const resetIfChat = (e) => {
+        if (e?.detail?.appId !== 'chat') return;
+        resetChatRecordMode();
+    };
+    window.addEventListener('phone:app-opened', resetIfChat);
+    window.addEventListener('phone:app-closed', resetIfChat);
+}
+
+// ============================================================
+// ★ v0.88 修复「切出 murmur 再切回,故事模式粉色残留」bug
+// 问题根因:bindShellModeListener / bindRootPageChangedListener 只在 hydrate() 异步完成后才绑定,
+// 但 phone:app-opened 事件在 hydrate() 完成前就派发了,导致 syncShellDataMode / syncHeaderActionsWithMode
+// 没机会执行,app-shell 保留旧的 story-mode 样式。
+// 解决:把监听器绑定移到「定义位置后立刻执行一次」,保证 phone:app-opened 事件随时能被接收。
+// 注意:由于 let 声明的暂时性死区(TDZ),这里只能用哨兵变量占位,
+//      真正的 addEventListener 要等下面函数定义后再调。
+// ============================================================
+let _shellModeListenerBoundEarly = false;
+let _rootPageChangedListenerBoundEarly = false;
+
+// 如果 chat:record-mode-changed 事件在监听器挂上之前就派发了,
+// 我们用「replay」机制补一次:监听器挂上后,主动派发一次当前 mode。
+// 这里只是占位,真正 dispatch 是在 hydrate 后 syncShellDataMode(getChatRecordMode()) 已完成时。
 
 // ============================================================
 // ★ v0.50 统一「滚到底部」工具
@@ -264,40 +461,26 @@ if (typeof window !== 'undefined' && typeof MutationObserver !== 'undefined' && 
 //   注意:container 必须是当前 chat root 内的 .chat-messages,
 //        不要缓存跨 v-html 的引用(framework 重画时会指向旧节点)。
 // ============================================================
-function scrollToBottomWithRetry(container) {
-    if (!container) return;
-    // 1) 同步滚:气泡 append 后立即滚,能解决文字 / sticker / 表情等同步 DOM
-    try { container.scrollTop = container.scrollHeight; } catch (_) {}
-    // 2) 下一帧再滚:等新加节点的 layout 完成(同步插入的 <img> 此时已有自然高度)
-    try {
-        requestAnimationFrame(() => {
-            try { container.scrollTop = container.scrollHeight; } catch (_) {}
-        });
-    } catch (_) {}
-    // 3) 200ms 兜底:等图片/音频异步加载完后,scrollHeight 才会真正反映最终高度
-    setTimeout(() => {
-        try { container.scrollTop = container.scrollHeight; } catch (_) {}
-    }, 200);
-}
+// ★ v0.70 抽到 components/chat-scroll.js,这里 re-export 保持向后兼容
+import { scrollToBottomWithRetry as _scrollToBottomWithRetry } from './components/chat-scroll.js';
+const scrollToBottomWithRetry = _scrollToBottomWithRetry;
 
 // ─── 联系人/群组名称映射 ──────────────────────────────
-
-const CONTACT_NAMES = {
-    'ai-1': '小美',
-    'ai-2': '小明',
-    'ai-3': '小蓝',
-    'ai-4': '小红',
-    'group-1': '游戏群',
-};
+// ★ v0.80:移除占位联系人名称(小美/小明/小蓝/小红/游戏群) — 真实联系人全部走 SDK,
+//   找不到就回退返回 id 本身,UI 自己根据 id 走「未知」展示逻辑。
+const CONTACT_NAMES = {};
 
 /**
  * 获取联系人或群组的名称
+ * @param {string} id - 可能是完整ID(如 'group-1', 'ai-1')或部分ID
+ * @param {string} sourceType - 'group' 或 'private'
  */
 function getContactOrGroupName(id, sourceType) {
+    if (!id) return null;
     if (sourceType === 'group') {
-        return CONTACT_NAMES[`group-${id}`] || id;
+        return CONTACT_NAMES[id] || CONTACT_NAMES[`group-${id}`] || id;
     }
-    return CONTACT_NAMES[`ai-${id}`] || id;
+    return CONTACT_NAMES[id] || CONTACT_NAMES[`ai-${id}`] || id;
 }
 
 /**
@@ -363,46 +546,58 @@ if (typeof window !== 'undefined') {
         '.new-group-page .new-group-body',
         '.new-chat-page .new-chat-content',
         '.chat-calendar-view .chat-calendar-view-page',
-        '.chat-story-archive-page',
+        '.chat-story-management .chat-story-mgmt-page',
         '.chat-favorites .chat-favorites-scroll',
         '.chat-history-page',
+        // ★ v0.87 root tab 的滚动容器（朋友圈 / 联系人 / 我的）
+        //   之前只列了 detail 页的容器，root tab 重画一律弹回顶部
+        '.moments-page',
+        '.chat-contacts-page',
+        '.chat-profile-page',
         '.app-detail-body',
+        '.app-content',
     ];
 
     // ★ v0.61.8.11 捕获 anchor:从 click 事件冒泡到 document.body,
     //   在 capture 阶段记下最近一次 click 的 [data-prompt-id] 祖先元素
     let _lastAnchorPromptId = null;
     let _lastAnchorOffsetTop = 0;
-    let _lastAnchorParent = null;
+    let _lastAnchorAt = 0;
+    // 锚点只在「刚点完就重画」这个窗口内有效。超过这个时间说明用户中间又滚动过，
+    // 拿旧锚点去算偏移会把页面拽到别的地方。
+    const ANCHOR_TTL_MS = 4000;
     if (typeof document !== 'undefined' && document.body && !document.body.__chatScrollAnchorHooked) {
         document.body.__chatScrollAnchorHooked = true;
         document.body.addEventListener('click', (e) => {
             try {
                 const t = e.target;
                 if (!t || typeof t.closest !== 'function') return;
-                // 优先找 .pm-card[data-prompt-id]
-                const card = t.closest('.pm-card[data-prompt-id]');
-                if (card) {
-                    _lastAnchorPromptId = card.getAttribute('data-prompt-id');
-                    _lastAnchorOffsetTop = findOffsetTopInScroller(card);
-                    _lastAnchorParent = card.parentElement;
-                    return;
-                }
-                // 兜底:任何 [data-prompt-id] 元素(segmented tabs 在 promptId 的 details 里)
-                const pidEl = t.closest('[data-prompt-id]');
-                if (pidEl) {
-                    _lastAnchorPromptId = pidEl.getAttribute('data-prompt-id');
-                    _lastAnchorOffsetTop = findOffsetTopInScroller(pidEl);
-                    _lastAnchorParent = pidEl.parentElement;
-                }
+                // 优先找 .pm-card[data-prompt-id],兜底任何 [data-prompt-id]
+                // (segmented tabs 在 promptId 的 details 里);朋友圈用 [data-moment-id]
+                const el = t.closest('.pm-card[data-prompt-id]')
+                    || t.closest('[data-prompt-id]')
+                    || t.closest('[data-moment-id]');
+                if (!el) return;
+                _lastAnchorPromptId = el.getAttribute('data-prompt-id')
+                    || `moment:${el.getAttribute('data-moment-id')}`;
+                _lastAnchorOffsetTop = findOffsetTopInScroller(el);
+                _lastAnchorAt = Date.now();
             } catch (_) { /* ignore */ }
         }, true); // capture phase
     }
+    /**
+     * 算元素相对**它所在滚动容器**的 offsetTop。
+     * ★ v0.87 之前这里写死「一直往上走到 .pm-page 为止」,只有回复提示词页是对的;
+     *   其他页面走到 null 才停,算出来的是相对文档的距离。
+     *   而 restore 那边是走到「滚动容器」为止 —— 两个基准不一样,
+     *   相减出来的 delta 是个毫无意义的大数,页面直接跳飞。
+     */
     function findOffsetTopInScroller(el) {
         try {
+            const scroller = _resolveScrollerFor(el);
             let cur = el;
             let top = 0;
-            while (cur && !(cur.classList && cur.classList.contains('pm-page'))) {
+            while (cur && cur !== scroller) {
                 top += cur.offsetTop || 0;
                 cur = cur.offsetParent;
             }
@@ -411,19 +606,32 @@ if (typeof window !== 'undefined') {
             return 0;
         }
     }
+    /** 元素往上找到第一个属于 CHAT_SCROLL_SELECTORS 的祖先 */
+    function _resolveScrollerFor(el) {
+        try {
+            const root = document.querySelector('.app-shell[data-app-id="chat"]');
+            if (!root) return null;
+            for (const sel of CHAT_SCROLL_SELECTORS) {
+                const candidate = el.closest?.(sel);
+                if (candidate && root.contains(candidate)) return candidate;
+            }
+        } catch (_) { /* ignore */ }
+        return null;
+    }
 
     function _findChatScroller() {
         try {
             const root = document.querySelector('.app-shell[data-app-id="chat"]');
             if (!root) return null;
+            const anchorFresh = _lastAnchorPromptId && (Date.now() - _lastAnchorAt) < ANCHOR_TTL_MS;
             for (const sel of CHAT_SCROLL_SELECTORS) {
                 const el = root.querySelector(sel);
                 if (el && el.scrollTop > 0) {
                     return {
                         selector: sel,
                         scrollTop: el.scrollTop,
-                        anchorPromptId: _lastAnchorPromptId,
-                        anchorOffsetTop: _lastAnchorOffsetTop,
+                        anchorPromptId: anchorFresh ? _lastAnchorPromptId : null,
+                        anchorOffsetTop: anchorFresh ? _lastAnchorOffsetTop : 0,
                         el,
                     };
                 }
@@ -440,10 +648,15 @@ if (typeof window !== 'undefined') {
                 const root = document.querySelector('.app-shell[data-app-id="chat"]');
                 const el = root ? root.querySelector(selector) : null;
                 if (!el) return;
-                // ★ v0.61.8.11 优先按 anchor 找新位置
+                // ★ v0.61.8.11 优先按 anchor 找新位置：卡片在重画后可能整体上移/下移
+                //   （启停一条 prompt 会让它在「当前上下文」和「可用 Prompt」之间搬家），
+                //   死记 scrollTop 会让用户看到的内容漂走。
                 let targetTop = scrollTop;
                 if (anchorPromptId) {
-                    const newAnchor = el.querySelector(`[data-prompt-id="${cssEscape(anchorPromptId)}"]`);
+                    const selector = anchorPromptId.startsWith('moment:')
+                        ? `[data-moment-id="${cssEscape(anchorPromptId.slice('moment:'.length))}"]`
+                        : `[data-prompt-id="${cssEscape(anchorPromptId)}"]`;
+                    const newAnchor = el.querySelector(selector);
                     if (newAnchor) {
                         // 计算新 anchor 在 scroller 里的 offsetTop
                         let cur = newAnchor;
@@ -452,13 +665,14 @@ if (typeof window !== 'undefined') {
                             top += cur.offsetTop || 0;
                             cur = cur.offsetParent;
                         }
-                        // 恢复成原 anchor offsetTop(等于"恢复用户当时看到的同一卡片位置")
-                        if (top !== _lastAnchorOffsetTop) {
-                            targetTop = el.scrollTop + (top - _lastAnchorOffsetTop);
-                            targetTop = Math.max(0, Math.min(targetTop, el.scrollHeight - el.clientHeight));
-                        }
+                        // ★ v0.87 这里原来写的是 `el.scrollTop + (top - _lastAnchorOffsetTop)`。
+                        //   restore 发生在元素刚重建之后,此时 el.scrollTop 恒为 0,
+                        //   于是 targetTop 变成了「锚点位移量」而不是「原位置 + 位移量」——
+                        //   结果每次重画都把用户弹到接近顶部。基准必须是**捕获时的** scrollTop。
+                        targetTop = scrollTop + (top - _lastAnchorOffsetTop);
                     }
                 }
+                targetTop = Math.max(0, Math.min(targetTop, Math.max(0, el.scrollHeight - el.clientHeight)));
                 el.scrollTop = targetTop;
             } catch (_) { /* ignore */ }
         };
@@ -527,7 +741,7 @@ const NAV_TABS = [
         iconHtml: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>',
         topbar: {
             visible: true,
-            title: '消息',
+            title: 'murmur',
             showPill: false,
             // ★ v0.25 framework 级 headerActions:顶栏右侧按钮组
             //   mode toggle 按钮的 iconHtml / variant 跟随 chatRecordMode 动态变,
@@ -540,7 +754,9 @@ const NAV_TABS = [
         id: 'contacts',
         label: '通讯录',
         iconHtml: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
-        topbar: { visible: true, type: 'search', searchPlaceholder: '搜索' },
+        // ★ 通讯录页搜索框:interactive=true 让 framework 渲染真正的 input,
+        //   onSearchInputMethod 指向 chat-app 的方法(framework 收到 input 事件会调用)
+        topbar: { visible: true, type: 'search', searchPlaceholder: '搜索联系人', interactive: true, onSearchInputMethod: 'onTopbarSearchInput' },
     },
     {
         id: 'moments',
@@ -624,6 +840,14 @@ function syncShellDataMode(mode) {
     shell.dataset.chatMode = next;
     shell.classList.toggle('is-story-mode', next === 'story');
     shell.classList.toggle('is-calendar-mode', next === 'calendar');
+    // ★ 切到 calendar/story 模式后,framework 会重画 .app-tab-bar,旧指示器跟着旧 DOM 一起死。
+    //   renderChatPage() 只在常规 chat 页面渲染时被调,接管模式下走不到,所以这里补一次。
+    try {
+        const tabBar = document.querySelector('.app-nav[data-app-id="chat"] .app-tab-bar');
+        if (tabBar && !tabBar.querySelector('.chat-tab-indicator')) {
+            tabBar.insertAdjacentHTML('afterbegin', '<div class="chat-tab-indicator"></div>');
+        }
+    } catch (_) {}
 }
 
 /**
@@ -634,7 +858,13 @@ function syncShellDataMode(mode) {
  */
 let _shellModeListenerBound = false;
 function bindShellModeListener() {
-    if (_shellModeListenerBound || typeof window === 'undefined') return;
+    // ★ v0.88 兼容早期模块级哨兵:函数可能在变量声明前就被调用,
+    //   用 _shellModeListenerBoundEarly 防止在早期路径重复挂监听。
+    if (typeof window === 'undefined') return;
+    if (_shellModeListenerBound || _shellModeListenerBoundEarly) {
+        _shellModeListenerBound = true;
+        return;
+    }
     _shellModeListenerBound = true;
     window.addEventListener('chat:record-mode-changed', (e) => {
         const mode = e?.detail?.mode;
@@ -654,7 +884,13 @@ function bindShellModeListener() {
  */
 let _rootPageChangedListenerBound = false;
 function bindRootPageChangedListener() {
-    if (_rootPageChangedListenerBound || typeof window === 'undefined') return;
+    // ★ v0.88 兼容早期模块级哨兵:函数可能在变量声明前就被调用,
+    //   用 _rootPageChangedListenerBoundEarly 防止在早期路径重复挂监听。
+    if (typeof window === 'undefined') return;
+    if (_rootPageChangedListenerBound || _rootPageChangedListenerBoundEarly) {
+        _rootPageChangedListenerBound = true;
+        return;
+    }
     _rootPageChangedListenerBound = true;
     window.addEventListener('app:rootpage-changed', (e) => {
         const { from, to, appId } = e?.detail || {};
@@ -668,6 +904,13 @@ function bindRootPageChangedListener() {
         // from === 'messages' && to !== 'messages' 的路径,framework 已在 switchRootPage 内清掉 override,
         // 这里无需再做(v0.28 fix 的逻辑保留)
     });
+}
+
+// ★ v0.88 模块加载后立即绑定这两个监听器,确保 phone:app-opened 事件随时能被接收到。
+//   这两行在函数定义之后才执行,绕开了 let 的 TDZ。
+if (typeof window !== 'undefined') {
+    try { bindShellModeListener(); } catch (_) {}
+    try { bindRootPageChangedListener(); } catch (_) {}
 }
 
 /**
@@ -723,14 +966,7 @@ export function renderChatPage(content, page, app) {
             bootstrapUserData = snapshotToProfileUser(snap);
         } catch (_) {}
         const html = renderMomentsPage(app, null, bootstrapUserData);
-        // 动态页面需要绑定交互
-        queueMicrotask(() => {
-            try {
-                app?.methods?.initMomentsPageInteractions?.();
-            } catch (err) {
-                console.warn('[chat-app] initMomentsPageInteractions failed', err);
-            }
-        });
+        // 注意:交互绑定由模块顶层的 MutationObserver 处理
         return html;
     }
     if (currentId === 'profile') {
@@ -840,7 +1076,196 @@ function _saveContextOrder(map) {
     } catch (_) {}
 }
 
+// ============================================================
+// ★ v0.81 群成员管理辅助函数
+//   - buildGroupPickerCandidates: 把 resolvedMembers + 当前用户
+//     转成 GroupMemberPickerModal 的 candidates 列表
+//   - generateAiGroupNickname: 基于 AI 人设字段启发式生成群昵称
+// ============================================================
+
+/**
+ * 构建群成员选择器候选列表
+ *
+ * @param {Object} opts
+ * @param {Array} opts.resolvedMembers  resolveMembers 返回 [{id, name, avatar, avatarBg, ...}]
+ * @param {Object} opts.defaultUser    sdk.users.getActive()
+ * @param {string} opts.currentOwnerId 当前群主 id
+ * @param {string[]} opts.adminIds    当前管理员 id 列表
+ * @param {Object} opts.memberNicknames 当前群昵称映射
+ * @param {'all'|'admin-picker'} [opts.filter='all']
+ *        'all' → 给群主选择用,包含 user + 所有 AI
+ *        'admin-picker' → 给选管理员用,排除 user、排除群主、已是管理员置灰
+ * @returns {Array} candidates
+ */
+function buildGroupPickerCandidates(opts) {
+    const {
+        resolvedMembers = [],
+        defaultUser,
+        currentOwnerId,
+        adminIds = [],
+        memberNicknames = {},
+        filter = 'all',
+    } = opts || {};
+    const adminSet = new Set(adminIds.map(String));
+    const ownerStr = String(currentOwnerId || '');
+    const userIdStr = String(defaultUser?.id || '');
+    const out = [];
+
+    // user 本人
+    if (filter === 'all' || filter === 'owner-picker') {
+        const userAv = (function () {
+            try {
+                const cu = defaultUser?.socialProfiles?.chat || {};
+                return {
+                    url: cu.avatar || defaultUser?.avatar || '',
+                    bg: cu.avatarBg || defaultUser?.avatarBg || '#F4A6CD',
+                };
+            } catch (_) {
+                return { url: '', bg: '#F4A6CD' };
+            }
+        })();
+        const userNick = memberNicknames[userIdStr] || '';
+        const isCurrentOwner = String(userIdStr) === ownerStr;
+        out.push({
+            id: userIdStr || 'user',
+            label: defaultUser?.name || '我',
+            avatar: userAv.url,
+            avatarBg: userAv.bg,
+            initial: '我',
+            kind: 'user',
+            isCurrentUser: true,
+            tag: isCurrentOwner ? '当前群主' : (userNick ? `昵称: ${userNick}` : ''),
+            disabled: isCurrentOwner, // 当前群主不可重复选择
+            disabledReason: isCurrentOwner ? '当前已是群主' : '',
+        });
+    }
+
+    // AI 成员
+    for (const m of resolvedMembers || []) {
+        const id = m.id || m.aiPersonId || '';
+        if (!id) continue;
+        const meta = (function () {
+            try {
+                const sdk = window.settingsSdk;
+                const ai = sdk?.aiPersons?.get?.(id);
+                const chat = ai?.socialProfiles?.chat || {};
+                return {
+                    nickname: chat.nickname || ai?.name || id,
+                    avatar: chat.avatar || ai?.avatar || '',
+                    avatarBg: chat.avatarBg || ai?.avatarBg || '#A8C8EC',
+                };
+            } catch (_) {
+                return { nickname: id, avatar: '', avatarBg: '#A8C8EC' };
+            }
+        })();
+        const nick = memberNicknames[id] || '';
+        const isOwner = String(id) === ownerStr;
+        const isAdmin = adminSet.has(String(id));
+        let disabled = false;
+        let disabledReason = '';
+        if (filter === 'admin-picker') {
+            if (isOwner) {
+                disabled = true;
+                disabledReason = '当前是群主';
+            } else if (isAdmin) {
+                disabled = true;
+                disabledReason = '已是管理员';
+            }
+        }
+        out.push({
+            id,
+            label: meta.nickname,
+            avatar: meta.avatar,
+            avatarBg: meta.avatarBg,
+            initial: (meta.nickname || id || '?').charAt(0),
+            kind: 'ai',
+            isCurrentUser: false,
+            tag: isOwner
+                ? '当前群主'
+                : (isAdmin ? '管理员' : (nick ? `昵称: ${nick}` : '')),
+            disabled,
+            disabledReason,
+        });
+    }
+
+    return out;
+}
+
+/**
+ * 启发式 AI 群昵称生成器
+ *
+ * 优先用人设里的 role / tone / personality 等结构化字段拼出
+ * 「昵称 + 修饰词」形式的群昵称。
+ *
+ * 模板(按顺序尝试,命中即返回):
+ *   1. {name}·{role 取首 2~3 字}
+ *   2. {name}（{tone 取首 4~6 字}）
+ *   3. {name}の{tagName}
+ *   4. {name}{groupName 末 2 字}
+ *   5. {name} · {role/tone 摘要前 2 字}
+ *
+ * @param {Object} ai aiPerson 实例
+ * @param {Object} entry chatGroup entry
+ * @returns {string|null} 生成的群昵称,失败返回 null
+ */
+function generateAiGroupNickname(ai, entry) {
+    try {
+        const chat = ai?.socialProfiles?.chat || {};
+        const nickname = chat.nickname || ai?.name || '';
+        if (!nickname) return null;
+        const role = String(ai?.role || '').trim();
+        const tone = String(ai?.tone || '').trim();
+        const personality = String(ai?.personality || '').trim();
+        const bio = String(ai?.bio || '').trim();
+        const groupName = String(entry?.name || '').trim();
+
+        // 第一个有意义的修饰词
+        const pickFragment = (raw, max = 4) => {
+            if (!raw) return '';
+            const cleaned = raw
+                .replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]/gu, '')
+                .replace(/[、，。！？,.\s]+/g, '、')
+                .trim();
+            if (!cleaned) return '';
+            return cleaned.split(/[、,，]/)[0].slice(0, max);
+        };
+
+        // 模板 1:昵称·职业
+        if (role) {
+            const r = pickFragment(role, 3);
+            if (r) return `${nickname}·${r}`.slice(0, 16);
+        }
+        // 模板 2:昵称（语气）
+        if (tone) {
+            const t = pickFragment(tone, 5);
+            if (t) return `${nickname}（${t}）`.slice(0, 16);
+        }
+        // 模板 3:昵称の人格
+        if (personality) {
+            const p = pickFragment(personality, 4);
+            if (p) return `${nickname}の${p}`.slice(0, 16);
+        }
+        // 模板 4:昵称 + 群聊末 2 字
+        if (groupName && groupName.length >= 2) {
+            const tail = groupName.slice(-2);
+            return `${nickname}${tail}`.slice(0, 16);
+        }
+        // 模板 5:昵称 + bio 前 2 字
+        if (bio) {
+            const b = pickFragment(bio, 3);
+            if (b) return `${nickname}·${b}`.slice(0, 16);
+        }
+        // 兜底:仅昵称
+        return nickname.slice(0, 16);
+    } catch (err) {
+        console.warn('[chat-app] generateAiGroupNickname failed', err);
+        return null;
+    }
+}
+
 export function createChatApp() {
+    // ★ v0.69 通话岛模板已在模块顶层注册过(见文件顶部),这里 noop
+
     // ★ v0.61.8.5 component-island 在 chat-app detail 渲染时未生效,
     //   编辑器已改为内联 HTML + data-app-action,不再依赖 island
     //   - 保留 registerIslandComponent 调用是 noop(framework 找不到 <component-island> 标签)
@@ -857,6 +1282,9 @@ export function createChatApp() {
         icon: '<svg viewBox="0 0 60 60" style="width:100%;height:100%;"><path d="M0,-22 Q2.5,-4 15,0 Q2.5,4 0,22 Q-2.5,4 -15,0 Q-2.5,-4 0,-22Z" fill="#4a9eca" transform="translate(15, 12) scale(1.5)"/><path d="M0,-22 Q2.5,-4 15,0 Q2.5,4 0,22 Q-2.5,4 -15,0 Q-2.5,-4 0,-22Z" fill="#3d8ab8" transform="translate(45, 49) scale(1.5)"/></svg>',
         renderMode: 'hybrid',
         background: 'linear-gradient(180deg, #f8fafc 0%, #ffffff 100%)',
+        // 有 getBackground 时框架会把状态栏图标兜底成白字；murmur 浅底要用收藏页主蓝。
+        statusBarColor: '#4a6fa5',
+        dock: { visible: true, order: 2 },
         // v0.26:framework 会在切 tab 时重算 activeAppBackgroundStyle,
         // 所以这里读 activePageId 区分「只在 messages tab 才让背景变粉」——
         // 通讯录/动态/我 这三个 tab 仍保留原色,避免全 app 都被染成粉色。
@@ -867,6 +1295,77 @@ export function createChatApp() {
             return 'linear-gradient(180deg, #f8fafc 0%, #ffffff 100%)';
         },
         nav: { type: 'tab' },
+
+        // ★ 声明「我是社交软件」：人设编辑器（nook）里会自动出现一张
+        //   murmur 的「社媒形象」卡（网名 / 头像 / 背景），数据存在
+        //   persona.socialProfiles.chat。
+        //   以前这张卡是写死在 settings 的 home-section.js 里的，
+        //   现在改成 App 自己声明（src/core/social-app-registry.js）。
+        socialProfile: {
+            label: 'murmur',
+            desc: '社交聊天软件',
+            order: 10,
+            // signature 和 pat 是 murmur 独有的：签名显示在通讯录
+            // （contacts-page 读 aiMeta.signature），拍一拍文案由
+            // chat-page 读 socialProfiles.chat.patSetting。别的社交 App
+            // 没有消费这两样的地方，所以不该在它们的卡上出现输入框。
+            fields: ['nickname', 'signature', 'pat', 'avatar', 'background'],
+        },
+
+        // ★ App Store 详情页描述
+        distribution: {
+            appStore: {
+                subtitle: '和你的人设聊天',
+                category: '社交',
+                description: `人为什么需要把话说给谁听？我也不知道。也许有些念头，只有在得到回应以后，才肯显出原来的形状。
+
+murmur 接住的是你与人设之间持续生长的关系。私聊也好，群聊也好，文字、通话、动态里的来往，都从 nook 中的人设与世界开始，不替它们预先规定结局。
+
+消息会留下，记忆和上下文可以查看、取舍；走到别处时，对方也仍可能发来消息。你来与不来，那些对话都在那里，等下一句自然发生。`,
+            },
+        },
+
+        // ★ v0.87 声明 murmur 会占用灵动岛的全部时机。
+        //   用户在「我 → 灵动岛与小组件」里能逐条预览和开关。
+        //   通话那条标了 essential —— 正在通话时把岛关掉等于把电话弄丢，不允许。
+        islandKinds: [
+            {
+                id: 'call',
+                label: '通话中',
+                desc: '头像、通话时长、挂断按钮和一个输入框。点岛展开成大卡后能直接看消息、继续对话。',
+                when: '语音通话最小化后常驻，直到挂断为止（视频通话不支持最小化）',
+                template: 'call-medium',
+                sizes: ['medium', 'large'],
+                essential: true,
+                previewPayload: {
+                    name: '示例联系人',
+                    avatarBg: '#A8C8EC',
+                    callType: 'voice',
+                    durationMs: 125000,
+                    messages: [
+                        { sender: 'ai', senderName: '示例联系人', content: '喂？听得到吗', timestamp: Date.now() - 60000 },
+                        { sender: 'user', content: '听得到 你说', timestamp: Date.now() - 30000 },
+                    ],
+                },
+            },
+            {
+                id: 'incoming-call',
+                label: '来电提醒',
+                desc: '对方打进来时的提示胶囊。',
+                when: 'AI 主动发起通话、而你正在别的页面时',
+                sizes: ['compact'],
+                previewPayload: { title: '示例联系人', message: '邀请你语音通话' },
+            },
+            {
+                id: 'new-message',
+                label: '新消息通知',
+                desc: '发送者名字 + 消息摘要，3.5 秒后自动消失。',
+                when: '你不在这个会话里、但收到了新消息时',
+                sizes: ['compact'],
+                previewPayload: { title: '示例联系人', message: '在吗 刚看到你发的朋友圈' },
+            },
+        ],
+
         pages: [
             // Tab 页
             ...NAV_TABS.map((tab) => ({
@@ -880,13 +1379,22 @@ export function createChatApp() {
         defaultRootPageId: 'messages',
         topbar: {
             visible: true,
-            title: '消息',
+            title: 'murmur',
             showPill: false,
             // headerActions 由 messages tab 的 page.topbar 提供(activeAppTopbar 优先 page),
             // 这里不再重复声明。
         },
         // detailContent 用于告诉 framework 详情页的存在和标题
-        detailContent: {},
+        detailContent: {
+            // ★ v0.67.x 钱包流水:从 chat profile 钱包菜单进入
+            //   - 复用 settings/persona/transaction-history.js 的渲染函数
+            //   - 但 settings 自己 detailContent 用的是驼峰 transactionHistory(看起来是 v0.67 留的小 bug),
+            //     跨 app 走 framework 全局 DETAIL_PAGE_CONTENT 时,按 pageId 'transaction-history' 找不到
+            //   - 这里在 chat-app 内显式补一条,framework detail 顶栏就能显示「钱包流水」标题
+            'transaction-history': { title: '钱包流水', subtitle: '最近的收支记录' },
+            // ★ v0.87 群聊记忆互通:从 chat profile → 群聊记忆互通 菜单进入
+            'group-memory-sync': { title: '群聊记忆互通', subtitle: '私聊与群聊记忆互通' },
+        },
         renderPage: renderChatPage,
         renderDetailPage: async function(content, page, app) {
             const pageId = page?.id || '';
@@ -923,36 +1431,44 @@ export function createChatApp() {
                 const favMatch = pageId.match(/^favorites-(?:([a-z]+)_(.+))?$/);
                 const favSourceType = favMatch?.[1] || null;
                 const favSourceId = favMatch?.[2] || null;
-                // ★ v0.44:读取真实收藏数据(sdk.chatFavorites)与 DEMO 合并展示
+                // ★ v0.44:读取真实收藏数据(sdk.chatFavorites)
                 const sdk = window.settingsSdk;
-                console.log('[chat] renderFavoritesPage sdk?', !!sdk, 'chatFavorites?', !!sdk?.chatFavorites);
                 const realFavs = (() => {
                     try {
                         const user = sdk?.defaultUserCard?.getDefault?.() || sdk?.users?.getActive?.();
-                        console.log('[chat] favorite user:', user);
                         if (!user) return [];
                         const userId = typeof user === 'string' ? user : user.id;
-                        console.log('[chat] favorite userId:', userId);
                         // 按 (user, aiPersonId, mode) 拉取,不过滤特定联系人(全部)
                         const list = sdk?.chatFavorites?.list?.(user) || [];
-                        console.log('[chat] realFavs count:', list.length);
                         return list;
                     } catch (err) {
                         console.warn('[chat] realFavs error:', err);
                         return [];
                     }
                 })();
-                // ★ v0.44:读取对话片段收藏(内存)
-                const conversationFavs = Array.isArray(app?.state?._conversationFavorites)
+                // ★ v0.44:读取对话片段收藏(内存 + v0.69 localStorage 兜底,刷新仍可见)
+                let conversationFavs = Array.isArray(app?.state?._conversationFavorites)
                     ? app.state._conversationFavorites
                     : [];
+                try {
+                    const ls = JSON.parse(localStorage.getItem('xiaoting::chat-conversation-favorites-v1') || '[]');
+                    if (Array.isArray(ls) && ls.length > 0) {
+                        // 用 conv key 去重,内存优先
+                        const seen = new Set(conversationFavs.map((c) => `${c.sourceType}::${c.sourceId}::${c.messages?.[0]?.id}`));
+                        for (const c of ls) {
+                            const k = `${c.sourceType}::${c.sourceId}::${c.messages?.[0]?.id}`;
+                            if (!seen.has(k)) { conversationFavs.push(c); seen.add(k); }
+                        }
+                    }
+                } catch (_) {}
                 const favOptions = {
                     contactId: favSourceId,
                     sourceType: favSourceType,
                     sourceName: favSourceId ? getContactOrGroupName(favSourceId, favSourceType) : null,
                     // ★ v0.36:从 app.state 读取收藏页 in-memory state(分类 / 搜索 keyword / 展开状态)
                     state: (app?.state?.chat?.favorites) || {},
-                    // ★ v0.44:合并三类收藏数据:对话片段(内存) + 单条收藏(sdk) + DEMO(兜底)
+                    // ★ v0.44:合并两类收藏数据:对话片段(内存) + 单条收藏(sdk)
+                    //   v0.80:不再合并 DEMO_FAVORITES 占位数据
                     realFavorites: [...conversationFavs, ...realFavs],
                 };
                 html = renderFavoritesPage(app, favOptions);
@@ -1000,6 +1516,7 @@ export function createChatApp() {
             } else if (pageId === 'chat-post') {
                 // 发布新动态详情页(动态页顶部「发布新动态」按钮)
                 html = renderChatPostPage(app);
+                // 注意:交互绑定由模块顶层的 MutationObserver 处理
             } else if (pageId.startsWith('ai-moments-')) {
                 // ★ v0.31 AI 专属朋友圈详情页(聊天设置 → 朋友圈)
                 //   pageId = 'ai-moments-{aiPersonId}-{mode}'
@@ -1034,14 +1551,36 @@ export function createChatApp() {
             } else if (pageId.startsWith('memory-history-')) {
                 // ★ v0.65 历史消息页(层级管理 → 历史消息),上下结构 + 层级 tab
                 html = renderMemoryHistoryPage(app, pageId);
+            } else if (pageId === 'group-memory-sync') {
+                // ★ v0.87 群聊记忆互通设置详情页(个人页面 → 群聊记忆互通 菜单)
+                //   - 走 sdk.groupMemorySync 全局 + 每个 AI 配置
+                //   - 改完走 appMethod → SDK 落盘 → invalidateRendererCache + syncNow 二段式重画
+                try {
+                    if (typeof window.whenSettingsSdkReady === 'function') {
+                        await window.whenSettingsSdkReady(3000);
+                    }
+                    const sdk = window.settingsSdk;
+                    const defaultUser = sdk?.defaultUserCard?.getDefault?.() || sdk?.users?.getActive?.();
+                    if (!sdk || !sdk.groupMemorySync || !defaultUser) {
+                        html = `<div class="settings-empty">SDK 尚未就绪,请稍后重试</div>`;
+                    } else {
+                        const { renderGroupMemorySyncPage } = await import('./pages/group-memory-sync-page.js');
+                        html = renderGroupMemorySyncPage(app, { sdk, user: defaultUser });
+                    }
+                } catch (err) {
+                    console.warn('[chat-app] group-memory-sync render failed:', err);
+                    html = `<div class="settings-empty">加载失败:${escapeHtml(String(err && err.message || err))}</div>`;
+                }
             } else if (pageId.startsWith('chat-history-')) {
                 // ★ v0.61.3 历史消息详情页(聊天设置 → 聊天记录管理 → 历史消息)
                 const cid = pageId.replace('chat-history-', '');
                 html = renderHistoryPage(app, cid);
-            } else if (pageId.startsWith('story-archive-')) {
-                // 故事存档详情页(聊天设置 → 聊天记录管理 → 故事记录)
-                const cid = pageId.replace('story-archive-', '');
-                html = renderStoryArchivePage(app, cid);
+            } else if (pageId.startsWith('story-archive-') || pageId.startsWith('story-management-')) {
+                // 故事管理详情页(原「故事存档」,v0.68 改名 → 故事管理)
+                //   - pageId 同时支持 story-archive-{cid} 和 story-management-{cid} 两种入口
+                //     (避免破坏已有 chat-settings-page / chat-group-settings-page 的入口链接)
+                const cid = pageId.replace(/^(story-archive|story-management)-/, '');
+                html = renderStoryManagementPage(app, cid);
                 // ★ v0.42 绑定存档列表交互(目前所有按钮都走 data-app-action,这里仅做
                 //   一次性的 SDK ready 兜底刷新)
                 queueMicrotask(() => {
@@ -1058,13 +1597,12 @@ export function createChatApp() {
                 html = await renderPromptManagerPage(app, cid);
             } else if (pageId.startsWith('private-')) {
                 // ★ v0.28 路由:private-{aiPersonId}-{mode} → 私聊详情页
-                //   完整 contactId 传给 renderPrivateChatPage，内部解析 aiPersonId + mode
+                //   完整 contactId 传给 renderPrivateChatPage,内部解析 aiPersonId + mode
                 html = renderPrivateChatPage(app, pageId);
-                // ★ v0.61.3:实时计算「当前聊天回合」prompt 文本 + 后台触发滚动摘要压缩
+                // ★ v0.61.3:实时计算「当前聊天回合」prompt 文本(只 contextRounds,无 K 链)
                 //   - 写入 app.state.chat.contextRoundsMap[aiPersonId] = { rounds, content, lastUpdated }
-                //   - fire-and-forget 调 _triggerRollingCompress(由 sdk.rollingSummaries.compressIfNeeded 处理)
-                //   - 写入完成后用 __appRendererBridge.syncNow({ force: true }) 强制 detail 重画,
-                //     避免使用 window.__detailRenderTick.value++ 触发死循环(AGENTS.md §16.27)
+                //   - 用途:prompt-manager「当前聊天回合」卡片 + 计算 realtime context prompt
+                //   - 不再触发任何 K 链压缩(K 链已移除)
                 (() => {
                     try {
                         const stripped = pageId.startsWith('private-')
@@ -1086,26 +1624,9 @@ export function createChatApp() {
                         const cfg = sdk.rollingSummaries?.getRollingConfig?.(aiPersonId) || { contextRounds: 20 };
                         const ctxN = Number(cfg.contextRounds) || 20;
                         const content = app.methods.computeContextRoundsPrompt(aiPersonId, msgs, ctxN);
-                        const roundsCount = (() => {
-                            const list = Array.isArray(msgs) ? msgs.slice() : [];
-                            // ★ v0.61.8.12 roundsCount 与 content 保持口径一致,只算「今天的回合」
-                            const _now = new Date();
-                            const _dayStart = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate(), 0, 0, 0, 0).getTime();
-                            const _dayEnd = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate(), 23, 59, 59, 999).getTime();
-                            const todayList = list.filter((m) => {
-                                const ts = Number(m && m.timestamp) || 0;
-                                return ts >= _dayStart && ts <= _dayEnd;
-                            });
-                            todayList.sort((a, b) => (Number(a.timestamp) || 0) - (Number(b.timestamp) || 0));
-                            let n = 0; let cur = []; let curSender = null;
-                            for (const m of todayList) {
-                                if (!m || m.sender == null) continue;
-                                if (m.sender !== curSender && cur.length > 0) { n += 1; cur = []; }
-                                cur.push(m); curSender = m.sender;
-                            }
-                            if (cur.length > 0) n += 1;
-                            return n;
-                        })();
+                        // roundsCount 与 content 同口径(1 回合 = 用户说一次 + AI 回一次),
+                        // 之前这里自己抄了一份"按 sender 切换计数"的逻辑,算出来正好是两倍。
+                        const roundsCount = takeRecentRounds(msgs, ctxN).total;
                         if (!app.state.chat) app.state.chat = {};
                         if (!app.state.chat.contextRoundsMap) app.state.chat.contextRoundsMap = {};
                         app.state.chat.contextRoundsMap[aiPersonId] = {
@@ -1114,16 +1635,9 @@ export function createChatApp() {
                             lastUpdated: Date.now(),
                             contextRounds: ctxN,
                         };
-                        // 后台 K 链压缩:不阻塞 renderPage,fire-and-forget
-                        if (app?.methods?._triggerRollingCompress) {
-                            app.methods._triggerRollingCompress(aiPersonId, mode, msgs).catch(() => {});
-                        }
-                        // 压缩完后异步触发 detail 重画,让 prompt-manager / 私聊页用最新数据
-                        setTimeout(() => {
-                            try {
-                                window.__appRendererBridge?.syncNow?.({ force: true });
-                            } catch (_) {}
-                        }, 60);
+                        // 打开私聊就把 pre 刷一次 —— 不用等用户点进「回复提示词」页。
+                        // 不 await:渲染链路不该被它拖慢,发送前 ai-service 还会再补一次。
+                        void window.__chatRefreshContextPreview?.({ aiPersonId, mode });
                     } catch (err) {
                         console.warn('[chat-app] v0.61.3 private-page context rounds init failed:', err);
                     }
@@ -1132,6 +1646,123 @@ export function createChatApp() {
                 // 通话记录详情页(语音/视频)— 卡片点击进入
                 const callRecordId = pageId.replace('call-record-', '');
                 html = renderCallRecordDetailPage(app, callRecordId);
+            } else if (pageId === 'transaction-history') {
+                // ★ v0.67.x 钱包流水(从 chat profile 钱包菜单进入)
+                //   - 渲染在 chat app 的 detail 容器里,返回 → closeDetailPage 直接回 chat profile
+                //   - 结构对齐 chat-favorites 详情页:同套 topbar + 渐变背景 + 摘要卡片 + 列表卡片
+                //   - 配色沿用 chat 主题蓝(#4a6fa5)/粉(#f2aacb) 渐变,而不是 chat 之外的绿色
+                try {
+                    if (typeof window.whenSettingsSdkReady === 'function') {
+                        await window.whenSettingsSdkReady(3000);
+                    }
+                    const sdk = window.settingsSdk;
+                    if (!sdk?.assetFlow) {
+                        html = `<div class="settings-empty">SDK 未就绪,请稍后再试</div>`;
+                    } else {
+                        const defaultUser = sdk?.defaultUserCard?.getDefault?.() || sdk?.users?.getActive?.();
+                        const personaName = defaultUser?.name || defaultUser?.socialProfiles?.chat?.nickname || '用户';
+                        const safeName = escapeHtml(personaName);
+                        const userId = defaultUser?.id || '';
+                        const balance = sdk.assetFlow.getBalance('user', userId) || 0;
+                        const flows = sdk.assetFlow.list('user', userId, { limit: 0 }) || [];
+
+                        // 流水类型
+                        const txTypeMap = {
+                            'redpacket': (d) => d === 'in' ? '收到红包' : '发红包',
+                            'transfer': (d) => d === 'in' ? '收到转账' : '转账',
+                            'income-settle': () => '定时收入到账',
+                            'manual': () => '手动调整',
+                            'unknown': () => '其他',
+                        };
+                        const fmtTime = (ts) => {
+                            const d = new Date(ts || Date.now());
+                            const pad = (n) => String(n).padStart(2, '0');
+                            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                        };
+                        const inCount = flows.filter(e => e.direction === 'in').length;
+                        const outCount = flows.filter(e => e.direction !== 'in').length;
+                        const listHtml = flows.length === 0
+                            ? `
+                            <div class="wallet-empty">
+                                <div class="wallet-empty-icon">
+                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                                        <circle cx="16" cy="12" r="2"></circle>
+                                    </svg>
+                                </div>
+                                <div class="wallet-empty-text">暂无交易记录</div>
+                                <div class="wallet-empty-hint">收发红包、转账后记录将显示在这里</div>
+                            </div>`
+                            : flows.map((e) => {
+                                const isIn = e.direction === 'in';
+                                const sign = isIn ? '+' : '-';
+                                const typeFn = txTypeMap[e.type] || (() => '其他');
+                                const typeLabel = typeFn(e.direction);
+                                const cpName = e.counterpartyName ? escapeHtml(e.counterpartyName) : '';
+                                const note = e.note ? escapeHtml(e.note) : '';
+                                const itemCls = `wallet-flow-item${isIn ? ' is-in' : ' is-out'}`;
+                                return `
+                                    <div class="${itemCls}">
+                                        <div class="wallet-flow-item-main">
+                                            <div class="wallet-flow-item-title">${typeLabel}${cpName ? ` <span class="wallet-flow-item-cp">· ${cpName}</span>` : ''}</div>
+                                            ${note ? `<div class="wallet-flow-item-note">${note}</div>` : ''}
+                                            <div class="wallet-flow-item-meta">${fmtTime(e.timestamp)}</div>
+                                        </div>
+                                        <div class="wallet-flow-item-amount ${isIn ? 'wallet-amount--in' : 'wallet-amount--out'}">${sign}¥${(Number(e.amount) || 0).toFixed(2)}</div>
+                                    </div>`;
+                            }).join('');
+
+                        html = `
+<div class="wallet-page">
+    <div class="wallet-topbar">
+        <button class="wallet-back-btn" data-app-action='{"action":"appMethod","appId":"chat","method":"closeDetail"}' aria-label="返回">
+            <svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <h1>钱包</h1>
+        <span class="wallet-topbar-spacer"></span>
+    </div>
+
+    <div class="wallet-scroll">
+        <!-- 余额 hero 卡片 -->
+        <div class="wallet-hero">
+            <div class="wallet-hero-bg wallet-hero-bg--1"></div>
+            <div class="wallet-hero-bg wallet-hero-bg--2"></div>
+            <div class="wallet-hero-deco">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="white"><rect x="2" y="4" width="20" height="16" rx="2"></rect><circle cx="16" cy="12" r="2"></circle></svg>
+            </div>
+            <div class="wallet-hero-name">${safeName} 的钱包</div>
+            <div class="wallet-hero-label">账户余额</div>
+            <div class="wallet-hero-balance">¥ ${balance.toFixed(2)}</div>
+        </div>
+
+        <!-- 摘要卡片(对齐 chat-favorites-summary) -->
+        <div class="wallet-summary">
+            <div class="wallet-summary-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M21 7H5a1 1 0 0 1 0-2h14V3H5a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h16v-2H5a1 1 0 0 1 0-2h16v-8zm-5 5a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/></svg>
+            </div>
+            <div>
+                <strong>交易记录</strong>
+                <span>收入 ${inCount} 笔 · 支出 ${outCount} 笔</span>
+            </div>
+            <button class="wallet-refresh-btn" data-app-action='{"action":"appMethod","appId":"chat","method":"refreshWalletHistory"}' id="refresh-transactions" aria-label="刷新">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 4 21 10 15 10"/></svg>
+                <span>刷新</span>
+            </button>
+        </div>
+
+        <div class="wallet-section-title">最近的流水</div>
+
+        <!-- 列表卡片(对齐 chat-favorites-list) -->
+        <div class="wallet-list" id="transactions-list">
+            ${listHtml}
+        </div>
+    </div>
+</div>`;
+                    }
+                } catch (err) {
+                    console.warn('[chat-app] renderTransactionHistory failed:', err);
+                    html = `<div class="settings-empty">钱包加载失败:${escapeHtml(err?.message || String(err))}</div>`;
+                }
             } else if (pageId.startsWith('chat-settings-')) {
                 // 聊天设置详情页(顶部「…」按钮)
                 const contactId = pageId.replace('chat-settings-', '');
@@ -1168,22 +1799,73 @@ export function createChatApp() {
                 // 群聊设置详情页(顶部「…」按钮) — 必须在 group-* 之前匹配!
                 const groupId = pageId.replace('group-settings-', '');
                 html = renderGroupSettingsPage(app, groupId);
+            } else if (pageId.startsWith('group-manage-')) {
+                // ★ v0.81 群成员管理详情页(从群设置 → 群聊设置 进入)
+                //   pageId 格式: group-manage-{groupId}-{mode}
+                //   groupId 可能含横杠,只剥掉前缀和末尾 mode
+                const stripped = pageId.slice('group-manage-'.length);
+                let mgmtGroupId = stripped;
+                let mgmtMode = 'calendar';
+                const lastDash = stripped.lastIndexOf('-');
+                if (lastDash > 0 && (stripped.slice(lastDash + 1) === 'calendar' || stripped.slice(lastDash + 1) === 'story')) {
+                    mgmtGroupId = stripped.slice(0, lastDash);
+                    mgmtMode = stripped.slice(lastDash + 1);
+                }
+                html = renderGroupManagePage(app, mgmtGroupId, mgmtMode);
             } else if (pageId.startsWith('group-')) {
                 // 群聊详情页 — 必须在 group-settings-* 之后匹配
                 const groupId = pageId.replace('group-', '');
                 html = renderGroupChatPage(app, groupId);
-            } else if (pageId === 'game-selector') {
-                // 游戏选择器页面
-                html = renderGameSelectorPage(app);
             } else if (pageId === 'game-leaderboard') {
-                // 游戏排行榜页面
+                // 战绩排行榜（读 games/core/record.js 的真实统计）
                 html = renderGameLeaderboardPage(app);
+            } else if (pageId === 'game-selector' || pageId.startsWith('game-selector-')) {
+                // 游戏大厅。带 groupId 才能开局（从群聊工具栏进来的都带）
+                const lobbyGroupId = pageId === 'game-selector' ? '' : pageId.slice('game-selector-'.length);
+                html = renderGameSelectorPage(app, lobbyGroupId);
+            } else if (pageId === 'game-maker' || pageId.startsWith('game-maker-')) {
+                // 「做一个新游戏」：出提示词 + 上传玩法 js
+                const makerGroupId = pageId === 'game-maker' ? '' : pageId.slice('game-maker-'.length);
+                html = renderGameMakerPage(app, makerGroupId);
+            } else if (pageId.startsWith('game-setup-')) {
+                // game-setup-{gameId}-{groupId}
+                const rest = pageId.slice('game-setup-'.length);
+                const cut = rest.indexOf('-');
+                const setupGameId = cut > 0 ? rest.slice(0, cut) : rest;
+                const setupGroupId = cut > 0 ? rest.slice(cut + 1) : '';
+                html = renderGameSetupPage(app, setupGameId, setupGroupId);
+            } else if (pageId.startsWith('game-play-')) {
+                // 对局页。renderGamePage 只按当前 store 状态画一次，
+                // 之后的实时更新由 games/live-view.js 打补丁（它靠 MutationObserver
+                // 认出 .cg-page，是唯一能保证 innerHTML 已写完的时机）
+                const playGroupId = pageId.slice('game-play-'.length);
+                html = chatGames.renderGamePage(playGroupId);
+            } else if (pageId.startsWith('game-record-')) {
+                // 群聊里点战绩卡进来的详情
+                const recordMsgId = pageId.slice('game-record-'.length);
+                let record = null;
+                try {
+                    const sdk = getSettingsSdk();
+                    const msg = await sdk?.chatMessages?.get?.(recordMsgId);
+                    record = msg?.gameRecord || null;
+                } catch (err) {
+                    console.warn('[chat-app] 读战绩失败', err);
+                }
+                html = renderGameRecordDetail(record);
             } else if (pageId.startsWith('call-')) {
                 // 通话页面(call-voice-{contactId} / call-video-{contactId})
                 const parts = pageId.replace('call-', '').split('-');
                 const callType = parts[0];
                 const contactId = parts.slice(1).join('-');
                 html = renderCallPage(app, contactId, callType);
+                // ★ v0.67.x 异步挂载通话页交互(挂断 / 静音 / 输入框 / call-manager)
+                queueMicrotask(() => {
+                    try {
+                        app?.methods?.initCallPage?.(contactId, callType);
+                    } catch (err) {
+                        console.warn('[chat-app] initCallPage failed:', err);
+                    }
+                });
             } else {
                 html = `<div style="padding:20px;text-align:center;color:#999;">未知页面: ${pageId}</div>`;
             }
@@ -1230,14 +1912,8 @@ export function createChatApp() {
             } else if (pageId.startsWith('group-settings-')) {
                 // 群聊设置页 — 不绑定群聊交互
             } else if (pageId.startsWith('group-')) {
-                // 群聊详情页 — 必须在 group-settings-* 之后匹配
-                queueMicrotask(() => {
-                    try {
-                        app?.methods?.initGroupChatInteractions?.();
-                    } catch (err) {
-                        console.warn('[chat-app] initGroupChatInteractions failed', err);
-                    }
-                });
+                // ★ v0.69:群聊详情页也改由模块顶层 MutationObserver 自动绑定
+                //   (见模块顶部 __chatGroupObserverInstalled 块,跟私聊同款)
             } else if (pageId.startsWith('prompt-manager-')) {
                 // 回复提示词管理页 — 绑定折叠/展开/复制交互
                 queueMicrotask(() => {
@@ -1251,6 +1927,39 @@ export function createChatApp() {
             return html;
         },
         methods: {
+            // ============================================================
+            // ★ 顶栏搜索框 input 事件 — framework 把 input 事件转发到这里
+            //   payload: { value, eventType }
+            //   写 keyword 到 app.state.chat.contacts.searchKeyword,触发 framework 重画通讯录页
+            // ============================================================
+            _ensureContactsSearchState(app) {
+                if (!app.state) app.state = {};
+                if (!app.state.chat) app.state.chat = {};
+                if (!app.state.chat.contacts) {
+                    app.state.chat.contacts = { searchKeyword: '' };
+                }
+                return app.state.chat.contacts;
+            },
+
+            onTopbarSearchInput(payload = {}) {
+                const app = this.app;
+                const st = this._ensureContactsSearchState(app);
+                const value = String(payload.value || '');
+                if (st.searchKeyword === value) return;
+                st.searchKeyword = value;
+                // 触发 framework 重画当前 page(通讯录页)
+                if (typeof window !== 'undefined' && window.__detailRenderTick) {
+                    window.__detailRenderTick.value++;
+                }
+                // 同步 framework 的 appTopbarOverride.searchValue,让 input :value 跟随输入
+                try {
+                    if (window.__appTopbarOverride) {
+                        const ov = window.__appTopbarOverride.value || {};
+                        window.__appTopbarOverride.value = Object.assign({}, ov, { searchValue: value });
+                    }
+                } catch (_) { /* override 可能为空,忽略 */ }
+            },
+
             // ============================================================
             // ★ v0.43 消息操作组 state / helpers(逐步加,先加 state helpers + 复制)
             //   - app.state.chat.action:
@@ -1299,6 +2008,12 @@ export function createChatApp() {
             /**
              * 切换系统 prompt 的注入状态(人设级别 user / ai)
              * payload: { aiPersonId, kind: 'user' | 'ai' }
+             * ★ v0.85 群聊版:payload 同时支持 { isGroup, groupId, mode, memberId }
+             *   - 群聊时写 groupSystemPromptInject[groupId](独立存储,不影响单 aiPersonId 维度)
+             *   - 用户人设:groupSystemPromptInject[groupId].user
+             *   - 每个 AI 成员:groupSystemPromptInject[groupId].aiMemberIds[memberId]
+             *   - 持久化到 localStorage('xiaoting::chat-group-system-prompt-inject-v1')
+             *     防 HMR / 旧实例不重跑 hydrate 时丢失(§28 黄金规则)
              * 重画后保留滚动位置(framework 重画默认会滚到顶部)
              */
             toggleSystemPromptInject(payload = {}) {
@@ -1310,8 +2025,79 @@ export function createChatApp() {
                 if (kind === 'sticker-library') {
                     return this.toggleStickerLibraryActive({ aiPersonId });
                 }
+                // ★ v0.85 群聊版:群维度开关走 groupSystemPromptInject(独立存储)
+                const isGroup = payload?.isGroup === true;
+                const groupId = payload?.groupId || null;
+                const memberId = payload?.memberId || null;
+                const mode = payload?.mode || 'calendar';
+                if (isGroup && groupId) {
+                    if (!this.app.state) this.app.state = {};
+                    if (!this.app.state.chat) this.app.state.chat = {};
+                    const groupMap = this.app.state.chat.groupSystemPromptInject
+                        || (this.app.state.chat.groupSystemPromptInject = {});
+                    if (!groupMap[groupId]) {
+                        groupMap[groupId] = { user: true, aiMemberIds: {} };
+                    }
+                    const groupCfg = groupMap[groupId];
+                    if (kind === 'user') {
+                        groupCfg.user = !(groupCfg.user !== false);
+                    } else if (kind === 'ai' && memberId) {
+                        if (!groupCfg.aiMemberIds) groupCfg.aiMemberIds = {};
+                        const prev = groupCfg.aiMemberIds[memberId];
+                        groupCfg.aiMemberIds[memberId] = !(prev !== false);
+                    }
+                    // 持久化到 localStorage(防 HMR 丢失)
+                    try {
+                        localStorage.setItem(
+                            'xiaoting::chat-group-system-prompt-inject-v1',
+                            JSON.stringify(groupMap),
+                        );
+                    } catch (_) { /* 隐私模式 / 配额满 */ }
+                    // 显示更精确的通知文案(包含 AI 成员名字或群名)
+                    let label;
+                    try {
+                        const sdk = window.settingsSdk;
+                        if (kind === 'user') {
+                            label = '用户人设';
+                        } else if (memberId) {
+                            const member = sdk?.aiPersons?.get?.(memberId);
+                            label = member?.name || memberId;
+                        } else {
+                            label = 'AI 人设';
+                        }
+                    } catch (_) {
+                        label = kind === 'user' ? '用户人设' : 'AI 人设';
+                    }
+                    const current = kind === 'user'
+                        ? groupCfg.user
+                        : (groupCfg.aiMemberIds?.[memberId]);
+                    this._preserveScrollAroundTick();
+                    this.toolkit?.island?.notify?.(
+                        'info',
+                        '已更新群人设注入',
+                        `${label} → ${current ? '已启用' : '已停用'}`,
+                    );
+                    try {
+                        if (typeof window.invalidateRendererCache === 'function') {
+                            window.invalidateRendererCache('chat', null);
+                        }
+                    } catch (_) {}
+                    try {
+                        window.__appRendererBridge?.syncNow?.({ force: true });
+                    } catch (_) {}
+                    return groupCfg;
+                }
+                // 私聊版(原 v0.57 行为):injectMap[aiPersonId][kind]
                 const st = this._ensureSystemPromptInject(this.app, aiPersonId);
                 st[kind] = !st[kind];
+                // ★ v0.85 持久化到 localStorage(防 HMR 丢失,跟 replyFormatInject 同款)
+                try {
+                    const allMap = this.app.state.chat.systemPromptInject || {};
+                    localStorage.setItem(
+                        'xiaoting::chat-system-prompt-inject-v1',
+                        JSON.stringify(allMap),
+                    );
+                } catch (_) { /* 隐私模式 / 配额满 */ }
                 this._preserveScrollAroundTick();
                 this.toolkit?.island?.notify?.(
                     'info',
@@ -1404,6 +2190,304 @@ export function createChatApp() {
             },
 
             /**
+             * ★ v0.79 「用户朋友圈」虚拟系统级卡的独立开关。
+             * 状态按 aiPersonId 保存到 app.state.chat.userMomentsInject。
+             * 关闭后该卡从 murmur 折叠区「当前上下文」消失 + prompt-builder 不注入用户朋友圈。
+             *   - 默认 true(开启状态),用户切到 false 才显示「关闭」高亮
+             *   - 持久化到 localStorage('xiaoting::chat-user-moments-inject-v1')
+             *   - 与 toggleReplyFormatActive 行为完全对齐
+             */
+            toggleUserMomentsInject(payload = {}) {
+                const aiPersonId = String(payload?.aiPersonId || '');
+                if (!aiPersonId) return null;
+                if (!this.app.state) this.app.state = {};
+                if (!this.app.state.chat) this.app.state.chat = {};
+                const map = this.app.state.chat.userMomentsInject || (this.app.state.chat.userMomentsInject = {});
+                map[aiPersonId] = !(map[aiPersonId] !== false); // 默认 true,切换为 false
+                try {
+                    localStorage.setItem(
+                        'xiaoting::chat-user-moments-inject-v1',
+                        JSON.stringify(map),
+                    );
+                } catch (_) { /* 隐私模式 / 配额满 */ }
+                this._preserveScrollAroundTick();
+                this.toolkit?.island?.notify?.(
+                    'info',
+                    '已更新用户朋友圈设置',
+                    `用户朋友圈 → ${map[aiPersonId] ? '已启用' : '已停用'}`,
+                );
+                try {
+                    if (typeof window.invalidateRendererCache === 'function') {
+                        window.invalidateRendererCache('chat', null);
+                    }
+                } catch (_) {}
+                try {
+                    window.__appRendererBridge?.syncNow?.({ force: true });
+                } catch (_) {}
+                return map[aiPersonId];
+            },
+
+            /**
+             * ★ v0.79 「AI 朋友圈概要」虚拟系统级卡的独立开关。
+             * 状态按 aiPersonId 保存到 app.state.chat.aiMomentsInject。
+             * 关闭后该卡从 murmur 折叠区消失 + prompt-builder 不注入 AI 朋友圈概要。
+             *   - 默认 true(开启状态),用户切到 false 才显示「关闭」高亮
+             *   - 持久化到 localStorage('xiaoting::chat-ai-moments-inject-v1')
+             *   - 与 toggleReplyFormatActive 行为完全对齐
+             */
+            toggleAiMomentsInject(payload = {}) {
+                const aiPersonId = String(payload?.aiPersonId || '');
+                if (!aiPersonId) return null;
+                if (!this.app.state) this.app.state = {};
+                if (!this.app.state.chat) this.app.state.chat = {};
+                const map = this.app.state.chat.aiMomentsInject || (this.app.state.chat.aiMomentsInject = {});
+                map[aiPersonId] = !(map[aiPersonId] !== false); // 默认 true,切换为 false
+                try {
+                    localStorage.setItem(
+                        'xiaoting::chat-ai-moments-inject-v1',
+                        JSON.stringify(map),
+                    );
+                } catch (_) { /* 隐私模式 / 配额满 */ }
+                this._preserveScrollAroundTick();
+                this.toolkit?.island?.notify?.(
+                    'info',
+                    '已更新 AI 朋友圈概要设置',
+                    `AI 朋友圈概要 → ${map[aiPersonId] ? '已启用' : '已停用'}`,
+                );
+                try {
+                    if (typeof window.invalidateRendererCache === 'function') {
+                        window.invalidateRendererCache('chat', null);
+                    }
+                } catch (_) {}
+                try {
+                    window.__appRendererBridge?.syncNow?.({ force: true });
+                } catch (_) {}
+                return map[aiPersonId];
+            },
+
+            /**
+             * 当前模式卡的独立开关。
+             * 状态按 aiPersonId 保存；关闭后该卡从 orderedCards 移除，因而也不会进入 pre。
+             */
+            toggleContextModeInject(payload = {}) {
+                const aiPersonId = String(payload?.aiPersonId || '');
+                const modeKey = String(payload?.modeKey || 'context-mode');
+                if (!aiPersonId) return null;
+                if (!this.app.state) this.app.state = {};
+                if (!this.app.state.chat) this.app.state.chat = {};
+                const rootMap = this.app.state.chat.contextModeInject || (this.app.state.chat.contextModeInject = {});
+                const aiMap = rootMap[aiPersonId] || (rootMap[aiPersonId] = {});
+                aiMap[modeKey] = !(aiMap[modeKey] !== false); // 默认 true,切换为 false
+                try {
+                    localStorage.setItem(
+                        'xiaoting::chat-context-mode-inject-v1',
+                        JSON.stringify(rootMap),
+                    );
+                } catch (_) {}
+                this._preserveScrollAroundTick();
+                this.toolkit?.island?.notify?.(
+                    'info',
+                    '上下文模式',
+                    aiMap[modeKey] ? '已启用(AI 收到当前模式指令)' : '已停用(AI 收不到当前模式指令)',
+                );
+                try {
+                    if (typeof window.invalidateRendererCache === 'function') {
+                        window.invalidateRendererCache('chat', null);
+                    }
+                } catch (_) {}
+                try {
+                    window.__appRendererBridge?.syncNow?.({ force: true });
+                } catch (_) {}
+                return aiMap[modeKey];
+            },
+
+/**
+ * ★ v0.70 标记弃用 —— 切换 mode 现在完全由 call-manager / game-selector 自动完成
+ *   - 用户不再主动按按钮切换
+ *   - 保留 method 名(防止旧 link action 报错)但什么都不做
+ *   - 由 call-manager / game-selector 直接调 window.__chatContextMode.setMode()
+ */
+switchContextMode(_payload = {}) {
+    this.toolkit?.island?.notify?.(
+        'info',
+        '模式自动切换',
+        '通话/视频/游戏时会自动切换,无需手动',
+    );
+    return null;
+},
+
+            /**
+             * 打开「当前模式」编辑器弹窗:4 个 tab(聊天/语音/视频/游戏) + textarea + 保存/取消/恢复默认。
+             * v0.72 改 AcModal:走 chat-modal-manager 派发,由 framework app-modal-layer 渲染。
+             *   - 视觉风格跟 ContextLengthModal / EditReplyPromptModal 一致
+             *   - 弹窗在 app-shell 内(不会溢出手机壳)
+             *   - 「恢复默认」组件内部直接响应(textarea 立即显示默认文本,需点保存才生效)
+             *   - 保存后通过 contextMode.setModePromptOverrides 持久化
+             */
+            async openContextModeEditor(payload = {}) {
+                const aiPersonId = String(payload?.aiPersonId || '');
+                const notify = (state, title, body) => this.toolkit?.island?.notify?.(state, title, body);
+                try {
+                    const { chatModalManager } = await import('./components/chat-modal-registry.js');
+                    chatModalManager.openContextModeEditor({
+                        aiPersonId,
+                        onSave: (map) => {
+                            // 不需要手动调 setModePromptOverrides:registry 默认行为已处理
+                            // 但仍可在 onSave 闭包里加自定义副作用(显示通知 / 触发其他重画)
+                            notify?.('success', '已保存', '4 种模式提示词已更新');
+                            // 触发 prompt-manager 重画(Murmur 组的「当前模式」卡)
+                            try {
+                                if (typeof window.invalidateRendererCache === 'function') {
+                                    window.invalidateRendererCache('chat', null);
+                                }
+                            } catch (_) {}
+                            try {
+                                window.__appRendererBridge?.syncNow?.({ force: true });
+                            } catch (_) {}
+                        },
+                    });
+                } catch (err) {
+                    console.warn('[chat-app] openContextModeEditor failed', err);
+                }
+                return null;
+            },
+
+            /**
+             * ★ v0.79 「可读取朋友圈」设置弹窗入口
+             *   - 入口:聊天设置 → 「可读取朋友圈」行
+             *   - payload: { contactId, mode }
+             *   - 弹窗本身由 chatModalManager.openMomentsReadModal 提供
+             *   - 保存:把 { self, user, social } merge patch 到 chatFriends entry
+             *   - 兜底:无 entry 时直接读 aiPerson.momentsReadConfig
+             *   - 联动:写入后让 chat-settings-page 重新渲染(显示新条数)
+             *             + prompt-manager 重画(让用户朋友圈 / AI 朋友圈概要按新条数注 pre)
+             */
+            async openMomentsReadModal(payload = {}) {
+                const contactId = String(payload?.contactId || '');
+                const mode = String(payload?.mode || 'calendar');
+                const notify = (state, title, body) => this.toolkit?.island?.notify?.(state, title, body);
+                if (!contactId) {
+                    notify?.('error', '打开失败', '缺少 contactId');
+                    return null;
+                }
+                try {
+                    const sdk = window.settingsSdk;
+                    const defaultUser = sdk?.defaultUserCard?.getDefault?.() || sdk?.users?.getActive?.();
+                    const entry = (sdk && defaultUser)
+                        ? sdk.chatFriends?.get?.(defaultUser, contactId, mode)
+                        : null;
+                    // 兼容:entry 优先,fallback 到 aiPerson 顶层
+                    const currentValue = entry?.momentsReadConfig
+                        || sdk?.aiPersons?.get?.(contactId)?.momentsReadConfig
+                        || { self: 3, user: 3, social: 3 };
+                    const contactName = entry?.displayName
+                        || sdk?.aiPersons?.get?.(contactId)?.name
+                        || contactId;
+                    const { chatModalManager } = await import('./components/chat-modal-registry.js');
+                    chatModalManager.openMomentsReadModal({
+                        contactId,
+                        contactName,
+                        currentValue,
+                        onSave: async (next) => {
+                            try {
+                                // 1) write back to chatFriends entry(merge patch)
+                                if (sdk && defaultUser && sdk.chatFriends?.update) {
+                                    await sdk.chatFriends.update(defaultUser, contactId, mode, {
+                                        momentsReadConfig: next,
+                                    });
+                                }
+                                // 2) 同步写到 aiPerson 顶层(老路径 fallback:某些旧 reader 直接读 aiPerson)
+                                const aiPerson = sdk?.aiPersons?.get?.(contactId);
+                                if (aiPerson && sdk.aiPersons?.update) {
+                                    await sdk.aiPersons.update(contactId, {
+                                        momentsReadConfig: next,
+                                    });
+                                }
+                                notify?.('success', '可读取朋友圈已更新', `自己${next.self}/用户${next.user}/交际圈${next.social}`);
+                                // 3) 触发整页重画
+                                try {
+                                    if (typeof window.invalidateRendererCache === 'function') {
+                                        window.invalidateRendererCache('chat', null);
+                                    }
+                                } catch (_) {}
+                                try {
+                                    window.__appRendererBridge?.syncNow?.({ force: true });
+                                } catch (_) {}
+                            } catch (err) {
+                                console.warn('[chat-app] openMomentsReadModal save failed', err);
+                                notify?.('error', '保存失败', err?.message || String(err));
+                            }
+                        },
+                    });
+                } catch (err) {
+                    console.warn('[chat-app] openMomentsReadModal failed', err);
+                    notify?.('error', '打开失败', err?.message || String(err));
+                }
+                return null;
+            },
+
+            /**
+             * ★ v0.79 「朋友圈管理」弹窗入口(AI 朋友圈概要详情)
+             *   - 入口:聊天设置 → 「朋友圈管理」行
+             *   - payload: { contactId, mode }
+             *   - 弹窗展示 aiPerson.moments[] 全部条目 + 每条概要的可编辑/重生成/删除
+             *   - 任意数据变化(sdk.moments.add / setSummary / remove / regenerateMomentSummary)→
+             *     触发整页重画,让 chat-settings 的「共 N 条」计数实时更新 + 让 prompt-manager
+             *     重新渲染用户朋友圈 / AI 朋友圈概要卡
+             */
+            async openAiMomentsDetailModal(payload = {}) {
+                const contactId = String(payload?.contactId || '');
+                const mode = String(payload?.mode || 'calendar');
+                const notify = (state, title, body) => this.toolkit?.island?.notify?.(state, title, body);
+                if (!contactId) {
+                    notify?.('error', '打开失败', '缺少 contactId');
+                    return null;
+                }
+                try {
+                    const sdk = window.settingsSdk;
+                    const entry = (sdk && sdk.defaultUserCard?.getDefault)
+                        ? sdk.chatFriends?.get?.(sdk.defaultUserCard.getDefault(), contactId, mode)
+                        : null;
+                    const contactName = entry?.displayName
+                        || sdk?.aiPersons?.get?.(contactId)?.name
+                        || contactId;
+                    let list = [];
+                    try {
+                        list = sdk?.moments?.list?.(contactId) || [];
+                    } catch (_) { list = []; }
+                    const { chatModalManager } = await import('./components/chat-modal-registry.js');
+                    chatModalManager.openAiMomentsDetailModal({
+                        contactId,
+                        contactName,
+                        initialMoments: list,
+                        onChange: (event) => {
+                            // 任意变化:重新计算 chat-settings 行的「共 N 条」+ prompt-manager 重画
+                            try {
+                                if (typeof window.invalidateRendererCache === 'function') {
+                                    window.invalidateRendererCache('chat', null);
+                                }
+                            } catch (_) {}
+                            try {
+                                window.__appRendererBridge?.syncNow?.({ force: true });
+                            } catch (_) {}
+                            // 删除/重生成后给一个轻提示
+                            if (event?.type === 'delete') {
+                                notify?.('info', '已删除朋友圈', '概要不再注入到 AI prompt');
+                            } else if (event?.type === 'regenerate') {
+                                notify?.('success', '概要已重生成', '');
+                            } else if (event?.type === 'save') {
+                                notify?.('success', '概要已保存', '');
+                            }
+                        },
+                    });
+                } catch (err) {
+                    console.warn('[chat-app] openAiMomentsDetailModal failed', err);
+                    notify?.('error', '打开失败', err?.message || String(err));
+                }
+                return null;
+            },
+
+            /**
              * ★ v0.64 切换「AI 表情包库」是否注入上下文
              *   - payload: { aiPersonId }
              *   - 状态存储:app.state.chat.stickerLibraryInject[aiPersonId]
@@ -1436,7 +2520,7 @@ export function createChatApp() {
                     if (typeof window.invalidateRendererCache === 'function') {
                         window.invalidateRendererCache('chat', null);
                     }
-                } catch (_) {}
+} catch (_) {}
                 try {
                     window.__appRendererBridge?.syncNow?.({ force: true });
                 } catch (_) {}
@@ -1444,119 +2528,13 @@ export function createChatApp() {
             },
 
             /**
-             * ★ v0.63 切换「K 链摘要」是否注入上下文
-             *   - payload: { aiPersonId }
-             *   - 状态存储:app.state.chat.kChainActive[aiPersonId]
-             *   - 默认 true,切到 false 表示「关闭 K 链注入」(K 链数据仍会保留)
-             *   - 持久化到 localStorage 'xiaoting::chat-k-chain-active-v1'
-             *   - 跟 reply-format 一样的模式
-             */
-            toggleKChainActive(payload = {}) {
-                const aiPersonId = String(payload?.aiPersonId || '');
-                if (!aiPersonId) return null;
-                if (!this.app.state) this.app.state = {};
-                if (!this.app.state.chat) this.app.state.chat = {};
-                const map = this.app.state.chat.kChainActive || (this.app.state.chat.kChainActive = {});
-                map[aiPersonId] = !(map[aiPersonId] !== false); // 默认 true,切换为 false
-                // ★ v0.63 持久化到 localStorage(防止 HMR 后内存丢失)
-                try {
-                    localStorage.setItem(
-                        'xiaoting::chat-k-chain-active-v1',
-                        JSON.stringify(map),
-                    );
-                } catch (_) { /* 隐私模式 / 配额满 */ }
-                this._preserveScrollAroundTick();
-                this.toolkit?.island?.notify?.(
-                    'info',
-                    '已更新 K 链设置',
-                    `K 链摘要 → ${map[aiPersonId] ? '已启用' : '已停用'}`,
-                );
-                // ★ 二段式重画(跟 toggleContextRoundsActive 完全对齐)
-                try {
-                    if (typeof window.invalidateRendererCache === 'function') {
-                        window.invalidateRendererCache('chat', null);
-                    }
-                } catch (_) {}
-                try {
-                    window.__appRendererBridge?.syncNow?.({ force: true });
-                } catch (_) {}
-                return map[aiPersonId];
-            },
-
-            /**
-             * ★ v0.63.1 切换 K 链卡片的小眼睛预览面板(跟 previewAppPrompt 同样的状态机)
-             *   - 用户期望(基于 8/8 反馈):
-             *     · 点 summary(卡片本体)→ 展开 details 显示「真实拼接到上下文的 K 链概要」(text-panel)
-             *     · 点小眼睛           → 显示「K 组里所有 K 的原文列表」(preview-panel,实时刷新)
-             *     · 再点小眼睛         → 收起预览面板(同时收起 details,回到完全收起状态)
-             *     · 两个面板互斥:真实概要 vs K 组原文不会同时显示
-             *   - 复用 .pm-app-prompt-views + data-active="preview" 模式
-             *   - 容器在 prompt-manager-page.js 的 renderKChainGroupItem 里生成,
-             *     data-prompt-id="k-chain::{aiPersonId}"
-             *   - 由于按钮在 <summary> 内,click 冒泡会触发 summary 的 toggle,
-             *     必须主动 set details.open 来覆盖(微任务兜底)
-             * payload: { aiPersonId }
-             */
-            previewKChainCard(payload = {}) {
-                const aiPersonId = String(payload?.aiPersonId || '');
-                if (!aiPersonId) return null;
-                const compositeId = `k-chain::${aiPersonId}`;
-                // 精确定位容器(避开 App Prompt 其它详情面板)
-                const container = document.querySelector(
-                    `.pm-kchain-views[data-prompt-id="${compositeId}"]`,
-                );
-                if (!container) return null;
-                // 找外层 details
-                const outerDetails = container.closest('details.pm-item') || container.closest('details');
-                if (!outerDetails) return null;
-                const cur = container.getAttribute('data-active') || '';
-                let nextActive = '';
-                let nextOpen = false;
-                if (cur === 'preview') {
-                    // 当前显示预览面板 → 再点收起(回到完全收起状态)
-                    nextActive = '';
-                    nextOpen = false;
-                } else {
-                    // 当前未显示预览面板 → 切到 preview
-                    nextActive = 'preview';
-                    nextOpen = true;
-                }
-                // 1) 同步设 data-active(切面板)
-                if (nextActive) {
-                    container.setAttribute('data-active', nextActive);
-                } else {
-                    container.removeAttribute('data-active');
-                }
-                // 2) 同步设 details.open(覆盖 summary 的 toggle 残留)
-                if (outerDetails.open !== nextOpen) {
-                    outerDetails.open = nextOpen;
-                }
-                // 3) 微任务兜底(覆盖任何异步残留)
-                const targetOpen = nextOpen;
-                queueMicrotask(() => {
-                    try {
-                        if (outerDetails.open !== targetOpen) {
-                            outerDetails.open = targetOpen;
-                        }
-                    } catch (_) { /* noop */ }
-                });
-                // 4) 进入 preview 时滚到预览区
-                if (nextActive === 'preview') {
-                    try {
-                        container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                    } catch (_) { /* noop */ }
-                }
-                return true;
-            },
-
-            /**
-             * ★ v0.57 / 修于 v0.61.8.11:保留当前滚动位置后触发 framework 重画
+ * ★ v0.57 / 修于 v0.61.8.11:保留当前滚动位置后触发 framework 重画
              *   - 监听 detail 重画产生的 scrollTop 归零,重置回保存位置
              *   - 解决「点 prompt-manager 按钮 → 页面跳回顶部」的问题
              *   - ★ v0.61.8.11 修:chat-app 内的所有 detail 页都是**自接管滚动容器**
              *     (.prompt-manager > .pm-page / .chat-settings > .chat-settings-page /
              *      .new-group-page > .new-group-body / .new-chat-page > .new-chat-content /
-             *      .chat-calendar-view > .chat-calendar-view-page / .chat-story-archive-page /
+             *      .chat-calendar-view > .chat-calendar-view-page / .chat-story-management > .chat-story-mgmt-page /
              *      .chat-favorites > .chat-favorites-scroll / .chat-private > .chat-messages ...),
              *     .app-detail-body 在 chat-app 内被设为 `overflow: hidden`,
              *     scrollTop 永远 = 0 → 老实现找错元素,scroll 保持完全失效,
@@ -1579,7 +2557,7 @@ export function createChatApp() {
                         '.new-group-page .new-group-body',
                         '.new-chat-page .new-chat-content',
                         '.chat-calendar-view .chat-calendar-view-page',
-                        '.chat-story-archive-page',
+                        '.chat-story-management .chat-story-mgmt-page',
                         '.chat-favorites .chat-favorites-scroll',
                         '.chat-history-page',
                         '.app-detail-body',
@@ -1793,13 +2771,21 @@ export function createChatApp() {
                         ? buildUserPersonaContextText(user)
                         : buildAiPersonaContextText(ai);
                     const existing = this._getSystemPromptOverride(aiPersonId, kind);
+                    // ★ defaultReplyNote 新增 ctx,跟 prompt-manager-page.js 同款(变量替换在调用方完成)
+                    const replyNoteCtx = kind === 'user'
+                        ? { userName: user?.name || user?.chineseName || '' }
+                        : { aiName: ai?.name || '' };
+                    // 系统预设原文：既是「没改过时的初始值」，也是「复原预设」按钮的目标。
+                    // 只算一次，两处共用 —— 分开算迟早会分叉（AGENTS2 §11.2 的通则）。
+                    const presetNote = defaultReplyNote(kind, replyNoteCtx);
                     chatModalManager.openSystemPromptEdit({
                         kind,
                         aiPersonId,
                         title: kind === 'user' ? '当前用户人设' : '当前 AI 人设',
                         baseContent,
-                        replyNote: existing?.note ?? defaultReplyNote(kind),
+                        replyNote: existing?.note ?? presetNote,
                         position: existing?.position ?? 'after',
+                        defaultNote: presetNote,
                         onSave: ({ note, position }) => {
                             this._setSystemPromptOverride(aiPersonId, kind, { note, position });
                             // ★ v0.61.8.11 保留滚动位置
@@ -2014,15 +3000,13 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
                     if (!root) return;
                     const app = this.app;
                     const st = (app.state.chat && app.state.chat.action) || {};
-                    const chat = root.querySelector('.chat-private');
+                    // ★ v0.69:同时支持私聊 / 群聊
+                    const chat = root.querySelector('.chat-private') || root.querySelector('.chat-group');
                     if (!chat) return;
                     const isActive = !!st.multiSelectActive;
-                    if (isActive) chat.classList.add('multi-select-mode');
-                    else chat.classList.remove('multi-select-mode');
+                    chat.classList.toggle('multi-select-mode', isActive);
                     // ★ FIX v0.48:HTML 渲染时给 .multi-select-bar 写了内联 style="display:none"
-                    //   (chat-page.js multiSelectBarStyle)，优先级高于 CSS class 选择器
-                    //   .multi-select-mode .multi-select-bar { display: flex }，导致 class 加了但条不出现。
-                    //   必须直接操作内联 style 才能生效。
+                    //   必须直接操作内联 style 才能生效(覆盖 chat-page / chat-group-page 初始隐藏)
                     const bar = chat.querySelector('.multi-select-bar');
                     if (bar) bar.style.display = isActive ? 'flex' : 'none';
                     const countEl = chat.querySelector('.multi-select-count strong[data-selected-count], .multi-select-count [data-selected-count]');
@@ -2044,39 +3028,42 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
             /**
              * ★ v0.44 多选模式 — 收藏
              *  - 形成对话片段,需要 ≥2 条消息
-             *  - 对话片段存到 app.state (内存),刷新页面后需要重新收藏
-             *  - 从 DOM 读取真实选中状态
+             *  - v0.69 群聊同步 + 持久化到 localStorage(刷新页面后仍能看到)
+             *  - 私聊/群聊都能用,自动从 DOM 上下文判断 sourceType
              */
             async favoriteMulti() {
-                const chatPrivate = document.querySelector('.chat-private');
-                if (!chatPrivate) {
-                    this.toolkit?.island?.notify?.('error', '页面结构异常');
-                    return;
-                }
-                const selectedWrappers = chatPrivate.querySelectorAll('.message-wrapper.selected');
-                const count = selectedWrappers.length;
-                if (count < 2) {
-                    this.toolkit?.island?.notify?.('info', '请至少选择 2 条消息', '对话片段需要多条消息');
-                    return;
-                }
                 const sdk = window.settingsSdk;
                 const user = sdk?.defaultUserCard?.getDefault?.() || sdk?.users?.getActive?.();
                 if (!user) {
                     this.toolkit?.island?.notify?.('error', '未找到默认用户');
                     return;
                 }
+                // ★ v0.69:同时支持私聊 / 群聊 — 取当前活动的容器
+                const chatEl = document.querySelector('.chat-private') || document.querySelector('.chat-group');
+                if (!chatEl) {
+                    this.toolkit?.island?.notify?.('error', '页面结构异常');
+                    return;
+                }
+                // ★ v0.69:根据容器判断 sourceType
+                const isGroup = chatEl.classList.contains('chat-group');
+                const sourceType = isGroup ? 'group' : 'private';
+                const convId = isGroup
+                    ? (chatEl.dataset.groupId || chatEl.dataset.conversationId || '')
+                    : (chatEl.dataset.contactId || chatEl.dataset.conversationId || '');
+                const mode = chatEl.dataset.mode || 'calendar';
 
-                // 收集选中消息并按 DOM 顺序排列
+                const selectedWrappers = chatEl.querySelectorAll('.message-wrapper.selected');
+                const count = selectedWrappers.length;
+                if (count < 2) {
+                    this.toolkit?.island?.notify?.('info', '请至少选择 2 条消息', '对话片段需要多条消息');
+                    return;
+                }
+
                 const selectedMsgs = [];
-                const mode = 'calendar';
-                const aiPersonId = 'ai0';
-
                 for (const wrapper of selectedWrappers) {
                     const messageId = wrapper.getAttribute('data-message-id');
-                    const msgAi = wrapper.getAttribute('data-msg-ai') || aiPersonId;
-                    const msgMode = wrapper.getAttribute('data-msg-mode') || mode;
                     if (!messageId) continue;
-                    const msgs = sdk?.chatMessages?.list ? sdk.chatMessages.list(user, msgAi, msgMode) : [];
+                    const msgs = sdk?.chatMessages?.list ? sdk.chatMessages.list(user, convId, mode) : [];
                     const target = msgs.find((m) => m.id === messageId);
                     if (target) selectedMsgs.push(target);
                 }
@@ -2086,27 +3073,30 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
                     return;
                 }
 
-                // 构建对话片段收藏
-                const contactName = (() => {
-                    try {
-                        const meta = window.aiMeta?.getAiMeta?.(aiPersonId, mode);
-                        return meta?.name || aiPersonId;
-                    } catch (_) { return aiPersonId; }
-                })();
+                // 计算会话显示名
+                let sourceName = convId;
+                try {
+                    if (isGroup) {
+                        const g = sdk?.chatGroups?.get?.(user, convId, mode);
+                        sourceName = g?.name || convId;
+                    } else {
+                        const meta = window.aiMeta?.getAiMeta?.(convId, mode);
+                        sourceName = meta?.name || convId;
+                    }
+                } catch (_) {}
 
                 const conversation = {
-                    // ★ v0.44:用 id 而不是 favoriteId,保持跟 sdk.chatFavorites.list 返回结构一致
                     id: 'conv-' + Date.now(),
                     type: 'conversation',
-                    sourceType: 'private',
-                    sourceId: aiPersonId,
-                    sourceName: contactName,
+                    sourceType,
+                    sourceId: convId,
+                    sourceName,
                     time: '今天 ' + new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
                     messageCount: selectedMsgs.length,
                     messages: selectedMsgs.map(msg => ({
                         id: msg.id,
                         sender: msg.sender,
-                        senderName: msg.senderName || (msg.sender === 'user' ? '我' : contactName),
+                        senderName: msg.senderName || (msg.sender === 'user' ? '我' : sourceName),
                         senderColor: msg.sender === 'user' ? 'pink' : 'blue',
                         type: msg.type || 'text',
                         content: msg.content || msg.text || '',
@@ -2118,12 +3108,20 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
                     })),
                 };
 
-                // ★ v0.44:对话片段存到 app.state._conversationFavorites (内存)
-                //  结构跟 sdk.chatFavorites.list 一致,合并时不会冲突
+                // ★ v0.69:同时写内存 + localStorage,刷新仍能看到
                 const app = this.app;
                 if (!app.state) app.state = {};
                 if (!app.state._conversationFavorites) app.state._conversationFavorites = [];
                 app.state._conversationFavorites.unshift(conversation);
+                try {
+                    const key = 'xiaoting::chat-conversation-favorites-v1';
+                    const arr = JSON.parse(localStorage.getItem(key) || '[]');
+                    // 用 convId+sourceType+首条消息 id 去重
+                    const dedupKey = `${sourceType}::${convId}::${selectedMsgs[0].id}`;
+                    const filtered = arr.filter((c) => `${c.sourceType}::${c.sourceId}::${c.messages?.[0]?.id}` !== dedupKey);
+                    filtered.unshift(conversation);
+                    localStorage.setItem(key, JSON.stringify(filtered.slice(0, 200)));
+                } catch (_) {}
 
                 this.toolkit?.island?.notify?.('success', '收藏成功', `已收藏 ${selectedMsgs.length} 条消息为对话片段`);
                 this.exitMultiSelect();
@@ -2134,15 +3132,22 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
 
             /**
              * ★ v0.44 多选模式 — 转发
-             *  - 从 DOM 读取真实选中状态
+             *  - v0.69 同时支持私聊 / 群聊(自动从 DOM 上下文判断 sourceType)
              */
             async forwardMulti() {
-                const chatPrivate = document.querySelector('.chat-private');
-                if (!chatPrivate) {
+                const chatEl = document.querySelector('.chat-private') || document.querySelector('.chat-group');
+                if (!chatEl) {
                     this.toolkit?.island?.notify?.('error', '页面结构异常');
                     return;
                 }
-                const selectedWrappers = chatPrivate.querySelectorAll('.message-wrapper.selected');
+                const isGroup = chatEl.classList.contains('chat-group');
+                const convId = isGroup
+                    ? (chatEl.dataset.groupId || chatEl.dataset.conversationId || '')
+                    : (chatEl.dataset.contactId || chatEl.dataset.conversationId || '');
+                const convType = isGroup ? 'group' : 'private';
+                const mode = chatEl.dataset.mode || 'calendar';
+
+                const selectedWrappers = chatEl.querySelectorAll('.message-wrapper.selected');
                 if (selectedWrappers.length === 0) {
                     this.toolkit?.island?.notify?.('info', '请先选择消息');
                     return;
@@ -2153,27 +3158,25 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
                     this.toolkit?.island?.notify?.('error', '未找到默认用户');
                     return;
                 }
-                // 收集选中的消息
                 const items = [];
                 for (const wrapper of selectedWrappers) {
                     const messageId = wrapper.getAttribute('data-message-id');
-                    const aiPersonId = wrapper.getAttribute('data-msg-ai') || '';
-                    const mode = wrapper.getAttribute('data-msg-mode') || 'calendar';
                     if (!messageId) continue;
-                    const msgs = sdk?.chatMessages?.list ? sdk.chatMessages.list(user, aiPersonId, mode) : [];
+                    const msgs = sdk?.chatMessages?.list ? sdk.chatMessages.list(user, convId, mode) : [];
                     const target = msgs.find((m) => m.id === messageId);
-                    if (target) items.push({ aiPersonId, mode, messageId, content: target.content || target.text || '', type: target.type || 'text', sender: target.sender });
+                    if (target) items.push({ aiPersonId: convId, mode, messageId, content: target.content || target.text || '', type: target.type || 'text', sender: target.sender });
                 }
                 if (!items.length) {
                     this.toolkit?.island?.notify?.('warning', '未找到可转发的消息');
                     return;
                 }
-                // 使用 chat-forward.js 的 openForwardTargetSelection（会生成转发卡片 + 排除当前会话）
+                // ★ v0.69 用当前容器判断 sourceType
                 const { openForwardTargetSelection } = await import('./chat-forward.js');
                 const sourceMeta = {
-                    conversationType: 'private',
-                    conversationId: items[0].aiPersonId,
+                    conversationType: convType,
+                    conversationId: convId,
                     mode: items[0].mode,
+                    conversationName: chatEl.dataset.conversationName || '',
                 };
                 await openForwardTargetSelection({
                     mode: items[0].mode,
@@ -2181,7 +3184,7 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
                     sourceMessages: items.map(i => ({
                         id: i.messageId,
                         sender: i.sender,
-                        senderName: i.sender === 'user' ? '我' : (this.app.state?.currentAiName || 'AI'),
+                        senderName: i.sender === 'user' ? '我' : (this.app.state?.currentAiName || (isGroup ? '成员' : 'AI')),
                         content: i.content,
                         type: i.type,
                         timestamp: Date.now(),
@@ -2193,15 +3196,21 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
 
             /**
              * ★ v0.44 多选模式 — 删除
-             *  - 从 DOM 读取真实选中状态
+             *  - v0.69 同时支持私聊 / 群聊
              */
             async deleteMulti() {
-                const chatPrivate = document.querySelector('.chat-private');
-                if (!chatPrivate) {
+                const chatEl = document.querySelector('.chat-private') || document.querySelector('.chat-group');
+                if (!chatEl) {
                     this.toolkit?.island?.notify?.('error', '页面结构异常');
                     return;
                 }
-                const selectedWrappers = chatPrivate.querySelectorAll('.message-wrapper.selected');
+                const isGroup = chatEl.classList.contains('chat-group');
+                const convId = isGroup
+                    ? (chatEl.dataset.groupId || chatEl.dataset.conversationId || '')
+                    : (chatEl.dataset.contactId || chatEl.dataset.conversationId || '');
+                const mode = chatEl.dataset.mode || 'calendar';
+
+                const selectedWrappers = chatEl.querySelectorAll('.message-wrapper.selected');
                 if (selectedWrappers.length === 0) {
                     this.toolkit?.island?.notify?.('info', '请先选择消息');
                     return;
@@ -2220,14 +3229,12 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
                 let fail = 0;
                 for (const wrapper of selectedWrappers) {
                     const messageId = wrapper.getAttribute('data-message-id');
-                    const aiPersonId = wrapper.getAttribute('data-msg-ai') || '';
-                    const mode = wrapper.getAttribute('data-msg-mode') || 'calendar';
                     if (!messageId) { fail++; continue; }
                     try {
                         const removed = await sdk.chatMessages.remove(messageId);
                         if (!removed) { fail++; continue; }
-                        if (user && sdk.chatFavorites?.has?.(user, aiPersonId, mode, messageId)) {
-                            await sdk.chatFavorites.remove(user, aiPersonId, mode, messageId);
+                        if (user && sdk.chatFavorites?.has?.(user, convId, mode, messageId)) {
+                            await sdk.chatFavorites.remove(user, convId, mode, messageId);
                         }
                         ok++;
                     } catch (_) { fail++; }
@@ -2239,18 +3246,30 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
 
             /**
              * ★ v0.43 触发语音通话(顶部语音通话按钮)
-             *  - 简单占位:灵动岛提示 + 实际进入 call 页留给后续
+             * ★ v0.67.x 修复:从 chatPrivate.dataset.contactId 拿到当前联系人,避免「缺少联系人上下文」告警
+             *  - 优先级:payload.aiPersonId > state.chat.action.aiPersonId > 当前 DOM chatPrivate.dataset.contactId
              */
             async triggerVoiceCall(payload = {}) {
-                const aiPersonId = payload.aiPersonId || (this.app?.state?.chat?.action?.aiPersonId);
-                const mode = payload.mode || (this.app?.state?.chat?.action?.mode) || 'calendar';
+                const aiPersonId = payload.aiPersonId
+                    || this.app?.state?.chat?.action?.aiPersonId
+                    || (() => {
+                        try {
+                            const el = document.querySelector('.app-shell[data-app-id="chat"] .chat-private');
+                            const cid = el?.dataset?.contactId || '';
+                            if (cid.startsWith('private-')) return cid.slice('private-'.length);
+                            return cid;
+                        } catch (_) { return ''; }
+                    })();
+                const mode = payload.mode
+                    || this.app?.state?.chat?.action?.mode
+                    || 'calendar';
                 if (!aiPersonId) {
-                    this.toolkit?.island?.notify?.('warning', '缺少联系人上下文');
+                    this.toolkit?.island?.notify?.('warning', '缺少联系人上下文', '请先进入私聊再拨打电话');
                     return;
                 }
                 this.toolkit?.island?.notify?.('info', '正在呼叫…', '语音通话');
                 try {
-                    const action = { action: 'detail', appId: 'chat', pageId: `call-${aiPersonId}-${mode}-voice` };
+                    const action = { action: 'detail', appId: 'chat', pageId: `call-voice-${aiPersonId}-${mode}` };
                     document.dispatchEvent(new CustomEvent('app:page-action', { detail: action, bubbles: true }));
                 } catch (err) {
                     console.warn('[chat] triggerVoiceCall dispatch failed', err);
@@ -2259,17 +3278,29 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
 
             /**
              * ★ v0.43 触发视频通话
+             * ★ v0.67.x 修复:同样从 DOM 拿 aiPersonId 兜底
              */
             async triggerVideoCall(payload = {}) {
-                const aiPersonId = payload.aiPersonId || (this.app?.state?.chat?.action?.aiPersonId);
-                const mode = payload.mode || (this.app?.state?.chat?.action?.mode) || 'calendar';
+                const aiPersonId = payload.aiPersonId
+                    || this.app?.state?.chat?.action?.aiPersonId
+                    || (() => {
+                        try {
+                            const el = document.querySelector('.app-shell[data-app-id="chat"] .chat-private');
+                            const cid = el?.dataset?.contactId || '';
+                            if (cid.startsWith('private-')) return cid.slice('private-'.length);
+                            return cid;
+                        } catch (_) { return ''; }
+                    })();
+                const mode = payload.mode
+                    || this.app?.state?.chat?.action?.mode
+                    || 'calendar';
                 if (!aiPersonId) {
-                    this.toolkit?.island?.notify?.('warning', '缺少联系人上下文');
+                    this.toolkit?.island?.notify?.('warning', '缺少联系人上下文', '请先进入私聊再拨打电话');
                     return;
                 }
                 this.toolkit?.island?.notify?.('info', '正在呼叫…', '视频通话');
                 try {
-                    const action = { action: 'detail', appId: 'chat', pageId: `call-${aiPersonId}-${mode}-video` };
+                    const action = { action: 'detail', appId: 'chat', pageId: `call-video-${aiPersonId}-${mode}` };
                     document.dispatchEvent(new CustomEvent('app:page-action', { detail: action, bubbles: true }));
                 } catch (err) {
                     console.warn('[chat] triggerVideoCall dispatch failed', err);
@@ -2399,12 +3430,16 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
                         return;
                     }
                     // ★ v0.44:已收藏则弹确认框,未收藏则直接添加
+                    // ★ v0.85 迁移到 AcModal
                     if (sdk.chatFavorites.has(user, aiPersonId, targetMode, messageId)) {
-                        window.__phoneConfirm?.request({
-                            title: '取消收藏',
-                            text: '确定要取消收藏这条消息吗？',
-                            confirmLabel: '取消收藏',
-                            danger: true,
+                        // 获取消息预览
+                        const messages = sdk.chatMessages?.list
+                            ? sdk.chatMessages.list(user, aiPersonId, targetMode)
+                            : [];
+                        const target = messages.find((m) => m.id === messageId);
+                        const messagePreview = target?.content?.substring(0, 100) || '';
+                        chatModalManager?.openUnfavoriteConfirm?.({
+                            messagePreview: messagePreview,
                             onConfirm: async () => {
                                 await sdk.chatFavorites.remove(user, aiPersonId, targetMode, messageId);
                                 if (window.__chatFavoritedIds) {
@@ -2413,7 +3448,6 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
                                 window.__detailRenderTick && window.__detailRenderTick.value++;
                                 this.toolkit?.island?.notify?.('info', '已取消收藏');
                             },
-                            onCancel: () => {},
                         });
                         return;
                     }
@@ -2451,6 +3485,47 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
             },
 
             /**
+             * ★ v0.85 群聊消息发送给AI
+             *   - payload: { messageId, aiPersonId, mode, sender, conversationType, text, senderLabel }
+             *   - 群聊时 aiPersonId = groupId
+             *   - 将消息内容填入输入框,用户可选择直接发送或长按触发AI回复
+             */
+            sendMessageToAi(payload = {}) {
+                const { messageId, aiPersonId, mode, text, senderLabel } = payload;
+                if (!aiPersonId) {
+                    this.toolkit?.island?.notify?.('warning', '缺少群聊上下文');
+                    return;
+                }
+                // 找到对应的群聊页面
+                const chatGroup = document.querySelector('.app-shell[data-app-id="chat"] .chat-group');
+                if (!chatGroup) {
+                    this.toolkit?.island?.notify?.('warning', '未找到群聊页面');
+                    return;
+                }
+                const messageInput = chatGroup.querySelector('#messageInput');
+                if (!messageInput) {
+                    this.toolkit?.island?.notify?.('warning', '未找到输入框');
+                    return;
+                }
+                // 将消息内容填入输入框
+                const textToSend = text || '';
+                messageInput.innerHTML = escapeHtml(textToSend);
+                // 将光标移到输入框
+                messageInput.focus();
+                /**
+                 * ★ 这里以前是 `scrollIntoView({ block: 'center' })`。
+                 *
+                 * 输入框本来就贴在屏幕底部，「滚到视口正中」意味着浏览器要把
+                 * 整个页面往上顶半屏 —— 手机壳模式下的表现就是「整台手机猛地
+                 * 往上蹿一大截」。软键盘的让位由框架统一处理
+                 * （src/index.js 的 --phone-keyboard-lift，抬到刚好够为止），
+                 * 这里只要保证输入框在它自己的滚动容器里没被挡住就行。
+                 */
+                messageInput.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+                this.toolkit?.island?.notify?.('info', '已填入输入框', senderLabel ? `来自: ${senderLabel}` : '请检查内容后发送');
+            },
+
+            /**
              * ★ v0.43 引用回复(写入 app.state.chat.action.replyingTo,渲染时显示 reply-preview)
              *  - payload: { messageId, aiPersonId, mode, text, sender, senderLabel }
              *  - 不需要持久化,只存内存;切走或发送后清掉
@@ -2458,7 +3533,6 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
             quoteMessage(payload = {}) {
                 const app = this.app;
                 const st = this._ensureChatActionState(app);
-                console.log('[chat] quoteMessage called, payload:', JSON.stringify(payload));
                 if (!payload.messageId || !payload.aiPersonId) {
                     this.toolkit?.island?.notify?.('warning', '缺少消息上下文', '无法引用');
                     return;
@@ -2472,7 +3546,6 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
                     senderLabel: payload.senderLabel || '',
                     createdAt: Date.now(),
                 };
-                console.log('[chat] quoteMessage set replyingTo:', JSON.stringify(replyingTo));
                 st.replyingTo = replyingTo;
                 this._triggerChatActionRerender();
             },
@@ -2491,7 +3564,7 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
              * ★ v0.43 编辑消息(打开 MessageEditModal 弹窗,复用 chat-modal-registry.openMessageEdit)
              *  - payload 来自 message-actions.js 的编辑按钮:
              *      { messageId, aiPersonId, mode, text, sender }
-             *  - 仅 user 自己发的消息可编辑(sender === 'user')
+             *  - 用户和 AI 消息都可编辑(后续 AI 上下文会看到改动后的内容)
              *  - 保存后:走 sdk.chatMessages.update → 触发 __detailRenderTick 重画
              */
             async editMessage(payload = {}) {
@@ -2500,16 +3573,13 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
                     this.toolkit?.island?.notify?.('warning', '缺少消息上下文', 'messageId / aiPersonId 为空');
                     return;
                 }
-                if (sender && sender !== 'user') {
-                    this.toolkit?.island?.notify?.('warning', '只能编辑自己发的消息');
-                    return;
-                }
                 const aiLabel = (() => {
                     try {
                         const snap = window.aiMeta?.getAiMeta?.(aiPersonId, mode);
                         return snap?.name || aiPersonId;
                     } catch (_) { return aiPersonId; }
                 })();
+                const isAiMsg = sender === 'ai';
                 chatModalManager.openMessageEdit({
                     originalText: text || '',
                     senderLabel: aiLabel,
@@ -2527,12 +3597,14 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
                             return;
                         }
                         try {
-                            const updated = await sdk.chatMessages.update(messageId, { content: trimmed, editedAt: Date.now() });
+                            // ★ 不写 editedAt — 编辑过的消息在 UI 上不显示「已编辑」标记,
+                            //   AI 后续上下文也只看到改后的 content,等同于原生「原话覆写」
+                            const updated = await sdk.chatMessages.update(messageId, { content: trimmed });
                             if (updated === null) {
                                 this.toolkit?.island?.notify?.('error', '消息已被删除或存储失败');
                                 return;
                             }
-                            this.toolkit?.island?.notify?.('success', '已保存', trimmed.length > 18 ? `${trimmed.slice(0, 18)}…` : trimmed);
+                            this.toolkit?.island?.notify?.('success', isAiMsg ? '已编辑 AI 消息' : '已保存', trimmed.length > 18 ? `${trimmed.slice(0, 18)}…` : trimmed);
                             this._triggerChatActionRerender();
                         } catch (err) {
                             console.warn('[chat] editMessage failed', err);
@@ -2540,6 +3612,257 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
                         }
                     },
                 });
+            },
+
+            /**
+             * ★ v0.72 重roll 消息(气泡循环按钮,AI/用户消息都能用)
+             *  - payload: { messageId, aiPersonId, mode, sender, conversationType, senderId }
+             *  - 私聊 / 群聊都生效:
+             *      · aiPersonId 字段在私聊 = 真实 AI 人设 ID
+             *      · aiPersonId 字段在群聊 = groupId
+             *  - sender: 'ai' → 删除该消息及之后所有消息,重新生成 AI 回复
+             *  - sender: 'user' → 删除该用户消息之后所有消息(含最后 AI 回复),重新生成 AI 回复
+             *  - 流程:
+             *      1) 定位目标消息 → 找到"待删除起始点"
+             *      2) 立即清 DOM 中后续消息气泡(先清视图,后端删库异步进行)
+             *      3) 从剩余消息中找到触发 AI 的 userText
+             *      4) 重算 contextRounds + 写回 contextPreview 缓存
+             *      5) 调 AI 重新生成回复
+             */
+            async rerollMessage(payload = {}) {
+                const messageId = String(payload?.messageId || '');
+                const aiPersonId = String(payload?.aiPersonId || '');
+                const mode = String(payload?.mode || 'calendar');
+                const conversationType = String(payload?.conversationType || 'private');
+                const senderId = String(payload?.senderId || '');
+                if (!messageId || !aiPersonId) {
+                    this.toolkit?.island?.notify?.('warning', '缺少消息上下文');
+                    return;
+                }
+                const sdk = window.settingsSdk;
+                if (!sdk?.chatMessages?.list) {
+                    this.toolkit?.island?.notify?.('error', '聊天存储未就绪');
+                    return;
+                }
+                const user = sdk.defaultUserCard?.getDefault?.() || sdk.users?.getActive?.();
+                if (!user) {
+                    this.toolkit?.island?.notify?.('error', '未找到默认用户');
+                    return;
+                }
+
+                // 1) 拉取当前会话所有消息,定位目标消息
+                const allMessages = sdk.chatMessages.list(user, aiPersonId, mode) || [];
+                const targetIdx = allMessages.findIndex((m) => m && String(m.id) === messageId);
+                if (targetIdx === -1) {
+                    this.toolkit?.island?.notify?.('warning', '找不到该消息');
+                    return;
+                }
+                const targetMsg = allMessages[targetIdx];
+
+                // 2) 确定删除起点:
+                //    - AI 消息:从这条 AI 消息开始删(包含它)
+                //    - 用户消息:从这条用户消息的「下一条 AI 消息」开始删
+                let deleteFromIdx = targetIdx;
+                if (payload.sender === 'user') {
+                    for (let i = targetIdx + 1; i < allMessages.length; i++) {
+                        if (allMessages[i]?.sender === 'ai') { deleteFromIdx = i; break; }
+                        if (allMessages[i]?.type === 'system') { deleteFromIdx = i; break; }
+                    }
+                }
+
+                // 3) 先算出「要删哪些 id」，DOM 和数据库用**同一份**清单。
+                //    以前 DOM 删了 system 消息、数据库跳过 system 消息，于是重画一次
+                //    那几条灰色系统提示就自己回来了 —— 看着像「删了个寂寞」。
+                const toRemoveIds = [];
+                for (let i = deleteFromIdx; i < allMessages.length; i++) {
+                    if (allMessages[i] && allMessages[i].id) toRemoveIds.push(allMessages[i].id);
+                }
+                const idsToRemove = new Set(toRemoveIds);
+
+                // 4) 立刻清视图 —— 用户按下重 roll 的那一刻后面的消息就该没了。
+                //    带 id 的选择器有可能匹配不上（群聊/私聊的 id 字段名不一样、
+                //    或者 detail 页刚重建还没写上 attribute），所以补一个不带 id 的兜底：
+                //    同一时刻屏幕上只可能有一个会话详情页。
+                const rootSelector = conversationType === 'group'
+                    ? `.app-shell[data-app-id="chat"] .chat-group[data-group-id="${aiPersonId}"]`
+                    : `.app-shell[data-app-id="chat"] .chat-private[data-contact-id="${aiPersonId}"]`;
+                const fallbackSelector = conversationType === 'group'
+                    ? '.app-shell[data-app-id="chat"] .chat-group'
+                    : '.app-shell[data-app-id="chat"] .chat-private';
+                const chatRoot = document.querySelector(rootSelector) || document.querySelector(fallbackSelector);
+                if (chatRoot) {
+                    const container = chatRoot.querySelector('.chat-messages');
+                    if (container) {
+                        // 不限定 .message-wrapper：卡片类消息（通话记录 / 红包 / 拍一拍）
+                        // 的外层 class 各不相同，统一按 data-message-id 抓。
+                        container.querySelectorAll('[data-message-id]').forEach((el) => {
+                            const mid = el.getAttribute('data-message-id');
+                            if (mid && idsToRemove.has(mid)) el.remove();
+                        });
+                    } else {
+                        console.warn('[chat] rerollMessage .chat-messages 未找到', chatRoot);
+                    }
+                } else {
+                    console.warn('[chat] rerollMessage chatRoot 未找到, conversationType=', conversationType, 'aiPersonId=', aiPersonId);
+                }
+
+                // 5) ★ 必须 await 删完再往下走。
+                //    以前这里是 fire-and-forget 的 IIFE，紧接着就去调 AI；而
+                //    callAiAndSplit 内部是**重新从数据库读历史**的 —— 删还没落地，
+                //    AI 就会看到那条正准备被替换掉的旧回复，重 roll 出来的东西
+                //    经常跟原来一模一样。删完再调，AI 看到的才是真正的「删除点之前」。
+                for (const rid of toRemoveIds) {
+                    try { await sdk.chatMessages.remove(rid); } catch (_) {}
+                }
+                // 删完立刻作废 renderer 缓存：否则切出去再回来会命中删除前的那份 HTML，
+                // 被删的气泡原样复活（AGENTS.md §X.6 同款坑）。
+                try { window.invalidateRendererCache?.('chat', null); } catch (_) {}
+
+                // 6) 找 beforeList(删除点之前的内容,不含 system)
+                const beforeList = allMessages.slice(0, deleteFromIdx).filter((m) => m && m.type !== 'system');
+
+                // 6) 找触发 AI 的 userText + 群聊时要找 senderId(AI 成员 ID)
+                //    群聊路径依赖 senderId 来调 AI API,如果为空则从消息历史中找
+                let resolvedSenderId = senderId;
+                if (conversationType === 'group' && !resolvedSenderId) {
+                    // 从 targetIdx 往前找第一条 AI 消息的 senderId
+                    for (let i = targetIdx; i >= 0; i--) {
+                        if (allMessages[i]?.sender === 'ai' && allMessages[i]?.senderId) {
+                            resolvedSenderId = allMessages[i].senderId;
+                            break;
+                        }
+                    }
+                    if (!resolvedSenderId) {
+                        this.toolkit?.island?.notify?.('warning', '群聊找不到 AI 成员 ID');
+                        return;
+                    }
+                }
+
+                let userText = '';
+                for (let i = beforeList.length - 1; i >= 0; i--) {
+                    const m = beforeList[i];
+                    if (m?.sender === 'user' && String(m.content || '').trim()) {
+                        userText = String(m.content || '').trim();
+                        break;
+                    }
+                    // 遇到 AI 消息就停止(这是触发 roll 的那条 AI,不再用它之前的内容)
+                    if (m?.sender === 'ai') break;
+                }
+                if (!userText) {
+                    this.toolkit?.island?.notify?.('warning', '没有可重roll 的上下文');
+                    return;
+                }
+
+                // 7) 重算 contextRounds + 写回 contextPreview 缓存
+                const realAiPersonId = (conversationType === 'group' && resolvedSenderId) ? resolvedSenderId : aiPersonId;
+                try {
+                    recomputeContextPreviewAfterReroll({
+                        aiPersonId: realAiPersonId,
+                        mode,
+                        messages: beforeList,
+                        oldSystemPrompt: payload?.oldSystemPrompt || '',
+                        computeContextRoundsPrompt: (pid, msgs) => {
+                            try {
+                                const cfg = sdk?.rollingSummaries?.getRollingConfig?.(pid);
+                                const ctxN = (cfg && Number(cfg.contextRounds) > 0) ? Number(cfg.contextRounds) : 20;
+                                return this.computeContextRoundsPrompt(pid, msgs, ctxN);
+                            } catch (_) { return this.computeContextRoundsPrompt(pid, msgs, 20); }
+                        },
+                    });
+                } catch (recompErr) {
+                    console.warn('[chat] rerollMessage recomputeContextPreview failed', recompErr);
+                }
+
+                // 8) 调 AI 重新生成回复。
+                //    等待反馈跟普通发送一致：顶栏名字变成闪烁的「对方正在输入中」，
+                //    不弹「正在重 roll…」的岛（用户就在这一页看着）。
+                beginTyping(conversationType === 'group' ? 'group' : 'private', aiPersonId);
+
+                if (conversationType === 'group' && resolvedSenderId) {
+                    // 群聊路径
+                    try {
+                        // 带上 groupId：让 ai-service 在发送时现算并追加「群成员与职务」
+                        // （群主 / 管理员 / 群昵称 + 可用的群管理格式）
+                        const result = await callAiAndSplit({ aiPersonId: senderId, mode, userText, historyLimit: 12, groupId: aiPersonId });
+                        if (!result || result.ok === false) {
+                            this.toolkit?.island?.notify?.('error', '重roll 失败', result?.error?.slice(0, 200) || '');
+                            return;
+                        }
+                        const aiMessages = result.messages || [];
+                        const memberName = (() => {
+                            try { const ai = sdk?.aiPersons?.get?.(senderId); return ai?.name || ai?.nickname || senderId; }
+                            catch (_) { return senderId; }
+                        })();
+                        let written = 0;
+                        for (const msg of aiMessages) {
+                            try {
+                                // 群管理动作不是消息，是动作：交给 group-admin-service 执行，
+                                // 它自己会写一条群公告。不能当普通消息写进 chatMessages，
+                                // 否则聊天流里会出现一条 "[群务]" 的空气泡。
+                                if (msg.type === 'group_admin') {
+                                    const svc = await import('./services/group-admin-service.js');
+                                    await svc.applyGroupAdminActions({
+                                        sdk, user, groupId: aiPersonId, mode,
+                                        actorId: senderId, actions: [msg.groupAdminAction],
+                                    });
+                                    continue;
+                                }
+                                // 四叶草送礼。群里也允许 —— 礼物卡会落到**这个群**里，
+                                // 但扣的是 senderId 那个成员自己的钱包。
+                                if (msg.type === 'shop_gift_request') {
+                                    const bridge = window.__shopGift;
+                                    if (bridge?.aiGiftToUser && bridge.isReady?.()) {
+                                        const res = await bridge.aiGiftToUser({
+                                            aiPersonId: senderId, mode, ...(msg.shopGift || {}),
+                                        });
+                                        if (!res?.ok) console.warn('[chat-app] 群里 AI 送礼没成功：', res?.error);
+                                    }
+                                    continue;
+                                }
+                                let resolvedMsg = msg;
+                                if (resolvedMsg.type === 'sticker') resolvedMsg = await _resolveAiStickerFromHistory(resolvedMsg, senderId, mode, beforeList);
+                                resolvedMsg.sender = 'ai';
+                                if (!resolvedMsg.senderName) resolvedMsg.senderName = memberName;
+                                if (!resolvedMsg.timestamp) resolvedMsg.timestamp = Date.now() + written;
+                                const saved = await sdk.chatMessages.add(user, aiPersonId, mode, {
+                                    ...resolvedMsg, conversationType: 'group', conversationId: aiPersonId, senderId,
+                                });
+                                if (saved) written += 1;
+                            } catch (saveErr) { console.warn('[chat] rerollMessage group save failed', saveErr); }
+                        }
+                        try {
+                            if (sdk.chatGroups?.updateLastMessage) {
+                                const last = aiMessages[aiMessages.length - 1];
+                                await sdk.chatGroups.updateLastMessage(sdk, user, aiPersonId, mode, {
+                                    content: last?.content || '[AI 回复]', timestamp: Date.now(),
+                                    senderName: memberName, type: last?.type || 'text',
+                                });
+                            }
+                        } catch (_) {}
+                        try { if (typeof window.invalidateRendererCache === 'function') window.invalidateRendererCache('chat', aiPersonId); } catch (_) {}
+                        try { window.__appRendererBridge?.syncNow?.({ force: true }); } catch (_) {}
+                        if (written === 0) {
+                            this.toolkit?.island?.notify?.('warning', '重roll 没写出内容', 'AI 返回为空');
+                        }
+                    } catch (err) {
+                        console.warn('[chat] rerollMessage group send failed', err);
+                        this.toolkit?.island?.notify?.('error', '重roll 失败', err?.message || '');
+                    } finally {
+                        endTyping('group', aiPersonId);
+                    }
+                    return;
+                }
+
+                // 私聊路径
+                try {
+                    const result = await this.sendMessageWithAi({ aiPersonId, mode, text: userText, silentIsland: true });
+                    if (!result) this.toolkit?.island?.notify?.('error', '重roll 失败');
+                } catch (err) {
+                    console.warn('[chat] rerollMessage sendMessageWithAi failed', err);
+                    this.toolkit?.island?.notify?.('error', '重roll 失败', err?.message || '');
+                } finally {
+                    endTyping('private', aiPersonId);
+                }
             },
 
             /**
@@ -2553,6 +3876,39 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
                     detail: action,
                     bubbles: true,
                 }));
+            },
+
+            /**
+             * ★ v0.87 record-mode-selector 页那两张卡的落点。
+             * 这个 method 一直没实现 —— 页面还在、按钮还在，点了什么都不会发生
+             * （invokeMethod 找不到就静默 resolve(null)）。
+             * 主流程改成「选联系人时再选模式」之后这页基本不走了，但入口没删干净，
+             * 补上实现，别让用户点进死胡同。
+             */
+            selectRecordMode(payload = {}) {
+                const mode = payload?.mode === 'story' ? 'story' : 'calendar';
+                try { setChatRecordMode(mode); } catch (_) { /* noop */ }
+                document.dispatchEvent(new CustomEvent('app:page-action', {
+                    detail: { action: 'detail', appId: 'chat', pageId: 'new-chat' },
+                    bubbles: true,
+                }));
+            },
+
+            /**
+             * ★ v0.87 语音消息的「转文字」展开/收起。
+             * 同样是有 UI 没实现 —— 气泡上那行「转文字」点下去毫无反应。
+             * CSS 靠 `.voice-transcribe.expanded` 控制显示，这里只切 class。
+             * 不走整页重渲染：转个文字把整个消息列表重画一遍会把滚动位置冲掉。
+             */
+            toggleVoiceTranscribe(payload = {}) {
+                const messageId = String(payload?.messageId || '');
+                if (!messageId) return;
+                const root = document.querySelector('.app-shell[data-app-id="chat"]');
+                const box = root?.querySelector(`.voice-transcribe[data-voice-id="${CSS.escape(messageId)}"]`);
+                if (!box) return;
+                box.classList.toggle('expanded');
+                const label = box.querySelector('.voice-transcribe-toggle span');
+                if (label) label.textContent = box.classList.contains('expanded') ? '收起' : '转文字';
             },
 
             // ============================================================
@@ -2627,6 +3983,176 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
                 if (typeof window !== 'undefined' && window.__detailRenderTick) {
                     window.__detailRenderTick.value++;
                 }
+            },
+
+            // ============================================================
+            // 收藏左滑操作:分享 / 编辑 / 删除
+            //   三个按钮都由 favorites-page.js 渲染成 data-app-action,
+            //   framework 派发到这里。手势本身在框架层
+            //   (src/core/components/swipe-actions.js)。
+            //
+            //   收藏分两类,处理方式不同:
+            //     · type === 'conversation' —— 对话片段,存在
+            //       app.state._conversationFavorites + localStorage
+            //     · 其他 —— 单条收藏,存在 sdk.chatFavorites(IndexedDB)
+            //   下面每个方法都要同时照顾这两条路径,漏一条就是「删了刷新又回来」。
+            // ============================================================
+
+            /** 从两个数据源里按 id 找一条收藏,顺带告诉调用方它是哪一类 */
+            _findFavoriteById(favoriteId) {
+                const id = String(favoriteId || '');
+                if (!id) return null;
+                // 对话片段(内存 + localStorage)
+                const convList = Array.isArray(this.app?.state?._conversationFavorites)
+                    ? this.app.state._conversationFavorites
+                    : [];
+                const conv = convList.find((f) => String(f?.id || f?.favoriteId) === id);
+                if (conv) return { kind: 'conversation', record: conv };
+                // 单条收藏(SDK)
+                try {
+                    const rec = window.settingsSdk?.chatFavorites?.get?.(id);
+                    if (rec) return { kind: 'single', record: rec };
+                } catch (_) {}
+                return null;
+            },
+
+            /** 把对话片段收藏写回内存 + localStorage(两处都写,否则刷新会回滚) */
+            _persistConversationFavorites(list) {
+                if (!this.app.state) this.app.state = {};
+                this.app.state._conversationFavorites = list;
+                try {
+                    localStorage.setItem('xiaoting::chat-conversation-favorites-v1', JSON.stringify(list));
+                } catch (_) { /* 隐私模式 / 配额满 */ }
+            },
+
+            /** 左滑「分享」:把这条收藏转发给某个联系人 / 群 */
+            async shareFavorite(payload = {}) {
+                const found = this._findFavoriteById(payload?.favoriteId);
+                if (!found) {
+                    this.toolkit?.island?.notify?.('warning', '找不到这条收藏');
+                    return;
+                }
+                const { kind, record } = found;
+                // 复用已有的「转发选择目标」弹窗 —— 转发链路已经处理过
+                // 文本 / 卡片 / 聊天记录三种载荷,这里不该再造一份。
+                let messages = [];
+                if (kind === 'conversation') {
+                    messages = Array.isArray(record.messages) ? record.messages : [];
+                } else {
+                    messages = [{
+                        id: record.messageId || record.id,
+                        sender: record.sender || 'user',
+                        senderName: record.senderName || '',
+                        type: record.type || 'text',
+                        content: record.content || record.summary || '',
+                        timestamp: record.createdAt || Date.now(),
+                    }];
+                }
+                if (!messages.length) {
+                    this.toolkit?.island?.notify?.('warning', '这条收藏没有可分享的内容');
+                    return;
+                }
+                try {
+                    // 复用消息转发那条链路 —— 它已经处理好「选目标 + 生成转发卡片 + 落盘」，
+                    // 收藏分享跟转发是同一件事，不该再写一遍。
+                    const { openForwardTargetSelection } = await import('./chat-forward.js');
+                    await openForwardTargetSelection({
+                        mode: record.mode || 'calendar',
+                        messageIds: messages.map((m) => m.id).filter(Boolean),
+                        sourceMessages: messages,
+                        sourceMeta: {
+                            conversationType: record.sourceType || 'private',
+                            conversationId: record.conversationId || record.sourceId || record.aiPersonId || '',
+                            mode: record.mode || 'calendar',
+                            conversationName: record.sourceName || '收藏',
+                        },
+                    });
+                } catch (err) {
+                    console.warn('[chat] shareFavorite failed', err);
+                    this.toolkit?.island?.notify?.('error', '分享失败', err?.message || '');
+                }
+            },
+
+            /** 左滑「编辑」:改这条收藏的正文(不动原消息 —— 收藏是快照) */
+            editFavorite(payload = {}) {
+                const found = this._findFavoriteById(payload?.favoriteId);
+                if (!found) {
+                    this.toolkit?.island?.notify?.('warning', '找不到这条收藏');
+                    return;
+                }
+                const { kind, record } = found;
+                const id = String(record.id || record.favoriteId);
+                const current = kind === 'conversation'
+                    ? String(record.firstMessage || record.sourceName || '')
+                    : String(record.content || record.summary || '');
+                chatModalManager.openEditReplyPrompt({
+                    initial: {
+                        title: record.sourceName || '收藏',
+                        content: current,
+                        source: 'custom',
+                        active: true,
+                    },
+                    isCreate: false,
+                    onSave: async (next) => {
+                        const content = String(next?.content ?? '');
+                        if (kind === 'conversation') {
+                            const list = (this.app?.state?._conversationFavorites || []).map((f) => (
+                                String(f?.id || f?.favoriteId) === id ? { ...f, firstMessage: content } : f
+                            ));
+                            this._persistConversationFavorites(list);
+                        } else {
+                            const updated = await window.settingsSdk?.chatFavorites?.updateById?.(id, { content });
+                            if (!updated) {
+                                this.toolkit?.island?.notify?.('warning', '保存失败', '这条收藏可能已被删除');
+                                return;
+                            }
+                        }
+                        this._triggerFavoritesRerender();
+                        this.toolkit?.island?.notify?.('success', '已保存');
+                    },
+                });
+            },
+
+            /** 左滑「删除」:走顶层确认弹窗,确认后从对应数据源移除 */
+            async deleteFavorite(payload = {}) {
+                const found = this._findFavoriteById(payload?.favoriteId);
+                if (!found) {
+                    this.toolkit?.island?.notify?.('warning', '找不到这条收藏');
+                    return;
+                }
+                const { kind, record } = found;
+                const id = String(record.id || record.favoriteId);
+                const doDelete = async () => {
+                    if (kind === 'conversation') {
+                        const list = (this.app?.state?._conversationFavorites || [])
+                            .filter((f) => String(f?.id || f?.favoriteId) !== id);
+                        this._persistConversationFavorites(list);
+                        // demo 数组也同步一份,否则渲染时又会把它合并回来
+                        try {
+                            if (Array.isArray(window.__chatDemoFavorites)) {
+                                const idx = window.__chatDemoFavorites
+                                    .findIndex((f) => String(f?.id || f?.favoriteId) === id);
+                                if (idx >= 0) window.__chatDemoFavorites.splice(idx, 1);
+                            }
+                        } catch (_) {}
+                    } else {
+                        const ok = await window.settingsSdk?.chatFavorites?.removeById?.(id);
+                        if (!ok) {
+                            this.toolkit?.island?.notify?.('warning', '删除失败', '这条收藏可能已经不在了');
+                            return;
+                        }
+                    }
+                    this._triggerFavoritesRerender();
+                    this.toolkit?.island?.notify?.('success', '已取消收藏');
+                };
+                const preview = kind === 'conversation'
+                    ? String(record.firstMessage || record.sourceName || '')
+                    : String(record.content || record.summary || '');
+                chatModalManager.openUnfavoriteConfirm({
+                    messagePreview: preview.substring(0, 100),
+                    subtitle: '确定要从收藏中移除这条内容吗？原始消息不受影响。',
+                    onConfirm: () => { doDelete(); },
+                });
             },
 
             /** 设置收藏页搜索 keyword(input 事件触发,debounce 100ms) */
@@ -2727,14 +4253,18 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
                     const messages = Array.isArray(record.messages) ? record.messages : [];
                     const mode = card.getAttribute('data-record-mode') || record.mode || 'calendar';
                     const chatPrivate = document.querySelector('.chat-private');
-                    const sourceLabel = `来自 ${chatPrivate?.getAttribute('data-conversation-name') || '对话'}`;
+                    // ★ v0.85:优先从 record.contactName 拿(卡片创建时就带),其次从 DOM 拿
+                    const conversationName = record.contactName
+                        || chatPrivate?.getAttribute('data-conversation-name')
+                        || '';
 
                     // 4. 弹 ChatRecordDetailModal(显示完整消息列表)
                     const { chatModalManager } = await import('./components/chat-modal-registry.js');
                     chatModalManager.openChatRecordDetail({
                         title: record.title || '聊天记录',
                         messages,
-                        sourceLabel,
+                        sourceLabel: `来自 ${conversationName}`,
+                        contactName: conversationName, // ★ v0.85:用于显示 AI 发送者真实名字
                         onClose: () => {},
                     });
                 } catch (err) {
@@ -3037,21 +4567,6 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
                         return;
                     }
                 });
-
-                // 搜索功能
-                const searchInput = page.querySelector('#newChatSearchInput');
-                if (searchInput) {
-                    searchInput.addEventListener('input', () => {
-                        const keyword = searchInput.value.trim().toLowerCase();
-                        const contactItems = page.querySelectorAll('.contact-select-item');
-                        contactItems.forEach(item => {
-                            const name = item.querySelector('.contact-name')?.textContent?.toLowerCase() || '';
-                            item.style.display = name.includes(keyword) ? 'flex' : 'none';
-                        });
-                    });
-                }
-
-                console.log('[chat-app] initNewChatPageInteractions bound');
             },
 
             /**
@@ -3062,6 +4577,338 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
              */
             initNewGroupPageInteractions() {
                 // no-op:SDK 已在 renderDetailPage 里 await 完成,无需再监听
+            },
+
+            /**
+             * ★ v0.67.x 初始化通话页面交互(call-voice-xxx / call-video-xxx)
+             *   - 内部逻辑在 call-page.js 的 initCallPage() 里
+             *   - 这里只做 wrapper + 异步 import
+             */
+            async initCallPage(contactId, callType = 'voice') {
+                try {
+                    const mod = await import('./pages/call-page.js');
+                    if (typeof mod.initCallPage === 'function') {
+                        mod.initCallPage(this.app, contactId, callType);
+                    }
+                } catch (err) {
+                    console.warn('[chat-app] initCallPage import failed:', err);
+                }
+            },
+
+            // ─── 群聊小游戏 ────────────────────────────────────────────
+            //
+            // 这一组 method 是「界面 → 引擎」的唯一通道。它们只做三件事：
+            // 收集用户意图、调 games/index.js 的 API、触发重画。
+            // 规则、AI、节奏全在 games/ 里，这里不做任何游戏逻辑。
+            //
+            // ⚠️ 所有会改变**页面结构**的操作都要走 `_rerenderGameDetail()`
+            //    （invalidate + syncNow 二段式）。对局进行中的实时更新**不走**
+            //    这里 —— 那条路在 games/live-view.js，走区域补丁，
+            //    否则每收到一句 AI 发言就整页重画，滚动和输入都会被打断。
+
+            /** 设置页：改一个字段（模式 / API / 词库类型…）。 */
+            gameSetupPatch(payload = {}) {
+                updateSetupDraft(payload);
+                this._rerenderGameDetail();
+            },
+
+            // ─── 做一个新游戏 ──────────────────────────────────────────
+            //
+            // 产物是**提示词**，不是代码：玩法逻辑是状态机 + AI 决策 + 异常兜底，
+            // 让模型一次写对的概率不高，而且写错了很难自动发现。用户拿提示词去
+            // 自己惯用的模型里写、改、重试，回来上传。上传时做静态体检
+            // （games/custom-games.js），把最容易犯的四个错拦下来。
+
+            /** 表单里改一个字段（选项卡 / 开关都走它）。 */
+            setGameMakerField(payload = {}) {
+                if (!payload.field) return;
+                updateMakerDraft({ [payload.field]: payload.value });
+                this._rerenderGameDetail();
+            },
+
+            /** 换一步。 */
+            setGameMakerStep(payload = {}) {
+                // 输入框的值只在 DOM 里（data-app-action 是渲染时写死的字符串），
+                // 换步之前先把这一屏的输入收走，否则用户填的名字会丢
+                this._collectGameMakerInputs();
+                setMakerStep(payload.step);
+                this._rerenderGameDetail();
+            },
+
+            resetGameMaker() {
+                resetMakerDraft();
+                this._rerenderGameDetail();
+                this.toolkit?.island?.notify?.('info', '已清空', '重新填一份');
+            },
+
+            /** 把当前这一屏的 input / textarea 收进草稿 */
+            _collectGameMakerInputs() {
+                try {
+                    const shell = document.querySelector('.app-shell[data-app-id="chat"]');
+                    if (!shell) return;
+                    const patch = {};
+                    shell.querySelectorAll('[data-cgm-field]').forEach((el) => {
+                        const key = el.getAttribute('data-cgm-field');
+                        if (!key) return;
+                        patch[key] = el.type === 'number' ? Number(el.value) : String(el.value || '');
+                    });
+                    if (Object.keys(patch).length) updateMakerDraft(patch);
+                } catch (_) { /* 页面已经换掉了就算了 */ }
+            },
+
+            async copyGamePrompt() {
+                this._collectGameMakerInputs();
+                const text = buildDraftPrompt();
+                try {
+                    await navigator.clipboard.writeText(text);
+                    this.toolkit?.island?.notify?.('success', '提示词已复制', `${text.length} 字，粘给 AI 就行`);
+                } catch (_) {
+                    this.toolkit?.island?.notify?.('warning', '复制失败', '浏览器不让读写剪贴板，用「存成 .md」吧');
+                }
+            },
+
+            downloadGamePrompt() {
+                this._collectGameMakerInputs();
+                const d = getMakerDraft();
+                const text = buildDraftPrompt();
+                const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${d.gameId || 'my-game'}-提示词.md`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+                this.toolkit?.island?.notify?.('success', '已下载');
+            },
+
+            /** 选一个 .js 文件装上。 */
+            uploadGameFile() {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.js,text/javascript,application/javascript';
+                input.onchange = async () => {
+                    const file = input.files?.[0];
+                    if (!file) return;
+                    let code = '';
+                    try { code = await file.text(); } catch (err) {
+                        this.toolkit?.island?.notify?.('error', '读不了这个文件', String(err?.message || err));
+                        return;
+                    }
+                    await this._installGameCode(code, file.name);
+                };
+                input.click();
+            },
+
+            /** 装一个现成的示例，让用户先看到效果再照着改。 */
+            async installSampleGame() {
+                const { buildSampleGameCode } = chatGames;
+                await this._installGameCode(buildSampleGameCode(), 'show-of-hands.js');
+            },
+
+            async _installGameCode(code, fileName) {
+                const result = await chatGames.installAndPersistGame(code, { fileName, allowReplace: true });
+                if (!result.success) {
+                    // 把体检出的问题一条条说清楚 —— 只说「装不上」用户没法改
+                    const detail = (result.errors || [result.error]).slice(0, 3).join('；');
+                    this.toolkit?.island?.notify?.('error', '装不上', detail);
+                    console.warn('[chat-games] 安装失败', result);
+                    return;
+                }
+                if (result.warnings?.length) {
+                    console.warn('[chat-games] 安装警告', result.warnings);
+                }
+                this._rerenderGameDetail();
+                this.toolkit?.island?.notify?.(
+                    'success',
+                    `「${result.name}」装好了`,
+                    result.warnings?.length ? `有 ${result.warnings.length} 条提醒，见控制台` : '每个群聊的小游戏页都能开了',
+                );
+            },
+
+            removeCustomGame(payload = {}) {
+                if (!payload.gameId) return;
+                const r = chatGames.removeCustomGame(payload.gameId);
+                this._rerenderGameDetail();
+                this.toolkit?.island?.notify?.(r.success ? 'success' : 'warning', r.success ? '已删除' : (r.error || '删不掉'));
+            },
+
+            /** 设置页：勾选 / 取消一个 AI。 */
+            gameSetupToggleAi(payload = {}) {
+                if (!payload.aiId) return;
+                toggleSetupAi(payload.aiId);
+                this._rerenderGameDetail();
+            },
+
+            /** 设置页：切一条规则开关。 */
+            gameSetupToggleRule(payload = {}) {
+                if (!payload.key) return;
+                toggleSetupRule(payload.key);
+                this._rerenderGameDetail();
+            },
+
+            /** 设置页：开始游戏。 */
+            async gameStart() {
+                const draft = getSetupDraft();
+                if (!draft) return;
+
+                // 「给 AI 的额外交代」是 textarea，值只在 DOM 里 ——
+                // data-app-action 是渲染时就写死的字符串，读不到用户后来打的字
+                try {
+                    const el = document.querySelector('.app-shell[data-app-id="chat"] [data-cg-setup-prompt="1"]');
+                    if (el) draft.customPrompt = String(el.value || '').trim();
+                } catch (_) {}
+
+                const setup = {
+                    customPrompt: draft.customPrompt || '',
+                    ...(draft.rules || {}),
+                };
+
+                // 卧底可以让 AI 现出题。失败会自动回落到本地词库，不阻塞开局
+                if (draft.gameId === chatGames.GAME_IDS.UNDERCOVER) {
+                    setup.wordType = draft.wordType;
+                    if (draft.aiWords) {
+                        this.toolkit?.island?.notify?.('info', '正在出题…', 'AI 在想一对词');
+                        try {
+                            setup.wordPair = await chatGames.prepareUndercoverWords(
+                                draft.apiRef, draft.groupId, draft.wordType,
+                            );
+                        } catch (err) {
+                            console.warn('[chat-app] AI 出题失败，用本地词库', err);
+                        }
+                    }
+                }
+
+                // 开新局会顶掉这个群原来那一局。原来那局如果还在跑，
+                // 先明确放弃掉，免得两个 session 同时被调度器推进
+                const running = chatGames.getRunningGame(draft.groupId);
+                if (running) chatGames.abortGame(draft.groupId);
+
+                const result = chatGames.startGame({
+                    gameId: draft.gameId,
+                    groupId: draft.groupId,
+                    aiIds: draft.aiIds,
+                    userPlays: draft.userPlays,
+                    apiRef: draft.apiRef,
+                    setup,
+                });
+                if (!result.ok) {
+                    this.toolkit?.island?.notify?.('warning', '开不了局', result.error || '');
+                    return;
+                }
+                clearSetupDraft();
+                // 对局期间告诉 AI「现在在打游戏」（私聊那边的语气会跟着变）
+                try { window.__chatContextMode?.setMode?.('game'); } catch (_) {}
+                this._openGamePage(draft.groupId);
+            },
+
+            /** 对局页：用户点了操作区里的按钮。 */
+            async gameUserAction(payload = {}) {
+                const groupId = this._currentGameGroupId();
+                if (!groupId) return;
+                await chatGames.submitUserAction(groupId, payload);
+            },
+
+            /** 对局页：多选（丘比特连情侣）。 */
+            gameSelectPlayer(payload = {}) {
+                const groupId = this._currentGameGroupId();
+                if (!groupId || !payload.playerId) return;
+                chatGames.togglePlayerSelection(groupId, payload.playerId, 2);
+            },
+
+            /** 对局页：女巫面板在「用药」和「选毒谁」之间切。 */
+            gameSetWitchMode(payload = {}) {
+                const groupId = this._currentGameGroupId();
+                if (!groupId) return;
+                chatGames.setWitchMode(groupId, payload.mode || '');
+            },
+
+            /** 对局页：某一步出错后重试。 */
+            gameRetryStep() {
+                const groupId = this._currentGameGroupId();
+                if (!groupId) return;
+                chatGames.retryStep(groupId);
+            },
+
+            /** 对局页：正常结束（写战绩卡 + 记排行榜）。 */
+            async gameFinish() {
+                const groupId = this._currentGameGroupId();
+                if (!groupId) return;
+                await chatGames.finishGame(groupId);
+                try { window.__chatContextMode?.setMode?.('chat'); } catch (_) {}
+                // 战绩卡是一条新的群消息，群聊页要重读
+                try { window.invalidateRendererCache?.('chat', groupId); } catch (_) {}
+                this._rerenderGameDetail();
+            },
+
+            /** 对局页：放弃这一局（不记战绩、不发卡）。 */
+            gameAbort() {
+                const groupId = this._currentGameGroupId();
+                if (!groupId) return;
+                chatGames.abortGame(groupId);
+                try { window.__chatContextMode?.setMode?.('chat'); } catch (_) {}
+                this.closeDetail();
+            },
+
+            /**
+             * 对局页：返回。
+             *
+             * ★ 只是收起界面，**不结束对局**。这正是这次要解决的核心需求：
+             *   狼人杀夜里流程长，用户去别的 App 聊会儿天，回来接着玩。
+             *   引擎在模块级调度器上跑，跟这个页面在不在完全无关。
+             */
+            closeGamePage() {
+                chatGames.flushSessions();
+                this.closeDetail();
+            },
+
+            /** 排行榜切 Tab。 */
+            gameLeaderboardTab(payload = {}) {
+                setLeaderboardTab(payload.key || 'all');
+                this._rerenderGameDetail();
+            },
+
+            /**
+             * 群聊里点战绩卡 → 开详情页。
+             *
+             * 走 detail 页而不是弹窗：名单可能有 12 个人，弹窗里要滚，
+             * 而这个内容是「看完就走」的，全屏更合适。
+             */
+            openGameRecordDetail(payload = {}) {
+                if (!payload.messageId) return;
+                document.dispatchEvent(new CustomEvent('app:page-action', {
+                    detail: { action: 'detail', appId: 'chat', pageId: `game-record-${payload.messageId}` },
+                    bubbles: true,
+                }));
+            },
+
+            /** 当前对局页是哪个群。detail 页 id 是 `game-play-{groupId}`。 */
+            _currentGameGroupId() {
+                try {
+                    const el = document.querySelector('.app-shell[data-app-id="chat"] .cg-page[data-cg-group]');
+                    if (el) return el.getAttribute('data-cg-group') || '';
+                } catch (_) {}
+                return '';
+            },
+
+            _openGamePage(groupId) {
+                document.dispatchEvent(new CustomEvent('app:page-action', {
+                    detail: { action: 'detail', appId: 'chat', pageId: `game-play-${groupId}` },
+                    bubbles: true,
+                }));
+            },
+
+            /**
+             * 重画当前 detail 页。
+             *
+             * chat-app 的 detail renderer 是 async，单独 `++__detailRenderTick`
+             * 会命中 HTML 缓存拿到旧内容 —— 必须 invalidate + syncNow 二段式
+             * （framework-总览 §8）。
+             */
+            _rerenderGameDetail() {
+                try { window.invalidateRendererCache?.('chat', null); } catch (_) {}
+                try { window.__appRendererBridge?.syncNow?.({ force: true }); } catch (_) {}
             },
 
             /**
@@ -3296,10 +5143,21 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
                 }
                 const messages = Array.isArray(archive.messages) ? archive.messages : [];
                 const { chatModalManager } = await import('./components/chat-modal-registry.js');
+                // ★ v0.85:从 chatGroups.get 拿群名称,用于显示 AI 发送者名字
+                let conversationName = '存档详情';
+                if (archive.groupId) {
+                    try {
+                        const sdk = window.settingsSdk;
+                        const user = sdk?.defaultUserCard?.getDefault?.() || sdk?.users?.getActive?.();
+                        const group = sdk?.chatGroups?.get?.(user, archive.groupId, archive.mode || 'calendar');
+                        conversationName = group?.name || '群聊';
+                    } catch (_) {}
+                }
                 chatModalManager.openChatRecordDetail({
                     title: archive.name || '存档详情',
                     messages,
                     sourceLabel: `封存于 ${formatDateShort(archive.createdAt)} · ${archive.messageCount} 条消息`,
+                    contactName: conversationName, // ★ v0.85:用于显示发送者真实名字
                     onClose: () => {},
                 });
                 return null;
@@ -3352,7 +5210,7 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
             //   - _saveCalendarSummary             保存占位概要 → sdk.calendarSummaries.add
             //   - _saveStorySummary                保存占位概要 → sdk.storySummaries.add
             //   - computeContextRoundsPrompt       实时计算「当前聊天回合」prompt
-            //   - _triggerRollingCompress          chat-page 渲染时后台触发 K 链压缩
+            //   - _triggerRollingCompress          (K 链已移除 2026-08-09,占位留作历史索引)
             // ============================================================
 
             /**
@@ -3630,6 +5488,505 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
             },
 
             // ============================================================
+            // ★ v0.68 故事概要管理 methods (故事管理主页使用)
+            //   故事模式无层级管理,每个故事对应 1 份概要。
+            //   storySummary.storyId 可空:
+            //     · 空 = 手动撰写的概要(用户自己写「当前情提要」)
+            //     · 非空 = 绑定到 storyArchive.id 的概要(AI 从存档提取生成)
+            //
+            //   methods:
+            //     - openStorySummaryEditModal(payload)        弹 SummaryEditModal
+            //     - extractStorySummary(payload)              AI 从存档/当前会话 提取概要
+            //     - saveStorySummary(payload)                 保存/覆盖 storySummary
+            //     - deleteStorySummary(payload)               删除 storySummary(走确认弹窗)
+            //     - addStorySummaryAsReplyPrompt(payload)     注入到 replyPrompts
+            // ============================================================
+
+            /**
+             * ★ v0.68 通过 summaryId 直接拿 storySummary
+             */
+            _getStorySummaryById(aiPersonId, summaryId) {
+                const sdk = window.settingsSdk;
+                if (!sdk?.storySummaries?.get || !aiPersonId || !summaryId) return null;
+                return sdk.storySummaries.get(aiPersonId, summaryId) || null;
+            },
+
+            /**
+             * ★ v0.68 通过 storyArchive.id 找到对应的 storySummary
+             *   (1:1 绑定:storyId === archiveId)
+             */
+            _getStorySummaryByArchiveId(aiPersonId, archiveId) {
+                const sdk = window.settingsSdk;
+                if (!sdk?.storySummaries?.list || !aiPersonId || !archiveId) return null;
+                const list = sdk.storySummaries.list(aiPersonId) || [];
+                return list.find((s) => s && s.storyId === archiveId) || null;
+            },
+
+            /**
+             * ★ v0.68 打开故事概要的编辑弹窗(三种入口,根据 payload 区分)
+             *   入口 A: payload = { aiPersonId, summaryId }              → 编辑现有概要
+             *   入口 B: payload = { aiPersonId, archiveId, archiveName } → 从存档生成概要
+             *   入口 C: payload = { aiPersonId }                         → 新增空白概要(手动撰写)
+             *
+             *   弹窗内容:
+             *     - 「生成概要」按钮 → 调 extractStorySummary 触发 AI(入口 B/C 都生效)
+             *     - 「保存概要」按钮 → 调 saveStorySummary 落盘
+             */
+            async openStorySummaryEditModal(payload = {}) {
+                const aiPersonId = String(payload.aiPersonId || '');
+                if (!aiPersonId) {
+                    this.toolkit?.island?.notify?.('error', '参数错误', '缺少 aiPersonId');
+                    return null;
+                }
+                const sdk = window.settingsSdk;
+                if (!sdk?.storySummaries) {
+                    this.toolkit?.island?.notify?.('error', 'SDK 未就绪');
+                    return null;
+                }
+
+                // ====== 入口 A:编辑现有概要 ======
+                if (payload.summaryId) {
+                    const summary = this._getStorySummaryById(aiPersonId, payload.summaryId);
+                    if (!summary) {
+                        this.toolkit?.island?.notify?.('error', '概要不存在', '可能被删除');
+                        return null;
+                    }
+                    return this._openStorySummaryModalForEdit({
+                        aiPersonId,
+                        summary,
+                        archive: summary.storyId
+                            ? sdk.storyArchives?.get?.(summary.storyId) || null
+                            : null,
+                        archiveName: payload.archiveName || '',
+                    });
+                }
+
+                // ====== 入口 B:从存档生成概要 ======
+                if (payload.archiveId) {
+                    const archiveId = String(payload.archiveId || '');
+                    const archive = sdk.storyArchives?.get?.(archiveId);
+                    if (!archive) {
+                        this.toolkit?.island?.notify?.('error', '故事存档不存在', '可能被删除');
+                        return null;
+                    }
+                    // 找已有的(绑这个 archiveId 的概要)
+                    const summary = this._getStorySummaryByArchiveId(aiPersonId, archiveId);
+                    return this._openStorySummaryModalForEdit({
+                        aiPersonId,
+                        summary,
+                        archive,
+                        archiveName: payload.archiveName || archive.name || '',
+                    });
+                }
+
+                // ====== 入口 C:新增空白概要(手动撰写) ======
+                return this._openStorySummaryModalForEdit({
+                    aiPersonId,
+                    summary: null,
+                    archive: null,
+                    archiveName: '',
+                });
+            },
+
+            /**
+             * ★ v0.68 内部 helper:统一打开 SummaryEditModal 的逻辑
+             *   三种入口共用:传入 archive + summary(null/有) 决定 UI 行为
+             */
+            async _openStorySummaryModalForEdit({ aiPersonId, summary, archive, archiveName }) {
+                const sdk = window.settingsSdk;
+                const aiPerson = sdk.aiPersons?.get?.(aiPersonId) || null;
+                const aiName = aiPerson?.name || aiPersonId;
+                const defaultUser = sdk.defaultUserCard?.getDefault?.() || sdk.users?.getActive?.() || null;
+                const userName = defaultUser?.name || defaultUser?.chineseName || '用户';
+                const aiPersonaSummary = this._buildAiPersonaSummary(aiPerson);
+                const userPersonaSummary = this._buildUserPersonaSummary(defaultUser);
+
+                // dateRange / messageCount / 标题
+                const dateRange = archive
+                    ? {
+                        start: this._toDateKey(archive.createdAt),
+                        end: this._toDateKey(archive.createdAt),
+                    }
+                    : { start: '', end: '' };
+                const messageCount = summary?.messageCount
+                    || (archive ? (Array.isArray(archive.messages) ? archive.messages.length : 0) : 0);
+
+                // 标题:
+                //   - 入口 A:用 summary.title
+                //   - 入口 B:用 archiveName 兜底
+                //   - 入口 C:留空,让用户起名
+                const initialTitle = summary?.title || archiveName || '';
+
+                chatModalManager.openSummaryEdit({
+                    mode: 'story',
+                    initialTitle,
+                    initialContent: summary?.content || '',
+                    dateRange,
+                    messageCount,
+                    defaultAsPrompt: false,
+                    aiPersonaSummary,
+                    userPersonaSummary,
+                    // 保存:编辑现有 summary,或新建
+                    onSave: async (next) => {
+                        try {
+                            await this.saveStorySummary({
+                                aiPersonId,
+                                summaryId: summary?.id || '',
+                                archiveId: archive?.id || '',
+                                title: next.title,
+                                content: next.content,
+                                messageCount: next.messageCount,
+                            });
+                        } catch (err) {
+                            console.error('[chat-app] openStorySummaryEditModal save failed', err);
+                            this.toolkit?.island?.notify?.('error', '保存失败', err?.message || '');
+                        }
+                    },
+                    // 生成:从 archive / 当前会话提取
+                    onGenerate: async (genPayload) => {
+                        const inst = _getCurrentSummaryEditInstance();
+                        if (!inst) return;
+                        inst.isGenerating = true;
+                        inst.errorMsg = '';
+                        try {
+                            const result = await this.extractStorySummary({
+                                aiPersonId,
+                                archive, // null = 走「当前会话」
+                                archiveName,
+                                aiName,
+                                userName,
+                                suggestedTitle: genPayload?.title,
+                            });
+                            if (result.ok && result.content) {
+                                inst.onGenerateSuccess({
+                                    content: result.content,
+                                    title: result.title || genPayload?.title || (archiveName ? `${archiveName}概要` : '故事概要'),
+                                });
+                                this.toolkit?.island?.notify?.('success', '概要已生成', '请确认后保存');
+                            } else {
+                                inst.onGenerateError(result.error || '生成失败，请重试');
+                                this.toolkit?.island?.notify?.('warning', '生成失败', result.error || '');
+                            }
+                        } catch (err) {
+                            console.error('[chat-app] openStorySummaryEditModal generate failed', err);
+                            inst.onGenerateError('网络错误，请重试');
+                            this.toolkit?.island?.notify?.('error', '生成失败', err?.message || '');
+                        }
+                    },
+                });
+                return true;
+            },
+
+            /**
+             * ★ v0.68 从素材源(存档 / 当前会话) 提取概要(AI 生成)
+             *   payload: { aiPersonId, archive, archiveName, aiName, userName, suggestedTitle, mode }
+             *     · archive 有 → 从 archive.messages 快照提取
+             *     · archive 无 → 从当前故事会话 chatMessages.list 提取
+             *   返回: { ok, content, title, error? }
+             */
+            async extractStorySummary(payload = {}) {
+                const {
+                    aiPersonId,
+                    archive,
+                    archiveName,
+                    aiName,
+                    userName,
+                    suggestedTitle,
+                    mode = 'story',
+                } = payload;
+                if (!aiPersonId) return { ok: false, error: '缺少 aiPersonId' };
+
+                // 拿消息源
+                let messages = [];
+                let sourceLabel = '';
+                if (archive && Array.isArray(archive.messages) && archive.messages.length > 0) {
+                    messages = archive.messages;
+                    sourceLabel = archive.name || archiveName || '故事存档';
+                } else {
+                    // 兜底:从当前故事会话读
+                    const sdk = window.settingsSdk;
+                    try {
+                        messages = sdk?.chatMessages?.list
+                            ? (sdk.chatMessages.list(null, aiPersonId, mode) || [])
+                            : [];
+                    } catch (_) {}
+                    sourceLabel = '当前故事会话';
+                }
+                if (messages.length === 0) {
+                    return { ok: false, error: '暂无对话内容可提炼,请先聊几句或封存当前聊天' };
+                }
+                const apiSdk = window.__apiSdk;
+                if (!apiSdk) return { ok: false, error: 'API SDK 未加载' };
+                const apiKeySdk = apiSdk.apiKeySdk;
+                let activeKey = null;
+                if (apiKeySdk) {
+                    const enabled = apiKeySdk.listEnabled?.() || [];
+                    const all = apiKeySdk.list?.() || [];
+                    activeKey = enabled[0] || all[0] || null;
+                }
+                if (!activeKey?.apiKey) {
+                    console.warn('[chat-app] extractStorySummary: no apiKey. apiSdk=', Object.keys(apiSdk || {}));
+                    return { ok: false, error: '未配置 API Key,请先在设置中添加' };
+                }
+
+                const messagesText = this._formatDayMessagesForPrompt(messages, aiName);
+                const titleHint = suggestedTitle || archiveName || '故事概要';
+                const systemPrompt = `你是故事概要生成助手。请根据以下故事对话记录,生成一段简洁准确的故事概要。
+
+=== AI 人设 ===
+名字: ${aiName || '未知'}
+
+=== 用户人设 ===
+名字: ${userName || '用户'}
+
+=== 素材来源 ===
+${sourceLabel}
+
+=== 对话记录 ===
+${messagesText || '(无对话记录)'}
+
+请生成一段 150-300 字的故事概要,包括:
+1. 故事发生在什么场景 / 时代背景
+2. 主要角色和关系
+3. 核心剧情走向(起承转合 / 关键转折点)
+4. 故事的情感基调和主题
+5. 是否有未完结的伏笔 / 后续线索
+
+直接输出概要正文,不要加前缀说明。语言风格可以稍微文学化一点,适合作为故事存档的简短回顾。`;
+
+                let apiResult;
+                try {
+                    apiResult = await apiSdk.executeApiRequest({
+                        apiKeyId: activeKey.id,
+                        endpoint: 'chat/completions',
+                        method: 'POST',
+                        body: {
+                            messages: [{ role: 'user', content: systemPrompt }],
+                            temperature: 0.7,
+                            max_tokens: 800,
+                        },
+                        timeout: 60000,
+                        source: 'chat-app',
+                        note: '故事概要',
+                    });
+                } catch (err) {
+                    return { ok: false, error: `网络错误: ${err?.message || '连接失败'}` };
+                }
+                if (!apiResult?.success) {
+                    const status = apiResult?.statusCode ? `HTTP ${apiResult.statusCode} ` : '';
+                    return { ok: false, error: `${status}${apiResult?.error || 'API 调用失败'}` };
+                }
+                const data = apiResult.data;
+                const content = data?.choices?.[0]?.message?.content
+                    || data?.content?.[0]?.text
+                    || data?.candidates?.[0]?.content?.parts?.[0]?.text
+                    || '';
+                if (!content.trim()) return { ok: false, error: 'AI 返回内容为空' };
+                return { ok: true, content: content.trim(), title: titleHint };
+            },
+
+            /**
+             * ★ v0.68 保存(覆盖)故事概要到 aiPerson.storySummaries
+             *   payload: { aiPersonId, summaryId?, archiveId?, title, content, messageCount }
+             *   三种入口:
+             *     - summaryId 有 → 更新现有 summary(覆盖)
+             *     - summaryId 无 + archiveId 有 → 创建 summary 并绑定到 archiveId
+             *       · 但若已有 archiveId 绑定的 summary(1:1),则更新那个
+             *     - summaryId 无 + archiveId 无 → 创建空白 summary(storyId 为空)
+             */
+            async saveStorySummary(payload = {}) {
+                const sdk = window.settingsSdk;
+                if (!sdk?.storySummaries) {
+                    this.toolkit?.island?.notify?.('error', 'SDK 未就绪');
+                    return null;
+                }
+                const aiPersonId = String(payload.aiPersonId || '');
+                if (!aiPersonId) {
+                    this.toolkit?.island?.notify?.('error', '参数错误', '缺少 aiPersonId');
+                    return null;
+                }
+                const summaryId = String(payload.summaryId || '');
+                const archiveId = String(payload.archiveId || '');
+                const title = String(payload.title || '故事概要').trim();
+                const content = String(payload.content || '');
+                const messageCount = Number(payload.messageCount) || 0;
+                if (!title) {
+                    this.toolkit?.island?.notify?.('warning', '概要标题不能为空');
+                    return null;
+                }
+
+                const patch = {
+                    title,
+                    content,
+                    messageCount,
+                    asPrompt: { active: false, order: 0, source: 'story-summary' },
+                };
+                let record = null;
+                let targetSummaryId = summaryId;
+
+                // 优先级 1:summaryId 明确 → update
+                if (summaryId) {
+                    record = await sdk.storySummaries.update(aiPersonId, summaryId, patch);
+                } else if (archiveId) {
+                    // 优先级 2:有 archiveId,查 1:1 绑定的 summary
+                    const existing = this._getStorySummaryByArchiveId(aiPersonId, archiveId);
+                    if (existing) {
+                        record = await sdk.storySummaries.update(aiPersonId, existing.id, patch);
+                        targetSummaryId = existing.id;
+                    } else {
+                        // 优先级 3:新建 + 绑定
+                        record = await sdk.storySummaries.add(aiPersonId, {
+                            ...patch,
+                            storyId: archiveId,
+                        });
+                    }
+                } else {
+                    // 优先级 4:全新手写(storyId 留空)
+                    record = await sdk.storySummaries.add(aiPersonId, patch);
+                }
+                if (!record) {
+                    this.toolkit?.island?.notify?.('warning', '保存失败');
+                    return null;
+                }
+                this.toolkit?.island?.notify?.('success', '已保存概要', record.title);
+                // 二段式重画(AGENTS.md §32)
+                try {
+                    if (typeof window.invalidateRendererCache === 'function') {
+                        window.invalidateRendererCache('chat', null);
+                    }
+                } catch (_) {}
+                try { window.__appRendererBridge?.syncNow?.({ force: true }); } catch (_) {}
+                try {
+                    window.dispatchEvent(new CustomEvent('chat:summary-updated', {
+                        detail: {
+                            aiPersonId,
+                            summaryId: record.id,
+                            source: 'story',
+                            archiveId: archiveId || undefined,
+                        },
+                    }));
+                } catch (_) {}
+                return record;
+            },
+
+            /**
+             * ★ v0.68 删除故事概要(走顶层确认弹窗)
+             *   payload: { aiPersonId, summaryId }
+             */
+            async deleteStorySummary(payload = {}) {
+                const sdk = window.settingsSdk;
+                if (!sdk?.storySummaries) {
+                    this.toolkit?.island?.notify?.('error', 'SDK 未就绪');
+                    return null;
+                }
+                const aiPersonId = String(payload.aiPersonId || '');
+                const summaryId = String(payload.summaryId || '');
+                if (!aiPersonId || !summaryId) return null;
+                const existing = this._getStorySummaryById(aiPersonId, summaryId);
+                if (!existing) {
+                    this.toolkit?.island?.notify?.('info', '该概要已不存在');
+                    return null;
+                }
+                const title = existing.title || '故事概要';
+                if (typeof window.__phoneConfirm?.request !== 'function') {
+                    this.toolkit?.island?.notify?.('error', '确认弹窗未加载');
+                    return null;
+                }
+                window.__phoneConfirm.request({
+                    title: '删除故事概要?',
+                    text: `「${title}」将被删除,无法恢复`,
+                    confirmLabel: '删除',
+                    danger: true,
+                    onConfirm: async () => {
+                        const ok = await sdk.storySummaries.remove(aiPersonId, summaryId);
+                        if (!ok) {
+                            this.toolkit?.island?.notify?.('warning', '删除失败');
+                            return;
+                        }
+                        this.toolkit?.island?.notify?.('success', '概要已删除', title);
+                        // 二段式重画
+                        try {
+                            if (typeof window.invalidateRendererCache === 'function') {
+                                window.invalidateRendererCache('chat', null);
+                            }
+                        } catch (_) {}
+                        try { window.__appRendererBridge?.syncNow?.({ force: true }); } catch (_) {}
+                        try {
+                            window.dispatchEvent(new CustomEvent('chat:summary-updated', {
+                                detail: { aiPersonId, summaryId, source: 'story', deleted: true },
+                            }));
+                        } catch (_) {}
+                    },
+                    onCancel: () => {},
+                });
+                return true;
+            },
+
+            /**
+             * ★ v0.68 把故事概要注入到回复提示词(replyPrompts)
+             *   payload: { aiPersonId, summaryId }
+             *   - 默认 active=true
+             *   - 去重:sourceStorySummaryId === summaryId 即视为重复
+             *   - 注入后,AI 下次回复会参考这份概要
+             */
+            async addStorySummaryAsReplyPrompt(payload = {}) {
+                const sdk = window.settingsSdk;
+                if (!sdk?.storySummaries || !sdk?.replyPrompts) {
+                    this.toolkit?.island?.notify?.('error', 'SDK 未就绪');
+                    return null;
+                }
+                const aiPersonId = String(payload.aiPersonId || '');
+                const summaryId = String(payload.summaryId || '');
+                if (!aiPersonId || !summaryId) return null;
+                const summary = this._getStorySummaryById(aiPersonId, summaryId);
+                if (!summary) {
+                    this.toolkit?.island?.notify?.('warning', '该概要已不存在');
+                    return null;
+                }
+                // 去重检查
+                const existingList = sdk.replyPrompts.list(aiPersonId) || [];
+                const dup = existingList.find((p) => p && p.sourceStorySummaryId === summaryId);
+                if (dup) {
+                    this.toolkit?.island?.notify?.('info', '已应用到回复提示词', dup.title || '该条目');
+                    return null;
+                }
+                const title = summary.title || '故事概要';
+                const content = `【故事概要】${title}\n\n${summary.content || ''}`;
+                const created = await sdk.replyPrompts.add(aiPersonId, {
+                    title,
+                    content,
+                    source: 'story-summary',
+                    active: true,
+                    sourceStorySummaryId: summaryId,
+                });
+                if (!created) {
+                    this.toolkit?.island?.notify?.('warning', '注入失败');
+                    return null;
+                }
+                this.toolkit?.island?.notify?.('success', '已应用到回复提示词', title);
+                // 二段式重画
+                try {
+                    if (typeof window.invalidateRendererCache === 'function') {
+                        window.invalidateRendererCache('chat', null);
+                    }
+                } catch (_) {}
+                try { window.__appRendererBridge?.syncNow?.({ force: true }); } catch (_) {}
+                return created;
+            },
+
+            /**
+             * ★ v0.68 timestamp → YYYY-MM-DD(本地时区)
+             */
+            _toDateKey(ts) {
+                const t = Number(ts) || Date.now();
+                const d = new Date(t);
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${y}-${m}-${day}`;
+            },
+
+            // ============================================================
             // ★ v0.65 分级记忆系统 methods
             //   - switchMemoryHistoryLevel             切换历史消息页层级 tab
             //   - openMemoryHistoryCreateModal         L1 新建概要 → SummaryRangeModal + EditModal
@@ -3727,11 +6084,6 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
                     return null;
                 }
 
-                // 取日历视图的 AI prompt 模板(localStorage 持久化的 textarea 内容)
-                const promptKey = `xiaoting::calendar-prompt-template-${aiPersonId}-${mode}`;
-                let promptTemplate = '';
-                try { promptTemplate = localStorage.getItem(promptKey) || ''; } catch (_) {}
-
                 // ★ v0.66 占位符替换:AI 人设 / 用户人设 / dateRange / messages
                 const aiPerson = sdk.aiPersons?.get?.(aiPersonId) || null;
                 const aiName = aiPerson?.name || aiPersonId;
@@ -3744,16 +6096,6 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
                 const aiPersonaSummary = this._buildAiPersonaSummary(aiPerson);
                 const userPersonaSummary = this._buildUserPersonaSummary(defaultUser);
 
-                // ★ v0.66 bug 修复:textarea 不再预填「发给 AI 的 prompt 模板」(用户误以为 AI 已生成)
-                //   正确语义:textarea = AI 概要正文初始为空(等 AI 生成)
-                //   mergedPrompt = 内部传给 AI 的指令,不要透到 textarea
-                const mergedPrompt = this._fillPromptPlaceholders(promptTemplate, {
-                    aiName,
-                    userName,
-                    dateRange: dateRangeText,
-                    messages: messagesText,
-                });
-
                 // 不弹 SummaryRangeModal(范围固定 = 当天 1 天),直接弹 SummaryEditModal
                 chatModalManager.openSummaryEdit({
                     mode: 'calendar',
@@ -3763,10 +6105,6 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
                     dateRange: { start: dateKey, end: dateKey },
                     messageCount: dayMessages.length,
                     defaultAsPrompt: false,
-                    // ★ v0.66:promptPrefix = 内部传给 AI 的指令模板,不透到 textarea
-                    promptPrefix: mergedPrompt
-                        ? `${mergedPrompt}\n\n---\n\n请基于以上指令,生成当日聊天概要。\n\n`
-                        : '',
                     aiPersonaSummary,
                     userPersonaSummary,
                     onSave: async (next) => {
@@ -3802,7 +6140,6 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
                                 userName,
                                 dateRange: dateRangeText,
                                 messages: messagesText,
-                                promptTemplate: mergedPrompt,
                                 dayMessages,
                             });
                             if (result.ok && result.content) {
@@ -3831,7 +6168,7 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
              *   返回: { ok: boolean, content: string, error?: string }
              */
             async _generateDaySummary(aiPersonId, mode, opts = {}) {
-                const { aiName, userName, dateRange, messages, promptTemplate, dayMessages } = opts;
+                const { aiName, userName, dateRange, messages } = opts;
                 const apiSdk = window.__apiSdk;
                 if (!apiSdk) return { ok: false, error: 'API SDK 未加载' };
 
@@ -3871,62 +6208,38 @@ ${messages || '(无对话记录)'}
                     return { ok: false, error: '未配置 API Key,请先在设置中添加' };
                 }
 
-                let resp;
+                let apiResult;
                 try {
-                    resp = await fetch(`${activeKey.baseUrl}/chat/completions`, {
+                    apiResult = await apiSdk.executeApiRequest({
+                        apiKeyId: activeKey.id,
+                        endpoint: 'chat/completions',
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${activeKey.apiKey}`,
-                        },
-                        body: JSON.stringify({
-                            model: activeKey.model || 'gpt-4o',
+                        body: {
                             messages: [{ role: 'user', content: systemPrompt }],
                             temperature: 0.7,
                             max_tokens: 500,
-                        }),
-                        signal: AbortSignal.timeout(60000),
+                        },
+                        timeout: 60000,
+                        source: 'chat-app',
+                        note: '聊天概要',
                     });
                 } catch (err) {
                     return { ok: false, error: `网络错误: ${err?.message || '连接失败'}` };
                 }
 
-                if (!resp.ok) {
-                    const txt = await resp.text().catch(() => '');
-                    return { ok: false, error: `HTTP ${resp.status}: ${txt.slice(0, 100)}` };
+                if (!apiResult?.success) {
+                    const status = apiResult?.statusCode ? `HTTP ${apiResult.statusCode}: ` : '';
+                    return { ok: false, error: `${status}${apiResult?.error || 'API 调用失败'}` };
                 }
 
-                let data;
-                try {
-                    data = await resp.json();
-                } catch (_) {
-                    return { ok: false, error: 'AI 返回格式错误' };
-                }
-
-                const content = data?.choices?.[0]?.message?.content || '';
+                const data = apiResult.data;
+                const content = data?.choices?.[0]?.message?.content
+                    || data?.content?.[0]?.text
+                    || data?.candidates?.[0]?.content?.parts?.[0]?.text
+                    || '';
                 if (!content.trim()) return { ok: false, error: 'AI 返回内容为空' };
 
                 return { ok: true, content: content.trim() };
-            },
-
-            /**
-             * ★ v0.66 把 prompt 模板里的占位符替换成实际值
-             *   占位符: {{aiName}} {{userName}} {{dateRange}} {{messages}}
-             *   - promptTemplate 为空 → 返回空字符串(让调用方用 fallback)
-             *   - 没替换成功的占位符 → 保留原样(不报错,让用户看到提示)
-             */
-            _fillPromptPlaceholders(template, vars) {
-                const t = String(template || '');
-                if (!t) return '';
-                const aiName = String(vars?.aiName ?? '');
-                const userName = String(vars?.userName ?? '');
-                const dateRange = String(vars?.dateRange ?? '');
-                const messages = String(vars?.messages ?? '');
-                return t
-                    .replace(/\{\{\s*aiName\s*\}\}/g, aiName)
-                    .replace(/\{\{\s*userName\s*\}\}/g, userName)
-                    .replace(/\{\{\s*dateRange\s*\}\}/g, dateRange)
-                    .replace(/\{\{\s*messages\s*\}\}/g, messages);
             },
 
             /**
@@ -4161,6 +6474,65 @@ ${messages || '(无对话记录)'}
             },
 
             /**
+             * ★ v0.72 切换概要的 Prompt 应用状态
+             *   - active=true → 取消应用(active=false)
+             *   - active=false → 重新应用(active=true)
+             *   payload: { aiPersonId, mode, summaryId, active }
+             */
+            async toggleMemorySummaryPromptActive(payload = {}) {
+                const aiPersonId = String(payload.aiPersonId || '');
+                const summaryId = String(payload.summaryId || '');
+                const mode = String(payload.mode || 'calendar');
+                const active = payload.active === undefined ? false : !!payload.active;
+                if (!aiPersonId || !summaryId) return;
+                const sdk = window.settingsSdk;
+                if (!sdk?.memorySummaries) return;
+
+                try {
+                    await sdk.memorySummaries.setActive(aiPersonId, summaryId, active);
+                } catch (err) {
+                    console.warn('[chat-app] toggleMemorySummaryPromptActive setActive failed', err);
+                    return;
+                }
+
+                // 同步 memorySummaryInjectMap
+                try {
+                    if (!this.app.state) this.app.state = {};
+                    if (!this.app.state.chat) this.app.state.chat = {};
+                    if (!this.app.state.chat.memorySummaryInject) this.app.state.chat.memorySummaryInject = {};
+                    if (!this.app.state.chat.memorySummaryInject[aiPersonId]) {
+                        this.app.state.chat.memorySummaryInject[aiPersonId] = {};
+                    }
+                    if (!active) {
+                        // 标记为不注入
+                        this.app.state.chat.memorySummaryInject[aiPersonId][summaryId] = false;
+                    } else {
+                        // 移除标记(重新启用)
+                        delete this.app.state.chat.memorySummaryInject[aiPersonId][summaryId];
+                    }
+                    localStorage.setItem(
+                        'xiaoting::chat-memory-summary-inject-v1',
+                        JSON.stringify(this.app.state.chat.memorySummaryInject),
+                    );
+                } catch (_) {}
+
+                this.toolkit?.island?.notify?.(
+                    active ? 'success' : 'info',
+                    active ? '已重新应用' : '已取消应用',
+                );
+
+                // 刷新 UI
+                try {
+                    if (typeof window.invalidateRendererCache === 'function') {
+                        window.invalidateRendererCache('chat', null);
+                    }
+                } catch (_) {}
+                try {
+                    window.__appRendererBridge?.syncNow?.({ force: true });
+                } catch (_) {}
+            },
+
+            /**
              * ★ v0.65 L1 日概要新建
              *   弹 SummaryRangeModal(选日期范围) → 弹 SummaryEditModal(编辑/重 Roll/保存)
              *   落库到 sdk.memorySummaries.add (storageLevel='L1')
@@ -4375,7 +6747,7 @@ ${messages || '(无对话记录)'}
             /**
              * ★ v0.66 prompt-manager Murmur 组内,记忆概要虚拟卡的「关闭 / 启用」toggle
              *   payload: { aiPersonId, summaryId }
-             *   - 行为:跟 replyFormatInject / kChainActive / stickerLibraryInject 完全对齐
+             *   - 行为:跟 replyFormatInject / stickerLibraryInject 完全对齐
              *     · 关闭 → app.state.chat.memorySummaryInject[aiPersonId][summaryId] = false
              *     · 启用 → 设为 true(从 map 里删掉)
              *   - 持久化:localStorage 'xiaoting::chat-memory-summary-inject-v1'
@@ -4506,165 +6878,73 @@ ${messages || '(无对话记录)'}
                 const sdk = window.settingsSdk;
                 if (!sdk?.memorySummaries) return null;
                 const config = sdk.memorySummaries.getConfig(aiPersonId);
-                const levels = config.levels || [];
+                const levels = (config.levels || []).map((l) => ({
+                    id: String(l.id || ''),
+                    name: String(l.name || ''),
+                    cycle: Math.max(1, Number(l.cycle) || 1),
+                }));
 
-                // 渲染弹窗
-                const overlay = document.createElement('div');
-                overlay.className = 'memory-modal-overlay';
-                overlay.innerHTML = `
-                    <div class="memory-modal" id="add-level-modal">
-                        <div class="memory-modal-header">
-                            <div class="memory-modal-title">添加层级</div>
-                            <div class="memory-modal-desc">在已有层级之间插入新层级,新层初始存量为 0</div>
-                        </div>
-                        <div class="memory-modal-body">
-                            <div class="memory-modal-field">
-                                <label class="memory-modal-label">插入位置</label>
-                                <select class="memory-modal-select" id="add-level-position">
-                                    ${levels.map((l, i) => `<option value="after-${escapeHtml(l.id)}">在 ${escapeHtml(l.name)} 之后</option>`).join('')}
-                                    <option value="append">追加到最上层</option>
-                                </select>
-                            </div>
-                            <div class="memory-modal-field">
-                                <label class="memory-modal-label">层级名称</label>
-                                <input type="text" class="memory-modal-input" id="add-level-name" placeholder="例如:季概要" />
-                            </div>
-                            <div class="memory-modal-field">
-                                <label class="memory-modal-label">周期(天)</label>
-                                <div class="memory-modal-cycle-row">
-                                    <input type="number" class="memory-modal-input memory-modal-cycle-input" id="add-level-cycle" min="1" value="14" />
-                                    <span class="memory-modal-cycle-unit">天</span>
-                                </div>
-                                <div class="memory-modal-hint" id="add-level-hint">请选择位置后查看约束</div>
-                            </div>
-                        </div>
-                        <div class="memory-modal-footer">
-                            <button type="button" class="memory-modal-btn" data-action="cancel">取消</button>
-                            <button type="button" class="memory-modal-btn is-primary" data-action="confirm" id="add-level-confirm">添加</button>
-                        </div>
-                    </div>
-                `;
-                document.body.appendChild(overlay);
-
-                const updateHint = () => {
-                    const sel = overlay.querySelector('#add-level-position');
-                    const hint = overlay.querySelector('#add-level-hint');
-                    const cycleInput = overlay.querySelector('#add-level-cycle');
-                    const value = parseInt(cycleInput.value, 10);
-                    if (!value || value < 1) {
-                        hint.textContent = '周期必须 ≥ 1';
-                        hint.classList.remove('is-success');
-                        return false;
-                    }
-                    const posVal = sel.value;
-                    if (posVal === 'append') {
-                        // 追加:只需 > 当前最上层
-                        const max = Math.max(...levels.map((l) => Number(l.cycle) || 1));
-                        if (value <= max) {
-                            hint.textContent = `必须 > 当前最上层周期(${max})`;
-                            hint.classList.remove('is-success');
-                            return false;
+                // ★ v0.74 迁移到 AcModal:不再用 document.createElement + body.appendChild 野生 DOM
+                //   通过 chatModalManager.openAddLevel 派发,弹窗由 framework mountInto,自动套用
+                //   .app-shell 作用域样式 + AcModal squircle / footer 按钮 / 关闭按钮 / Esc 关闭
+                const onConfirm = async (next) => {
+                    try {
+                        const res = await sdk.memorySummaries.addLevel(aiPersonId, {
+                            name: next.name,
+                            cycle: next.cycle,
+                            position: next.position,
+                        });
+                        if (!res.ok) {
+                            this.toolkit?.island?.notify?.('warning', '添加失败', res.error || '');
+                            return;
                         }
-                        hint.textContent = `✓ 合法`;
-                        hint.classList.add('is-success');
-                        return true;
+                        // 双重刷新确保列表更新
+                        try { window.__appRendererBridge?.syncNow?.({ force: true }); } catch (_) {}
+                        try { window.__detailRenderTick.value++; } catch (_) {}
+                        this.toolkit?.island?.notify?.('success', '已添加层级', res.level?.name || '');
+                    } catch (err) {
+                        this.toolkit?.island?.notify?.('error', '添加失败', err?.message || String(err));
                     }
-                    const m = posVal.match(/^after-(.+)$/);
-                    if (!m) return false;
-                    const anchor = levels.find((l) => l.id === m[1]);
-                    if (!anchor) return false;
-                    const idx = levels.findIndex((l) => l.id === m[1]);
-                    const lower = levels[idx + 1];
-                    if (value <= anchor.cycle) {
-                        hint.textContent = `必须 > ${anchor.name} 周期(${anchor.cycle})`;
-                        hint.classList.remove('is-success');
-                        return false;
-                    }
-                    if (lower && value >= lower.cycle) {
-                        hint.textContent = `必须 < ${lower.name} 周期(${lower.cycle})`;
-                        hint.classList.remove('is-success');
-                        return false;
-                    }
-                    hint.textContent = `✓ 合法`;
-                    hint.classList.add('is-success');
-                    return true;
                 };
 
-                overlay.querySelector('#add-level-position').addEventListener('change', updateHint);
-                overlay.querySelector('#add-level-cycle').addEventListener('input', updateHint);
-                overlay.querySelector('#add-level-name').addEventListener('input', () => {});
-                updateHint();
-
-                const cleanup = () => {
-                    try { document.body.removeChild(overlay); } catch (_) {}
-                };
-                overlay.addEventListener('click', (e) => {
-                    if (e.target === overlay) cleanup();
-                });
-                overlay.querySelector('[data-action="cancel"]').addEventListener('click', cleanup);
-                overlay.querySelector('[data-action="confirm"]').addEventListener('click', async () => {
-                    const name = overlay.querySelector('#add-level-name').value.trim() || '新层级';
-                    const cycle = parseInt(overlay.querySelector('#add-level-cycle').value, 10) || 1;
-                    const position = overlay.querySelector('#add-level-position').value;
-                    if (!updateHint()) {
-                        this.toolkit?.island?.notify?.('warning', '周期不合法', '请检查提示');
-                        return;
-                    }
-                    const res = await sdk.memorySummaries.addLevel(aiPersonId, { name, cycle, position });
-                    cleanup();
-                    if (!res.ok) {
-                        this.toolkit?.island?.notify?.('warning', '添加失败', res.error || '');
-                        return;
-                    }
-                    try { window.__appRendererBridge?.syncNow?.({ force: true }); } catch (_) {}
-                    this.toolkit?.island?.notify?.('success', '已添加层级', res.level?.name || '');
-                });
+                chatModalManager.openAddLevel({ levels, onConfirm, onClose: () => {} });
             },
 
             /**
-             * ★ v0.65 弹「删除层级」确认弹窗
+             * ★ v0.75 弹「删除层级」确认弹窗(AcModal)
+             *   替代原 window.__phoneConfirm.request 的野生确认弹窗
              *   payload: { levelId }
              */
             async openRemoveLevelModal(payload = {}) {
-                const levelId = String(payload.levelId || '');
-                if (!levelId) return;
-                let aiPersonId = '';
-                try {
-                    const detailEl = document.querySelector('.app-shell[data-app-id="chat"] .memory-mgmt');
-                    if (detailEl) aiPersonId = detailEl.dataset.aiPersonId || '';
-                } catch (_) {}
-                if (!aiPersonId) return;
+                const { aiPersonId, levelId } = payload;
+                if (!aiPersonId || !levelId) return;
                 const sdk = window.settingsSdk;
                 if (!sdk?.memorySummaries) return;
                 const config = sdk.memorySummaries.getConfig(aiPersonId);
                 const level = (config.levels || []).find((l) => l.id === levelId);
                 if (!level) return;
 
-                const ok = typeof window !== 'undefined' && window.__phoneConfirm
-                    ? await new Promise((resolve) => {
-                        window.__phoneConfirm.request({
-                            title: `确认删除 ${level.name}`,
-                            text: '删除后该层概要将标记为已删除(数据保留可恢复),上层自动降级',
-                            confirmLabel: '删除',
-                            danger: true,
-                            onConfirm: () => resolve(true),
-                            onCancel: () => resolve(false),
-                        });
-                    })
-                    : true;
-                if (!ok) return;
-
-                const res = await sdk.memorySummaries.removeLevel(aiPersonId, levelId);
-                if (!res.ok) {
-                    this.toolkit?.island?.notify?.('warning', '删除失败', res.error || '');
-                    return;
-                }
-                try { window.__appRendererBridge?.syncNow?.({ force: true }); } catch (_) {}
-                this.toolkit?.island?.notify?.('success', '已删除层级', level.name);
+                // ★ v0.75 改 AcModal 弹窗
+                chatModalManager.openRemoveLevelConfirm({
+                    levelName: level.name,
+                    onConfirm: async () => {
+                        const res = await sdk.memorySummaries.removeLevel(aiPersonId, levelId);
+                        if (!res.ok) {
+                            this.toolkit?.island?.notify?.('warning', '删除失败', res.error || '');
+                            return;
+                        }
+                        // 双重刷新确保列表更新
+                        try { window.__appRendererBridge?.syncNow?.({ force: true }); } catch (_) {}
+                        try { window.__detailRenderTick.value++; } catch (_) {}
+                        this.toolkit?.island?.notify?.('success', '已删除层级', level.name);
+                    },
+                    onClose: () => {},
+                });
             },
 
             /**
-             * ★ v0.65 改周期:从 inline input blur 时弹确认弹窗(改后清存量)
+             * ★ v0.75 改周期:从 inline input blur 时弹确认弹窗(改后清存量)(AcModal)
+             *   替代原 window.__phoneConfirm.request 的野生确认弹窗
              *   payload: { aiPersonId, levelId, newCycle }
              */
             async saveUpdateLevelCycle(payload = {}) {
@@ -4688,35 +6968,34 @@ ${messages || '(无对话记录)'}
                 if (!level) return;
                 if (level.cycle === newCycle) return;
 
-                const ok = typeof window !== 'undefined' && window.__phoneConfirm
-                    ? await new Promise((resolve) => {
-                        window.__phoneConfirm.request({
-                            title: `确认修改 ${level.name} 周期`,
-                            text: `新周期 ${newCycle} 天,旧周期 ${level.cycle} 天。修改后该层所有存量清零,从下层已压缩数量重新开始计数。`,
-                            confirmLabel: '确认修改',
-                            danger: false,
-                            onConfirm: () => resolve(true),
-                            onCancel: () => resolve(false),
-                        });
-                    })
-                    : true;
-                if (!ok) return;
-
-                const res = await sdk.memorySummaries.updateLevelCycle(aiPersonId, levelId, newCycle);
-                if (!res.ok) {
-                    this.toolkit?.island?.notify?.('warning', '修改失败', res.error || '');
-                    try { window.__appRendererBridge?.syncNow?.({ force: true }); } catch (_) {} // 让 input 回滚
-                    return;
-                }
-                try { window.__appRendererBridge?.syncNow?.({ force: true }); } catch (_) {}
-                this.toolkit?.island?.notify?.('success', '已修改周期', `${level.name}: ${level.cycle} → ${newCycle} 天`);
+                // ★ v0.75 改 AcModal 弹窗
+                chatModalManager.openUpdateLevelCycleConfirm({
+                    levelName: level.name,
+                    oldCycle: level.cycle,
+                    newCycle,
+                    onConfirm: async () => {
+                        const res = await sdk.memorySummaries.updateLevelCycle(aiPersonId, levelId, newCycle);
+                        if (!res.ok) {
+                            this.toolkit?.island?.notify?.('warning', '修改失败', res.error || '');
+                            try { window.__appRendererBridge?.syncNow?.({ force: true }); } catch (_) {} // 让 input 回滚
+                            return;
+                        }
+                        // 双重刷新确保列表更新
+                        try { window.__appRendererBridge?.syncNow?.({ force: true }); } catch (_) {}
+                        try { window.__detailRenderTick.value++; } catch (_) {}
+                        this.toolkit?.island?.notify?.('success', '已修改周期', `${level.name}: ${level.cycle} → ${newCycle} 天`);
+                    },
+                    onClose: () => {},
+                });
             },
 
             /**
              * ★ v0.61.3 实时计算「当前聊天回合」prompt 文本
              *   - 输入: messages 数组(必须带 sender / timestamp)
-             *   - 回合定义:从最新到最旧,连续的同一侧消息归一组;
-             *     当 sender 切到另一边时,新一组开始。
+             *   - 回合定义见 services/context-rounds.js:
+             *     **1 回合 = 1 组用户消息 + 紧随其后的 1 组 AI 消息**
+             *     (v0.87 修复:之前把每个"连续同侧块"当一个回合,一来一回被算成 2 个,
+             *      用户设 20 回合实际只拿到 10 组来回)
              *   - 取最近 contextRounds 个回合(默认 20),拼成文本
              *   - 位置:注入 prompt 时排在「近期聊天」之前 / 之后
              *
@@ -4738,41 +7017,10 @@ ${messages || '(无对话记录)'}
                     }
                 } catch (_) { /* 兜底用传入值 */ }
 
-                // ★ v0.61.8.12 只保留「今天的聊天记录」,过滤掉 8.7 / 8.6 等历史日期
-                //   - 过滤基准:调用方本地时区的今天 00:00:00 ~ 23:59:59.999
-                const _now = new Date();
-                const _dayStart = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate(), 0, 0, 0, 0).getTime();
-                const _dayEnd = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate(), 23, 59, 59, 999).getTime();
-                const todayList = list.filter((m) => {
-                    const ts = Number(m && m.timestamp) || 0;
-                    return ts >= _dayStart && ts <= _dayEnd;
-                });
-                if (todayList.length === 0) return '';
-
-                // 按时间升序
-                todayList.sort((a, b) => (Number(a.timestamp) || 0) - (Number(b.timestamp) || 0));
-
-                // 分组回合:从最早到最新,连续的同一侧归一组
-                const rounds = [];
-                let cur = [];
-                let curSender = null;
-                for (const m of todayList) {
-                    if (!m || m.sender == null) continue;
-                    if (m.sender !== curSender && cur.length > 0) {
-                        rounds.push(cur);
-                        cur = [];
-                    }
-                    cur.push(m);
-                    curSender = m.sender;
-                }
-                if (cur.length > 0) rounds.push(cur);
-
-                // 取最后 contextRounds 个回合
-                const start = Math.max(0, rounds.length - contextRounds);
-                const picked = rounds.slice(start);
+                const { rounds: picked } = takeRecentRounds(list, contextRounds);
                 if (picked.length === 0) return '';
 
-                const lines = [`# 当前聊天回合(最近 ${picked.length} / ${contextRounds} 回合,1 回合 = 1 组用户 + 1 组 AI)`];
+                const lines = [buildContextRoundsHeading(picked.length, contextRounds)];
                 picked.forEach((round, i) => {
                     for (const m of round) {
                         const sender = m.sender === 'ai' ? 'AI' : '用户';
@@ -4886,61 +7134,6 @@ ${messages || '(无对话记录)'}
                 return lines.join('\n');
             },
 
-            /**
-             * ★ v0.63 chat-page 渲染时后台触发 K 链压缩(异步,fire-and-forget)
-             *   - 不会 throw,失败静默
-             *   - v0.63:实际调用AI生成梗概,然后写入K链
-             *   - 完成后通知灵动岛
-             */
-            async _triggerRollingCompress(aiPersonId, mode, messages) {
-                try {
-                    const sdk = window.settingsSdk;
-                    if (!sdk?.rollingSummaries?.compressIfNeeded) return;
-                    const cfg = sdk.rollingSummaries.getRollingConfig(aiPersonId);
-                    if (!cfg?.enabled) return;
-
-                    // ★ v0.63:传入 generateSummary 回调,让 rollingSummaries 在内部调用AI生成梗概
-                    const res = await sdk.rollingSummaries.compressIfNeeded(aiPersonId, mode, messages, {
-                        contextRounds: cfg.contextRounds,
-                        kMergeSize: cfg.kMergeSize,
-                        maxChainLength: cfg.maxChainLength,
-                        generateSummary: async (rounds, opts) => {
-                            // 这里调用 AI 生成梗概
-                            return await generateKChainSummary(rounds, {
-                                aiPersonId: opts.aiPersonId,
-                                mode: opts.mode || 'calendar',
-                                summaryStyle: opts.summaryStyle || 'concise',
-                            });
-                        },
-                    });
-                    if (res?.compressed) {
-                        // v0.63:通知内容包含生成的梗概预览
-                        const preview = res.summaryContent
-                            ? res.summaryContent.slice(0, 30) + (res.summaryContent.length > 30 ? '…' : '')
-                            : '';
-                        this.toolkit?.island?.notify?.(
-                            'info',
-                            '已生成滚动摘要',
-                            preview ? `K${res.chainLength - 1}: ${preview}` : `K链现有 ${res.chainLength} 个 K`,
-                        );
-                        // ★ v0.63.1 K 生成完成后主动触发 detail 重画
-                        //   - 让 prompt-manager 的 K 链卡片(小眼睛 badge + preview 列表)实时显示新 K
-                        //   - 之前只在 v0.61.3 上下文初始化时跑过一次 setTimeout 60ms syncNow,
-                        //     但 AI 生成 K 可能 1~30 秒,那次 syncNow 早就跑完 → UI 还是看不到新 K
-                        try {
-                            if (typeof window.invalidateRendererCache === 'function') {
-                                window.invalidateRendererCache('chat', null);
-                            }
-                        } catch (_) {}
-                        try {
-                            window.__appRendererBridge?.syncNow?.({ force: true });
-                        } catch (_) {}
-                    }
-                } catch (err) {
-                    console.warn('[chat-app] _triggerRollingCompress failed', err);
-                }
-            },
-
             // ============================================================
             // ★ v0.42 故事存档交互 methods 结束
             // ============================================================
@@ -4966,7 +7159,6 @@ ${messages || '(无对话记录)'}
                         if (snapAiPersons.length > 0 && snapWorld) {
                             if (contactsTitle) contactsTitle.textContent = '可添加的 AI 人设（按当前模式筛选）';
                             contactsList.innerHTML = snapAiPersons.map(renderItem).join('');
-                            console.log('[chat-app] refreshNewChatContacts snapshot path, count:', snapAiPersons.length);
                             // 不 return —— 后面继续走 SDK 路径覆盖
                         }
                     } catch (_) {}
@@ -4986,7 +7178,7 @@ ${messages || '(无对话记录)'}
                         });
                         contactsList.innerHTML = `
                             <div class="new-chat-empty-state" data-app-action='${escapeHtml(gotoSettings)}' style="cursor: pointer;">
-                                <div class="new-chat-empty-icon">🌐</div>
+                                <div class="new-chat-empty-icon">${SNAIL_EMPTY_SVG}</div>
                                 <div class="new-chat-empty-text">还没有可添加的 AI 人设</div>
                                 <div class="new-chat-empty-hint">
                                     默认用户卡还没有绑定世界观。<br/>
@@ -4995,14 +7187,12 @@ ${messages || '(无对话记录)'}
                                 </div>
                             </div>
                         `;
-                        console.log('[chat-app] refreshNewChatContacts empty, no ai persons for current world');
                         return;
                     }
 
                     if (contactsTitle) contactsTitle.textContent = '可添加的 AI 人设（按当前模式筛选）';
                     const itemsHtml = aiPersons.map(renderContactItem).join('');
                     contactsList.innerHTML = itemsHtml;
-                    console.log('[chat-app] refreshNewChatContacts done, count:', aiPersons.length);
                 } catch (err) {
                     console.warn('[chat-app] refreshNewChatContacts failed:', err);
                 }
@@ -5053,15 +7243,37 @@ ${messages || '(无对话记录)'}
                         }
                     }
 
-                    console.log('[chat-app] refreshProfileTab done, user:', user.name);
                 } catch (err) {
                     console.warn('[chat-app] refreshProfileTab failed:', err);
                 }
             },
 
+            /**
+             * ★ v0.67.x 钱包流水页「刷新」按钮 handler
+             *   - 派发入口:transaction-history 页 #refresh-transactions 元素的 data-app-action
+             *   - 走 framework 二段式重画:invalidateRendererCache + bridge.syncNow({force:true})
+             *   - 严禁用 __detailRenderTick.value++(async renderMode 会死循环,详见 AGENTS.md §27)
+             *   - 灵动岛提示一下,让用户有反馈
+             */
+            async refreshWalletHistory() {
+                try {
+                    try {
+                        if (typeof window.invalidateRendererCache === 'function') {
+                            window.invalidateRendererCache('chat', null);
+                        }
+                    } catch (_) {}
+                    try {
+                        window.__appRendererBridge?.syncNow?.({ force: true });
+                    } catch (_) {}
+                    this.toolkit?.island?.notify?.('success', '钱包已刷新');
+                } catch (err) {
+                    console.warn('[chat-app] refreshWalletHistory failed:', err);
+                    this.toolkit?.island?.notify?.('warning', '刷新失败', err?.message || '');
+                }
+            },
+
             /** framework 调用：关闭当前 detail 页 */
             closeDetail() {
-                console.log('[chat-app] closeDetail called, nav=', !!window.__navigationForDebug);
                 if (window.__navigationForDebug?.closeDetailPage) {
                     window.__navigationForDebug.closeDetailPage();
                 }
@@ -5102,7 +7314,6 @@ ${messages || '(无对话记录)'}
             /** 切换搜索模式（后续实现） */
             toggleSearch() {
                 // TODO: 搜索逻辑后续实现
-                console.log('[chat] toggleSearch called');
             },
 
             /**
@@ -5111,26 +7322,21 @@ ${messages || '(无对话记录)'}
              *   - 让 framework 重渲当前消息列表 tab（背景 / 内容都跟着切）
              */
             toggleRecordMode() {
-                console.log('[chat-app] toggleRecordMode CALLED, this.toolkit?', !!this.toolkit, 'this.methods?', Object.keys(this.methods || {}).slice(0, 6));
                 let next;
                 try {
                     next = toggleChatRecordMode();
-                    console.log('[chat-app] toggleChatRecordMode returned:', next);
                 } catch (err) {
                     console.error('[chat-app] toggleChatRecordMode threw:', err);
                     return;
                 }
                 const modeCfg = getModeConfig(next);
-                console.log('[chat-app] modeCfg:', modeCfg);
                 this.toolkit?.island?.notify?.(
                     next === 'story' ? 'info' : 'success',
                     `已切换到${modeCfg.label}`,
                     next === 'story' ? '消息列表背景变为粉色，对话视为游戏模式' : '正常日历模式'
                 );
-                console.log('[chat-app] refreshMessagesTab starting');
                 try {
                     refreshMessagesTab(this);
-                    console.log('[chat-app] refreshMessagesTab done');
                 } catch (err) {
                     console.error('[chat-app] refreshMessagesTab threw:', err);
                 }
@@ -5177,7 +7383,7 @@ ${messages || '(无对话记录)'}
                                         <span class="message-select-check"></span>
                                     </button>
                                     <div class="message sent">
-                                        <div class="avatar self" data-poke="self" style="background: #F4A6CD;">我</div>
+                                        <div class="avatar self" data-poke="self" style="background: ${DEFAULT_USER_AVATAR_BG};">我</div>
                                         <div class="message-content">
                                             <div class="message-bubble message-bubble-card">
                                                 <div class="desc-image-card" data-desc="${result.description.replace(/"/g, '&quot;')}" data-color="${result.cardColor}" data-text-color="${result.textColor}">
@@ -5224,6 +7430,13 @@ ${messages || '(无对话记录)'}
                 }
                 chatPrivate.__chatPrivateInteractionsBound = true;
 
+                // 「对方正在输入中」状态重放。
+                //   v-html 每次重画都会把顶栏的名字还原成联系人名，所以状态不能
+                //   「设一次就完事」—— 必须在页面重新挂载后重放一遍。这里是唯一
+                //   能保证 innerHTML 已写完的时机（同 §X.7 的结论）。
+                //   场景：发消息 → 切出 murmur → 切回来，AI 还没回，要继续闪。
+                applyTypingToRoot(chatPrivate);
+
                 // ★ v0.49 表情选择器面板 — 首次绑定时预填缓存
                 //   v0.49.1 流程:
                 //     ① _prerenderEmojiPicker(ids) 填 _emojiCache + bridge.syncNow({force:true}) 触发 v-html 重画
@@ -5231,85 +7444,60 @@ ${messages || '(无对话记录)'}
                 //     ③ 第二次 init 走 cacheHit 分支,但因为 chatRoot 是旧节点,不 fill
                 //     ④ 用户点 emoji 按钮时,toggle 路径传入新 chatRoot → prerender 走 cacheHit + fill 分支
                 //   注意:init 时不传 chatRoot,因为那是即将被 v-html 重画的旧节点,fill 会被重画冲掉
-                try {
-                    const sdk = window.settingsSdk;
-                    const activeUser = sdk?.users?.getActive?.();
-                    const ids = activeUser?.boundResources?.stickerGroupIds || [];
-                    if (ids.length > 0) {
-                        // ★ v0.49.1:传 chatPrivate 进 prerender ——
-                        //   首次:缓存空 → 填缓存 + bridge.syncNow 触发 v-html 重画(chatPrivate 即将失效,fill 被跳过)
-                        //   重画后 init 第二次跑(observer 触发,新节点):
-                        //   → prerender cacheHit + chatRoot 是新节点 → _fillEmojiPickerImages 直接 fill 缩略图
-                        const { _prerenderEmojiPicker } = await import('./components/emoji-picker-panel.js');
-                        _prerenderEmojiPicker(ids, chatPrivate).catch(err => {
-                            console.warn('[chat-app] prerender emoji picker (init) failed', err);
-                        });
-                    }
-                } catch (err) {
-                    console.warn('[chat-app] init emoji picker failed', err);
-                }
+                // ★ v0.70:抽出到 components/chat-emoji-panel.js
+                const { prerenderEmojiPickerOnInit, scrollChatToBottomOnInit } = await import('./components/chat-emoji-panel.js');
+                await prerenderEmojiPickerOnInit(chatPrivate);
 
                 // ★ v0.50 进入私聊页即滚到底(像微信那样:打开聊天默认看最新消息)
                 //   - 不要等用户点「跳到最新」按钮,符合聊天直觉
                 //   - 这里 chatPrivate 已经是 observer 写入后的新节点,container 引用稳定
-                try {
-                    const initMessagesContainer = chatPrivate.querySelector('.chat-messages');
-                    scrollToBottomWithRetry(initMessagesContainer);
-                } catch (_) {}
+                scrollChatToBottomOnInit(chatPrivate);
 
                 // ★ FIX v0.46:每次进入页面都重新绑定交互事件
                 //   v-html 会替换整个 DOM，切出再返回时旧的事件监听器已失效
                 //   必须重新绑定才能让按钮响应点击
-                const selectedMessages = new Set();
-                const setMultiSelectMode = (enabled) => {
-                    chatPrivate.classList.toggle('multi-select-mode', enabled);
-                    chatPrivate.querySelectorAll('[data-selected-count]').forEach(el => { el.textContent = selectedMessages.size; });
-                    chatPrivate.querySelectorAll('.message-wrapper').forEach(wrapper => wrapper.classList.toggle('selectable', enabled));
-                    if (!enabled) {
-                        selectedMessages.clear();
-                        chatPrivate.querySelectorAll('.message-wrapper.selected').forEach(wrapper => wrapper.classList.remove('selected'));
-                        chatPrivate.querySelectorAll('.message-select-button[aria-checked="true"]').forEach(button => button.setAttribute('aria-checked', 'false'));
-                    }
+                // ★ v0.70:多选模式工具抽到 components/chat-multi-select.js
+                const { createMultiSelectController } = await import('./components/chat-multi-select.js');
+                const multiSelect = createMultiSelectController(chatPrivate);
+                // ★ v0.70:从 sdk 拿 sender + senderName + avatar 抽成 helper
+                //   原代码在 toolBtn onConfirm 里重复 5 次(image/voice/location/redpacket/transfer)
+                const { resolveSenderProfile } = await import('./components/chat-sender-profile.js');
+                const _resolveSenderInfo = () => {
+                    const { sender, senderName, userAvatar, userAvatarBg } = resolveSenderProfile();
+                    return { sender, senderName, userAvatar, userAvatarBg };
                 };
-                const updateSelection = (button) => {
-                    const messageId = button.dataset.messageSelect;
-                    const wrapper = button.closest('.message-wrapper');
-                    if (!messageId || !wrapper) return;
-                    if (selectedMessages.has(messageId)) {
-                        selectedMessages.delete(messageId);
-                        wrapper.classList.remove('selected');
-                        button.setAttribute('aria-checked', 'false');
-                    } else {
-                        selectedMessages.add(messageId);
-                        wrapper.classList.add('selected');
-                        button.setAttribute('aria-checked', 'true');
-                    }
-                    chatPrivate.querySelectorAll('[data-selected-count]').forEach(el => { el.textContent = selectedMessages.size; });
-                };
+                // ★ v0.70:长按发送按钮 + Enter 键发送抽到 components/chat-press-sender.js
+                const { createChatSendHandlers } = await import('./components/chat-press-sender.js');
                 const notifyMultiAction = async (action) => {
                     const labels = { favorite: '收藏', forward: '转发', delete: '删除' };
-                    if (!selectedMessages.size) {
+                    if (!multiSelect.getSelectedCount()) {
                         window.__phoneIsland?.notify?.('info', '请先选择消息', '点击消息左侧的圆圈进行选择');
                         return;
                     }
                     if (action === 'favorite') {
-                        // 创建对话片段收藏
-                        const selectedIds = Array.from(selectedMessages);
-                        const selectedMsgs = DEMO_MESSAGES.filter(m => selectedIds.includes(m.id));
+                        // 创建对话片段收藏(从当前聊天 DOM 拿真实消息)
+                        const selectedIds = multiSelect.getSelectedIds();
+                        const convName = chatPrivate.dataset.conversationName || '联系人';
+                        let sourceMessages = [];
+                        try {
+                            const raw = chatPrivate.dataset.rawMessages;
+                            if (raw) sourceMessages = JSON.parse(raw);
+                        } catch (_) {}
+                        const selectedMsgs = sourceMessages.filter(m => selectedIds.includes(m.id));
 
                         // 构建对话片段
                         const newConversation = {
                             favoriteId: 'conv-' + Date.now(),
                             type: 'conversation',
-                            sourceType: 'private',
-                            sourceId: contactId,
-                            sourceName: '小美',
+                            sourceType: chatPrivate.dataset.conversationType || 'private',
+                            sourceId: chatPrivate.dataset.conversationId || contactId,
+                            sourceName: convName,
                             time: '今天 ' + new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
                             messageCount: selectedMsgs.length,
                             messages: selectedMsgs.map(msg => ({
                                 id: msg.id,
                                 sender: msg.sender,
-                                senderName: msg.senderName || (msg.sender === 'user' ? '我' : '小美'),
+                                senderName: msg.senderName || (msg.sender === 'user' ? '我' : convName),
                                 senderColor: msg.sender === 'user' ? 'pink' : 'blue',
                                 type: msg.type,
                                 content: msg.content || msg.imageDescription || '',
@@ -5322,12 +7510,28 @@ ${messages || '(无对话记录)'}
                         };
 
                         // 添加到收藏列表(在开头插入)
-                        window.__chatDemoFavorites.unshift(newConversation);
+                        if (Array.isArray(window.__chatDemoFavorites)) {
+                            window.__chatDemoFavorites.unshift(newConversation);
+                        }
+                        // 同步写入 app.state._conversationFavorites + localStorage(v0.44 兜底)
+                        try {
+                            const app = window.__chatAppInstance;
+                            if (app) {
+                                if (!Array.isArray(app.state._conversationFavorites)) {
+                                    app.state._conversationFavorites = [];
+                                }
+                                app.state._conversationFavorites.unshift(newConversation);
+                            }
+                            const lsKey = 'xiaoting::chat-conversation-favorites-v1';
+                            const ls = JSON.parse(localStorage.getItem(lsKey) || '[]');
+                            ls.unshift(newConversation);
+                            localStorage.setItem(lsKey, JSON.stringify(ls));
+                        } catch (_) {}
 
                         window.__phoneIsland?.notify?.('success', '收藏成功', `已收藏 ${selectedMsgs.length} 条消息为对话片段`);
                     } else if (action === 'forward') {
                         // ★ v0.33 转发:从 DOM 反查消息 + 弹目标选择弹窗
-                        const messageIds = Array.from(selectedMessages);
+                        const messageIds = multiSelect.getSelectedIds();
                         const mode = chatPrivate.dataset.mode || 'calendar';
                         const convType = chatPrivate.dataset.conversationType || 'private';
                         const convId = chatPrivate.dataset.conversationId || '';
@@ -5356,9 +7560,9 @@ ${messages || '(无对话记录)'}
                             window.__phoneIsland?.notify?.('error', '转发失败', err?.message || '');
                         }
                     } else {
-                        window.__phoneIsland?.notify?.(action === 'delete' ? 'warning' : 'success', `消息${labels[action]}成功`, `已处理 ${selectedMessages.size} 条消息`);
+                        window.__phoneIsland?.notify?.(action === 'delete' ? 'warning' : 'success', `消息${labels[action]}成功`, `已处理 ${multiSelect.getSelectedCount()} 条消息`);
                     }
-                    setMultiSelectMode(false);
+                    multiSelect.disable();
                 };
 
                 chatPrivate.addEventListener('click', async (event) => {
@@ -5366,9 +7570,9 @@ ${messages || '(无对话记录)'}
                     const chatApp = externalAppRegistry.getApp('chat');
 
                     const selectButton = event.target.closest('[data-message-select]');
-                    if (selectButton && chatPrivate.classList.contains('multi-select-mode')) {
+                    if (selectButton && multiSelect.isActive()) {
 
-                        updateSelection(selectButton);
+                        multiSelect.toggleMessage(selectButton);
                         event.preventDefault();
                         event.stopPropagation();
                         return;
@@ -5376,7 +7580,7 @@ ${messages || '(无对话记录)'}
                     const multiAction = event.target.closest('[data-multi-action]');
                     if (multiAction) {
                         const action = multiAction.dataset.multiAction;
-                        if (action === 'cancel') setMultiSelectMode(false);
+                        if (action === 'cancel') multiSelect.disable();
                         else notifyMultiAction(action);
                         event.preventDefault();
                         event.stopPropagation();
@@ -5384,7 +7588,7 @@ ${messages || '(无对话记录)'}
                     }
                     const multiSelectButton = event.target.closest('[data-action="multiselect"]');
                     if (multiSelectButton) {
-                        setMultiSelectMode(!chatPrivate.classList.contains('multi-select-mode'));
+                        multiSelect.toggle();
                         event.preventDefault();
                         event.stopPropagation();
                         return;
@@ -5402,109 +7606,9 @@ ${messages || '(无对话记录)'}
                         return;
                     }
 
-                    // ★ v0.49 输入区右侧 #emojiBtn 笑脸 → 切换表情面板显隐
-                    const emojiBtn = event.target.closest('#emojiBtn');
-                    if (emojiBtn) {
-                        const isOpen = chatPrivate.getAttribute('data-emoji-open') === '1';
-                        if (isOpen) {
-                            chatPrivate.removeAttribute('data-emoji-open');
-                            if (chatApp.state?.chat) chatApp.state.chat.emojiOpen = false;
-                        } else {
-                            chatPrivate.setAttribute('data-emoji-open', '1');
-                            if (chatApp.state?.chat) chatApp.state.chat.emojiOpen = true;
-                            // ★ v0.49.1:表情 DOM 已在 v-html 里(只是被 CSS 隐藏),
-                            //   init 时已经 prerender + fill 过,这里只需在缓存可能过期时重 fill
-                            //   prerender 内部会自动检测 cacheKey 变化并清缓存重载
-                            try {
-                                const sdk = window.settingsSdk;
-                                const activeUser = sdk?.users?.getActive?.();
-                                const ids = activeUser?.boundResources?.stickerGroupIds || [];
-                                const { _prerenderEmojiPicker } = await import('./components/emoji-picker-panel.js');
-                                _prerenderEmojiPicker(ids, chatPrivate).catch(err => {
-                                    console.warn('[chat-app] prerender emoji picker failed', err);
-                                });
-                            } catch (err) {
-                                console.warn('[chat-app] prerender emoji picker (toggle) failed', err);
-                            }
-                        }
-                        event.preventDefault();
-                        event.stopPropagation();
-                        return;
-                    }
-
-                    // ★ v0.49 表情面板「关闭」按钮 (chat-emoji-picker__close)
-                    const emojiClose = event.target.closest('.chat-emoji-picker__close');
-                    if (emojiClose) {
-                        chatPrivate.removeAttribute('data-emoji-open');
-                        if (chatApp.state?.chat) chatApp.state.chat.emojiOpen = false;
-                        event.preventDefault();
-                        event.stopPropagation();
-                        return;
-                    }
-
-                    // ★ v0.49 表情图片点击 → 发送 sticker 消息
-                    const stickerCell = event.target.closest('.chat-emoji-cell[data-sticker-code]');
-                    if (stickerCell) {
-                        const code = stickerCell.getAttribute('data-sticker-code');
-                        const aiPersonId = chatPrivate.dataset.conversationId || '';
-                        const mode = chatPrivate.dataset.mode || 'calendar';
-                        try {
-                            const sdk = window.settingsSdk;
-                            const sender = sdk?.defaultUserCard?.getDefault?.() || sdk?.users?.getActive?.();
-                            const { _loadSource } = await import('./components/emoji-picker-panel.js');
-                            const url = await _loadSource(code);
-                            if (!url) {
-                                window.__phoneIsland?.notify?.('warning', '表情加载失败', '原图不存在');
-                                event.preventDefault();
-                                event.stopPropagation();
-                                return;
-                            }
-                            const now = Date.now();
-                            const msgId = `sticker-${now}`;
-                            const senderName = (sender?.socialProfiles?.chat?.nickname) || sender?.name || '我';
-                            // ★ 持久化 (v0.45 sticker 走 type='sticker' + url 字段)
-                            let saved = null;
-                            if (sdk?.chatMessages?.add && sender) {
-                                saved = await sdk.chatMessages.add(sender, aiPersonId, mode, {
-                                    id: msgId,
-                                    sender: 'user',
-                                    senderName,
-                                    type: 'sticker',
-                                    content: '[表情]',
-                                    url,
-                                    stickerCode: code,
-                                    timestamp: now,
-                                });
-                            }
-                            if (saved) {
-                                // ★ v0.46 修复:写完消息后 invalidate cache,防止下次切回命中旧 HTML
-                                window.invalidateRendererCache?.('chat', chatPrivate.dataset.contactId);
-                                // ★ 渲染气泡(text-bubble.js 的 case 'sticker' 走 msg.url)
-                                const messagesContainer = chatPrivate.querySelector('.chat-messages');
-                                if (messagesContainer) {
-                                    const { renderTextBubble } = await import('./components/text-bubble.js');
-                                    const tempDiv = document.createElement('div');
-                                    tempDiv.className = 'message-wrapper user';
-                                    tempDiv.dataset.messageId = msgId;
-                                    tempDiv.innerHTML = renderTextBubble(saved, null, { aiPersonId, mode });
-                                    messagesContainer.appendChild(tempDiv);
-                                    scrollToBottomWithRetry(messagesContainer);
-                                }
-                                // ★ 关闭 picker
-                                chatPrivate.removeAttribute('data-emoji-open');
-                                if (chatApp.state?.chat) chatApp.state.chat.emojiOpen = false;
-                                window.__phoneIsland?.notify?.('success', '已发送表情');
-                            } else {
-                                window.__phoneIsland?.notify?.('warning', '发送失败', '消息未保存');
-                            }
-                        } catch (err) {
-                            console.error('[chat-app] send sticker failed', err);
-                            window.__phoneIsland?.notify?.('error', '发送失败', err?.message || '');
-                        }
-                        event.preventDefault();
-                        event.stopPropagation();
-                        return;
-                    }
+                    // ★ v0.49 输入区右侧 #emojiBtn 笑脸 / 表情面板关闭 / sticker 点击
+                    //   已抽到 components/chat-emoji-panel.js(见模块底部 bindEmojiPanelInteractions)
+                    //   这里只接管 emoji 之外的转发按钮(emojiBtn / close / sticker 由独立 listener 处理)
 
                     // ★ v0.33 单条消息操作组的「转发」按钮
                     const singleForwardBtn = event.target.closest('.message-actions [data-action="forward"]');
@@ -5562,17 +7666,20 @@ ${messages || '(无对话记录)'}
                                     const msgId = `img-${now}`;
 
                                     // 从 SDK 拿 user 头像用于渲染
-                                    let userAvatar = '', userAvatarBg = '';
-                                    let senderName = '我';
-                                    try {
-                                        const defaultUser = sdk?.defaultUserCard?.getDefault?.() || sdk?.users?.getActive?.();
-                                        if (defaultUser) {
-                                            const chatProfile = defaultUser.socialProfiles?.chat || {};
-                                            userAvatar = chatProfile.avatar || defaultUser.avatar || '';
-                                            userAvatarBg = chatProfile.avatarBg || defaultUser.avatarBg || '';
-                                            senderName = chatProfile.nickname || defaultUser.name || '我';
-                                        }
-                                    } catch (_) {}
+                                    const { sender, senderName, userAvatar, userAvatarBg } = _resolveSenderInfo();
+
+                                    // ★ v1.0 身份转换模式:决定消息 sender 字段 + 写盘 senderName
+                                    const swapOn = getSwapMode();
+                                    const swapProfile = swapOn ? _resolveSwapSenderProfile() : null;
+                                    const writeSender = swapOn && swapProfile ? 'ai' : 'user';
+                                    const writeSenderName = swapOn && swapProfile ? swapProfile.senderName : senderName;
+                                    // 渲染时用的 contact(供 share-cards 读 avatar/avatarBg)
+                                    const renderContact = swapOn && swapProfile ? {
+                                        name: writeSenderName,
+                                        senderName: writeSenderName,
+                                        avatar: swapProfile.aiAvatar,
+                                        avatarBg: swapProfile.aiAvatarBg,
+                                    } : null;
 
                                     // 1. 持久化到 IndexedDB
                                     let saved = null;
@@ -5581,8 +7688,8 @@ ${messages || '(无对话记录)'}
                                         if (sdk?.chatMessages?.add && sender) {
                                             saved = await sdk.chatMessages.add(sender, aiPersonId, mode, {
                                                 id: msgId,
-                                                sender: 'user',
-                                                senderName,
+                                                sender: writeSender,
+                                                senderName: writeSenderName,
                                                 type: 'descriptive_image',
                                                 content: result.description,
                                                 imageDescription: result.description,
@@ -5600,8 +7707,8 @@ ${messages || '(无对话记录)'}
                                     // 2. 构建消息对象(SDK 没成功时用本地对象)
                                     const msg = saved || {
                                         id: msgId,
-                                        sender: 'user',
-                                        senderName,
+                                        sender: writeSender,
+                                        senderName: writeSenderName,
                                         type: 'descriptive_image',
                                         content: result.description,
                                         imageDescription: result.description,
@@ -5615,8 +7722,8 @@ ${messages || '(无对话记录)'}
                                     if (messagesContainer) {
                                         const { renderDescImageBubble } = await import('./components/card-messages.js');
                                         const tempDiv = document.createElement('div');
-                                        tempDiv.className = 'message-wrapper user';
-                                        tempDiv.innerHTML = renderDescImageBubble(msg, null, {
+                                        tempDiv.className = `message-wrapper ${writeSender}`;
+                                        tempDiv.innerHTML = renderDescImageBubble(msg, renderContact, {
                                             userAvatar, userAvatarBg, aiPersonId, mode
                                         });
                                         messagesContainer.appendChild(tempDiv);
@@ -5643,17 +7750,19 @@ ${messages || '(无对话记录)'}
                                     const msgId = `voice-${now}`;
 
                                     // 从 SDK 拿 user 头像
-                                    let userAvatar = '', userAvatarBg = '';
-                                    let senderName = '我';
-                                    try {
-                                        const defaultUser = sdk?.defaultUserCard?.getDefault?.() || sdk?.users?.getActive?.();
-                                        if (defaultUser) {
-                                            const chatProfile = defaultUser.socialProfiles?.chat || {};
-                                            userAvatar = chatProfile.avatar || defaultUser.avatar || '';
-                                            userAvatarBg = chatProfile.avatarBg || defaultUser.avatarBg || '';
-                                            senderName = chatProfile.nickname || defaultUser.name || '我';
-                                        }
-                                    } catch (_) {}
+                                    const { sender, senderName, userAvatar, userAvatarBg } = _resolveSenderInfo();
+
+                                    // ★ v1.0 身份转换模式
+                                    const swapOn = getSwapMode();
+                                    const swapProfile = swapOn ? _resolveSwapSenderProfile() : null;
+                                    const writeSender = swapOn && swapProfile ? 'ai' : 'user';
+                                    const writeSenderName = swapOn && swapProfile ? swapProfile.senderName : senderName;
+                                    const renderContact = swapOn && swapProfile ? {
+                                        name: writeSenderName,
+                                        senderName: writeSenderName,
+                                        avatar: swapProfile.aiAvatar,
+                                        avatarBg: swapProfile.aiAvatarBg,
+                                    } : null;
 
                                     // 1. 持久化到 IndexedDB
                                     let saved = null;
@@ -5662,8 +7771,8 @@ ${messages || '(无对话记录)'}
                                         if (sdk?.chatMessages?.add && sender) {
                                             saved = await sdk.chatMessages.add(sender, aiPersonId, mode, {
                                                 id: msgId,
-                                                sender: 'user',
-                                                senderName,
+                                                sender: writeSender,
+                                                senderName: writeSenderName,
                                                 type: 'voice',
                                                 content: '[语音消息]',
                                                 voiceContent: result.content,
@@ -5681,8 +7790,8 @@ ${messages || '(无对话记录)'}
                                     // 2. 构建消息对象
                                     const msg = saved || {
                                         id: msgId,
-                                        sender: 'user',
-                                        senderName,
+                                        sender: writeSender,
+                                        senderName: writeSenderName,
                                         type: 'voice',
                                         content: '[语音消息]',
                                         voiceContent: result.content,
@@ -5696,8 +7805,8 @@ ${messages || '(无对话记录)'}
                                     if (messagesContainer) {
                                         const { renderVoiceBubble } = await import('./components/special-messages.js');
                                         const tempDiv = document.createElement('div');
-                                        tempDiv.className = 'message-wrapper user';
-                                        tempDiv.innerHTML = renderVoiceBubble(msg, null, {
+                                        tempDiv.className = `message-wrapper ${writeSender}`;
+                                        tempDiv.innerHTML = renderVoiceBubble(msg, renderContact, {
                                             userAvatar, userAvatarBg, aiPersonId, mode
                                         });
                                         messagesContainer.appendChild(tempDiv);
@@ -5741,23 +7850,26 @@ ${messages || '(无对话记录)'}
                                     const { aiPersonId, mode } = parseContactId(chatPrivate.dataset.contactId);
                                     const now = Date.now();
 
-                                    let userAvatar = '', userAvatarBg = '';
-                                    let senderName = '我';
-                                    try {
-                                        const defaultUser = sdk?.defaultUserCard?.getDefault?.() || sdk?.users?.getActive?.();
-                                        if (defaultUser) {
-                                            const chatProfile = defaultUser.socialProfiles?.chat || {};
-                                            userAvatar = chatProfile.avatar || defaultUser.avatar || '';
-                                            userAvatarBg = chatProfile.avatarBg || defaultUser.avatarBg || '';
-                                            senderName = chatProfile.nickname || defaultUser.name || '我';
-                                        }
-                                    } catch (_) {}
+                                    // 从 SDK 拿 user 头像
+                                    const { sender, senderName, userAvatar, userAvatarBg } = _resolveSenderInfo();
+
+                                    // ★ v1.0 身份转换模式
+                                    const swapOn = getSwapMode();
+                                    const swapProfile = swapOn ? _resolveSwapSenderProfile() : null;
+                                    const writeSender = swapOn && swapProfile ? 'ai' : 'user';
+                                    const writeSenderName = swapOn && swapProfile ? swapProfile.senderName : senderName;
+                                    const renderContact = swapOn && swapProfile ? {
+                                        name: writeSenderName,
+                                        senderName: writeSenderName,
+                                        avatar: swapProfile.aiAvatar,
+                                        avatarBg: swapProfile.aiAvatarBg,
+                                    } : null;
 
                                     // 构建位置消息（★ v0.45 position 只存 x/y，防止函数导致 DataCloneError）
                                     const locationMsg = {
                                         id: `loc-${now}`,
-                                        sender: 'user',
-                                        senderName,
+                                        sender: writeSender,
+                                        senderName: writeSenderName,
                                         type: 'location',
                                         content: '[位置]',
                                         locationCard: {
@@ -5774,12 +7886,11 @@ ${messages || '(无对话记录)'}
 
                                     // 保存到 IndexedDB（★ v0.45 直接用 locationMsg.locationCard，避免引用未序列化的对象）
                                     try {
-                                        const sender = sdk?.defaultUserCard?.getDefault?.() || sdk?.users?.getActive?.();
                                         if (sdk?.chatMessages?.add && sender) {
                                             await sdk.chatMessages.add(sender, aiPersonId, mode, {
                                                 id: locationMsg.id,
-                                                sender: 'user',
-                                                senderName,
+                                                sender: writeSender,
+                                                senderName: writeSenderName,
                                                 type: 'location',
                                                 content: '[位置]',
                                                 locationCard: {
@@ -5803,8 +7914,8 @@ ${messages || '(无对话记录)'}
                                     if (messagesContainer) {
                                         const { renderLocationBubble } = await import('./components/share-cards.js');
                                         const tempDiv = document.createElement('div');
-                                        tempDiv.className = 'message-wrapper user';
-                                        tempDiv.innerHTML = renderLocationBubble(locationMsg, null, {
+                                        tempDiv.className = `message-wrapper ${writeSender}`;
+                                        tempDiv.innerHTML = renderLocationBubble(locationMsg, renderContact, {
                                             userAvatar, userAvatarBg, aiPersonId, mode
                                         });
                                         messagesContainer.appendChild(tempDiv);
@@ -5849,17 +7960,20 @@ ${messages || '(无对话记录)'}
                                     const now = Date.now();
                                     const msgId = `rp-${now}`;
 
-                                    let userAvatar = '', userAvatarBg = '';
-                                    let senderName = '我';
-                                    try {
-                                        const defaultUser = sdk?.defaultUserCard?.getDefault?.() || sdk?.users?.getActive?.();
-                                        if (defaultUser) {
-                                            const chatProfile = defaultUser.socialProfiles?.chat || {};
-                                            userAvatar = chatProfile.avatar || defaultUser.avatar || '';
-                                            userAvatarBg = chatProfile.avatarBg || defaultUser.avatarBg || '';
-                                            senderName = chatProfile.nickname || defaultUser.name || '我';
-                                        }
-                                    } catch (_) {}
+                                    // 从 SDK 拿 user 头像
+                                    const { sender, senderName, userAvatar, userAvatarBg } = _resolveSenderInfo();
+
+                                    // ★ v1.0 身份转换模式
+                                    const swapOn = getSwapMode();
+                                    const swapProfile = swapOn ? _resolveSwapSenderProfile() : null;
+                                    const writeSender = swapOn && swapProfile ? 'ai' : 'user';
+                                    const writeSenderName = swapOn && swapProfile ? swapProfile.senderName : senderName;
+                                    const renderContact = swapOn && swapProfile ? {
+                                        name: writeSenderName,
+                                        senderName: writeSenderName,
+                                        avatar: swapProfile.aiAvatar,
+                                        avatarBg: swapProfile.aiAvatarBg,
+                                    } : null;
 
                                     // ★ v0.67 走 chat-asset-service:扣 user 余额 + 写 assetFlow + 写消息
                                     let saved = null;
@@ -5870,6 +7984,9 @@ ${messages || '(无对话记录)'}
                                             mode,
                                             amount: Number(result.amount) || 0,
                                             message: result.message || '恭喜发财',
+                                            // ★ v1.0 swap 模式:传 sender/senderName 走 AI 身份写盘
+                                            sender: writeSender,
+                                            senderName: writeSenderName,
                                         });
                                         if (!res?.ok) {
                                             window.__phoneIsland?.notify?.('warning', '红包发送失败', res?.error || '请稍后重试');
@@ -5887,8 +8004,8 @@ ${messages || '(无对话记录)'}
                                     // 2. 构建消息对象
                                     const msg = saved || {
                                         id: msgId,
-                                        sender: 'user',
-                                        senderName,
+                                        sender: writeSender,
+                                        senderName: writeSenderName,
                                         type: 'redpacket',
                                         content: '[红包]',
                                         redpacketCard: {
@@ -5904,8 +8021,8 @@ ${messages || '(无对话记录)'}
                                     if (messagesContainer) {
                                         const { renderRedpacketBubble } = await import('./components/share-cards.js');
                                         const tempDiv = document.createElement('div');
-                                        tempDiv.className = 'message-wrapper user';
-                                        tempDiv.innerHTML = renderRedpacketBubble(msg, null, {
+                                        tempDiv.className = `message-wrapper ${writeSender}`;
+                                        tempDiv.innerHTML = renderRedpacketBubble(msg, renderContact, {
                                             userAvatar, userAvatarBg, aiPersonId, mode
                                         });
                                         messagesContainer.appendChild(tempDiv);
@@ -5934,17 +8051,20 @@ ${messages || '(无对话记录)'}
                                     const now = Date.now();
                                     const msgId = `tf-${now}`;
 
-                                    let userAvatar = '', userAvatarBg = '';
-                                    let senderName = '我';
-                                    try {
-                                        const defaultUser = sdk?.defaultUserCard?.getDefault?.() || sdk?.users?.getActive?.();
-                                        if (defaultUser) {
-                                            const chatProfile = defaultUser.socialProfiles?.chat || {};
-                                            userAvatar = chatProfile.avatar || defaultUser.avatar || '';
-                                            userAvatarBg = chatProfile.avatarBg || defaultUser.avatarBg || '';
-                                            senderName = chatProfile.nickname || defaultUser.name || '我';
-                                        }
-                                    } catch (_) {}
+                                    // 从 SDK 拿 user 头像
+                                    const { sender, senderName, userAvatar, userAvatarBg } = _resolveSenderInfo();
+
+                                    // ★ v1.0 身份转换模式
+                                    const swapOn = getSwapMode();
+                                    const swapProfile = swapOn ? _resolveSwapSenderProfile() : null;
+                                    const writeSender = swapOn && swapProfile ? 'ai' : 'user';
+                                    const writeSenderName = swapOn && swapProfile ? swapProfile.senderName : senderName;
+                                    const renderContact = swapOn && swapProfile ? {
+                                        name: writeSenderName,
+                                        senderName: writeSenderName,
+                                        avatar: swapProfile.aiAvatar,
+                                        avatarBg: swapProfile.aiAvatarBg,
+                                    } : null;
 
                                     // ★ v0.67 走 chat-asset-service:扣 user 余额 + 写 assetFlow + 写消息
                                     let saved = null;
@@ -5955,6 +8075,9 @@ ${messages || '(无对话记录)'}
                                             mode,
                                             amount: Number(result.amount) || 0,
                                             note: result.note || '转账',
+                                            // ★ v1.0 swap 模式:传 sender/senderName 走 AI 身份写盘
+                                            sender: writeSender,
+                                            senderName: writeSenderName,
                                         });
                                         if (!res?.ok) {
                                             window.__phoneIsland?.notify?.('warning', '转账发送失败', res?.error || '请稍后重试');
@@ -5972,8 +8095,8 @@ ${messages || '(无对话记录)'}
                                     // 2. 构建消息对象
                                     const msg = saved || {
                                         id: msgId,
-                                        sender: 'user',
-                                        senderName,
+                                        sender: writeSender,
+                                        senderName: writeSenderName,
                                         type: 'transfer',
                                         content: '[转账]',
                                         transferCard: {
@@ -5989,8 +8112,8 @@ ${messages || '(无对话记录)'}
                                     if (messagesContainer) {
                                         const { renderTransferBubble } = await import('./components/share-cards.js');
                                         const tempDiv = document.createElement('div');
-                                        tempDiv.className = 'message-wrapper user';
-                                        tempDiv.innerHTML = renderTransferBubble(msg, null, {
+                                        tempDiv.className = `message-wrapper ${writeSender}`;
+                                        tempDiv.innerHTML = renderTransferBubble(msg, renderContact, {
                                             userAvatar, userAvatarBg, aiPersonId, mode
                                         });
                                         messagesContainer.appendChild(tempDiv);
@@ -6009,12 +8132,20 @@ ${messages || '(无对话记录)'}
                                 call: '通话',
                                 favorite: '收藏',
                                 pat: '拍一拍',
-                                // ★ v0.49 「自定义」按钮暂时占位,后续接新功能
-                                custom: '自定义',
+                                // ★ v1.0 「身份」按钮走 toggleSwapMode 单独处理,不在这里占位
                             };
                             if (labels[action]) {
                                 window.__phoneIsland.notify('info', labels[action], '功能即将开放');
                             }
+                        }
+                        // ★ v1.0 「身份」按钮:切换身份转换模式(原本是「自定义」占位)
+                        //   - 默认蓝色 → 激活粉色
+                        //   - 开启后用户发出去的消息(文字 + 图片/语音/位置/红包/转账)全部以 AI 身份显示
+                        if (action === 'custom') {
+                            toggleSwapMode(chatPrivate);
+                            event.preventDefault();
+                            event.stopPropagation();
+                            return;
                         }
                         event.preventDefault();
                         event.stopPropagation();
@@ -6281,6 +8412,11 @@ ${messages || '(无对话记录)'}
                     }
                 });
 
+                // ★ v0.70:把 emoji panel 的三个交互(emojiBtn / close / sticker)绑到独立 listener
+                //   因为这些交互可能异步加载图片/触发 prerender,跟主 click 委托解耦更清晰
+                const { bindEmojiPanelInteractions } = await import('./components/chat-emoji-panel.js');
+                bindEmojiPanelInteractions(chatPrivate, { conversationType: 'private', chatApp: this });
+
                 // ★ v0.33 双击头像触发拍一拍
                 //   - 用 dblclick 而不是 click,避免和单击(无操作)冲突
                 //   - 双击用户头像(.avatar[data-poke="self"])→ 用户拍 AI
@@ -6323,6 +8459,99 @@ ${messages || '(无对话记录)'}
                 };
 
                 /**
+                 * ★ v1.0 身份转换模式(swap mode) — 状态工具
+                 *   - 状态存 app.state.chat.swapMode[`<aiPersonId>::<mode>`] = true/false
+                 *   - DOM 同步:开启时给 .chat-private 加 data-swap-active="1",关闭时移除
+                 *   - 持久化:用 localStorage,key = chat.swapMode,刷新/重启后状态仍在
+                 */
+                const SWAP_MODE_STORAGE_KEY = 'chat.swapMode.v1';
+                const _loadSwapModeMap = () => {
+                    try {
+                        const raw = localStorage.getItem(SWAP_MODE_STORAGE_KEY);
+                        if (!raw) return {};
+                        const obj = JSON.parse(raw);
+                        return (obj && typeof obj === 'object') ? obj : {};
+                    } catch (_) { return {}; }
+                };
+                const _saveSwapModeMap = (map) => {
+                    try { localStorage.setItem(SWAP_MODE_STORAGE_KEY, JSON.stringify(map || {})); } catch (_) {}
+                };
+                const _ensureSwapModeState = () => {
+                    if (!this.app.state) this.app.state = {};
+                    if (!this.app.state.chat) this.app.state.chat = {};
+                    if (!this.app.state.chat.swapMode || typeof this.app.state.chat.swapMode !== 'object') {
+                        // 启动时从 localStorage 恢复(防止热更新/刷新后状态丢失)
+                        this.app.state.chat.swapMode = _loadSwapModeMap();
+                    }
+                    return this.app.state.chat.swapMode;
+                };
+                const _getSwapKey = (aiPersonId, mode) => `${aiPersonId}::${mode}`;
+
+                /**
+                 * 读取当前 chat-private 是否在 swap 模式
+                 * @returns {boolean}
+                 */
+                const getSwapMode = () => {
+                    try {
+                        const { aiPersonId, mode } = parseContactId(chatPrivate.dataset.contactId);
+                        const map = _ensureSwapModeState();
+                        return !!map[_getSwapKey(aiPersonId, mode)];
+                    } catch (_) { return false; }
+                };
+
+                /**
+                 * 切换 swap 模式
+                 * @param {HTMLElement} rootEl .chat-private 容器
+                 * @returns {boolean} 切换后的状态
+                 */
+                const toggleSwapMode = (rootEl) => {
+                    const { aiPersonId, mode } = parseContactId(rootEl.dataset.contactId);
+                    const key = _getSwapKey(aiPersonId, mode);
+                    const map = _ensureSwapModeState();
+                    const next = !map[key];
+                    map[key] = next;
+                    _saveSwapModeMap(map);
+                    // 同步 DOM 属性
+                    if (next) {
+                        rootEl.setAttribute('data-swap-active', '1');
+                    } else {
+                        rootEl.removeAttribute('data-swap-active');
+                    }
+                    // 灵动岛提示
+                    try {
+                        if (next) {
+                            window.__phoneIsland?.notify?.('success', '身份转换已开启', '接下来发出的消息将作为 AI 发送');
+                        } else {
+                            window.__phoneIsland?.notify?.('info', '身份转换已关闭', '恢复以你本人身份发送');
+                        }
+                    } catch (_) {}
+                    return next;
+                };
+
+                /**
+                 * ★ v1.0 swap 模式开关后,消息渲染需要用 AI 头像/名字
+                 *   - 走 aiMeta.resolveAiAvatar(aiPersonId) 拿 url/bg
+                 *   - senderName 走 chat-page 里 contact.name(已实时算好)
+                 * @returns {{ sender: 'ai', senderName: string, aiAvatar: string, aiAvatarBg: string, aiPersonId: string, mode: string }|null}
+                 */
+                const _resolveSwapSenderProfile = () => {
+                    try {
+                        const { aiPersonId, mode } = parseContactId(chatPrivate.dataset.contactId);
+                        const aiAv = resolveAiAvatar(aiPersonId);
+                        // contact.name 已经在 chat-page 渲染时算好,直接从 dataset 读
+                        const aiName = chatPrivate.dataset.conversationName || 'AI';
+                        return {
+                            sender: 'ai',
+                            senderName: aiName,
+                            aiAvatar: aiAv.url,
+                            aiAvatarBg: aiAv.bg,
+                            aiPersonId,
+                            mode,
+                        };
+                    } catch (_) { return null; }
+                };
+
+                /**
                  * ★ v0.67 在当前 chat 缓存里查某条消息(从 dataset.rawMessages 拿)
                  * 渲染时 chat-page.js 把最近 100 条消息塞到 data-raw-messages attribute
                  * 给卡片点击 handler 用,避免再去 sdk.chatMessages.list 同步读
@@ -6357,26 +8586,43 @@ ${messages || '(无对话记录)'}
                     }
                 };
 
+                // ★ v0.67.x 修复:发送按钮同时被 pointer + touch 触发 + Enter 键连续按 → 同一手势多次发同一条消息
+                //   - 加 doSendRunning 锁:同一条 doSend 链没跑完之前,新触发直接 return
+                //   - 锁在 await save 之前同步置位,写盘完成后才释放
+                let doSendRunning = false;
                 const doSend = async () => {
                     if (!messageInput) return;
+                    if (doSendRunning) return; // 上一条还没写完,直接跳过
                     const text = (messageInput.innerText || messageInput.textContent || '').trim();
                     if (!text) return;
 
                     const { aiPersonId, mode } = parseContactId(chatPrivate.dataset.contactId);
-                    // ★ LOG-1: 文字消息发送时的关键参数
-                    console.log('[LOG-1][doSend] contactId=', chatPrivate.dataset.contactId, 'aiPersonId=', aiPersonId, 'mode=', mode, 'text=', text.slice(0,20));
                     const sdk = window.settingsSdk;
                     if (!sdk?.chatMessages?.add) {
                         window.__phoneIsland?.notify?.('error', '发送失败', 'SDK 未就绪');
                         return;
                     }
 
+                    // ★ v0.67.x 同步置位,防止写盘期间再触发
+                    doSendRunning = true;
+
+                    // ★ v1.0 身份转换模式判断:
+                    //   - 开启时:消息以 AI 身份发送,sender='ai',用 AI 头像/名字
+                    //   - 但写盘 owner 仍要是 user(否则 chatFriends 找不到 entry)
+                    const swapOn = getSwapMode();
+                    const swapProfile = swapOn ? _resolveSwapSenderProfile() : null;
+
                     // 默认 user 名(从 defaultUserCard 拿)
-                    let senderName = '我';
-                    try {
-                        const defaultUser = sdk.defaultUserCard?.getDefault?.() || sdk.users?.getActive?.();
-                        senderName = defaultUser?.socialProfiles?.chat?.nickname || defaultUser?.name || '我';
-                    } catch (_) {}
+                    // ★ v0.70:用 chat-sender-profile.resolveSenderProfile 统一提取
+                    const { sender, senderName: userSenderName } = _resolveSenderInfo();
+                    if (!sender) {
+                        window.__phoneIsland?.notify?.('error', '发送失败', '未找到默认用户');
+                        doSendRunning = false;
+                        return;
+                    }
+
+                    // 写盘时使用的 senderName = swap 时用 AI 名字,否则用用户自己名字
+                    const writeSenderName = swapOn && swapProfile ? swapProfile.senderName : userSenderName;
 
                     // ★ v0.43 如果有引用回复,带上 replyTo
                     let replyTo = null;
@@ -6391,8 +8637,8 @@ ${messages || '(无对话记录)'}
                     } catch (_) {}
 
                     const msg = {
-                        sender: 'user',
-                        senderName,
+                        sender: swapOn ? 'ai' : 'user',
+                        senderName: writeSenderName,
                         type: 'text',
                         content: text,
                         timestamp: Date.now(),
@@ -6400,12 +8646,7 @@ ${messages || '(无对话记录)'}
                     };
 
                     try {
-                        // 1. 写盘
-                        const sender = sdk.defaultUserCard?.getDefault?.() || sdk.users?.getActive?.();
-                        if (!sender) {
-                            window.__phoneIsland?.notify?.('error', '发送失败', '未找到默认用户');
-                            return;
-                        }
+                        // 1. 写盘(写盘 owner 仍用 user,确保 chatFriends 能找到)
                         const saved = await sdk.chatMessages.add(sender, aiPersonId, mode, msg);
                         if (!saved) {
                             window.__phoneIsland?.notify?.('error', '发送失败', '请重试');
@@ -6414,18 +8655,27 @@ ${messages || '(无对话记录)'}
                         // ★ FIX v0.47:清 renderer 缓存,避免切出再切回时命中旧 HTML 缓存丢消息
                         try { window.invalidateRendererCache?.('chat', chatPrivate.dataset.contactId); } catch (_) {}
                         // 2. 立即把气泡追到 DOM
-                        appendMessageBubble(saved, { name: senderName, senderName }, { aiPersonId, mode });
+                        //   swap 时 contact 用 AI 头像/名字 + sender='ai' → text-bubble 自然渲染成 AI 气泡
+                        if (swapOn && swapProfile) {
+                            appendMessageBubble(saved, {
+                                name: writeSenderName,
+                                senderName: writeSenderName,
+                                avatar: swapProfile.aiAvatar,
+                                avatarBg: swapProfile.aiAvatarBg,
+                            }, { aiPersonId, mode });
+                        } else {
+                            appendMessageBubble(saved, { name: userSenderName, senderName: userSenderName }, { aiPersonId, mode });
+                        }
                         // 3. 清空输入框
                         messageInput.innerHTML = '';
                         messageInput.focus();
                         // 4. 更新联系人 entry.lastMessage(消息列表页预览要用)
                         try {
-                            const defaultUser = sdk.defaultUserCard?.getDefault?.() || sdk.users?.getActive?.();
-                            if (defaultUser && sdk.chatFriends?.updateLastMessage) {
-                                await sdk.chatFriends.updateLastMessage(sdk, defaultUser, aiPersonId, mode, {
+                            if (sender && sdk.chatFriends?.updateLastMessage) {
+                                await sdk.chatFriends.updateLastMessage(sdk, sender, aiPersonId, mode, {
                                     content: text,
                                     timestamp: saved.timestamp,
-                                    senderName,
+                                    senderName: writeSenderName,
                                     type: 'text',
                                 });
                             }
@@ -6438,9 +8688,13 @@ ${messages || '(无对话记录)'}
                                 detail: { aiPersonId, mode, message: saved },
                             }));
                         } catch (_) {}
+                        // ★ v0.67.x 写盘完成 → 释放锁,允许后续发送
+                        doSendRunning = false;
                     } catch (err) {
                         console.warn('[chat-app] send message failed:', err);
                         window.__phoneIsland?.notify?.('error', '发送失败', err?.message || '请重试');
+                        // ★ v0.67.x 失败也要释放锁,否则会卡死
+                        doSendRunning = false;
                     }
                 };
 
@@ -6449,147 +8703,100 @@ ${messages || '(无对话记录)'}
                 //   - 长按(≥ 1.5 秒):发文字 + 调 AI
                 //   - 空文本:整个发送逻辑不响应(短按长按都不响应)
                 //   - 长按时按钮变粉 + 进度填充,作为视觉反馈
+                // ★ v0.70:startPress/endPress/Enter 监听抽到 components/chat-press-sender.js
+                //   私聊独有逻辑:_longPressInvokeAi(读 pre 文本 → 调 AI)作为 onLongPress 传入
                 if (sendBtn) {
-                    const PRESS_THRESHOLD_MS = 1500; // ★ v0.62.5 长按 1.5 秒触发
-                    let pressTimer = null;
-                    let pressProgressRaf = null;
-                    let pressStartTs = 0;
-                    let pressTriggered = false;
-                    // ★ v0.62.8 长按时:输入框为空 → 从 prompt-manager 预览区(pre)读文本
-                    //   - 优先 DOM 读(detail 页打开过就有),fallback 调 builder.buildPreview
+                    const PRESS_THRESHOLD_MS = 800; // ★ v0.62.5 长按 0.8 秒触发(降低等待焦虑)
+                    // 长按空输入框时，读取 prompt-manager 已生成好的最终 pre。
                     function _readPromptPreviewText() {
                         const { aiPersonId: aid, mode: m } = parseContactId(chatPrivate.dataset.contactId);
                         try {
-                            const pre = document.querySelector(
-                                '.app-shell[data-app-id="chat"] .pm-context-preview__raw'
-                            );
-                            if (pre) {
-                                const t = (pre.textContent || pre.innerText || '').trim();
-                                if (t) return t;
-                            }
-                        } catch (_) {}
-                        try {
-                            const builder = window.__chatPromptBuilder;
-                            if (builder?.buildPreview && aid) {
-                                const r = builder.buildPreview(aid, { mode: m });
-                                const t = (r?.preview || '').trim();
-                                if (t) return t;
-                            }
-                        } catch (_) {}
-                        return '';
+                            return readContextPreview({ aiPersonId: aid, mode: m }) || '';
+                        } catch (_) {
+                            return '';
+                        }
                     }
 
                     // ★ v0.62.8 长按触发 AI 回复(独立入口,不依赖 doSend)
                     //   - 长按 + 有文本 → 什么也不做(用户原话:输入框有内容时长按无效)
                     //   - 长按 + 空文本 → 读 pre 内容,作为 userText 调 AI 回复(不写盘)
-                    async function _longPressInvokeAi() {
+                    // ★ 2026-08-13:等待反馈从「挂一个胶囊灵动岛」改成「顶栏名字变成
+                    //   闪烁的『对方正在输入中』」。只有「没东西可发」和「调用失败」
+                    //   这两种**用户可能不在页面上**的情况还弹岛。
+                    const _self = this; // 箭头函数捕获 this,避免 onLongPress() 调用时丢 this
+                    const _longPressInvokeAi = async () => {
                         const { aiPersonId, mode } = parseContactId(chatPrivate.dataset.contactId);
-                        const inputText = messageInput ? (messageInput.innerText || messageInput.textContent || '').trim() : '';
+                        const inputText = (messageInput?.innerText || messageInput?.textContent || '').trim();
                         if (inputText) return; // 输入框有内容 → 长按无效(用户偏好)
                         const sendText = _readPromptPreviewText();
+                        const island = _self?.toolkit?.island;
                         if (!sendText) {
                             try {
-                                window.__phoneIsland?.notify?.('warning', '无可发送内容', '输入框为空且未生成预览');
+                                if (island?.showInfo) {
+                                    island.showInfo('mini', {
+                                        type: 'warning',
+                                        title: '无可发送内容',
+                                        message: '输入框为空且未生成预览',
+                                        lifecycle: 'time',
+                                        duration: 2500,
+                                        maxSize: 'mini',
+                                        ownerId: 'chat-longpress-ai',
+                                    });
+                                } else {
+                                    window.__phoneIsland?.notify?.('warning', '无可发送内容', '输入框为空且未生成预览');
+                                }
                             } catch (_) {}
                             return;
                         }
-                        try {
-                            window.__phoneIsland?.notify?.('info', '正在发送给 AI…', sendText.slice(0, 30));
-                        } catch (_) {}
+
+                        // ★ 1) 反馈长在聊天页顶栏：名字变成闪烁的「对方正在输入中」。
+                        //   以前这里挂的是一个 lifecycle:'manual' 的胶囊灵动岛。问题有两个：
+                        //     · 用户明明正盯着聊天页，再弹个岛属于重复告知；
+                        //     · 那个岛会把音乐/通话这类常驻岛顶掉（AGENTS2 §1.3）。
+                        //   现在改成 typing 状态：切出 murmur 再切回来会自动重放，
+                        //   直到 AI 消息真的被渲染出来才摘掉。
+                        beginTyping('private', aiPersonId);
+
+                        // ★ 2) 调 AI（typing 挂着，不阻塞用户切页）
                         try {
                             const inst = externalAppRegistry?.getApp?.('chat') || window.__chatAppSingleton;
                             if (inst?.methods?.sendMessageWithAi) {
-                                await inst.methods.sendMessageWithAi({ aiPersonId, mode, text: sendText });
+                                // silentIsland:true → sendMessageWithAi 内部的 notify 全部跳过
+                                await inst.methods.sendMessageWithAi({
+                                    aiPersonId,
+                                    mode,
+                                    text: sendText,
+                                    silentIsland: true,
+                                });
                             } else {
                                 console.warn('[chat-app] sendMessageWithAi not found, inst=', inst);
+                                window.__phoneIsland?.notify?.('error', 'AI 入口未找到');
                             }
                         } catch (aiErr) {
                             console.warn('[chat-app] sendMessageWithAi invoke failed', aiErr);
-                        }
-                        console.log('[chat][sendBtn] 长按 1.5 秒(pre)触发,textLen=', sendText.length);
-                    }
-
-                    const startPress = (ev) => {
-                        if (!sendBtn) return;
-                        // ★ v0.62.8 任何情况都允许长按启动进度条;最终要不要触发由 endPress 决定
-                        pressTriggered = false;
-                        sendBtn.classList.add('is-pressing');
-                        sendBtn.classList.remove('is-pressing--armed');
-                        sendBtn.style.setProperty('--press-progress', '0');
-                        pressStartTs = Date.now();
-                        sendBtn.style.setProperty('--press-duration', PRESS_THRESHOLD_MS + 'ms');
-                        pressTimer = setTimeout(() => {
-                            pressTriggered = true;
-                            sendBtn.classList.add('is-pressing--armed');
-                        }, PRESS_THRESHOLD_MS);
-                        if (typeof ev?.preventDefault === 'function') ev.preventDefault();
-                        if (typeof ev?.stopPropagation === 'function') ev.stopPropagation();
-                    };
-                    const endPress = (ev) => {
-                        if (pressTimer) {
-                            clearTimeout(pressTimer);
-                            pressTimer = null;
-                        }
-                        sendBtn.classList.remove('is-pressing', 'is-pressing--armed');
-                        sendBtn.style.setProperty('--press-progress', '0');
-                        const inputText = messageInput ? (messageInput.innerText || messageInput.textContent || '').trim() : '';
-                        if (pressTriggered) {
-                            // 长按 1.5 秒达到阈值 → 调 AI(走 _longPressInvokeAi,内部判断输入框状态)
-                            pressTriggered = false;
-                            ev?.preventDefault?.();
-                            ev?.stopPropagation?.();
-                            _longPressInvokeAi();
-                        } else {
-                            // ★ v0.62.7:短按(< 1.5 秒松开)→ 仅发送文字消息,不调 AI
-                            //   与群聊页(chat-group)的「短按 = 发文字」行为对齐。
-                            ev?.preventDefault?.();
-                            ev?.stopPropagation?.();
-                            if (inputText) {
-                                doSend();
-                            } else {
-                                try {
-                                    window.__phoneIsland?.notify?.('warning', '消息为空', '请先输入内容');
-                                } catch (_) {}
-                            }
+                            // 失败必须弹岛：typing 一摘就什么都不剩了，用户会以为消息发丢了
+                            window.__phoneIsland?.notify?.('error', 'AI 调用失败', aiErr?.message || '');
+                        } finally {
+                            // 不管成功失败都要摘掉，否则会留一个永远转不完的「正在输入中」
+                            endTyping('private', aiPersonId);
                         }
                     };
-                    sendBtn.addEventListener('pointerdown', startPress);
-                    sendBtn.addEventListener('pointerup', endPress);
-                    sendBtn.addEventListener('pointercancel', endPress);
-                    sendBtn.addEventListener('pointerleave', (ev) => {
-                        if (pressTimer) endPress(ev);
-                    });
-                    sendBtn.addEventListener('touchstart', (ev) => {
-                        if (sendBtn.dataset.pressing === '1') return;
-                        sendBtn.dataset.pressing = '1';
-                        startPress(ev);
-                    }, { passive: true });
-                    sendBtn.addEventListener('touchend', (ev) => {
-                        if (sendBtn.dataset.pressing !== '1') return;
-                        sendBtn.dataset.pressing = '0';
-                        endPress(ev);
-                    });
-                    sendBtn.addEventListener('touchcancel', (ev) => {
-                        if (sendBtn.dataset.pressing !== '1') return;
-                        sendBtn.dataset.pressing = '0';
-                        endPress(ev);
-                    });
-                }
-                if (messageInput) {
-                    // ★ 使用 keydown 监听 Enter 而不是 Enter 合成 keypress
-                    // 1) keypress 不受 contenteditable 元素默认 Enter 行为影响
-                    // 2) Shift+Enter 仍然走默认换行
-                    // 3) 中文输入法正在输入时浏览器不会触发 keydown key=Enter
-                    messageInput.addEventListener('keydown', (ev) => {
-                        if (ev.key === 'Enter' && !ev.shiftKey && !ev.isComposing) {
-                            ev.preventDefault();
-                            doSend();
-                        }
-                    });
-                }
 
-                console.log('[chat-app] initPrivateChatInteractions bound');
-            },
+                    const { bindEnterToSend, bindPressToSend } = createChatSendHandlers({
+                        sendBtn,
+                        messageInput,
+                        threshold: PRESS_THRESHOLD_MS,
+                        requireTextOnStart: false, // 私聊:空文本也允许长按(走 _longPressInvokeAi)
+                        doSend,
+                        onLongPress: _longPressInvokeAi,
+                        notifyEmpty: () => {
+                            try { window.__phoneIsland?.notify?.('warning', '消息为空', '请先输入内容'); } catch (_) {}
+                        },
+                    });
+                    bindEnterToSend();
+                    bindPressToSend();
+                }
+        },
 
             /**
              * ★ v0.29 聊天设置页「聊天背景」行点击入口。
@@ -6611,18 +8818,26 @@ ${messages || '(无对话记录)'}
              *
              * @param {Object} payload { contactId: string, mode: string }
              */
+            /**
+             * ★ v0.62 聊天背景弹窗(支持私聊 + 群聊)
+             *   - 私聊:payload = { contactId, mode } → sdk.chatFriends.updateBackground
+             *   - 群聊:payload = { contactId, mode, isGroup: true } → sdk.chatGroups.updateBackground
+             *
+             * @param {Object} payload { contactId: string, mode: string, isGroup?: boolean }
+             */
             async openChatBackgroundModal(payload = {}) {
                 const contactId = payload?.contactId || '';
                 const mode = payload?.mode || 'calendar';
+                const isGroup = !!payload?.isGroup;
 
                 if (!contactId) {
                     console.warn('[chat-app] openChatBackgroundModal: contactId empty');
-                    this.toolkit?.island?.notify?.('error', '打开失败', '缺少联系人 ID');
+                    this.toolkit?.island?.notify?.('error', '打开失败', '缺少 ID');
                     return null;
                 }
 
                 const sdk = window.settingsSdk;
-                if (!sdk?.chatFriends || !sdk?.users) {
+                if (!sdk?.users) {
                     this.toolkit?.island?.notify?.('error', 'SDK 未就绪', '请稍后再试');
                     return null;
                 }
@@ -6632,27 +8847,51 @@ ${messages || '(无对话记录)'}
                     return null;
                 }
 
-                const entry = sdk.chatFriends.get(defaultUser, contactId, mode);
-                if (!entry) {
-                    this.toolkit?.island?.notify?.(
-                        'warning',
-                        '该联系人尚未添加',
-                        '请先在「发起聊天」页添加此 AI 联系人后再设置背景'
-                    );
-                    return null;
+                // ★ 根据 isGroup 分发到不同 SDK
+                let currentValue = '';
+                let saveBackground;
+                if (isGroup) {
+                    const entry = sdk.chatGroups?.get?.(defaultUser, contactId, mode);
+                    if (!entry) {
+                        this.toolkit?.island?.notify?.(
+                            'warning',
+                            '该群聊已被删除',
+                            '请退出此页'
+                        );
+                        return null;
+                    }
+                    currentValue = entry.chatBackground || '';
+                    saveBackground = async (newValue) => {
+                        // ★ v0.69 直接走 sdk.chatGroups.update(chatBackground)
+                        return await sdk.chatGroups.update(sdk, defaultUser, contactId, mode, {
+                            chatBackground: newValue,
+                        });
+                    };
+                } else {
+                    const entry = sdk.chatFriends?.get?.(defaultUser, contactId, mode);
+                    if (!entry) {
+                        this.toolkit?.island?.notify?.(
+                            'warning',
+                            '该联系人尚未添加',
+                            '请先在「发起聊天」页添加此 AI 联系人后再设置背景'
+                        );
+                        return null;
+                    }
+                    currentValue = entry.chatBackground || '';
+                    saveBackground = async (newValue) => {
+                        return await sdk.chatFriends.updateBackground(
+                            sdk, defaultUser, contactId, mode, newValue
+                        );
+                    };
                 }
-
-                const currentValue = entry.chatBackground || '';
 
                 chatModalManager.openChatBackground({
                     currentValue,
                     onSave: async (newValue) => {
                         try {
-                            const updated = await sdk.chatFriends.updateBackground(
-                                sdk, defaultUser, contactId, mode, newValue
-                            );
+                            const updated = await saveBackground(newValue);
                             if (!updated) {
-                                this.toolkit?.island?.notify?.('warning', '保存失败', '该联系人已被删除');
+                                this.toolkit?.island?.notify?.('warning', '保存失败', isGroup ? '该群聊已被删除' : '该联系人已被删除');
                                 return;
                             }
                             // 派发事件让监听方自行重画
@@ -6661,6 +8900,7 @@ ${messages || '(无对话记录)'}
                                     detail: {
                                         contactId,
                                         mode,
+                                        isGroup,
                                         oldValue: currentValue,
                                         newValue: newValue || '',
                                         entry: updated,
@@ -6668,7 +8908,7 @@ ${messages || '(无对话记录)'}
                                 }));
                             } catch (_) {}
 
-                            // 触发 framework 重画:聊天设置页(更新右侧预览) + 私聊页(应用新背景)
+                            // 触发 framework 重画:聊天设置页(更新右侧预览) + 私聊/群聊页(应用新背景)
                             if (typeof window.__detailRenderTick !== 'undefined') {
                                 window.__detailRenderTick.value++;
                             }
@@ -6685,13 +8925,1083 @@ ${messages || '(无对话记录)'}
                         }
                     },
                     onClose: () => {
-                        // 弹窗关闭后 force 重画聊天设置页,让右侧预览区正确反映当前值
                         if (typeof window.__detailRenderTick !== 'undefined') {
                             window.__detailRenderTick.value++;
                         }
                     },
                 });
 
+                return null;
+            },
+
+            /**
+             * ★ v0.69 群聊设置 - 编辑群名称
+             *   payload = { groupId, mode }
+             *   走 chatModalManager.openAiRemark(复用私聊备注弹窗)
+             *   写入 sdk.chatGroups.update({ name })
+             */
+            async openGroupNameEdit(payload = {}) {
+                const groupId = payload?.groupId || '';
+                const mode = payload?.mode || 'calendar';
+                if (!groupId) {
+                    this.toolkit?.island?.notify?.('warning', '群 ID 缺失');
+                    return null;
+                }
+                const sdk = window.settingsSdk;
+                if (!sdk?.chatGroups || !sdk?.users) {
+                    this.toolkit?.island?.notify?.('error', 'SDK 未就绪');
+                    return null;
+                }
+                const defaultUser = sdk.defaultUserCard?.getDefault?.() || sdk.users.getActive();
+                if (!defaultUser) {
+                    this.toolkit?.island?.notify?.('error', '未找到默认用户');
+                    return null;
+                }
+                const entry = sdk.chatGroups.get(defaultUser, groupId, mode);
+                if (!entry) {
+                    this.toolkit?.island?.notify?.('warning', '群聊已被删除');
+                    return null;
+                }
+                chatModalManager.openAiRemark({
+                    name: entry.name || '群聊',
+                    avatarBg: DEFAULT_AI_AVATAR_BG,
+                    remark: entry.name || '',
+                    mode,
+                    onSave: async (newName) => {
+                        try {
+                            const trimmed = String(newName || '').trim().slice(0, 30);
+                            if (!trimmed) {
+                                this.toolkit?.island?.notify?.('warning', '名称不能为空');
+                                return;
+                            }
+                            const updated = await sdk.chatGroups.update(sdk, defaultUser, groupId, mode, {
+                                name: trimmed,
+                            });
+                            if (!updated) {
+                                this.toolkit?.island?.notify?.('warning', '保存失败', '该群聊已被删除');
+                                return;
+                            }
+                            // 派发事件 + 重画
+                            try {
+                                window.dispatchEvent(new CustomEvent('chat:group-name-changed', {
+                                    detail: { groupId, mode, oldName: entry.name, newName: trimmed, entry: updated },
+                                }));
+                            } catch (_) {}
+                            if (typeof window.__detailRenderTick !== 'undefined') {
+                                window.__detailRenderTick.value++;
+                            }
+                            refreshMessagesTab(this);
+                            this.toolkit?.island?.notify?.('success', '群名称已保存', trimmed);
+                        } catch (err) {
+                            console.error('[chat-app] openGroupNameEdit failed', err);
+                            this.toolkit?.island?.notify?.('error', '保存失败', err?.message || '');
+                        }
+                    },
+                });
+                return null;
+            },
+
+            /**
+             * ★ v0.69 群聊设置 - 编辑群公告
+             *   payload = { groupId, mode }
+             *   复用 AiRemarkModal,允许多行
+             *   写入 sdk.chatGroups.update({ announcement })
+             */
+            async openGroupAnnouncementEdit(payload = {}) {
+                const groupId = payload?.groupId || '';
+                const mode = payload?.mode || 'calendar';
+                if (!groupId) {
+                    this.toolkit?.island?.notify?.('warning', '群 ID 缺失');
+                    return null;
+                }
+                const sdk = window.settingsSdk;
+                if (!sdk?.chatGroups || !sdk?.users) {
+                    this.toolkit?.island?.notify?.('error', 'SDK 未就绪');
+                    return null;
+                }
+                const defaultUser = sdk.defaultUserCard?.getDefault?.() || sdk.users.getActive();
+                if (!defaultUser) {
+                    this.toolkit?.island?.notify?.('error', '未找到默认用户');
+                    return null;
+                }
+                const entry = sdk.chatGroups.get(defaultUser, groupId, mode);
+                if (!entry) {
+                    this.toolkit?.island?.notify?.('warning', '群聊已被删除');
+                    return null;
+                }
+                chatModalManager.openAiRemark({
+                    name: '群公告',
+                    avatarBg: DEFAULT_USER_AVATAR_BG,
+                    remark: entry.announcement || '',
+                    mode,
+                    onSave: async (text) => {
+                        try {
+                            const trimmed = String(text || '').trim().slice(0, 200);
+                            const updated = await sdk.chatGroups.update(sdk, defaultUser, groupId, mode, {
+                                announcement: trimmed,
+                            });
+                            if (!updated) {
+                                this.toolkit?.island?.notify?.('warning', '保存失败', '该群聊已被删除');
+                                return;
+                            }
+                            try {
+                                window.dispatchEvent(new CustomEvent('chat:group-announcement-changed', {
+                                    detail: { groupId, mode, newAnnouncement: trimmed, entry: updated },
+                                }));
+                            } catch (_) {}
+                            if (typeof window.__detailRenderTick !== 'undefined') {
+                                window.__detailRenderTick.value++;
+                            }
+                            this.toolkit?.island?.notify?.('success', '群公告已保存');
+                        } catch (err) {
+                            console.error('[chat-app] openGroupAnnouncementEdit failed', err);
+                            this.toolkit?.island?.notify?.('error', '保存失败', err?.message || '');
+                        }
+                    },
+                });
+                return null;
+            },
+
+            /**
+             * ★ v0.69 群聊设置 - 编辑群备注(per-mode 独立)
+             *   payload = { groupId, mode }
+             *   复用 AiRemarkModal
+             *   写入 sdk.chatGroups.update({ remark })
+             */
+            async openGroupRemarkEdit(payload = {}) {
+                const groupId = payload?.groupId || '';
+                const mode = payload?.mode || 'calendar';
+                if (!groupId) {
+                    this.toolkit?.island?.notify?.('warning', '群 ID 缺失');
+                    return null;
+                }
+                const sdk = window.settingsSdk;
+                if (!sdk?.chatGroups || !sdk?.users) {
+                    this.toolkit?.island?.notify?.('error', 'SDK 未就绪');
+                    return null;
+                }
+                const defaultUser = sdk.defaultUserCard?.getDefault?.() || sdk.users.getActive();
+                if (!defaultUser) {
+                    this.toolkit?.island?.notify?.('error', '未找到默认用户');
+                    return null;
+                }
+                const entry = sdk.chatGroups.get(defaultUser, groupId, mode);
+                if (!entry) {
+                    this.toolkit?.island?.notify?.('warning', '群聊已被删除');
+                    return null;
+                }
+                chatModalManager.openAiRemark({
+                    name: '群备注',
+                    avatarBg: DEFAULT_AI_AVATAR_BG,
+                    remark: entry.remark || '',
+                    mode,
+                    onSave: async (text) => {
+                        try {
+                            const trimmed = String(text || '').trim().slice(0, 100);
+                            const updated = await sdk.chatGroups.update(sdk, defaultUser, groupId, mode, {
+                                remark: trimmed,
+                            });
+                            if (!updated) {
+                                this.toolkit?.island?.notify?.('warning', '保存失败', '该群聊已被删除');
+                                return;
+                            }
+                            try {
+                                window.dispatchEvent(new CustomEvent('chat:group-remark-changed', {
+                                    detail: { groupId, mode, newRemark: trimmed, entry: updated },
+                                }));
+                            } catch (_) {}
+                            if (typeof window.__detailRenderTick !== 'undefined') {
+                                window.__detailRenderTick.value++;
+                            }
+                            this.toolkit?.island?.notify?.('success', '群备注已保存');
+                        } catch (err) {
+                            console.error('[chat-app] openGroupRemarkEdit failed', err);
+                            this.toolkit?.island?.notify?.('error', '保存失败', err?.message || '');
+                        }
+                    },
+                });
+                return null;
+            },
+
+            /**
+             * ★ v0.69 群聊设置 - 切换开关(置顶 / 免打扰 / 提醒)
+             *   payload = { groupId, mode, field: 'isPinned' | 'isMuted' | 'isRemindEnabled' }
+             *   走 sdk.chatGroups.update
+             *   不需要弹窗,直接写盘
+             */
+            async toggleGroupSetting(payload = {}) {
+                const groupId = payload?.groupId || '';
+                const mode = payload?.mode || 'calendar';
+                const field = payload?.field || '';
+                if (!groupId || !field) {
+                    this.toolkit?.island?.notify?.('warning', '参数缺失');
+                    return null;
+                }
+                const validFields = ['isPinned', 'isMuted', 'isRemindEnabled'];
+                if (!validFields.includes(field)) {
+                    this.toolkit?.island?.notify?.('warning', '未知字段', field);
+                    return null;
+                }
+                const sdk = window.settingsSdk;
+                if (!sdk?.chatGroups || !sdk?.users) {
+                    this.toolkit?.island?.notify?.('error', 'SDK 未就绪');
+                    return null;
+                }
+                const defaultUser = sdk.defaultUserCard?.getDefault?.() || sdk.users.getActive();
+                if (!defaultUser) {
+                    this.toolkit?.island?.notify?.('error', '未找到默认用户');
+                    return null;
+                }
+                const entry = sdk.chatGroups.get(defaultUser, groupId, mode);
+                if (!entry) {
+                    this.toolkit?.island?.notify?.('warning', '群聊已被删除');
+                    return null;
+                }
+                try {
+                    const newValue = !entry[field];
+                    const updated = await sdk.chatGroups.update(sdk, defaultUser, groupId, mode, {
+                        [field]: newValue,
+                    });
+                    if (!updated) {
+                        this.toolkit?.island?.notify?.('warning', '保存失败');
+                        return null;
+                    }
+                    try {
+                        window.dispatchEvent(new CustomEvent('chat:group-setting-changed', {
+                            detail: { groupId, mode, field, newValue, entry: updated },
+                        }));
+                    } catch (_) {}
+                    if (typeof window.__detailRenderTick !== 'undefined') {
+                        window.__detailRenderTick.value++;
+                    }
+                    refreshMessagesTab(this);
+                    const labelMap = { isPinned: '置顶', isMuted: '免打扰', isRemindEnabled: '消息提醒' };
+                    this.toolkit?.island?.notify?.('success',
+                        `${labelMap[field]}已${newValue ? '开启' : '关闭'}`,
+                        '');
+                } catch (err) {
+                    console.error('[chat-app] toggleGroupSetting failed', err);
+                    this.toolkit?.island?.notify?.('error', '保存失败', err?.message || '');
+                }
+                return null;
+            },
+
+            /**
+             * ★ v0.81 群成员管理 - 打开群主选择器
+             *   payload = { groupId, mode }
+             *   - 候选:当前群所有成员(user + ai)
+             *   - 排除已是管理员的 AI?(允许,但 UI 提示)
+             *   - 当前群主默认置灰 + 标注「当前群主」
+             */
+            openGroupOwnerPicker(payload = {}) {
+                const groupId = payload?.groupId || '';
+                const mode = payload?.mode || 'calendar';
+                if (!groupId) {
+                    this.toolkit?.island?.notify?.('warning', '群 ID 缺失');
+                    return null;
+                }
+                const sdk = window.settingsSdk;
+                const defaultUser = sdk?.defaultUserCard?.getDefault?.() || sdk?.users?.getActive?.();
+                if (!sdk?.chatGroups || !defaultUser) {
+                    this.toolkit?.island?.notify?.('error', 'SDK 未就绪');
+                    return null;
+                }
+                let entry = null;
+                for (const m of ['calendar', 'story']) {
+                    const e = sdk.chatGroups.get?.(defaultUser, groupId, m);
+                    if (e) { entry = e; break; }
+                }
+                if (!entry) {
+                    this.toolkit?.island?.notify?.('warning', '群聊已被删除');
+                    return null;
+                }
+                // 当前用户本人必须是群主(本次 MVP),否则不允许换群主
+                const currentOwnerId = entry.ownerId || defaultUser.id;
+                if (String(currentOwnerId) !== String(defaultUser.id)) {
+                    this.toolkit?.island?.notify?.(
+                        'warning',
+                        '当前不是群主',
+                        '仅群主本人可转让群主身份'
+                    );
+                    return null;
+                }
+                const resolved = (sdk.chatGroups.resolveMembers && entry)
+                    ? sdk.chatGroups.resolveMembers(sdk, defaultUser, entry)
+                    : (entry.members || []).map((id) => ({ id }));
+                const candidates = buildGroupPickerCandidates({
+                    resolvedMembers: resolved,
+                    defaultUser,
+                    currentOwnerId,
+                    adminIds: entry.adminIds || [],
+                    memberNicknames: entry.memberNicknames || {},
+                });
+                chatModalManager.openGroupMemberPicker({
+                    title: '选择新群主',
+                    subtitle: '群主转让后,原群主将自动降为普通成员',
+                    confirmLabel: '转让群主',
+                    candidates,
+                    onPick: async (member) => {
+                        try {
+                            // 走 group-admin-service：它顺带写一条「XX 把群主转让给了 XX」
+                            // 的群公告消息。之前这里只改字段，聊天流里什么都不留，
+                            // 用户过两天完全不记得群主什么时候换的。
+                            const { applyGroupOwner } = await import('./services/group-admin-service.js');
+                            const res = await applyGroupOwner({
+                                sdk, user: defaultUser, groupId, mode,
+                                actorId: defaultUser.id, targetId: member.id,
+                            });
+                            if (!res?.ok) {
+                                this.toolkit?.island?.notify?.('warning', '保存失败', res?.error || '');
+                                return;
+                            }
+                            try {
+                                window.dispatchEvent(new CustomEvent('chat:group-owner-changed', {
+                                    detail: { groupId, mode, newOwnerId: member.id, entry: res.group },
+                                }));
+                            } catch (_) {}
+                            refreshMessagesTab(this);
+                            const memberLabel = member?.label || member?.id || '新群主';
+                            this.toolkit?.island?.notify?.('success', '群主已转让', memberLabel);
+                        } catch (err) {
+                            console.error('[chat-app] openGroupOwnerPicker onPick failed', err);
+                            this.toolkit?.island?.notify?.('error', '转让失败', err?.message || '');
+                        }
+                    },
+                });
+                return null;
+            },
+
+            /**
+             * ★ v0.81 群成员管理 - 打开管理员选择器
+             *   payload = { groupId, mode }
+             *   - 候选:AI 成员,排除已是群主的人,排除已是管理员的人(置灰)
+             *   - 最多 MAX_GROUP_ADMIN_COUNT(2)个
+             */
+            openGroupAdminPicker(payload = {}) {
+                const groupId = payload?.groupId || '';
+                const mode = payload?.mode || 'calendar';
+                if (!groupId) {
+                    this.toolkit?.island?.notify?.('warning', '群 ID 缺失');
+                    return null;
+                }
+                const sdk = window.settingsSdk;
+                const defaultUser = sdk?.defaultUserCard?.getDefault?.() || sdk?.users?.getActive?.();
+                if (!sdk?.chatGroups || !defaultUser) {
+                    this.toolkit?.island?.notify?.('error', 'SDK 未就绪');
+                    return null;
+                }
+                let entry = null;
+                for (const m of ['calendar', 'story']) {
+                    const e = sdk.chatGroups.get?.(defaultUser, groupId, m);
+                    if (e) { entry = e; break; }
+                }
+                if (!entry) {
+                    this.toolkit?.island?.notify?.('warning', '群聊已被删除');
+                    return null;
+                }
+                const currentOwnerId = entry.ownerId || defaultUser.id;
+                if (String(currentOwnerId) !== String(defaultUser.id)) {
+                    this.toolkit?.island?.notify?.('warning', '当前不是群主', '仅群主可设置管理员');
+                    return null;
+                }
+                const adminIds = Array.isArray(entry.adminIds) ? entry.adminIds : [];
+                if (adminIds.length >= MAX_GROUP_ADMIN_COUNT) {
+                    this.toolkit?.island?.notify?.('warning', '已达上限', `最多 ${MAX_GROUP_ADMIN_COUNT} 名管理员`);
+                    return null;
+                }
+                const resolved = (sdk.chatGroups.resolveMembers && entry)
+                    ? sdk.chatGroups.resolveMembers(sdk, defaultUser, entry)
+                    : (entry.members || []).map((id) => ({ id }));
+                const candidates = buildGroupPickerCandidates({
+                    resolvedMembers: resolved,
+                    defaultUser,
+                    currentOwnerId,
+                    adminIds,
+                    memberNicknames: entry.memberNicknames || {},
+                    filter: 'admin-picker',
+                });
+                chatModalManager.openGroupMemberPicker({
+                    title: '添加管理员',
+                    subtitle: `还可添加 ${MAX_GROUP_ADMIN_COUNT - adminIds.length} 名管理员`,
+                    confirmLabel: '设为管理员',
+                    candidates,
+                    onPick: async (member) => {
+                        try {
+                            if (adminIds.includes(member.id)) {
+                                this.toolkit?.island?.notify?.('warning', '已是管理员', member.label);
+                                return;
+                            }
+                            if (adminIds.length >= MAX_GROUP_ADMIN_COUNT) {
+                                this.toolkit?.island?.notify?.('warning', '已达上限', `最多 ${MAX_GROUP_ADMIN_COUNT} 名管理员`);
+                                return;
+                            }
+                            // 走 group-admin-service：写盘 + 「XX 把 XX 设为了管理员」群公告
+                            const { applyGroupAdmin } = await import('./services/group-admin-service.js');
+                            const res = await applyGroupAdmin({
+                                sdk, user: defaultUser, groupId, mode,
+                                actorId: defaultUser.id, targetId: member.id, on: true,
+                            });
+                            if (!res?.ok) {
+                                this.toolkit?.island?.notify?.('warning', '保存失败', res?.error || '');
+                                return;
+                            }
+                            try {
+                                window.dispatchEvent(new CustomEvent('chat:group-admin-changed', {
+                                    detail: { groupId, mode, adminIds: res.group?.adminIds || [], entry: res.group },
+                                }));
+                            } catch (_) {}
+                            refreshMessagesTab(this);
+                            this.toolkit?.island?.notify?.('success', '已设为管理员', member.label);
+                        } catch (err) {
+                            console.error('[chat-app] openGroupAdminPicker onPick failed', err);
+                            this.toolkit?.island?.notify?.('error', '设置失败', err?.message || '');
+                        }
+                    },
+                });
+                return null;
+            },
+
+            /**
+             * ★ v0.81 群成员管理 - 移除管理员
+             *   payload = { groupId, mode, aiPersonId }
+             */
+            async removeGroupAdmin(payload = {}) {
+                const groupId = payload?.groupId || '';
+                const mode = payload?.mode || 'calendar';
+                const aiPersonId = payload?.aiPersonId || '';
+                if (!groupId || !aiPersonId) {
+                    this.toolkit?.island?.notify?.('warning', '参数缺失');
+                    return null;
+                }
+                const sdk = window.settingsSdk;
+                const defaultUser = sdk?.defaultUserCard?.getDefault?.() || sdk?.users?.getActive?.();
+                if (!sdk?.chatGroups || !defaultUser) {
+                    this.toolkit?.island?.notify?.('error', 'SDK 未就绪');
+                    return null;
+                }
+                let entry = null;
+                for (const m of ['calendar', 'story']) {
+                    const e = sdk.chatGroups.get?.(defaultUser, groupId, m);
+                    if (e) { entry = e; break; }
+                }
+                if (!entry) {
+                    this.toolkit?.island?.notify?.('warning', '群聊已被删除');
+                    return null;
+                }
+                const currentOwnerId = entry.ownerId || defaultUser.id;
+                if (String(currentOwnerId) !== String(defaultUser.id)) {
+                    this.toolkit?.island?.notify?.('warning', '当前不是群主', '仅群主可移除管理员');
+                    return null;
+                }
+                const oldAdmins = Array.isArray(entry.adminIds) ? entry.adminIds : [];
+                if (!oldAdmins.map(String).includes(String(aiPersonId))) {
+                    return null; // 不在管理员列表
+                }
+                try {
+                    const { applyGroupAdmin } = await import('./services/group-admin-service.js');
+                    const res = await applyGroupAdmin({
+                        sdk, user: defaultUser, groupId, mode,
+                        actorId: defaultUser.id, targetId: aiPersonId, on: false,
+                    });
+                    if (!res?.ok) {
+                        this.toolkit?.island?.notify?.('warning', '保存失败', res?.error || '');
+                        return null;
+                    }
+                    try {
+                        window.dispatchEvent(new CustomEvent('chat:group-admin-changed', {
+                            detail: { groupId, mode, adminIds: res.group?.adminIds || [], entry: res.group },
+                        }));
+                    } catch (_) {}
+                    refreshMessagesTab(this);
+                    this.toolkit?.island?.notify?.('success', '已移除管理员');
+                } catch (err) {
+                    console.error('[chat-app] removeGroupAdmin failed', err);
+                    this.toolkit?.island?.notify?.('error', '移除失败', err?.message || '');
+                }
+                return null;
+            },
+
+            /**
+             * ★ v0.81 群成员管理 - 编辑某个成员的群昵称
+             *   payload = { groupId, mode, memberId, memberLabel, memberKind, currentNickname }
+             *   - 任意成员都能编辑自己(user 始终可以编辑;AI 编辑自己需要在群聊中)
+             *   - 群主额外可以编辑任何成员
+             *   - 复用 chatModalManager.openAiRemark(单行版本)
+             */
+            openGroupMemberNicknameEdit(payload = {}) {
+                const groupId = payload?.groupId || '';
+                const mode = payload?.mode || 'calendar';
+                const memberId = payload?.memberId || '';
+                const memberLabel = payload?.memberLabel || '成员';
+                const memberKind = payload?.memberKind || 'ai';
+                const currentNickname = payload?.currentNickname || '';
+                if (!groupId || !memberId) {
+                    this.toolkit?.island?.notify?.('warning', '参数缺失');
+                    return null;
+                }
+                const sdk = window.settingsSdk;
+                const defaultUser = sdk?.defaultUserCard?.getDefault?.() || sdk?.users?.getActive?.();
+                if (!sdk?.chatGroups || !defaultUser) {
+                    this.toolkit?.island?.notify?.('error', 'SDK 未就绪');
+                    return null;
+                }
+                let entry = null;
+                for (const m of ['calendar', 'story']) {
+                    const e = sdk.chatGroups.get?.(defaultUser, groupId, m);
+                    if (e) { entry = e; break; }
+                }
+                if (!entry) {
+                    this.toolkit?.island?.notify?.('warning', '群聊已被删除');
+                    return null;
+                }
+                // 权限判断:群主 / 管理员可以编辑任何人,其他人只能编辑自己。
+                // ⚠️ 之前这里写的是 `String(memberId) === String(memberId)` —— 恒为 true，
+                //    等于「谁都能改任何人」，权限判断从来没生效过。
+                const isSelf = String(memberId) === String(defaultUser.id);
+                const canManage = sdk.chatGroups.isAdmin?.(entry, defaultUser.id, defaultUser.id) ?? true;
+                if (!canManage && !isSelf) {
+                    this.toolkit?.island?.notify?.('warning', '没有权限', '仅群主 / 管理员或本人可编辑群昵称');
+                    return null;
+                }
+                const avatarBg = memberKind === 'user' ? '#F4A6CD' : '#A8C8EC';
+                chatModalManager.openAiRemark({
+                    name: memberLabel,
+                    avatarBg,
+                    remark: currentNickname,
+                    mode,
+                    onSave: async (text) => {
+                        try {
+                            const trimmed = String(text || '').trim().slice(0, 16);
+                            // 走 group-admin-service：写盘 + 「XX 给 XX 设置的群昵称是 XX」群公告
+                            const { applyGroupNickname } = await import('./services/group-admin-service.js');
+                            const res = await applyGroupNickname({
+                                sdk, user: defaultUser, groupId, mode,
+                                actorId: defaultUser.id, targetId: memberId, nickname: trimmed,
+                            });
+                            if (!res?.ok) {
+                                this.toolkit?.island?.notify?.('warning', '保存失败', res?.error || '');
+                                return;
+                            }
+                            try {
+                                window.dispatchEvent(new CustomEvent('chat:group-nickname-changed', {
+                                    detail: { groupId, mode, memberId, newNickname: trimmed, entry: res.group },
+                                }));
+                            } catch (_) {}
+                            refreshMessagesTab(this);
+                            this.toolkit?.island?.notify?.(
+                                'success',
+                                trimmed ? '群昵称已保存' : '群昵称已清空',
+                                trimmed || memberLabel
+                            );
+                        } catch (err) {
+                            console.error('[chat-app] openGroupMemberNicknameEdit onSave failed', err);
+                            this.toolkit?.island?.notify?.('error', '保存失败', err?.message || '');
+                        }
+                    },
+                });
+                return null;
+            },
+
+            /**
+             * 请「AI 群主」安排群务（任命管理员 + 取群昵称）。
+             *
+             * 什么时候用：群主已经转让给某个 AI 了。这时候用户自己不能再改管理员
+             * 和别人的群昵称（那是群主的权力），只能按这个按钮请群主去安排。
+             *
+             * 做法不是「再写一套 AI 调用」，而是**把一段请求当成用户消息发给群主 AI**：
+             *   - 走的还是 callAiAndSplit 那条唯一的 AI 链路
+             *   - AI 输出的 [设为管理员:x] / [群昵称:x:y] 由 group-admin-service 解析执行
+             *   - 每条执行都会留一条群公告
+             * 这样「AI 自己在聊天里安排群务」和「用户按按钮请它安排」走的是同一套解析，
+             * 不会出现两边行为不一致。
+             *
+             * payload = { groupId, mode }
+             */
+            async askGroupOwnerAiToArrange(payload = {}) {
+                const groupId = String(payload?.groupId || '');
+                const mode = payload?.mode === 'story' ? 'story' : 'calendar';
+                if (!groupId) {
+                    this.toolkit?.island?.notify?.('warning', '群 ID 缺失');
+                    return null;
+                }
+                const sdk = window.settingsSdk;
+                const defaultUser = sdk?.defaultUserCard?.getDefault?.() || sdk?.users?.getActive?.();
+                if (!sdk?.chatGroups || !defaultUser) {
+                    this.toolkit?.island?.notify?.('error', 'SDK 未就绪');
+                    return null;
+                }
+                let entry = null;
+                let realMode = mode;
+                for (const m of [mode, mode === 'story' ? 'calendar' : 'story']) {
+                    const e = sdk.chatGroups.get?.(defaultUser, groupId, m);
+                    if (e) { entry = e; realMode = m; break; }
+                }
+                if (!entry) {
+                    this.toolkit?.island?.notify?.('warning', '群聊已被删除');
+                    return null;
+                }
+                const ownerId = sdk.chatGroups.getOwnerId(entry, defaultUser.id);
+                if (String(ownerId) === String(defaultUser.id)) {
+                    this.toolkit?.island?.notify?.(
+                        'info', '你就是群主',
+                        '直接在上面的卡片里安排就行，不用请 AI',
+                    );
+                    return null;
+                }
+                const ownerAi = sdk.aiPersons?.get?.(ownerId);
+                if (!ownerAi) {
+                    this.toolkit?.island?.notify?.('warning', '找不到群主的人设', '可能已被删除');
+                    return null;
+                }
+
+                const svc = await import('./services/group-admin-service.js');
+                const askText = svc.buildAskOwnerToArrangePrompt({ sdk, user: defaultUser, group: entry });
+
+                // 等待期间在群聊顶栏显示「对方正在输入中」，跟普通发消息一致
+                beginTyping('group', groupId);
+                try {
+                    const result = await callAiAndSplit({
+                        aiPersonId: ownerId,
+                        mode: realMode,
+                        userText: askText,
+                        historyLimit: 12,
+                        groupId,   // 让它看到花名册 + 群管理格式，否则它不知道能输出什么 token
+                    });
+                    if (!result || result.ok === false) {
+                        this.toolkit?.island?.notify?.('error', '群主没有回应', (result?.error || '').slice(0, 200));
+                        return null;
+                    }
+                    // 从原文里抠出管理动作并执行（AI 可能把 token 分散在几段里，
+                    // 所以用 raw 全文解析，而不是逐条消息解析）
+                    // callAiAndSplit 已经把 token 拆成 type:'group_admin' 的动作段了，
+                    // 这里直接取那些段，不用再对 raw 正则一遍（两份解析迟早会分叉）。
+                    const actions = (result.messages || [])
+                        .filter((m) => m.type === 'group_admin')
+                        .map((m) => m.groupAdminAction)
+                        .filter(Boolean);
+                    const applied = await svc.applyGroupAdminActions({
+                        sdk, user: defaultUser, groupId, mode: realMode,
+                        actorId: ownerId, actions,
+                    });
+                    const okCount = applied.filter((r) => r?.ok).length;
+                    // AI 顺带说的那些话也要落进群聊，否则用户只看到一堆公告，
+                    // 不知道群主为什么这么安排
+                    const ownerName = ownerAi.name || ownerAi.socialProfiles?.chat?.nickname || ownerId;
+                    for (const msg of (result.messages || [])) {
+                        if (msg.type === 'group_admin') continue;
+                        try {
+                            await sdk.chatMessages.add(defaultUser, groupId, realMode, {
+                                ...msg,
+                                sender: 'ai',
+                                senderId: ownerId,
+                                senderName: msg.senderName || ownerName,
+                                conversationType: 'group',
+                                conversationId: groupId,
+                                timestamp: msg.timestamp || Date.now(),
+                            });
+                        } catch (saveErr) {
+                            console.warn('[chat-app] askGroupOwnerAiToArrange save failed', saveErr);
+                        }
+                    }
+                    try { window.invalidateRendererCache?.('chat', null); } catch (_) {}
+                    try { window.__appRendererBridge?.syncNow?.({ force: true }); } catch (_) {}
+                    refreshMessagesTab(this);
+                    this.toolkit?.island?.notify?.(
+                        okCount > 0 ? 'success' : 'warning',
+                        okCount > 0 ? `群主安排了 ${okCount} 项群务` : '群主没有做出安排',
+                        okCount > 0 ? '' : '它这次没有按格式输出，可以再试一次',
+                    );
+                } catch (err) {
+                    console.error('[chat-app] askGroupOwnerAiToArrange failed', err);
+                    this.toolkit?.island?.notify?.('error', '请求失败', err?.message || '');
+                } finally {
+                    endTyping('group', groupId);
+                }
+                return null;
+            },
+
+            /**
+             * ★ v0.81 群成员管理 - AI 自动生成群昵称
+             *   payload = { groupId, mode, memberId }
+             *   - 基于 AI 人设的 name / nickname / role / personality 等字段启发式拼装
+             *   - MVP:本地启发式生成,写盘后立即生效
+             *   - hook: 预留接入真正的 AI 调用(让 AI 来给建议)
+             */
+            async aiGenerateGroupNickname(payload = {}) {
+                const groupId = payload?.groupId || '';
+                const mode = payload?.mode || 'calendar';
+                const memberId = payload?.memberId || '';
+                if (!groupId || !memberId) {
+                    this.toolkit?.island?.notify?.('warning', '参数缺失');
+                    return null;
+                }
+                const sdk = window.settingsSdk;
+                const defaultUser = sdk?.defaultUserCard?.getDefault?.() || sdk?.users?.getActive?.();
+                if (!sdk?.chatGroups) {
+                    this.toolkit?.island?.notify?.('error', 'SDK 未就绪');
+                    return null;
+                }
+                let entry = null;
+                for (const m of ['calendar', 'story']) {
+                    const e = sdk.chatGroups.get?.(defaultUser, groupId, m);
+                    if (e) { entry = e; break; }
+                }
+                if (!entry) {
+                    this.toolkit?.island?.notify?.('warning', '群聊已被删除');
+                    return null;
+                }
+                const currentOwnerId = entry.ownerId || defaultUser.id;
+                if (String(currentOwnerId) !== String(defaultUser.id)) {
+                    this.toolkit?.island?.notify?.('warning', '当前不是群主', '仅群主可让 AI 生成群昵称');
+                    return null;
+                }
+                try {
+                    const ai = sdk.aiPersons?.get?.(memberId);
+                    if (!ai) {
+                        this.toolkit?.island?.notify?.('warning', '找不到该成员的人设');
+                        return null;
+                    }
+                    const generated = generateAiGroupNickname(ai, entry);
+                    if (!generated) {
+                        this.toolkit?.island?.notify?.('warning', '生成失败', 'AI 人设信息不足');
+                        return null;
+                    }
+                    // actorId 用 memberId 而不是用户 —— 这是「AI 给自己取了个群昵称」，
+                    // 群公告应该写成「XX 给自己的群昵称修改为 XX」，而不是用户改的。
+                    const { applyGroupNickname } = await import('./services/group-admin-service.js');
+                    const res = await applyGroupNickname({
+                        sdk, user: defaultUser, groupId, mode,
+                        actorId: memberId, targetId: memberId, nickname: generated,
+                    });
+                    if (!res?.ok) {
+                        this.toolkit?.island?.notify?.('warning', '保存失败', res?.error || '');
+                        return null;
+                    }
+                    try {
+                        window.dispatchEvent(new CustomEvent('chat:group-nickname-changed', {
+                            detail: { groupId, mode, memberId, newNickname: generated, source: 'ai', entry: res.group },
+                        }));
+                    } catch (_) {}
+                    refreshMessagesTab(this);
+                    this.toolkit?.island?.notify?.('success', '已用 AI 生成群昵称', generated);
+                } catch (err) {
+                    console.error('[chat-app] aiGenerateGroupNickname failed', err);
+                    this.toolkit?.island?.notify?.('error', '生成失败', err?.message || '');
+                }
+                return null;
+            },
+
+            /**
+             * ★ v0.69 群聊设置 - 查找聊天记录
+             *   payload = { groupId, mode }
+             *   自动根据 mode 跳到:
+             *     - calendar → memory-management-{groupId}-calendar(层级管理)
+             *     - story → memory-management-{groupId}-story(层级管理,故事模式背景粉色)
+             *     - 同步设 app.state.chat.currentGroupRecordMode 便于详情页读取
+             */
+            openGroupChatHistory(payload = {}) {
+                const groupId = payload?.groupId || '';
+                const mode = payload?.mode || 'calendar';
+                if (!groupId) {
+                    this.toolkit?.island?.notify?.('warning', '群 ID 缺失');
+                    return null;
+                }
+                try {
+                    // ★ v0.69 写入当前群聊 id 给详情页读
+                    if (this?.app?.state?.chat) {
+                        this.app.state.chat.currentGroupRecordMode = mode;
+                        this.app.state.chat.currentGroupId = groupId;
+                    }
+                    // 跳到层级管理详情页(沿用私聊同款入口)
+                    document.dispatchEvent(new CustomEvent('app:page-action', {
+                        detail: {
+                            action: 'detail',
+                            appId: 'chat',
+                            pageId: `memory-management-${groupId}-${mode}`,
+                        },
+                        bubbles: true,
+                    }));
+                } catch (err) {
+                    console.error('[chat-app] openGroupChatHistory failed', err);
+                    this.toolkit?.island?.notify?.('error', '打开失败', err?.message || '');
+                }
+                return null;
+            },
+
+            /**
+             * ★ v0.69 群聊设置 - 清空聊天记录
+             *   payload = { groupId, mode }
+             *   ★ v0.85 迁移到 AcModal
+             */
+            async clearGroupHistory(payload = {}) {
+                const groupId = payload?.groupId || '';
+                const mode = payload?.mode || 'calendar';
+                if (!groupId) {
+                    this.toolkit?.island?.notify?.('warning', '群 ID 缺失');
+                    return null;
+                }
+                const sdk = window.settingsSdk;
+                if (!sdk?.chatMessages || !sdk?.users) {
+                    this.toolkit?.island?.notify?.('error', 'SDK 未就绪');
+                    return null;
+                }
+                // ★ v0.85:获取群名称
+                let groupName = '群聊';
+                try {
+                    const defaultUser = sdk.defaultUserCard?.getDefault?.() || sdk.users.getActive();
+                    const groupEntry = sdk.chatGroups?.get?.(defaultUser, groupId, mode);
+                    groupName = groupEntry?.name || groupName;
+                } catch (_) {}
+                chatModalManager?.openClearChatConfirm?.({
+                    targetName: groupName,
+                    targetType: 'group',
+                    onConfirm: async () => {
+                        try {
+                            const defaultUser = sdk.defaultUserCard?.getDefault?.() || sdk.users.getActive();
+                            if (!defaultUser) {
+                                this.toolkit?.island?.notify?.('error', '未找到默认用户');
+                                return;
+                            }
+                            const result = await this._clearConversationMessages({
+                                sdk,
+                                defaultUser,
+                                aiPersonId: groupId,
+                                mode,
+                                conversationType: 'group',
+                            });
+                            if (!result.ok) {
+                                this.toolkit?.island?.notify?.('error', '清空失败', result.error || '');
+                                return;
+                            }
+                            // 重画
+                            if (typeof window.__detailRenderTick !== 'undefined') {
+                                window.__detailRenderTick.value++;
+                            }
+                            refreshMessagesTab(this);
+                            this.toolkit?.island?.notify?.(
+                                'success',
+                                '已清空聊天记录',
+                                `共删除 ${result.removed} 条`
+                            );
+                        } catch (err) {
+                            console.error('[chat-app] clearGroupHistory failed', err);
+                            this.toolkit?.island?.notify?.('error', '清空失败', err?.message || '');
+                        }
+                    },
+                });
+                return null;
+            },
+
+            /**
+             * ★ v0.71 私聊设置 - 清空聊天记录
+             *   payload = { aiPersonId, mode }
+             *   ★ v0.85 迁移到 AcModal
+             */
+            async clearChatHistory(payload = {}) {
+                const aiPersonId = payload?.aiPersonId || '';
+                const mode = payload?.mode || 'calendar';
+                if (!aiPersonId) {
+                    this.toolkit?.island?.notify?.('warning', '联系人 ID 缺失');
+                    return null;
+                }
+                const sdk = window.settingsSdk;
+                if (!sdk?.chatMessages || !sdk?.users) {
+                    this.toolkit?.island?.notify?.('error', 'SDK 未就绪');
+                    return null;
+                }
+                // ★ v0.85:获取联系人名称
+                let contactName = '联系人';
+                try {
+                    const defaultUser = sdk.defaultUserCard?.getDefault?.() || sdk.users.getActive();
+                    const entry = sdk.chatFriends?.get?.(defaultUser, aiPersonId, mode);
+                    if (entry?.remark) {
+                        contactName = entry.remark;
+                    } else {
+                        const meta = window.aiMeta?.getAiMeta?.(aiPersonId, mode);
+                        contactName = meta?.name || aiPersonId;
+                    }
+                } catch (_) {}
+                chatModalManager?.openClearChatConfirm?.({
+                    targetName: contactName,
+                    targetType: 'private',
+                    onConfirm: async () => {
+                        try {
+                            const defaultUser = sdk.defaultUserCard?.getDefault?.() || sdk.users.getActive();
+                            if (!defaultUser) {
+                                this.toolkit?.island?.notify?.('error', '未找到默认用户');
+                                return;
+                            }
+                            const result = await this._clearConversationMessages({
+                                sdk,
+                                defaultUser,
+                                aiPersonId,
+                                mode,
+                                conversationType: 'private',
+                            });
+                            if (!result.ok) {
+                                this.toolkit?.island?.notify?.('error', '清空失败', result.error || '');
+                                return;
+                            }
+                            // 重画(私聊详情页 + 消息列表 + 日历视图共用同一 tick)
+                            if (typeof window.__detailRenderTick !== 'undefined') {
+                                window.__detailRenderTick.value++;
+                            }
+                            try {
+                                if (typeof window.invalidateRendererCache === 'function') {
+                                    window.invalidateRendererCache('chat', null);
+                                }
+                            } catch (_) {}
+                            try {
+                                window.__appRendererBridge?.syncNow?.({ force: true });
+                            } catch (_) {}
+                            refreshMessagesTab(this);
+                            this.toolkit?.island?.notify?.(
+                                'success',
+                                '已清空聊天记录',
+                                `共删除 ${result.removed} 条`
+                            );
+                        } catch (err) {
+                            console.error('[chat-app] clearChatHistory failed', err);
+                            this.toolkit?.island?.notify?.('error', '清空失败', err?.message || '');
+                        }
+                    },
+                });
+                return null;
+            },
+
+            /**
+             * ★ v0.71 私有:把某个 (aiPersonId, mode) 会话的主表 / 归档表消息全部物理清空。
+             *   - 主表:sdk.chatMessages.removeAllForConversation (优先) 或 list+remove 兜底
+             *   - 归档:sdk.chatArchive.cache 直删 + db.remove + 计数
+             *   - lastMessage:走 sdk.chatFriends.update 清成 null/0,消息列表预览立即更新
+             * 返回 { ok, removed, error? }
+             */
+            async _clearConversationMessages({ sdk, defaultUser, aiPersonId, mode, conversationType = 'private' }) {
+                let removed = 0;
+                try {
+                    // 1) 主表 chatMessages
+                    if (typeof sdk.chatMessages.removeAllForConversation === 'function') {
+                        removed += await sdk.chatMessages.removeAllForConversation(defaultUser, aiPersonId, mode);
+                    } else if (typeof sdk.chatMessages.list === 'function') {
+                        const list = sdk.chatMessages.list(defaultUser, aiPersonId, mode) || [];
+                        for (const m of list) {
+                            try {
+                                if (typeof sdk.chatMessages.remove === 'function') {
+                                    await sdk.chatMessages.remove(m.id);
+                                }
+                                removed++;
+                            } catch (_) {}
+                        }
+                    }
+
+                    // 2) 归档表 chatArchiveMessages(私聊 / 群聊都走 aiPersonId(=conversationId) 区分)
+                    //    settings-sdk 没有把 cache 暴露到 sdk.chatArchive,但 record.id === 原消息 id
+                    //    (见 chat-archive.js archive() 实现),所以直接从 db 删就行。
+                    if (sdk?.toolkit?.db?.getAll) {
+                        try {
+                            const archiveRecords = await sdk.toolkit.db.getAll('chatArchiveMessages') || [];
+                            for (const rec of archiveRecords) {
+                                if (!rec || rec.aiPersonId !== aiPersonId) continue;
+                                if (mode && rec.mode !== mode) continue;
+                                if (conversationType && rec.conversationType !== conversationType) continue;
+                                try {
+                                    await sdk.toolkit.db.remove('chatArchiveMessages', rec.id);
+                                    removed++;
+                                } catch (_) {}
+                            }
+                        } catch (err) {
+                            console.warn('[chat-app] _clearConversationMessages: archive cleanup failed', err);
+                        }
+                    }
+
+                    // 3) 重置 lastMessage / lastMessageAt,消息列表预览立刻消失
+                    try {
+                        if (typeof sdk.chatFriends?.update === 'function') {
+                            await sdk.chatFriends.update(sdk, defaultUser, aiPersonId, mode, {
+                                lastMessage: null,
+                                lastMessageAt: 0,
+                                unreadCount: 0,
+                            });
+                        }
+                    } catch (_) { /* entry 可能不存在,静默 */ }
+
+                    // 4) 派发业务事件,让日历视图 / 存档页等也同步刷新
+                    try {
+                        window.dispatchEvent(new CustomEvent('chat:conversation-cleared', {
+                            detail: { aiPersonId, mode, conversationType, removed },
+                        }));
+                    } catch (_) {}
+
+                    return { ok: true, removed };
+                } catch (err) {
+                    console.error('[chat-app] _clearConversationMessages failed', err);
+                    return { ok: false, error: err?.message || String(err), removed };
+                }
+            },
+
+            /**
+             * ★ v0.69 群聊设置 - 退出群聊
+             *   payload = { groupId, mode }
+             *   ★ v0.85 迁移到 AcModal
+             */
+            async exitGroup(payload = {}) {
+                const groupId = payload?.groupId || '';
+                const mode = payload?.mode || 'calendar';
+                if (!groupId) {
+                    this.toolkit?.island?.notify?.('warning', '群 ID 缺失');
+                    return null;
+                }
+                const sdk = window.settingsSdk;
+                if (!sdk?.chatGroups || !sdk?.users) {
+                    this.toolkit?.island?.notify?.('error', 'SDK 未就绪');
+                    return null;
+                }
+                // ★ v0.85:获取群名称
+                let groupName = '群聊';
+                try {
+                    const defaultUser = sdk.defaultUserCard?.getDefault?.() || sdk.users.getActive();
+                    const groupEntry = sdk.chatGroups?.get?.(defaultUser, groupId, mode);
+                    groupName = groupEntry?.name || groupName;
+                } catch (_) {}
+                chatModalManager?.openExitGroupConfirm?.({
+                    groupName: groupName,
+                    onConfirm: async () => {
+                        try {
+                            const defaultUser = sdk.defaultUserCard?.getDefault?.() || sdk.users.getActive();
+                            if (!defaultUser) {
+                                this.toolkit?.island?.notify?.('error', '未找到默认用户');
+                                return;
+                            }
+                            const ok = await sdk.chatGroups.remove(sdk, defaultUser, groupId, mode);
+                            if (!ok) {
+                                this.toolkit?.island?.notify?.('warning', '退出失败');
+                                return;
+                            }
+                            // 派发事件 + 重画消息列表 + 关闭详情
+                            try {
+                                window.dispatchEvent(new CustomEvent('chat:group-removed', {
+                                    detail: { groupId, mode },
+                                }));
+                            } catch (_) {}
+                            if (typeof window.__detailRenderTick !== 'undefined') {
+                                window.__detailRenderTick.value++;
+                            }
+                            refreshMessagesTab(this);
+                            // 关闭当前 detail 回到消息列表
+                            try {
+                                this.toolkit?.actions?.detail?.('') ||
+                                document.dispatchEvent(new CustomEvent('app:page-action', {
+                                    detail: { action: 'detail', appId: 'chat', pageId: '' },
+                                    bubbles: true,
+                                }));
+                            } catch (_) {}
+                            this.toolkit?.island?.notify?.('success', '已退出群聊');
+                        } catch (err) {
+                            console.error('[chat-app] exitGroup failed', err);
+                            this.toolkit?.island?.notify?.('error', '退出失败', err?.message || '');
+                        }
+                    },
+                });
                 return null;
             },
 
@@ -6776,85 +10086,81 @@ ${messages || '(无对话记录)'}
             },
 
             /**
-             * ★ v0.63 滚动摘要容量设置弹窗入口
+             * ★ v0.88 K 链记忆设置弹窗入口
              *
-             * 触发链路:
-             *   <div id="set-rolling-capacity" data-app-action="...">
-             *   → framework 顶层 click 委托
-             *   → externalAppRegistry.invokeMethod('chat', 'openRollingCapacityModal', payload)
-             *   → 本方法
+             * 触发链路和「上下文长度」一样:
+             *   <div id="set-kchain" data-app-action="..."> → framework click 委托
+             *   → invokeMethod('chat', 'openKChainModal', payload) → 本方法
              *
-             * 配置:
-             *   - kMergeSize: 每多少个回合合并成一个 K（默认 5）
-             *   - maxChainLength: K 链最大长度（默认 10）
+             * 「还差几轮」在这里现算再传进弹窗 —— 数回合要用 chat-app 的回合口径
+             * (`context-rounds.js`),弹窗层和 SDK 层都拿不到。
              *
              * @param {Object} payload { contactId: string, mode: string }
              */
-            async openRollingCapacityModal(payload = {}) {
+            async openKChainModal(payload = {}) {
                 const contactId = payload?.contactId || '';
-                const mode = payload?.mode || 'calendar';
+                const mode = payload?.mode === 'story' ? 'story' : 'calendar';
                 if (!contactId) {
-                    console.warn('[chat-app] openRollingCapacityModal: contactId empty');
+                    console.warn('[chat-app] openKChainModal: contactId empty');
                     this.toolkit?.island?.notify?.('error', '打开失败', '缺少联系人 ID');
                     return null;
                 }
 
-                // 从 rollingConfig 读当前的 kMergeSize / maxChainLength
-                let currentMergeSize = 5;
-                let currentChainLength = 10;
+                const sdk = window.settingsSdk;
+                if (!sdk?.kChain) {
+                    this.toolkit?.island?.notify?.('warning', '还没准备好', '设置 SDK 未就绪,稍等一下再试');
+                    return null;
+                }
+
                 let contactName = contactId;
                 try {
-                    const sdk = window.settingsSdk;
-                    const cfg = sdk?.rollingSummaries?.getRollingConfig?.(contactId);
-                    if (cfg) {
-                        currentMergeSize = Number(cfg.kMergeSize) || 5;
-                        currentChainLength = Number(cfg.maxChainLength) || 10;
-                    }
                     const defaultUser = sdk?.defaultUserCard?.getDefault?.() || sdk?.users?.getActive?.();
                     const entry = sdk?.chatFriends?.get?.(defaultUser, contactId, mode);
-                    if (entry) {
-                        contactName = entry.displayName || entry.remark || contactId;
-                    }
-                } catch (_) { /* 兜底用默认值 */ }
+                    if (entry) contactName = entry.displayName || entry.remark || contactId;
+                } catch (_) { /* 显示名拿不到就用 id */ }
 
-                // 打开弹窗
+                const pending = countKChainPending(contactId, mode);
                 const { chatModalManager } = await import('./components/chat-modal-registry.js');
-                chatModalManager.openRollingCapacity({
+
+                const repaint = () => {
+                    // async renderMode 下必须 invalidate + syncNow 二段式(AGENTS.md §32),
+                    // 单靠 __detailRenderTick++ 在缓存命中时不会重画
+                    try { window.invalidateRendererCache?.('chat', null); } catch (_) {}
+                    try { window.__appRendererBridge?.syncNow?.({ force: true }); } catch (_) {}
+                };
+
+                chatModalManager.openKChain({
                     aiPersonId: contactId,
                     contactName,
-                    currentMergeSize,
-                    currentChainLength,
                     mode,
-                    onSave: async ({ kMergeSize, maxChainLength }) => {
+                    pending,
+                    onSave: async ({ enabled, windowSize, content }) => {
                         try {
-                            const sdk = window.settingsSdk;
-                            if (sdk?.rollingSummaries?.setRollingConfig && contactId) {
-                                await sdk.rollingSummaries.setRollingConfig(contactId, {
-                                    kMergeSize: Number(kMergeSize) || 5,
-                                    maxChainLength: Number(maxChainLength) || 10,
-                                });
+                            await sdk.kChain.setConfig(contactId, { enabled, windowSize });
+                            // 正文单独走 editCurrent:它改的是「当前这一版」,不该新增版本号
+                            const before = sdk.kChain.getSlot(contactId, mode)?.current?.content || '';
+                            if (String(content || '') !== String(before)) {
+                                await sdk.kChain.editCurrent(contactId, mode, content);
                             }
                             this.toolkit?.island?.notify?.(
                                 'success',
                                 '已保存',
-                                `K 链容量: 合并粒度 ${kMergeSize} · 链长 ${maxChainLength}`
+                                enabled ? `K 链记忆:每 ${windowSize} 回合更新一次` : 'K 链记忆已关闭',
                             );
                         } catch (err) {
-                            console.error('[chat-app] openRollingCapacityModal: save failed', err);
+                            console.error('[chat-app] openKChainModal: save failed', err);
                             this.toolkit?.island?.notify?.('error', '保存失败', err?.message || '请重试');
                         }
                     },
-                    onClose: () => {
-                        // ★ 二段式重画(async renderMode 缓存命中 + AGENTS.md §27 §32)
+                    onClear: async () => {
                         try {
-                            if (typeof window.invalidateRendererCache === 'function') {
-                                window.invalidateRendererCache('chat', null);
-                            }
-                        } catch (_) {}
-                        try {
-                            window.__appRendererBridge?.syncNow?.({ force: true });
-                        } catch (_) {}
+                            await sdk.kChain.reset(contactId, mode);
+                            this.toolkit?.island?.notify?.('info', '已清空', '回合数也从头开始数');
+                        } catch (err) {
+                            console.error('[chat-app] openKChainModal: clear failed', err);
+                        }
                     },
+                    onClose: repaint,
                 });
 
                 return null;
@@ -6892,7 +10198,6 @@ ${messages || '(无对话记录)'}
                 const now = Date.now();
                 const last = this.__toggleDedupe[settingId] || 0;
                 if (now - last < 100) {
-                    console.log('[chat-app] onChatSettingToggle: dedupe within 100ms, skip', settingId);
                     return null;
                 }
                 this.__toggleDedupe[settingId] = now;
@@ -7007,9 +10312,8 @@ ${messages || '(无对话记录)'}
                         // 后续可以加 case 'set-context-dilute' / 'set-reply-enhance'
                         // 目前只接 set-pinned / set-muted(其它 AI 设置项的 toggle
                         // 继续走通知「功能即将开放」,避免静默存到错误位置)
-                        // ★ v0.61.3:接 set-context-dilute / set-rolling-enabled
+                        // ★ v0.61.3:接 set-context-dilute
                         //   - contextLength 单位已经从「条」改成「回合」(chat-settings UI)
-                        //   - rollingEnabled 落到 aiPerson.socialProfiles.chat.rollingConfig.enabled
                         case 'set-context-dilute':
                             updated = await sdk.chatFriends.update(sdk, defaultUser, aiPersonId, mode, {
                                 contextDiluteEnabled: newChecked,
@@ -7024,45 +10328,6 @@ ${messages || '(无对话记录)'}
                                 newChecked ? '已开启上下文智能稀释' : '已关闭上下文智能稀释',
                                 updated.displayName || aiPersonId
                             );
-                            break;
-
-                        case 'set-rolling-enabled':
-                            // 持久化到 aiPerson.socialProfiles.chat.rollingConfig.enabled
-                            // 走 aiPersons.update(SDK 顶层 API,自动 mergePatch)
-                            try {
-                                const aiPerson = sdk.aiPersons?.get?.(aiPersonId);
-                                if (!aiPerson) {
-                                    throw new Error('AI 人设不存在');
-                                }
-                                const socialProfiles = aiPerson.socialProfiles || {};
-                                const chat = socialProfiles.chat || {};
-                                const rollingConfig = chat.rollingConfig || {
-                                    enabled: false,
-                                    contextRounds: 20,
-                                    kMergeSize: 5,
-                                    maxChainLength: 10,
-                                    style: 'concise',
-                                };
-                                rollingConfig.enabled = newChecked;
-                                const nextChat = { ...chat, rollingConfig };
-                                const nextSocial = { ...socialProfiles, chat: nextChat };
-                                const updatedAi = await sdk.aiPersons.update(aiPersonId, {
-                                    socialProfiles: nextSocial,
-                                });
-                                if (!updatedAi) {
-                                    throw new Error('保存失败');
-                                }
-                                this.toolkit?.island?.notify?.(
-                                    'success',
-                                    newChecked ? '已开启滚动摘要' : '已关闭滚动摘要',
-                                    aiPerson.name || aiPersonId
-                                );
-                            } catch (err) {
-                                console.warn('[chat-app] set-rolling-enabled failed:', err);
-                                this.toolkit?.island?.notify?.('error', '保存失败', err?.message || '');
-                                input.checked = !newChecked;
-                                return null;
-                            }
                             break;
 
                         default:
@@ -7108,7 +10373,43 @@ ${messages || '(无对话记录)'}
             //     - openEditReplyPromptModal 编辑弹窗
             //     - openCreateReplyPromptModal 新增弹窗
             //   所有写入走 sdk.replyPrompts API,落盘后 ++detailRenderTick 重画页面
+            //
+            //   ★ v0.82 群聊版:新增 payload.isGroup + payload.groupId + payload.mode,
+            //     method 内部切到 sdk.groupReplyPrompts(挂在 chatGroup.prompts[] 顶层,
+            //     N 个 AI 共享)。私聊 payload 不带这些字段,行为不变。
             // ============================================================
+
+            /**
+             * ★ v0.82 群聊版辅助:从 payload 拆出「prompt 操作的目标 SDK」
+             *   - 私聊 → { isGroup:false, sdkReply: sdk.replyPrompts, aiPersonId, user }
+             *   - 群聊 → { isGroup:true,  sdkReply: sdk.groupReplyPrompts, groupId, mode, user }
+             *   私聊 SDK 仍然只接 aiPersonId;群聊 SDK 总是接 user + groupId + mode。
+             *
+             *   调用方拿到 sdkReply 后,操作方式完全平行(都是 list/listActive/get/add/...)。
+             */
+            _resolvePromptTarget(payload = {}) {
+                const sdk = window.settingsSdk;
+                const isGroup = payload?.isGroup === true;
+                const user = sdk?.defaultUserCard?.getDefault?.() || sdk?.users?.getActive?.() || null;
+                if (isGroup) {
+                    return {
+                        isGroup: true,
+                        groupId: String(payload?.groupId || ''),
+                        mode: payload?.mode === 'story' ? 'story' : 'calendar',
+                        aiPersonId: String(payload?.aiPersonId || ''), // 群聊版也带 aiPersonId 占位,某些 method 仍用
+                        user,
+                        sdkReply: sdk?.groupReplyPrompts || null,
+                    };
+                }
+                return {
+                    isGroup: false,
+                    groupId: null,
+                    mode: null,
+                    aiPersonId: String(payload?.aiPersonId || ''),
+                    user,
+                    sdkReply: sdk?.replyPrompts || null,
+                };
+            },
 
             /**
              * 启停切换 replyPrompt。
@@ -7118,9 +10419,8 @@ ${messages || '(无对话记录)'}
              * 走 SDK 会返回 null → 给用户提示,不再重画。
              */
             async toggleReplyPromptActive(payload = {}) {
-                const aiPersonId = String(payload?.aiPersonId || '');
                 const promptId = String(payload?.promptId || '');
-                if (!aiPersonId || !promptId) {
+                if (!promptId) {
                     console.warn('[chat-app] toggleReplyPromptActive: missing params');
                     return null;
                 }
@@ -7133,12 +10433,19 @@ ${messages || '(无对话记录)'}
                     );
                     return null;
                 }
-                const sdk = window.settingsSdk;
-                if (!sdk?.replyPrompts) {
+                const target = this._resolvePromptTarget(payload);
+                if (!target.sdkReply) {
                     this.toolkit?.island?.notify?.('error', 'SDK 未就绪', '请稍后再试');
                     return null;
                 }
-                const next = await sdk.replyPrompts.toggleActive(aiPersonId, promptId);
+                let next = null;
+                if (target.isGroup) {
+                    if (!target.groupId) return null;
+                    next = await target.sdkReply.toggleActive(target.user, target.groupId, target.mode, promptId);
+                } else {
+                    if (!target.aiPersonId) return null;
+                    next = await target.sdkReply.toggleActive(target.aiPersonId, promptId);
+                }
                 if (!next) {
                     this.toolkit?.island?.notify?.('warning', '提示词不存在', '可能被删除,请刷新');
                     return null;
@@ -7158,7 +10465,14 @@ ${messages || '(无对话记录)'}
                 } catch (_) {}
                 try {
                     window.dispatchEvent(new CustomEvent('chat:reply-prompt-updated', {
-                        detail: { aiPersonId, promptId, action: 'toggle', active: next.active },
+                        detail: {
+                            aiPersonId: target.aiPersonId,
+                            groupId: target.groupId,
+                            isGroup: target.isGroup,
+                            promptId,
+                            action: 'toggle',
+                            active: next.active,
+                        },
                     }));
                 } catch (_) {}
                 return next;
@@ -7169,17 +10483,27 @@ ${messages || '(无对话记录)'}
              * payload: { aiPersonId, promptId }
              */
             async moveReplyPromptUp(payload = {}) {
-                const aiPersonId = String(payload?.aiPersonId || '');
                 const promptId = String(payload?.promptId || '');
-                if (!aiPersonId || !promptId) return null;
-                const sdk = window.settingsSdk;
-                if (!sdk?.replyPrompts) return null;
-                const list = sdk.replyPrompts.list(aiPersonId);
+                if (!promptId) return null;
+                const target = this._resolvePromptTarget(payload);
+                if (!target.sdkReply) return null;
+                let list = [];
+                if (target.isGroup) {
+                    if (!target.groupId) return null;
+                    list = target.sdkReply.list(target.user, target.groupId, target.mode) || [];
+                } else {
+                    if (!target.aiPersonId) return null;
+                    list = target.sdkReply.list(target.aiPersonId) || [];
+                }
                 const idx = list.findIndex((p) => p && p.id === promptId);
                 if (idx <= 0) return null; // 第一条 / 不存在
                 const newOrder = list.slice();
                 [newOrder[idx - 1], newOrder[idx]] = [newOrder[idx], newOrder[idx - 1]];
-                await sdk.replyPrompts.setOrder(aiPersonId, newOrder.map((p) => p.id));
+                if (target.isGroup) {
+                    await target.sdkReply.setOrder(target.user, target.groupId, target.mode, newOrder.map((p) => p.id));
+                } else {
+                    await target.sdkReply.setOrder(target.aiPersonId, newOrder.map((p) => p.id));
+                }
                 // ★ v0.61.8.11 保留滚动位置
                 this._preserveScrollAroundTick();
                 // ★ v0.61.7 invalidate + syncNow 让 prompt-manager 重画
@@ -7196,20 +10520,30 @@ ${messages || '(无对话记录)'}
 
             /**
              * 下移一条 replyPrompt。
-             * payload: { aiPersonId, promptId }
+             * payload: { aiPersonId, promptId } 或 { isGroup, groupId, mode, promptId }
              */
             async moveReplyPromptDown(payload = {}) {
-                const aiPersonId = String(payload?.aiPersonId || '');
                 const promptId = String(payload?.promptId || '');
-                if (!aiPersonId || !promptId) return null;
-                const sdk = window.settingsSdk;
-                if (!sdk?.replyPrompts) return null;
-                const list = sdk.replyPrompts.list(aiPersonId);
+                if (!promptId) return null;
+                const target = this._resolvePromptTarget(payload);
+                if (!target.sdkReply) return null;
+                let list = [];
+                if (target.isGroup) {
+                    if (!target.groupId) return null;
+                    list = target.sdkReply.list(target.user, target.groupId, target.mode) || [];
+                } else {
+                    if (!target.aiPersonId) return null;
+                    list = target.sdkReply.list(target.aiPersonId) || [];
+                }
                 const idx = list.findIndex((p) => p && p.id === promptId);
                 if (idx < 0 || idx >= list.length - 1) return null; // 最后一条 / 不存在
                 const newOrder = list.slice();
                 [newOrder[idx], newOrder[idx + 1]] = [newOrder[idx + 1], newOrder[idx]];
-                await sdk.replyPrompts.setOrder(aiPersonId, newOrder.map((p) => p.id));
+                if (target.isGroup) {
+                    await target.sdkReply.setOrder(target.user, target.groupId, target.mode, newOrder.map((p) => p.id));
+                } else {
+                    await target.sdkReply.setOrder(target.aiPersonId, newOrder.map((p) => p.id));
+                }
                 // ★ v0.61.8.11 保留滚动位置
                 this._preserveScrollAroundTick();
                 // ★ v0.61.7 invalidate + syncNow
@@ -7228,16 +10562,22 @@ ${messages || '(无对话记录)'}
              * 删除一条 replyPrompt(灵动岛先确认)。
              * payload: { aiPersonId, promptId }
              */
-            async deleteReplyPrompt(payload = {}) {
-                const aiPersonId = String(payload?.aiPersonId || '');
+async deleteReplyPrompt(payload = {}) {
                 const promptId = String(payload?.promptId || '');
-                if (!aiPersonId || !promptId) return false;
-                const sdk = window.settingsSdk;
-                if (!sdk?.replyPrompts) {
+                if (!promptId) return false;
+                const target = this._resolvePromptTarget(payload);
+                if (!target.sdkReply) {
                     this.toolkit?.island?.notify?.('error', 'SDK 未就绪', '请稍后再试');
                     return false;
                 }
-                const cur = sdk.replyPrompts.get(aiPersonId, promptId);
+                let cur = null;
+                if (target.isGroup) {
+                    if (!target.groupId) return false;
+                    cur = target.sdkReply.get(target.user, target.groupId, target.mode, promptId);
+                } else {
+                    if (!target.aiPersonId) return false;
+                    cur = target.sdkReply.get(target.aiPersonId, promptId);
+                }
                 if (!cur) {
                     this.toolkit?.island?.notify?.('warning', '提示词不存在', '可能被删除');
                     return false;
@@ -7245,73 +10585,93 @@ ${messages || '(无对话记录)'}
                 const confirmTitle = '删除提示词';
                 const confirmText = `确认删除「${cur.title}」?该操作不可撤销。`;
                 // 走 framework 顶层确认弹窗
+                const _doDelete = async () => {
+                    let ok = false;
+                    if (target.isGroup) {
+                        ok = await target.sdkReply.remove(target.user, target.groupId, target.mode, promptId);
+                    } else {
+                        ok = await target.sdkReply.remove(target.aiPersonId, promptId);
+                    }
+                    if (!ok) {
+                        this.toolkit?.island?.notify?.('warning', '删除失败', '可能已被删除');
+                        return;
+                    }
+                    // ★ v0.61.8.11 保留滚动位置
+                    this._preserveScrollAroundTick();
+                    // ★ v0.61.7 invalidate + syncNow 让 prompt-manager 重画
+                    try {
+                        if (typeof window.invalidateRendererCache === 'function') {
+                            window.invalidateRendererCache('chat', null);
+                        }
+                    } catch (_) {}
+                    try {
+                        window.__appRendererBridge?.syncNow?.({ force: true });
+                    } catch (_) {}
+                    this.toolkit?.island?.notify?.('success', '已删除', cur.title);
+                    try {
+                        window.dispatchEvent(new CustomEvent('chat:reply-prompt-updated', {
+                            detail: {
+                                aiPersonId: target.aiPersonId,
+                                groupId: target.groupId,
+                                isGroup: target.isGroup,
+                                promptId,
+                                action: 'remove',
+                            },
+                        }));
+                    } catch (_) {}
+                };
                 if (typeof window.__phoneConfirm?.request === 'function') {
                     window.__phoneConfirm.request({
                         title: confirmTitle,
                         text: confirmText,
                         confirmLabel: '删除',
                         danger: true,
-                        onConfirm: async () => {
-                            const ok = await sdk.replyPrompts.remove(aiPersonId, promptId);
-                            if (!ok) {
-                                this.toolkit?.island?.notify?.('warning', '删除失败', '可能已被删除');
-                                return;
-                            }
-                            // ★ v0.61.8.11 保留滚动位置
-                            this._preserveScrollAroundTick();
-                            // ★ v0.61.7 invalidate + syncNow 让 prompt-manager 重画
-                            try {
-                                if (typeof window.invalidateRendererCache === 'function') {
-                                    window.invalidateRendererCache('chat', null);
-                                }
-                            } catch (_) {}
-                            try {
-                                window.__appRendererBridge?.syncNow?.({ force: true });
-                            } catch (_) {}
-                            this.toolkit?.island?.notify?.('success', '已删除', cur.title);
-                            try {
-                                window.dispatchEvent(new CustomEvent('chat:reply-prompt-updated', {
-                                    detail: { aiPersonId, promptId, action: 'remove' },
-                                }));
-                            } catch (_) {}
-                        },
+                        onConfirm: _doDelete,
                         onCancel: () => {},
                     });
                     return true;
                 }
                 // 退化方案:无确认弹窗 API,直接删
-                const ok = await sdk.replyPrompts.remove(aiPersonId, promptId);
-                if (!ok) return false;
-                // ★ v0.61.8.11 保留滚动位置
-                this._preserveScrollAroundTick();
-                try {
-                    if (typeof window.invalidateRendererCache === 'function') {
-                        window.invalidateRendererCache('chat', null);
-                    }
-                } catch (_) {}
-                try {
-                    window.__appRendererBridge?.syncNow?.({ force: true });
-                } catch (_) {}
+                await _doDelete();
                 return true;
             },
 
             /**
              * 打开「编辑 replyPrompt」弹窗。
-             * payload: { aiPersonId, promptId }
+             * payload: { aiPersonId, promptId } 或 { isGroup, groupId, mode, promptId }
              */
             async openEditReplyPromptModal(payload = {}) {
-                const aiPersonId = String(payload?.aiPersonId || '');
                 const promptId = String(payload?.promptId || '');
-                if (!aiPersonId || !promptId) return null;
-                const sdk = window.settingsSdk;
-                if (!sdk?.replyPrompts) {
+                if (!promptId) return null;
+                const target = this._resolvePromptTarget(payload);
+                if (!target.sdkReply) {
                     this.toolkit?.island?.notify?.('error', 'SDK 未就绪', '请稍后再试');
                     return null;
                 }
-                const cur = sdk.replyPrompts.get(aiPersonId, promptId);
+                let cur = null;
+                if (target.isGroup) {
+                    if (!target.groupId) return null;
+                    cur = target.sdkReply.get(target.user, target.groupId, target.mode, promptId);
+                } else {
+                    if (!target.aiPersonId) return null;
+                    cur = target.sdkReply.get(target.aiPersonId, promptId);
+                }
                 if (!cur) {
                     this.toolkit?.island?.notify?.('warning', '提示词不存在', '可能被删除');
                     return null;
+                }
+                // 这条如果是从 Prompt 库拉来的，把库里的原文捞出来，
+                // 弹窗里就能给一个「复原原文」按钮 —— 用户改坏了能退回去，
+                // 不用自己记得原来写的什么。自己新建的没有 sourceLibraryPromptId，
+                // originContent 是空串，按钮不显示。
+                let originContent = '';
+                if (cur.sourceLibraryPromptId) {
+                    try {
+                        const origin = await window.settingsSdk?.promptLibrary?.getPrompt?.(cur.sourceLibraryPromptId);
+                        originContent = String(origin?.text || '');
+                    } catch (err) {
+                        console.warn('[chat-app] 读 Prompt 库原文失败', err);
+                    }
                 }
                 // 复用 settings 侧的 prompt 编辑 modal(单 title + content + source + active)
                 chatModalManager.openEditReplyPrompt({
@@ -7321,17 +10681,24 @@ ${messages || '(无对话记录)'}
                         source: cur.source || 'custom',
                         active: cur.active !== false,
                     },
+                    originContent,
                     onSave: async (next) => {
                         if (!next?.title) {
                             this.toolkit?.island?.notify?.('warning', '保存失败', '标题不能为空');
                             return;
                         }
-                        const updated = await sdk.replyPrompts.update(aiPersonId, promptId, {
+                        const patch = {
                             title: next.title,
                             content: next.content || '',
                             source: next.source || 'custom',
                             active: !!next.active,
-                        });
+                        };
+                        let updated = null;
+                        if (target.isGroup) {
+                            updated = await target.sdkReply.update(target.user, target.groupId, target.mode, promptId, patch);
+                        } else {
+                            updated = await target.sdkReply.update(target.aiPersonId, promptId, patch);
+                        }
                         if (!updated) {
                             this.toolkit?.island?.notify?.('warning', '保存失败', '该提示词已被删除');
                             return;
@@ -7349,7 +10716,14 @@ ${messages || '(无对话记录)'}
                         this.toolkit?.island?.notify?.('success', '已保存', updated.title);
                         try {
                             window.dispatchEvent(new CustomEvent('chat:reply-prompt-updated', {
-                                detail: { aiPersonId, promptId, action: 'update', record: updated },
+                                detail: {
+                                    aiPersonId: target.aiPersonId,
+                                    groupId: target.groupId,
+                                    isGroup: target.isGroup,
+                                    promptId,
+                                    action: 'update',
+                                    record: updated,
+                                },
                             }));
                         } catch (_) {}
                     },
@@ -7359,16 +10733,16 @@ ${messages || '(无对话记录)'}
 
             /**
              * 打开「新增 replyPrompt」弹窗。
-             * payload: { aiPersonId }
+             * payload: { aiPersonId } 或 { isGroup, groupId, mode }
              */
             async openCreateReplyPromptModal(payload = {}) {
-                const aiPersonId = String(payload?.aiPersonId || '');
-                if (!aiPersonId) return null;
-                const sdk = window.settingsSdk;
-                if (!sdk?.replyPrompts) {
+                const target = this._resolvePromptTarget(payload);
+                if (!target.sdkReply) {
                     this.toolkit?.island?.notify?.('error', 'SDK 未就绪', '请稍后再试');
                     return null;
                 }
+                if (target.isGroup && !target.groupId) return null;
+                if (!target.isGroup && !target.aiPersonId) return null;
                 chatModalManager.openEditReplyPrompt({
                     initial: {
                         title: '',
@@ -7382,12 +10756,18 @@ ${messages || '(无对话记录)'}
                             this.toolkit?.island?.notify?.('warning', '保存失败', '标题不能为空');
                             return;
                         }
-                        const created = await sdk.replyPrompts.add(aiPersonId, {
+                        const patch = {
                             title: next.title,
                             content: next.content || '',
                             source: next.source || 'custom',
                             active: next.active !== false,
-                        });
+                        };
+                        let created = null;
+                        if (target.isGroup) {
+                            created = await target.sdkReply.add(target.user, target.groupId, target.mode, patch);
+                        } else {
+                            created = await target.sdkReply.add(target.aiPersonId, patch);
+                        }
                         if (!created) {
                             this.toolkit?.island?.notify?.('warning', '创建失败', '请重试');
                             return;
@@ -7405,7 +10785,14 @@ ${messages || '(无对话记录)'}
                         this.toolkit?.island?.notify?.('success', '已新增', created.title);
                         try {
                             window.dispatchEvent(new CustomEvent('chat:reply-prompt-updated', {
-                                detail: { aiPersonId, promptId: created.id, action: 'create', record: created },
+                                detail: {
+                                    aiPersonId: target.aiPersonId,
+                                    groupId: target.groupId,
+                                    isGroup: target.isGroup,
+                                    promptId: created.id,
+                                    action: 'create',
+                                    record: created,
+                                },
                             }));
                         } catch (_) {}
                     },
@@ -7423,11 +10810,17 @@ ${messages || '(无对话记录)'}
              *   4. 触发重画 + 灵动岛通知
              */
             async pullReplyPromptFromLibrary(payload = {}) {
-                const aiPersonId = String(payload?.aiPersonId || '');
                 const promptId = String(payload?.promptId || '');
-                if (!aiPersonId || !promptId) return null;
+                if (!promptId) return null;
+                const target = this._resolvePromptTarget(payload);
+                if (!target.sdkReply) {
+                    this.toolkit?.island?.notify?.('error', 'SDK 未就绪', '请稍后再试');
+                    return null;
+                }
+                if (target.isGroup && !target.groupId) return null;
+                if (!target.isGroup && !target.aiPersonId) return null;
                 const sdk = window.settingsSdk;
-                if (!sdk?.promptLibrary || !sdk?.replyPrompts) {
+                if (!sdk?.promptLibrary) {
                     this.toolkit?.island?.notify?.('error', 'SDK 未就绪', '请稍后再试');
                     return null;
                 }
@@ -7445,14 +10838,19 @@ ${messages || '(无对话记录)'}
                 const path = `${entry.library?.name || ''} / ${entry.package?.name || ''} / ${entry.group?.name || ''}`.trim();
                 // 去重检查:同 sourceLibraryPromptId 视为已拉取
                 try {
-                    const existing = sdk.replyPrompts.list(aiPersonId);
+                    let existing = [];
+                    if (target.isGroup) {
+                        existing = target.sdkReply.list(target.user, target.groupId, target.mode) || [];
+                    } else {
+                        existing = target.sdkReply.list(target.aiPersonId) || [];
+                    }
                     const dup = existing.find((p) => p && p.sourceLibraryPromptId === promptId);
                     if (dup) {
                         this.toolkit?.island?.notify?.('info', '已拉取过', dup.title || '该条目');
                         return null;
                     }
                 } catch (_) { /* 静默,不影响主流程 */ }
-                // 写入 replyPrompts
+                // 写入 replyPrompts / groupReplyPrompts
                 //   - title 取 prompt.text 第一行前 24 字(避免空标题)
                 //   - source = 'prompt-library:{libraryId}'(来源标识)
                 //   - sourceLibraryPromptId 用于去重
@@ -7460,14 +10858,20 @@ ${messages || '(无对话记录)'}
                 //     不进「当前上下文」;用户想用就手动在「可用 Prompt」区启用)
                 const firstLine = (pr.text || '').split('\n')[0] || '';
                 const title = firstLine.slice(0, 24) || path || promptId;
-                const created = await sdk.replyPrompts.add(aiPersonId, {
+                const patch = {
                     title,
                     content: pr.text || '',
                     source: entry.library?.id ? `prompt-library:${entry.library.id}` : 'prompt-library',
                     active: false,
                     sourceLibraryPromptId: promptId,
                     sourcePath: path,
-                });
+                };
+                let created = null;
+                if (target.isGroup) {
+                    created = await target.sdkReply.add(target.user, target.groupId, target.mode, patch);
+                } else {
+                    created = await target.sdkReply.add(target.aiPersonId, patch);
+                }
                 if (!created) {
                     this.toolkit?.island?.notify?.('warning', '拉取失败', '请重试');
                     return null;
@@ -7489,7 +10893,14 @@ ${messages || '(无对话记录)'}
                 this.toolkit?.island?.notify?.('success', '已拉取', created.title);
                 try {
                     window.dispatchEvent(new CustomEvent('chat:reply-prompt-updated', {
-                        detail: { aiPersonId, promptId: created.id, action: 'pull-from-library', record: created },
+                        detail: {
+                            aiPersonId: target.aiPersonId,
+                            groupId: target.groupId,
+                            isGroup: target.isGroup,
+                            promptId: created.id,
+                            action: 'pull-from-library',
+                            record: created,
+                        },
                     }));
                 } catch (_) {}
                 return created;
@@ -7511,18 +10922,23 @@ ${messages || '(无对话记录)'}
              *     setOrder 内部 map.has(pid) 失败自动跳过,只持久化 replyPrompts 数组里的真实条目
              */
             async reorderContextPrompts(payload = {}) {
-                const aiPersonId = String(payload?.aiPersonId || '');
                 const promptIdsInOrder = Array.isArray(payload?.promptIdsInOrder) ? payload.promptIdsInOrder : [];
-                if (!aiPersonId || promptIdsInOrder.length === 0) {
+                if (promptIdsInOrder.length === 0) {
                     return null;
                 }
-                const sdk = window.settingsSdk;
-                if (!sdk?.replyPrompts?.setOrder) {
+                const target = this._resolvePromptTarget(payload);
+                if (!target.sdkReply?.setOrder) {
                     this.toolkit?.island?.notify?.('error', 'SDK 未就绪', '请稍后再试');
                     return null;
                 }
+                if (target.isGroup && !target.groupId) return null;
+                if (!target.isGroup && !target.aiPersonId) return null;
                 try {
-                    await sdk.replyPrompts.setOrder(aiPersonId, promptIdsInOrder);
+                    if (target.isGroup) {
+                        await target.sdkReply.setOrder(target.user, target.groupId, target.mode, promptIdsInOrder);
+                    } else {
+                        await target.sdkReply.setOrder(target.aiPersonId, promptIdsInOrder);
+                    }
                 } catch (err) {
                     console.warn('[chat-app] reorderContextPrompts replyPrompts failed', err);
                     this.toolkit?.island?.notify?.('warning', '重排失败', err?.message || '请重试');
@@ -7533,10 +10949,12 @@ ${messages || '(无对话记录)'}
                 //   - 历史 bug:只写 state.chat.contextOrder[aiPersonId],刷新后内存丢失
                 //   - SDK.replyPrompts.setOrder 只能改 replyPrompts 自己的顺序,无法影响 system-* 位置
                 //   - prompt-builder 读 contextOrder 来决定注入顺序,所以必须持久化
+                //   ★ v0.82 群聊版:key 改用 groupId,内存结构按 aiPersonId/groupId 分桶
                 if (!this.app.state) this.app.state = {};
                 if (!this.app.state.chat) this.app.state.chat = {};
                 if (!this.app.state.chat.contextOrder) this.app.state.chat.contextOrder = {};
-                this.app.state.chat.contextOrder[aiPersonId] = promptIdsInOrder.slice();
+                const orderKey = target.isGroup ? `group::${target.groupId}` : target.aiPersonId;
+                this.app.state.chat.contextOrder[orderKey] = promptIdsInOrder.slice();
                 _saveContextOrder(this.app.state.chat.contextOrder);
                 // ★ v0.61.8.11 保留滚动位置
                 this._preserveScrollAroundTick();
@@ -7603,7 +11021,13 @@ ${messages || '(无对话记录)'}
                 } catch (_) { /* ignore */ }
                 try {
                     window.dispatchEvent(new CustomEvent('chat:reply-prompt-updated', {
-                        detail: { aiPersonId, action: 'reorder', promptIdsInOrder: promptIdsInOrder.slice() },
+                        detail: {
+                                aiPersonId: target.aiPersonId,
+                                groupId: target.groupId,
+                                isGroup: target.isGroup,
+                                action: 'reorder',
+                                promptIdsInOrder: promptIdsInOrder.slice(),
+                            },
                     }));
                 } catch (_) {}
                 return true;
@@ -7620,33 +11044,42 @@ ${messages || '(无对话记录)'}
              *   - invalidate + syncNow 让 detail 页重画(序号/preview 100% 反映最新顺序)
              */
             async savePromptManagerChanges(payload = {}) {
-                const sdk = window.settingsSdk;
                 // 1) 从 DOM 读「当前上下文」section 当前顺序
                 const listEl = document.querySelector('.prompt-manager .pm-active-list');
                 const rootEl = document.querySelector('.prompt-manager');
-                const aiPersonId = payload?.aiPersonId
-                    || rootEl?.getAttribute('data-ai-person-id')
-                    || '';
+                // ★ v0.82 群聊版:从 data-* 读 groupId / mode,优先级 payload → DOM
+                const domGroupId = rootEl?.getAttribute('data-group-id') || '';
+                const domIsGroup = rootEl?.getAttribute('data-is-group') === 'true';
+                const target = this._resolvePromptTarget({
+                    isGroup: payload?.isGroup !== undefined ? payload.isGroup : domIsGroup,
+                    groupId: payload?.groupId || domGroupId,
+                    mode: payload?.mode || rootEl?.getAttribute('data-chat-mode') || 'calendar',
+                    aiPersonId: payload?.aiPersonId || rootEl?.getAttribute('data-ai-person-id') || '',
+                });
                 const ids = listEl
                     ? Array.from(listEl.querySelectorAll('.pm-card.pm-item'))
                         .map((el) => el.getAttribute('data-prompt-id') || el.dataset?.promptId)
                         .filter(Boolean)
                     : [];
-                if (!aiPersonId) {
-                    try { this.toolkit?.island?.notify?.('warning', '无法保存', '未找到当前 AI 人设'); } catch (_) {}
+                if ((target.isGroup && !target.groupId) || (!target.isGroup && !target.aiPersonId)) {
+                    try { this.toolkit?.island?.notify?.('warning', '无法保存', '未找到当前对象'); } catch (_) {}
                     return null;
                 }
                 if (ids.length === 0) {
                     try { this.toolkit?.island?.notify?.('info', '无需保存', '当前上下文为空'); } catch (_) {}
                     return null;
                 }
-                // 2) 落盘到 IndexedDB(走 sdk.replyPrompts.setOrder,与 toggle/move/edit/create 全部一致)
-                if (!sdk?.replyPrompts?.setOrder) {
+                // 2) 落盘到 IndexedDB(走 sdk.replyPrompts.setOrder / sdk.groupReplyPrompts.setOrder)
+                if (!target.sdkReply?.setOrder) {
                     try { this.toolkit?.island?.notify?.('error', 'SDK 未就绪', '请稍后再试'); } catch (_) {}
                     return null;
                 }
                 try {
-                    await sdk.replyPrompts.setOrder(aiPersonId, ids);
+                    if (target.isGroup) {
+                        await target.sdkReply.setOrder(target.user, target.groupId, target.mode, ids);
+                    } else {
+                        await target.sdkReply.setOrder(target.aiPersonId, ids);
+                    }
                 } catch (err) {
                     console.warn('[chat-app] savePromptManagerChanges replyPrompts failed', err);
                     try { this.toolkit?.island?.notify?.('warning', '保存失败', err?.message || '请重试'); } catch (_) {}
@@ -7657,7 +11090,8 @@ ${messages || '(无对话记录)'}
                 if (!this.app.state) this.app.state = {};
                 if (!this.app.state.chat) this.app.state.chat = {};
                 if (!this.app.state.chat.contextOrder) this.app.state.chat.contextOrder = {};
-                this.app.state.chat.contextOrder[aiPersonId] = ids.slice();
+                const orderKey = target.isGroup ? `group::${target.groupId}` : target.aiPersonId;
+                this.app.state.chat.contextOrder[orderKey] = ids.slice();
                 _saveContextOrder(this.app.state.chat.contextOrder);
                 // ★ v0.61.8.11 保留滚动位置
                 this._preserveScrollAroundTick();
@@ -7678,7 +11112,13 @@ ${messages || '(无对话记录)'}
                 try {
                     this.toolkit?.island?.notify?.('success', '已保存', `当前上下文 ${ids.length} 条已落盘`);
                 } catch (_) {}
-                return { aiPersonId, saved: ids.length, ids };
+                return {
+                    aiPersonId: target.aiPersonId,
+                    groupId: target.groupId,
+                    isGroup: target.isGroup,
+                    saved: ids.length,
+                    ids,
+                };
             },
 
             /**
@@ -8099,14 +11539,12 @@ ${messages || '(无对话记录)'}
 
             /** 为聊天设置页面绑定交互 */
             initChatSettingsInteractions() {
-                console.log('[chat-app] initChatSettingsInteractions called');
                 const page = document.querySelector('.app-shell[data-app-id="chat"] .chat-settings');
                 if (!page) {
                     console.warn('[chat-app] initChatSettingsInteractions: .chat-settings not found');
                     return;
                 }
                 if (page.__chatSettingsInteractionsBound) {
-                    console.log('[chat-app] initChatSettingsInteractions: already bound, skipping');
                     return;
                 }
                 page.__chatSettingsInteractionsBound = true;
@@ -8122,17 +11560,93 @@ ${messages || '(无对话记录)'}
                         const aiPersonId = aiIdInput?.value || page.dataset.contactId || '';
                         const mode = modeInput?.value || 'calendar';
 
-                        console.log('[chat-app] remark clicked, aiPersonId:', aiPersonId, 'mode:', mode);
                         if (aiPersonId) {
                             openAiRemarkModal(aiPersonId, mode);
                         }
                         event.preventDefault();
                         event.stopPropagation();
                     });
-                    console.log('[chat-app] initChatSettingsInteractions: remark handler attached');
                 }
 
-                console.log('[chat-app] initChatSettingsInteractions bound');
+                // ★ v0.67.x 互动统计自动刷新:
+                //   - chat-settings 打开后,每 4s 重读一次 chatMessages,统计有变化时
+                //     **就地更新 .chat-stat-value 文本** + 写回 [data-*] 钩子,**不再**
+                //     调 invalidateRendererCache / bridge.syncNow({force:true})。
+                //   - 历史实现走 framework 全页 v-html 重建,会导致 .chat-settings-page 滚动
+                //     位置被重置,体感像「页面被强刷 / 自动回滚到顶部」,且对性能也是浪费。
+                //   - timer 绑定到 page 元素上,framework v-html 重建不影响旧 timer
+                //   - 离开 chat-settings 时由 closeDetail 清掉(见下)
+                const statsRefreshIntervalMs = 4000;
+                let lastStatsSig = '';
+                const computeSig = (msgList) => {
+                    const daySet = new Set();
+                    let aiCount = 0;
+                    for (const m of msgList) {
+                        if (m && m.sender === 'ai') aiCount += 1;
+                        const ts = Number(m && m.timestamp);
+                        if (!Number.isFinite(ts) || ts <= 0) continue;
+                        const d = new Date(ts);
+                        daySet.add(`${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`);
+                    }
+                    return `${msgList.length}|${aiCount}|${daySet.size}`;
+                };
+                const patchStatsDom = (grid, msgList) => {
+                    // 计算四组数字
+                    const daySet = new Set();
+                    let aiCount = 0;
+                    for (const m of msgList) {
+                        if (m && m.sender === 'ai') aiCount += 1;
+                        const ts = Number(m && m.timestamp);
+                        if (!Number.isFinite(ts) || ts <= 0) continue;
+                        const d = new Date(ts);
+                        daySet.add(`${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`);
+                    }
+                    const total = msgList.length;
+                    const chatDays = daySet.size;
+                    const avgPerDay = chatDays > 0 ? String(Math.ceil(total / chatDays)) : '0';
+                    // 写回 data-* 钩子(下次进来不会过时)
+                    grid.dataset.totalMessages = String(total);
+                    grid.dataset.aiReplies = String(aiCount);
+                    grid.dataset.chatDays = String(chatDays);
+                    grid.dataset.avgPerDay = avgPerDay;
+                    // 就地写四张 .chat-stat-value 文本(避免重建 DOM → 滚动位置保留)
+                    const valueNodes = grid.querySelectorAll('.chat-stat-value');
+                    if (valueNodes.length >= 4) {
+                        valueNodes[0].textContent = String(total);
+                        valueNodes[1].textContent = String(aiCount);
+                        valueNodes[2].textContent = String(chatDays);
+                        valueNodes[3].textContent = avgPerDay;
+                    }
+                };
+                page.__chatSettingsStatsTimer = setInterval(() => {
+                    try {
+                        // 详情页已被关闭(page 节点已从 DOM 移除)就停 timer
+                        if (!document.body.contains(page)) {
+                            clearInterval(page.__chatSettingsStatsTimer);
+                            page.__chatSettingsStatsTimer = null;
+                            return;
+                        }
+                        const aiIdInput = page.querySelector('#set-remark-aiid');
+                        const modeInput = page.querySelector('#set-remark-mode');
+                        const aiPersonId = aiIdInput?.value || page.dataset.contactId || '';
+                        const mode = modeInput?.value || 'calendar';
+                        if (!aiPersonId) return;
+
+                        const sdk = window.settingsSdk;
+                        const defaultUser = sdk?.defaultUserCard?.getDefault?.() || sdk?.users?.getActive?.();
+                        const msgList = (sdk?.chatMessages?.list && defaultUser)
+                            ? sdk.chatMessages.list(defaultUser, aiPersonId, mode)
+                            : [];
+                        const sig = computeSig(msgList);
+                        if (sig === lastStatsSig) return; // 没变化,跳过
+                        lastStatsSig = sig;
+                        // ★ 就地更新四张统计卡的数字(不动其他 DOM)
+                        const grid = page.querySelector('.chat-stat-grid[data-chat-settings-stats]');
+                        if (grid) patchStatsDom(grid, msgList);
+                    } catch (err) {
+                        // 静默 — 不影响聊天设置其他交互
+                    }
+                }, statsRefreshIntervalMs);
             },
 
             /**
@@ -8178,27 +11692,13 @@ ${messages || '(无对话记录)'}
                 };
                 window.addEventListener('chat:message-sent', handler);
                 view.__calendarViewSentHandler = handler;
-
-                // ★ v0.65.1 「发给 AI Prompt」textarea → 实时持久化
-                const textarea = view.querySelector('.calendar-prompt-textarea');
-                if (textarea && !textarea.__boundPersist) {
-                    textarea.__boundPersist = true;
-                    const persist = () => {
-                        try {
-                            const key = `xiaoting::calendar-prompt-template-${textarea.dataset.aiPersonId || ''}-${textarea.dataset.mode || 'calendar'}`;
-                            localStorage.setItem(key, textarea.value || '');
-                        } catch (_) {}
-                    };
-                    textarea.addEventListener('input', persist);
-                    textarea.addEventListener('blur', persist);
-                }
             },
 
             /**
-             * ★ v0.32 日历视图:点击某天,展开「当天 AI/用户消息记录」面板
-             *   - 走 framework action 派发,目标 method 在 methods 内
+             * ★ 点击日期 div 展开当天面板
              *   - 用 window.__chatCalendarViewSelectedDate 持久化「当前展开的日期」,
              *     renderCalendarViewPage 重新渲染时能记住状态
+             *   - 由于面板 header 已经没有关闭按钮，state 持久化只是个无害的旁路
              */
             viewCalendarDay(payload = {}) {
                 const { aiPersonId, mode, date } = payload;
@@ -8213,7 +11713,8 @@ ${messages || '(无对话记录)'}
             },
 
             /**
-             * ★ v0.32 关闭「当天消息面板」
+             * ★ 保留 closeCalendarDay method 兜底（理论上没有关闭按钮就不会触发）
+             *   - 外部如果通过别的入口想清掉展开状态，仍然可以走这里
              */
             closeCalendarDay() {
                 try {
@@ -8253,57 +11754,33 @@ ${messages || '(无对话记录)'}
                 return { ok: true, year: next.getFullYear(), month: next.getMonth() };
             },
 
-            /** 为群聊详情页绑定输入区与工具栏交互 */
-            async initGroupChatInteractions() {
-                // ★ FIX v0.47.1: 等待 .chat-group 真正出现在 DOM 后再绑定（同 private）
-                const waitForElement = (selector, timeout = 2000) => {
-                    return new Promise((resolve) => {
-                        const start = Date.now();
-                        const check = () => {
-                            const el = document.querySelector(selector);
-                            if (el) {
-                                resolve(el);
-                            } else if (Date.now() - start > timeout) {
-                                resolve(null);
-                            } else {
-                                requestAnimationFrame(check);
-                            }
-                        };
-                        check();
-                    });
-                };
-
-                const chatGroup = await waitForElement('.app-shell[data-app-id="chat"] .chat-group', 2000);
+            /** 为群聊详情页绑定输入区与工具栏交互(每次进 detail 都会调用一次,这里要做幂等) */
+            async initGroupChatInteractions(providedEl) {
+                console.log('[chat-group] initGroupChatInteractions START, providedEl=', !!providedEl);
+                // ★ FIX v0.69:跟私聊对齐 — MutationObserver 驱动,providedEl 由 observer 直接传入
+                //   不用 queueMicrotask + waitForElement(会拿到 v-html 替换前的旧节点)
+                const chatGroup = providedEl || document.querySelector('.app-shell[data-app-id="chat"] .chat-group');
                 if (!chatGroup) {
-                    console.warn('[chat-app] initGroupChatInteractions: .chat-group not found after 2s');
                     return;
                 }
-                if (chatGroup.__chatGroupInteractionsBound) return;
+                if (chatGroup.__chatGroupInteractionsBound) {
+                    return;
+                }
                 chatGroup.__chatGroupInteractionsBound = true;
+                console.log('[chat-group] chatGroup bound, groupId=', chatGroup.dataset.groupId);
 
                 // ★ v0.49 表情选择器面板 — 首次绑定时预填缓存 + 触发重画
                 //   v0.49.1 修复:之前调 _fillEmojiPickerImages 因 DOM 是 loading HTML
                 //   查不到 .chat-emoji-cell 死锁 → 永远 loading
-                try {
-                    const sdk = window.settingsSdk;
-                    const activeUser = sdk?.users?.getActive?.();
-                    const ids = activeUser?.boundResources?.stickerGroupIds || [];
-                    if (ids.length > 0) {
-                        // ★ v0.49.1:传 chatGroup 给 prerender,让重画后的第二次 init 能 fill 缩略图
-                        const { _prerenderEmojiPicker } = await import('./components/emoji-picker-panel.js');
-                        _prerenderEmojiPicker(ids, chatGroup).catch(err => {
-                            console.warn('[chat-app] group prerender emoji picker (init) failed', err);
-                        });
-                    }
-                } catch (err) {
-                    console.warn('[chat-app] group init emoji picker failed', err);
-                }
+                // ★ v0.70:抽出到 components/chat-emoji-panel.js
+                const { prerenderEmojiPickerOnInit, scrollChatToBottomOnInit } = await import('./components/chat-emoji-panel.js');
+                await prerenderEmojiPickerOnInit(chatGroup);
 
                 // ★ v0.50 进入群聊页即滚到底(同上,跟私聊保持一致)
-                try {
-                    const initGroupMessagesContainer = chatGroup.querySelector('.chat-messages');
-                    scrollToBottomWithRetry(initGroupMessagesContainer);
-                } catch (_) {}
+                scrollChatToBottomOnInit(chatGroup);
+
+                // 「对方正在输入中」状态重放（同私聊，见 initPrivateChatInteractions 的注释）
+                applyTypingToRoot(chatGroup);
 
                 // ============================================================
                 // ★ v0.62 群聊发送消息(文本 / 图片 / 语音 / 位置 / 红包 / 转账 / sticker)
@@ -8315,6 +11792,18 @@ ${messages || '(无对话记录)'}
                 const messagesContainer = chatGroup.querySelector('.chat-messages');
                 const groupId = chatGroup.dataset.conversationId || chatGroup.dataset.groupId || '';
                 const mode = chatGroup.dataset.mode || 'calendar';
+
+                // ★ v0.70:抽到 components/chat-sender-profile.js
+                const { resolveSenderProfile } = await import('./components/chat-sender-profile.js');
+                const _resolveSenderInfo = () => {
+                    const { sender, senderName, userAvatar, userAvatarBg } = resolveSenderProfile();
+                    return { sender, senderName, userAvatar, userAvatarBg };
+                };
+                // ★ v0.70:多选模式工具抽到 components/chat-multi-select.js
+                const { createMultiSelectController } = await import('./components/chat-multi-select.js');
+                const multiSelect = createMultiSelectController(chatGroup);
+                // ★ v0.70:长按发送按钮 + Enter 键发送抽到 components/chat-press-sender.js
+                const { createChatSendHandlers } = await import('./components/chat-press-sender.js');
 
                 /**
                  * ★ v0.62 群聊发送文本消息(与私聊 doSend 平行)
@@ -8328,11 +11817,12 @@ ${messages || '(无对话记录)'}
                         window.__phoneIsland?.notify?.('error', '发送失败', 'SDK 未就绪');
                         return;
                     }
-                    let senderName = '我';
-                    try {
-                        const defaultUser = sdk.defaultUserCard?.getDefault?.() || sdk.users?.getActive?.();
-                        senderName = defaultUser?.socialProfiles?.chat?.nickname || defaultUser?.name || '我';
-                    } catch (_) {}
+                    // ★ v0.70:统一从 chat-sender-profile.js 拿 sender + senderName
+                    const { sender, senderName } = _resolveSenderInfo();
+                    if (!sender) {
+                        window.__phoneIsland?.notify?.('error', '发送失败', '未找到默认用户');
+                        return;
+                    }
 
                     // ★ v0.62 群聊 replyTo(私聊同款,跨 (groupId, mode) 校验)
                     //   quoteMessage 写入的 replyingTo 用 aiPersonId 字段,在群聊里就是 groupId
@@ -8356,11 +11846,6 @@ ${messages || '(无对话记录)'}
                     };
 
                     try {
-                        const sender = sdk.defaultUserCard?.getDefault?.() || sdk.users?.getActive?.();
-                        if (!sender) {
-                            window.__phoneIsland?.notify?.('error', '发送失败', '未找到默认用户');
-                            return;
-                        }
                         const saved = await sdk.chatMessages.add(sender, groupId, mode, {
                             ...msg,
                             conversationType: 'group',
@@ -8403,77 +11888,27 @@ ${messages || '(无对话记录)'}
                 };
 
                 // ★ v0.62 群聊页发送按钮也改造:长按→调 AI,短按→只发文字
+                //   ★ v0.70:startPress/endPress/Enter 监听抽到 components/chat-press-sender.js
+                //     群聊没有真正的 AI 长按(_longPressInvokeAi),仅 doSend + 「AI 暂未支持」提示
                 if (sendBtn) {
-                    const PRESS_THRESHOLD_MS = 800;
-                    let pressTimer = null;
-                    let pressTriggered = false;
-                    const startPress = (ev) => {
-                        if (!messageInput) return;
-                        const text = (messageInput.innerText || messageInput.textContent || '').trim();
-                        if (!text) return;
-                        pressTriggered = false;
-                        sendBtn.classList.add('is-pressing');
-                        pressTimer = setTimeout(() => {
-                            pressTriggered = true;
-                            sendBtn.classList.add('is-pressing--armed');
+                    const PRESS_THRESHOLD_MS = 800; // 群聊比私聊短
+                    const { bindEnterToSend, bindPressToSend } = createChatSendHandlers({
+                        sendBtn,
+                        messageInput,
+                        threshold: PRESS_THRESHOLD_MS,
+                        requireTextOnStart: true, // 群聊:输入框为空时不启动长按
+                        doSend,
+                        onLongPress: async () => {
+                            // 群聊的 aiPersonId 不存在,sendMessageWithAi 不适用于群聊
+                            // 这里仅 doSend + 提示,实际 AI 调用留给 v0.63 群聊版本
+                            await doSend();
                             try {
-                                window.__phoneIsland?.notify?.('info', '正在发送给 AI…', text.slice(0, 30));
+                                window.__phoneIsland?.notify?.('info', '群聊 AI 对话', '暂未支持');
                             } catch (_) {}
-                            sendBtn.style.setProperty('--press-progress', '1');
-                            if (typeof ev?.preventDefault === 'function') ev.preventDefault();
-                            if (typeof ev?.stopPropagation === 'function') ev.stopPropagation();
-                        }, PRESS_THRESHOLD_MS);
-                    };
-                    const endPress = (ev) => {
-                        if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
-                        sendBtn.classList.remove('is-pressing', 'is-pressing--armed');
-                        const text = messageInput ? (messageInput.innerText || messageInput.textContent || '').trim() : '';
-                        if (!text) return;
-                        if (pressTriggered) {
-                            ev?.preventDefault?.();
-                            ev?.stopPropagation?.();
-                            (async () => {
-                                await doSend();
-                                // 群聊的 aiPersonId 不存在,sendMessageWithAi 不适用于群聊
-                                // 这里仅做提示,实际 AI 调用留给 v0.63 群聊版本
-                                try {
-                                    window.__phoneIsland?.notify?.('info', '群聊 AI 对话', '暂未支持');
-                                } catch (_) {}
-                            })();
-                        } else {
-                            ev?.preventDefault?.();
-                            ev?.stopPropagation?.();
-                            doSend();
-                        }
-                        pressTriggered = false;
-                    };
-                    sendBtn.addEventListener('pointerdown', startPress);
-                    sendBtn.addEventListener('pointerup', endPress);
-                    sendBtn.addEventListener('pointercancel', endPress);
-                    sendBtn.addEventListener('pointerleave', (ev) => { if (pressTimer) endPress(ev); });
-                    sendBtn.addEventListener('touchstart', (ev) => {
-                        if (sendBtn.dataset.pressing === '1') return;
-                        sendBtn.dataset.pressing = '1';
-                        startPress(ev);
-                    }, { passive: true });
-                    sendBtn.addEventListener('touchend', (ev) => {
-                        if (sendBtn.dataset.pressing !== '1') return;
-                        sendBtn.dataset.pressing = '0';
-                        endPress(ev);
+                        },
                     });
-                    sendBtn.addEventListener('touchcancel', (ev) => {
-                        if (sendBtn.dataset.pressing !== '1') return;
-                        sendBtn.dataset.pressing = '0';
-                        endPress(ev);
-                    });
-                }
-                if (messageInput) {
-                    messageInput.addEventListener('keydown', (ev) => {
-                        if (ev.key === 'Enter' && !ev.shiftKey && !ev.isComposing) {
-                            ev.preventDefault();
-                            doSend();
-                        }
-                    });
+                    bindEnterToSend();
+                    bindPressToSend();
                 }
 
                 /**
@@ -8486,19 +11921,13 @@ ${messages || '(无对话记录)'}
                         window.__phoneIsland?.notify?.('error', 'SDK 未就绪');
                         return;
                     }
-                    const sender = sdk.defaultUserCard?.getDefault?.() || sdk.users?.getActive?.();
-                    if (!sender) {
+                    // ★ v0.70:从 chat-sender-profile.js 拿 sender + senderName + avatar
+                    const senderInfo = _resolveSenderInfo();
+                    if (!senderInfo.sender) {
                         window.__phoneIsland?.notify?.('error', '未找到默认用户');
                         return;
                     }
-                    let userAvatar = '', userAvatarBg = '';
-                    let senderName = '我';
-                    try {
-                        const chatProfile = sender.socialProfiles?.chat || {};
-                        userAvatar = chatProfile.avatar || sender.avatar || '';
-                        userAvatarBg = chatProfile.avatarBg || sender.avatarBg || '';
-                        senderName = chatProfile.nickname || sender.name || '我';
-                    } catch (_) {}
+                    const { sender, senderName, userAvatar, userAvatarBg } = senderInfo;
 
                     if (action === 'image') {
                         chatModalManager.openDescImageSend({
@@ -8676,44 +12105,44 @@ ${messages || '(无对话记录)'}
                             bubbles: true,
                         }));
                     } else if (action === 'game') {
+                        // 带上 groupId：大厅要知道跟谁玩，也才能显示「继续上一局」
                         document.dispatchEvent(new CustomEvent('app:page-action', {
-                            detail: { action: 'detail', appId: 'chat', pageId: 'game-selector' },
+                            detail: { action: 'detail', appId: 'chat', pageId: `game-selector-${groupId}` },
                             bubbles: true,
                         }));
+                    } else if (action === 'call') {
+                        // ★ v0.69 群聊通话(语音/视频),暂用 voice,可后续加选择器
+                        try {
+                            const { callManager } = await import('./services/call-manager.js');
+                            await callManager.startOutgoingCall(groupId, 'voice', mode);
+                        } catch (err) {
+                            console.warn('[chat-app] group call failed', err);
+                            window.__phoneIsland?.notify?.('warning', '通话启动失败');
+                        }
+                    } else if (action === 'pat') {
+                        window.__phoneIsland?.notify?.('info', '拍一拍', '群拍一拍功能即将开放');
+                    } else if (action === 'card') {
+                        window.__phoneIsland?.notify?.('info', '群名片', '群名片功能即将开放');
+                    } else if (action === 'custom') {
+                        window.__phoneIsland?.notify?.('info', '自定义', '自定义消息功能即将开放');
                     } else {
                         window.__phoneIsland?.notify?.('info', '群聊工具', '功能即将开放');
                     }
                 };
 
-                const selectedMessages = new Set();
-                const setMultiSelectMode = (enabled) => {
-                    chatGroup.classList.toggle('multi-select-mode', enabled);
-                    chatGroup.querySelectorAll('[data-selected-count]').forEach(el => { el.textContent = selectedMessages.size; });
-                    if (!enabled) {
-                        selectedMessages.clear();
-                        chatGroup.querySelectorAll('.message-wrapper.selected').forEach(wrapper => wrapper.classList.remove('selected'));
-                        chatGroup.querySelectorAll('.message-select-button[aria-checked="true"]').forEach(button => button.setAttribute('aria-checked', 'false'));
-                    }
-                };
-                const updateSelection = (button) => {
-                    const messageId = button.dataset.messageSelect;
-                    const wrapper = button.closest('.message-wrapper');
-                    if (!messageId || !wrapper) return;
-                    if (selectedMessages.has(messageId)) { selectedMessages.delete(messageId); wrapper.classList.remove('selected'); button.setAttribute('aria-checked', 'false'); }
-                    else { selectedMessages.add(messageId); wrapper.classList.add('selected'); button.setAttribute('aria-checked', 'true'); }
-                    chatGroup.querySelectorAll('[data-selected-count]').forEach(el => { el.textContent = selectedMessages.size; });
-                };
+                // ★ v0.70:多选模式工具已经抽到 components/chat-multi-select.js,见顶部 multiSelect 实例
+
                 chatGroup.addEventListener('click', async (event) => {
                     const selectButton = event.target.closest('[data-message-select]');
-                    if (selectButton && chatGroup.classList.contains('multi-select-mode')) { updateSelection(selectButton); event.preventDefault(); event.stopPropagation(); return; }
+                    if (selectButton && multiSelect.isActive()) { multiSelect.toggleMessage(selectButton); event.preventDefault(); event.stopPropagation(); return; }
                     const multiAction = event.target.closest('[data-multi-action]');
                     if (multiAction) {
                         const action = multiAction.dataset.multiAction;
                         if (action === 'cancel') {
-                            setMultiSelectMode(false);
+                            multiSelect.disable();
                         } else if (action === 'forward') {
                             // ★ v0.33 群聊转发
-                            const messageIds = Array.from(selectedMessages);
+                            const messageIds = multiSelect.getSelectedIds();
                             const mode = chatGroup.dataset.mode || 'calendar';
                             const convType = chatGroup.dataset.conversationType || 'group';
                             const convId = chatGroup.dataset.conversationId || chatGroup.dataset.groupId || '';
@@ -8741,119 +12170,20 @@ ${messages || '(无对话记录)'}
                                 console.error('[chat-app] group forward failed', err);
                                 window.__phoneIsland?.notify?.('error', '转发失败', err?.message || '');
                             }
-                            setMultiSelectMode(false);
+                            multiSelect.disable();
                         } else {
-                            window.__phoneIsland?.notify?.('success', `消息${action === 'favorite' ? '收藏' : '删除'}成功`, `已选择 ${selectedMessages.size} 条消息`);
-                            setMultiSelectMode(false);
+                            window.__phoneIsland?.notify?.('success', `消息${action === 'favorite' ? '收藏' : '删除'}成功`, `已选择 ${multiSelect.getSelectedCount()} 条消息`);
+                            multiSelect.disable();
                         }
                         event.preventDefault();
                         event.stopPropagation();
                         return;
                     }
                     const multiSelectButton = event.target.closest('[data-action="multiselect"]');
-                    if (multiSelectButton) { setMultiSelectMode(!chatGroup.classList.contains('multi-select-mode')); event.preventDefault(); event.stopPropagation(); return; }
+                    if (multiSelectButton) { multiSelect.toggle(); event.preventDefault(); event.stopPropagation(); return; }
 
-                    // ★ v0.49 群聊也支持 #emojiBtn 笑脸切换表情面板
-                    const groupEmojiBtn = event.target.closest('#emojiBtn');
-                    if (groupEmojiBtn) {
-                        const chatApp = externalAppRegistry.getApp('chat');
-                        const isOpen = chatGroup.getAttribute('data-emoji-open') === '1';
-                        if (isOpen) {
-                            chatGroup.removeAttribute('data-emoji-open');
-                            if (chatApp.state?.chat) chatApp.state.chat.emojiOpen = false;
-                        } else {
-                            chatGroup.setAttribute('data-emoji-open', '1');
-                            if (chatApp.state?.chat) chatApp.state.chat.emojiOpen = true;
-                            try {
-                                const sdk = window.settingsSdk;
-                                const activeUser = sdk?.users?.getActive?.();
-                                const ids = activeUser?.boundResources?.stickerGroupIds || [];
-                                const { _prerenderEmojiPicker } = await import('./components/emoji-picker-panel.js');
-                                _prerenderEmojiPicker(ids, chatGroup).catch(err => {
-                                    console.warn('[chat-app] group prerender emoji picker failed', err);
-                                });
-                            } catch (err) {
-                                console.warn('[chat-app] group prerender emoji picker (toggle) failed', err);
-                            }
-                        }
-                        event.preventDefault();
-                        event.stopPropagation();
-                        return;
-                    }
-
-                    // ★ v0.49 群聊表情面板关闭按钮
-                    const groupEmojiClose = event.target.closest('.chat-emoji-picker__close');
-                    if (groupEmojiClose) {
-                        chatGroup.removeAttribute('data-emoji-open');
-                        const chatApp = externalAppRegistry.getApp('chat');
-                        if (chatApp.state?.chat) chatApp.state.chat.emojiOpen = false;
-                        event.preventDefault();
-                        event.stopPropagation();
-                        return;
-                    }
-
-                    // ★ v0.49 群聊表情图片点击 → 发送 sticker 消息
-                    const groupStickerCell = event.target.closest('.chat-emoji-cell[data-sticker-code]');
-                    if (groupStickerCell) {
-                        const code = groupStickerCell.getAttribute('data-sticker-code');
-                        const groupId = chatGroup.dataset.conversationId || chatGroup.dataset.groupId || '';
-                        const mode = chatGroup.dataset.mode || 'calendar';
-                        try {
-                            const sdk = window.settingsSdk;
-                            const sender = sdk?.defaultUserCard?.getDefault?.() || sdk?.users?.getActive?.();
-                            const { _loadSource } = await import('./components/emoji-picker-panel.js');
-                            const url = await _loadSource(code);
-                            if (!url) {
-                                window.__phoneIsland?.notify?.('warning', '表情加载失败', '原图不存在');
-                                event.preventDefault();
-                                event.stopPropagation();
-                                return;
-                            }
-                            const now = Date.now();
-                            const msgId = `sticker-${now}`;
-                            const senderName = (sender?.socialProfiles?.chat?.nickname) || sender?.name || '我';
-                            let saved = null;
-                            if (sdk?.chatMessages?.add && sender) {
-                                saved = await sdk.chatMessages.add(sender, groupId, mode, {
-                                    id: msgId,
-                                    sender: 'user',
-                                    senderName,
-                                    conversationType: 'group',
-                                    conversationId: groupId,
-                                    type: 'sticker',
-                                    content: '[表情]',
-                                    url,
-                                    stickerCode: code,
-                                    timestamp: now,
-                                });
-                            }
-                            if (saved) {
-                                window.invalidateRendererCache?.('chat', chatGroup.dataset.groupId);
-                                const messagesContainer = chatGroup.querySelector('.chat-messages');
-                                if (messagesContainer) {
-                                    const { renderTextBubble } = await import('./components/text-bubble.js');
-                                    const tempDiv = document.createElement('div');
-                                    tempDiv.className = 'message-wrapper user';
-                                    tempDiv.dataset.messageId = msgId;
-                                    tempDiv.innerHTML = renderTextBubble(saved, null, { aiPersonId: groupId, mode });
-                                    messagesContainer.appendChild(tempDiv);
-                                    scrollToBottomWithRetry(messagesContainer);
-                                }
-                                chatGroup.removeAttribute('data-emoji-open');
-                                const chatApp = externalAppRegistry.getApp('chat');
-                                if (chatApp.state?.chat) chatApp.state.chat.emojiOpen = false;
-                                window.__phoneIsland?.notify?.('success', '已发送表情');
-                            } else {
-                                window.__phoneIsland?.notify?.('warning', '发送失败', '消息未保存');
-                            }
-                        } catch (err) {
-                            console.error('[chat-app] group send sticker failed', err);
-                            window.__phoneIsland?.notify?.('error', '发送失败', err?.message || '');
-                        }
-                        event.preventDefault();
-                        event.stopPropagation();
-                        return;
-                    }
+                    // ★ v0.70:emoji 面板 / sticker 发送已经抽到 components/chat-emoji-panel.js
+                    //   由 init 末尾的 bindEmojiPanelInteractions 统一接管
 
                     const expandBtn = event.target.closest('.expand-toolbar-btn');
                     if (expandBtn) {
@@ -8901,7 +12231,7 @@ ${messages || '(无对话记录)'}
                         }
                     }
 
-                    const toolBtn = event.target.closest('.group-toolbar-btn');
+                    const toolBtn = event.target.closest('.toolbar-btn[data-action]');
                     if (toolBtn) {
                         const expandBtn = chatGroup.querySelector('.expand-toolbar-btn');
                         const toolbar = chatGroup.querySelector('.input-toolbar');
@@ -8910,47 +12240,38 @@ ${messages || '(无对话记录)'}
                         expandBtn?.setAttribute('aria-expanded', 'false');
 
                         const action = toolBtn.dataset.action;
+                        // ★ v0.69 群聊工具栏统一走 handleGroupToolBar(图片/语音/位置/红包/转账/通话/@成员/公告/成员/收藏/游戏/拍一拍/名片/自定义)
+                        handleGroupToolBar(action).catch(err => {
+                            console.error('[chat-app] group toolbar failed', err);
+                            window.__phoneIsland?.notify?.('error', '操作失败', err?.message || '');
+                        });
+                        event.preventDefault();
+                        event.stopPropagation();
+                        return;
+                    }
 
-                        // 收藏按钮 - 跳转到该群聊的收藏
-                        if (action === 'favorite') {
-                            const groupId = chatGroup.dataset.groupId || 'group-1';
-                            document.dispatchEvent(new CustomEvent('app:page-action', {
-                                detail: { action: 'detail', appId: 'chat', pageId: `favorites-group_${groupId}` },
-                                bubbles: true,
-                            }));
-                            event.preventDefault();
-                            event.stopPropagation();
-                            return;
-                        }
-                        if (action === 'game') {
-                            document.dispatchEvent(new CustomEvent('app:page-action', {
-                                detail: { action: 'detail', appId: 'chat', pageId: 'game-selector' },
-                                bubbles: true,
-                            }));
-                            event.preventDefault();
-                            event.stopPropagation();
-                            return;
-                        }
-                        if (action && window.__phoneIsland?.notify) {
-                            const labels = {
-                                image: '图片',
-                                voice: '语音',
-                                mention: '@成员',
-                                announcement: '公告',
-                                members: '成员',
-                                game: '游戏',
-                            };
-                            // ★ v0.62 走统一工具栏处理器(私聊同款)
-                            handleGroupToolBar(action).catch(err => {
-                                console.error('[chat-app] group toolbar (notify fallback) failed', err);
-                                window.__phoneIsland.notify('info', labels[action] || '群聊工具', '功能即将开放');
+                    // ★ v0.69 工具栏翻页指示器(小圆点点击切换 page1/page2)
+                    const toolbarDot = event.target.closest('.toolbar-dot');
+                    if (toolbarDot) {
+                        const targetPage = toolbarDot.dataset.pageTarget;
+                        const toolbar = chatGroup.querySelector('.input-toolbar');
+                        if (toolbar) {
+                            toolbar.querySelectorAll('.toolbar-page').forEach((p) => {
+                                p.classList.toggle('toolbar-page--active', p.dataset.page === targetPage);
+                            });
+                            toolbar.querySelectorAll('.toolbar-dot').forEach((d) => {
+                                d.classList.toggle('toolbar-dot--active', d.dataset.pageTarget === targetPage);
                             });
                         }
                         event.preventDefault();
                         event.stopPropagation();
+                        return;
                     }
                 });
-                console.log('[chat-app] initGroupChatInteractions bound');
+
+                // ★ v0.70:emoji panel / sticker 发送由独立 listener 处理
+                const { bindEmojiPanelInteractions } = await import('./components/chat-emoji-panel.js');
+                bindEmojiPanelInteractions(chatGroup, { conversationType: 'group', chatApp: this });
             },
 
             /**
@@ -8974,19 +12295,52 @@ ${messages || '(无对话记录)'}
                 // 占位,所有交互由 framework data-app-action 派发
             },
 
-            /** 注入 .chat-tab-indicator div(仅初始化一次) */
+            /** 注入 .chat-tab-indicator div(每次框架重渲后都补一遍,防 DOM 重建后丢失) */
             mountNavIndicator() {
-                if (this._navIndicatorMounted) return;
-                this._navIndicatorMounted = true;
                 // 只在 chat app 的 tab-bar 注入指示器
                 const tabBar = document.querySelector('.app-nav[data-app-id="chat"] .app-tab-bar');
                 if (!tabBar) {
                     console.warn('[chat-app] mountNavIndicator: .app-tab-bar not found. nav HTML:', document.querySelector('.app-nav[data-app-id="chat"]')?.outerHTML?.slice(0, 400));
                     return;
                 }
-                if (tabBar.querySelector('.chat-tab-indicator')) return;
-                tabBar.insertAdjacentHTML('afterbegin', '<div class="chat-tab-indicator"></div>');
-                console.log('[chat-app] tab-bar 指示器已注入');
+                // 幂等:已存在就不重复插入;framework 重渲时 .app-tab-bar 会被整体替换,
+                //   div 跟着旧 DOM 一起死,这里每次都重建,防止「有时候出现有时候不出现」
+                if (!tabBar.querySelector('.chat-tab-indicator')) {
+                    tabBar.insertAdjacentHTML('afterbegin', '<div class="chat-tab-indicator"></div>');
+                }
+                // ★ v0.72 修复:从聊天 detail 退出时 .app-tab-bar 会被 framework patch/重画,
+                //   chldren 改变导致 .chat-tab-indicator 丢失(常见于 closeDetailPage 触发
+                //   v-html 重渲但 chat-app 的 renderChatPage 没走到的路径)。
+                //   用 MutationObserver 监听 .app-tab-bar 的 children — indicator 消失即补上。
+                this._ensureTabIndicatorObserver();
+            },
+
+            /**
+             * ★ v0.72 启动一个全局 MutationObserver 监听 chat 顶栏 tab-bar。
+             *   - 监听 .app-nav[data-app-id="chat"] 容器(容器本身可能替换)
+             *   - 监听 chat app 全 .app-tab-bar 的 childrenList / 子树变化
+             *   - 一旦任何 .app-tab-bar 内的 .chat-tab-indicator 消失,立即补上
+             */
+            _ensureTabIndicatorObserver() {
+                if (this._tabIndicatorObserver) return;
+                if (typeof window === 'undefined' || typeof MutationObserver === 'undefined') return;
+                const self = this;
+                const tryInject = () => {
+                    const tabBar = document.querySelector('.app-nav[data-app-id="chat"] .app-tab-bar');
+                    if (tabBar && !tabBar.querySelector('.chat-tab-indicator')) {
+                        tabBar.insertAdjacentHTML('afterbegin', '<div class="chat-tab-indicator"></div>');
+                    }
+                };
+                // 监听 body 子树(framework 可能直接重建 .app-nav;绑定到 body 能覆盖所有路径)
+                this._tabIndicatorObserver = new MutationObserver(() => {
+                    tryInject();
+                });
+                this._tabIndicatorObserver.observe(document.body, {
+                    childList: true,
+                    subtree: true,
+                });
+                // 立即跑一次保底
+                tryInject();
             },
 
             /** 初始化动态页面交互 */
@@ -8998,22 +12352,476 @@ ${messages || '(无对话记录)'}
                 }
                 if (momentsPage.__momentsInteractionsBound) return;
                 momentsPage.__momentsInteractionsBound = true;
+                console.log('[chat-app] initMomentsPageInteractions: binding click events');
 
-                // 使用事件委托绑定 AI 图片点击
+                // 使用事件委托绑定点击事件
                 momentsPage.addEventListener('click', (event) => {
-                    const descImage = event.target.closest('.clickable-desc-image, .ai-image-display, .ai-image-grid-item');
+                    const target = event.target;
+                    
+                    // AI 图片点击
+                    const descImage = target.closest('.clickable-desc-image, .ai-image-display, .ai-image-grid-item');
                     if (descImage) {
+                        console.log('[chat-app] AI image clicked:', descImage.dataset.desc);
                         const desc = descImage.dataset.desc || '';
-                        const cardColor = descImage.dataset.color || '#FFE4EC';
+                        const cardColor = descImage.dataset.color || descImage.dataset.textColor || '#FFE4EC';
                         const textColor = descImage.dataset.textColor || '#D4728A';
-                        const borderColor = Object.values(DESC_IMAGE_PRESETS || {}).find(p => p.cardColor === cardColor)?.borderColor || '#C0607A';
-
-                        chatModalManager.openDescImage({ description: desc, cardColor, textColor, borderColor });
+                        
+                        chatModalManager.openDescImage({ description: desc, cardColor, textColor });
                         event.stopPropagation();
+                        return;
+                    }
+                    
+                    // 收藏按钮点击（id 在按钮 / .swipe-row 上，不在 .swipe-row__content）
+                    const likeBtn = target.closest('.moment-like-btn');
+                    if (likeBtn) {
+                        const momentData = this._getMomentDataFromCard(likeBtn);
+                        if (momentData) {
+                            this._handleLikeMoment(momentData, likeBtn);
+                        }
+                        event.stopPropagation();
+                        return;
+                    }
+                    
+                    // 分享按钮点击
+                    const shareBtn = target.closest('.moment-share-btn');
+                    if (shareBtn) {
+                        const momentData = this._getMomentDataFromCard(shareBtn);
+                        if (momentData) {
+                            this._handleShareMoment(momentData);
+                        }
+                        event.stopPropagation();
+                        return;
+                    }
+
+                    // ★ v0.87 编辑按钮点击(用户的和 AI 的动态都能改)
+                    // ★ v0.88 编辑按钮改为左滑操作
+                    const editBtn = target.closest('.moment-swipe-action--edit, .moment-edit-btn');
+                    if (editBtn) {
+                        const swipeRow = editBtn.closest('.swipe-row');
+                        const momentData = this._getMomentDataFromCard(swipeRow);
+                        if (momentData) {
+                            this._handleEditMoment(momentData);
+                        }
+                        event.stopPropagation();
+                        return;
+                    }
+
+                    // ★ v0.85 删除按钮点击
+                    // ★ v0.88 删除按钮改为左滑操作
+                    const deleteBtn = target.closest('.moment-swipe-action--delete, .moment-delete-btn');
+                    if (deleteBtn) {
+                        const swipeRow = deleteBtn.closest('.swipe-row');
+                        const momentData = this._getMomentDataFromCard(swipeRow);
+
+                        if (momentData) {
+                            this._handleDeleteMoment(momentData);
+                        }
+                        event.stopPropagation();
+                        return;
                     }
                 });
 
-                console.log('[chat-app] initMomentsPageInteractions bound');
+            },
+
+            /**
+             * 朋友圈列表重画。
+             * 发布 / 编辑 / 删除 / 收藏之后都要调 —— 之前发完朋友圈得切出去再切回来才看得到。
+             * 走 invalidate + syncNow 而不是 detailRenderTick:朋友圈是 root tab,不是 detail 页。
+             */
+            _refreshMomentsFeed() {
+                try {
+                    if (typeof window.invalidateRendererCache === 'function') {
+                        window.invalidateRendererCache('chat', null);
+                    }
+                } catch (_) { /* noop */ }
+                try { window.__appRendererBridge?.syncNow?.({ force: true }); } catch (_) { /* noop */ }
+                try { window.__detailRenderTick && window.__detailRenderTick.value++; } catch (_) { /* noop */ }
+            },
+            
+            /** 从卡片 DOM 中获取动态数据（支持新滑动结构） */
+            _getMomentDataFromCard(card) {
+                if (!card) return null;
+
+                // data-moment-id 写在 .swipe-row / 按钮上，.swipe-row__content 本身没有
+                const idHost = card.closest?.('[data-moment-id]') || card;
+                const row = card.closest?.('.swipe-row') || (card.classList?.contains('swipe-row') ? card : null);
+                const contentEl = (row && row.querySelector('.swipe-row__content'))
+                    || card.closest?.('.swipe-row__content')
+                    || card;
+
+                const momentId = idHost.dataset.momentId || row?.dataset?.momentId || '';
+                const authorId = idHost.dataset.authorId || row?.dataset?.authorId || '';
+                const isUser = (idHost.dataset.isUser || row?.dataset?.isUser) === 'true';
+
+                // 获取内容
+                const contentDiv = contentEl.querySelector('.moments-card-content');
+                const content = contentDiv ? contentDiv.textContent.trim() : '';
+
+                // 获取时间
+                const timeEl = contentEl.querySelector('.moments-author-time');
+                const timeStr = timeEl ? timeEl.textContent.trim() : '';
+
+                // 获取图片
+                const images = [];
+                const aiImages = [];
+
+                contentEl.querySelectorAll('.post-image-wrap img').forEach(img => {
+                    if (img.src) images.push(img.src);
+                });
+
+                contentEl.querySelectorAll('.ai-image-grid-item, .ai-image-display').forEach(aiEl => {
+                    aiImages.push({
+                        description: aiEl.dataset.desc || '',
+                        cardColor: aiEl.dataset.color || '#FFE4EC',
+                        textColor: aiEl.dataset.textColor || '#D4728A',
+                    });
+                });
+
+                // 获取位置
+                const locationEl = contentEl.querySelector('.location-name');
+                const location = locationEl ? locationEl.textContent.trim() : '';
+
+                return {
+                    id: momentId,
+                    authorId: authorId,
+                    authorName: contentEl.querySelector('.moments-author-name')?.textContent.replace('(我)', '').trim() || '匿名',
+                    isUser: isUser,
+                    content: content,
+                    images: images,
+                    aiImages: aiImages,
+                    location: location,
+                    timestamp: Number(contentEl.dataset.timestamp || card.dataset.timestamp) || 0,
+                };
+            },
+
+            /**
+             * 收藏 / 取消收藏一条朋友圈。
+             *
+             * ★ v0.87 之前这里只加了个 CSS class,再把数据塞进
+             * `xiaoting::chat-moment-favorites` —— 那是个**没人读的孤儿 key**,
+             * 跟真正的收藏系统(sdk.chatFavorites)毫无关系。
+             * 用户点了收藏,收藏页「朋友圈」分类里永远是空的,这就是「收藏不成功」。
+             * 现在统一走 moments-service → sdk.chatFavorites(type='moments')。
+             */
+            async _handleLikeMoment(momentData, btnEl) {
+                const res = await toggleFavoriteMoment(momentData);
+                if (!res.ok) {
+                    this.toolkit?.island?.notify?.('error', '收藏失败', res.error || '');
+                    return;
+                }
+                // 先就地改按钮外观（重画之前也要有即时反馈）
+                btnEl.classList.toggle('liked', res.favorited);
+                btnEl.setAttribute('aria-pressed', String(res.favorited));
+                btnEl.setAttribute('title', res.favorited ? '取消收藏' : '收藏');
+                const svg = btnEl.querySelector('svg');
+                if (svg) svg.setAttribute('fill', res.favorited ? 'currentColor' : 'none');
+                this.toolkit?.island?.notify?.(
+                    res.favorited ? 'success' : 'info',
+                    res.favorited ? '已收藏' : '已取消收藏',
+                );
+            },
+
+            /** ★ v0.87 编辑一条朋友圈正文（用户的和 AI 的都能改） */
+            _handleEditMoment(momentData) {
+                chatModalManager?.openMessageEdit?.({
+                    originalText: momentData.content || '',
+                    senderLabel: momentData.isUser ? '我的朋友圈' : `${momentData.authorName || 'AI'} 的朋友圈`,
+                    messageType: 'text',
+                    editable: true,
+                    onSave: async (nextText) => {
+                        const text = String(nextText || '').trim();
+                        if (!text) {
+                            this.toolkit?.island?.notify?.('warning', '内容不能为空');
+                            return;
+                        }
+                        const ok = await updateMomentContent(momentData, text);
+                        if (!ok) {
+                            this.toolkit?.island?.notify?.('error', '保存失败');
+                            return;
+                        }
+                        this.toolkit?.island?.notify?.('success', '已保存');
+                        this._refreshMomentsFeed();
+                    },
+                });
+            },
+            
+            /**
+             * 转发朋友圈到聊天。
+             *
+             * ★ v0.87 这里原来还挂了个 `onSelect` 回调去调 `_sendMomentShare`，
+             *   但 `openMomentShare` 根本不接受 onSelect —— 发送逻辑在
+             *   MomentShareModal 自己的 doShare 里。那份 `_sendMomentShare` 是死代码，
+             *   而且它在 `shareMsg` 里引用了几行之后才 `const` 出来的 `defaultUser`，
+             *   真被调到会直接 ReferenceError。已删。
+             */
+            _handleShareMoment(momentData) {
+                chatModalManager.openMomentShare({
+                    shareData: {
+                        momentId: momentData.id,
+                        authorName: momentData.authorName,
+                        content: momentData.content,
+                        aiImages: momentData.aiImages,
+                    },
+                });
+            },
+
+            /**
+             * ★ v0.85 处理删除朋友圈
+             * ★ v0.87 之前这里删的是 `xiaoting::chat-moment-favorites`(收藏的孤儿 key),
+             *   动态本身根本没删 —— 用户点删除,提示「已删除」,刷新一看还在。
+             *   现在按来源分流:用户动态删 localStorage,AI 动态走 sdk.moments.remove。
+             */
+            async _handleDeleteMoment(momentData) {
+                const doDelete = async () => {
+                    try {
+                        const ok = await deleteMoment(momentData);
+                        if (!ok) {
+                            this.toolkit?.island?.notify?.('error', '删除失败', '没找到这条动态');
+                            return;
+                        }
+                        this.toolkit?.island?.notify?.('success', '已删除');
+                        this._refreshMomentsFeed();
+                    } catch (e) {
+                        console.error('[chat-app] _handleDeleteMoment failed:', e);
+                        this.toolkit?.island?.notify?.('error', '删除失败', e?.message || '');
+                    }
+                };
+                if (chatModalManager?.openMomentDeleteConfirm) {
+                    chatModalManager.openMomentDeleteConfirm({
+                        momentId: momentData.id,
+                        momentContent: momentData.content,
+                        onConfirm: doDelete,
+                    });
+                } else if (window.confirm('确定要删除这条朋友圈动态吗？')) {
+                    await doDelete();
+                }
+            },
+
+            /** 初始化发布朋友圈页面交互 */
+            initChatPostInteractions() {
+                const chatPost = document.querySelector('.app-shell[data-app-id="chat"] .chat-post');
+                if (!chatPost) {
+                    console.warn('[chat-app] initChatPostInteractions: .chat-post not found');
+                    return;
+                }
+                if (chatPost.__chatPostInteractionsBound) return;
+                chatPost.__chatPostInteractionsBound = true;
+
+                const contentEl = chatPost.querySelector('#moment-content');
+                const imagesPreview = chatPost.querySelector('#moment-images-preview');
+                const addAiImageBtn = chatPost.querySelector('#add-ai-image');
+                const publishBtn = chatPost.querySelector('#publish-moment-btn');
+                const locationRow = chatPost.querySelector('#add-location');
+                const locationText = chatPost.querySelector('#location-text');
+
+                // 存储已选择的图片
+                const selectedImages = [];
+                let currentLocation = null;
+                let currentLocationAddress = '';
+
+                // AI 描述生成图片按钮 - 打开描述生成弹窗
+                if (addAiImageBtn) {
+                    addAiImageBtn.addEventListener('click', () => {
+                        // 使用 chatModalManager 打开 AI 描述图片生成弹窗
+                        if (chatModalManager?.openDescImageSend) {
+                            chatModalManager.openDescImageSend({
+                                onConfirm: (result) => {
+                                    // result = { description, cardColor, textColor, borderColor }
+                                    selectedImages.push({
+                                        type: 'ai',
+                                        description: result.description,
+                                        cardColor: result.cardColor || '#FFE4EC',
+                                        textColor: result.textColor || '#D4728A',
+                                    });
+                                    renderImagesPreview();
+                                },
+                                onCancel: () => {},
+                            });
+                        } else {
+                            // 兜底:直接弹窗让用户输入描述
+                            const desc = prompt('请输入图片描述(AI会生成对应的图片卡片):');
+                            if (desc && desc.trim()) {
+                                const colors = [
+                                    { card: '#FFE4EC', text: '#D4728A' },
+                                    { card: '#E8F2FF', text: '#4A6FA5' },
+                                    { card: '#FFF3E0', text: '#FF9800' },
+                                    { card: '#E8F8F0', text: '#4CAF50' },
+                                    { card: '#F3E8FF', text: '#8B5CF6' },
+                                ];
+                                const color = colors[Math.floor(Math.random() * colors.length)];
+                                selectedImages.push({
+                                    type: 'ai',
+                                    description: desc.trim(),
+                                    cardColor: color.card,
+                                    textColor: color.text,
+                                });
+                                renderImagesPreview();
+                            }
+                        }
+                    });
+                }
+
+                // 渲染图片预览
+                const renderImagesPreview = () => {
+                    if (!imagesPreview) return;
+                    if (selectedImages.length === 0) {
+                        imagesPreview.innerHTML = '';
+                        return;
+                    }
+
+                    // 最多显示9张
+                    const displayImages = selectedImages.slice(0, 9);
+                    const totalImages = selectedImages.length;
+
+                    imagesPreview.innerHTML = displayImages.map((img, idx) => {
+                        const extraOverlay = (idx === 8 && totalImages > 9)
+                            ? `<div class="moment-image-overlay">+${totalImages - 9}</div>`
+                            : '';
+
+                        if (img.type === 'ai') {
+                            return `
+                                <div class="moment-image-item moment-image-item--ai"
+                                     data-index="${idx}"
+                                     style="background: ${escapeHtml(img.cardColor)};">
+                                    <div class="moment-image-ai-text" style="color: ${escapeHtml(img.textColor)};">
+                                        ${escapeHtml(img.description.substring(0, 30))}${img.description.length > 30 ? '...' : ''}
+                                    </div>
+                                    <button class="moment-image-remove" data-index="${idx}">×</button>
+                                    ${extraOverlay}
+                                </div>`;
+                        } else {
+                            return `
+                                <div class="moment-image-item" data-index="${idx}">
+                                    <img src="${escapeHtml(img.url || img)}" alt="">
+                                    <button class="moment-image-remove" data-index="${idx}">×</button>
+                                    ${extraOverlay}
+                                </div>`;
+                        }
+                    }).join('');
+                };
+
+                // 图片预览区事件委托(删除按钮)
+                if (imagesPreview) {
+                    imagesPreview.addEventListener('click', (e) => {
+                        const removeBtn = e.target.closest('.moment-image-remove');
+                        if (removeBtn) {
+                            const index = parseInt(removeBtn.dataset.index, 10);
+                            selectedImages.splice(index, 1);
+                            renderImagesPreview();
+                            e.stopPropagation();
+                        }
+                    });
+                }
+
+                // 位置选项 - 打开位置选择弹窗
+                if (locationRow && locationText) {
+                    locationRow.addEventListener('click', () => {
+                        // 使用位置选择弹窗
+                        if (chatModalManager?.openLocationPicker) {
+                            chatModalManager.openLocationPicker({
+                                onSelect: (locationData) => {
+                                    currentLocation = locationData.name || locationData.address || '未知位置';
+                                    currentLocationAddress = locationData.address || '';
+                                    locationText.textContent = currentLocation;
+                                },
+                                onClose: () => {},
+                            });
+                        } else {
+                            // 兜底:简单的确认弹窗
+                            window.__phoneConfirm?.request({
+                                title: '添加位置',
+                                text: '当前位置: 上海市浦东新区(模拟)',
+                                confirmLabel: '确认',
+                                onConfirm: () => {
+                                    currentLocation = '上海市浦东新区';
+                                    currentLocationAddress = '上海市浦东新区陆家嘴';
+                                    locationText.textContent = currentLocation;
+                                },
+                                onCancel: () => {},
+                            });
+                        }
+                    });
+                }
+
+                // 发布按钮
+                if (publishBtn) {
+                    publishBtn.addEventListener('click', async () => {
+                        const content = contentEl?.value?.trim() || '';
+                        if (!content && selectedImages.length === 0) {
+                            this.toolkit?.island?.notify?.('warning', '请输入内容或添加图片');
+                            return;
+                        }
+
+                        publishBtn.disabled = true;
+                        publishBtn.textContent = '发布中...';
+
+                        try {
+                            // 模拟发布成功
+                            await new Promise(resolve => setTimeout(resolve, 800));
+
+                            // ★ 发布成功后保存到全局数据,并刷新朋友圈页面
+                            // 将新动态添加到朋友圈数据中
+                            const newMoment = {
+                                id: 'moment-user-' + Date.now(),
+                                authorName: '我',
+                                authorId: 'user_self',
+                                authorAvatar: '',
+                                isUser: true,
+                                timestamp: Date.now(),
+                                content: content,
+                                images: [],
+                                aiImages: selectedImages.filter(i => i.type === 'ai').map(i => ({
+                                    description: i.description,
+                                    cardColor: i.cardColor,
+                                    textColor: i.textColor,
+                                })),
+                                likes: [],
+                                comments: [],
+                                location: currentLocation || null,
+                            };
+
+                            // 保存到本地存储(模拟)
+                            try {
+                                const momentsData = JSON.parse(localStorage.getItem('xiaoting::chat-user-moments') || '[]');
+                                momentsData.unshift(newMoment);
+                                localStorage.setItem('xiaoting::chat-user-moments', JSON.stringify(momentsData.slice(0, 50)));
+                            } catch (e) {
+                                console.warn('[chat-post] save moment failed:', e);
+                            }
+
+                            // 通知发布成功
+                            this.toolkit?.island?.notify?.('success', '发布成功!');
+
+                            // ★ 关闭发布页面并切换到朋友圈 tab
+                            // 先关闭当前 detail 页面
+                            document.dispatchEvent(new CustomEvent('app:page-action', {
+                                detail: { action: 'appMethod', appId: 'chat', method: 'closeDetail' },
+                                bubbles: true,
+                            }));
+                            // 然后切换到朋友圈 tab（延迟确保关闭完成）
+                            setTimeout(() => {
+                                document.dispatchEvent(new CustomEvent('app:page-action', {
+                                    detail: { action: 'switchPage', pageId: 'moments' },
+                                    bubbles: true,
+                                }));
+                                // ★ v0.87 切 tab 只是路由,渲染结果还在 renderer 缓存里 ——
+                                //   之前必须再切出去切回来才看得到新发的那条。这里主动作废缓存重画。
+                                this._refreshMomentsFeed();
+                            }, 100);
+                        } catch (err) {
+                            console.error('[chat-post] publish failed:', err);
+                            this.toolkit?.island?.notify?.('error', '发布失败');
+                        } finally {
+                            publishBtn.disabled = false;
+                            publishBtn.textContent = '发布动态';
+                        }
+                    });
+                }
+
+                // 自动聚焦到输入框
+                if (contentEl) {
+                    setTimeout(() => contentEl.focus(), 100);
+                }
             },
 
             /**
@@ -9061,23 +12869,12 @@ ${messages || '(无对话记录)'}
                         this.app.state.chat.contextOrder = _loadContextOrder();
                     }
                     // ★ v0.63.2 跟 systemPromptOverrides 同样的模式:hydrate 第一步同步加载
-                    //   - 历史 bug(用户 8/8 反馈):kChainActive / replyFormatInject 在 toggleKChainActive
-                    //     / toggleReplyFormatActive 写到 localStorage 但 hydrate 不读回
-                    //     → 刷新页面后 state.chat.kChainActive / replyFormatInject 为空对象,
-                    //     prompt-manager 渲染时 kChainVisible/kChainActive 计算错误,
-                    //     K 链卡片可能消失
+                    //   - 历史 bug(用户 8/8 反馈):replyFormatInject 在 toggleReplyFormatActive
+                    //     写到 localStorage 但 hydrate 不读回
+                    //     → 刷新页面后 state.chat.replyFormatInject 为空对象,
+                    //     prompt-manager 渲染时计算错误,
+                    //     回复格式卡片可能消失
                     //   - 解决方案:跟 systemPromptOverrides 一样的兜底三段式
-                    if (!this.app.state.chat.kChainActive) {
-                        try {
-                            const raw = localStorage.getItem('xiaoting::chat-k-chain-active-v1');
-                            if (raw) {
-                                const parsed = JSON.parse(raw);
-                                if (parsed && typeof parsed === 'object') {
-                                    this.app.state.chat.kChainActive = parsed;
-                                }
-                            }
-                        } catch (_) { /* ignore */ }
-                    }
                     if (!this.app.state.chat.replyFormatInject) {
                         try {
                             const raw = localStorage.getItem('xiaoting::chat-reply-format-inject-v1');
@@ -9101,22 +12898,36 @@ ${messages || '(无对话记录)'}
                             }
                         } catch (_) { /* ignore */ }
                     }
+                    // ★ v0.79 「用户朋友圈」启用状态 — 跟 replyFormatInject 同款三段式 hydrate
+                    if (!this.app.state.chat.userMomentsInject) {
+                        try {
+                            const raw = localStorage.getItem('xiaoting::chat-user-moments-inject-v1');
+                            if (raw) {
+                                const parsed = JSON.parse(raw);
+                                if (parsed && typeof parsed === 'object') {
+                                    this.app.state.chat.userMomentsInject = parsed;
+                                }
+                            }
+                        } catch (_) { /* ignore */ }
+                    }
+                    // ★ v0.79 「AI 朋友圈概要」启用状态 — 跟 replyFormatInject 同款三段式 hydrate
+                    if (!this.app.state.chat.aiMomentsInject) {
+                        try {
+                            const raw = localStorage.getItem('xiaoting::chat-ai-moments-inject-v1');
+                            if (raw) {
+                                const parsed = JSON.parse(raw);
+                                if (parsed && typeof parsed === 'object') {
+                                    this.app.state.chat.aiMomentsInject = parsed;
+                                }
+                            }
+                        } catch (_) { /* ignore */ }
+                    }
                 } catch (_) { /* ignore */ }
 
-                // ★ v0.37 立即挂上 mode→app-shell 的同步监听,并把当前 mode 写到 app-shell 上
-                //   (覆盖「用户刷新页面后 mode 已存在但 data 属性未写」的场景)
-                try {
-                    bindShellModeListener();
-                    syncShellDataMode(getChatRecordMode());
-                    // ★ v0.37 同步顶栏标题(冷启动如果 mode=story,要立即显示 "Dream")
-                    syncHeaderActionsWithMode();
-                    // ★ v0.37 监听 framework 的 root page 切换 — 切回 messages 时自动恢复 headerActions / title override
-                    bindRootPageChangedListener();
-                    // ★ v0.61.8.4 挂 App Prompt 卡片 details 的 toggle 监听(在 hydrate 里调一次,后续 module-level 复用)
-                    this._initAppPromptDetailsObserver?.();
-                    // ★ v0.61.8.5 挂 App Prompt 预览编辑器 textarea 的 input 监听(实时重渲染预览卡片)
-                    this._initAppPromptPreviewInputObserver?.();
-                } catch (_) {}
+                // ★ v0.61.8.4 挂 App Prompt 卡片 details 的 toggle 监听(在 hydrate 里调一次,后续 module-level 复用)
+                this._initAppPromptDetailsObserver?.();
+                // ★ v0.61.8.5 挂 App Prompt 预览编辑器 textarea 的 input 监听(实时重渲染预览卡片)
+                this._initAppPromptPreviewInputObserver?.();
 
                 // ★ v0.28 走顶层预热入口(幂等,可能已被 framework 启动过)
                 if (typeof window.whenSettingsSdkReady === 'function') {
@@ -9243,10 +13054,19 @@ ${messages || '(无对话记录)'}
 
                 // 1) AI 人设本体
                 const ai = sdk.aiPersons?.get?.(aiPersonId) || null;
-                const aiName = ai?.name || aiPersonId;
-
                 // 2) 用户人设(默认 / active)
                 const defaultUser = sdk.defaultUserCard?.getDefault?.() || sdk.users?.getActive?.() || null;
+
+                // 判断是否是用户本人
+                const isUserSelf = !ai && (defaultUser?.id === aiPersonId || aiPersonId === defaultUser?.id);
+
+                // 获取显示名称
+                let aiName = aiPersonId;
+                if (isUserSelf) {
+                    aiName = defaultUser?.name || defaultUser?.socialProfiles?.chat?.nickname || '我';
+                } else if (ai) {
+                    aiName = ai.name || aiPersonId;
+                }
 
                 // 3) 聚合两边的 refs(去重)
                 // ★ 真实存储形态:{ refType: 'key'|'group', refId: string, name, subTitle, addedAt }
@@ -9350,11 +13170,6 @@ ${messages || '(无对话记录)'}
                             matched?.label || ''
                         );
                         // ★ v0.62.1 async renderMode 下走二段式重画(AGENTS.md §27/§32)
-                        const __diagApiCall = (window.__APP_RENDERER_BRIDGE_DEBUG__ = window.__APP_RENDERER_BRIDGE_DEBUG__ || {});
-                        const __diagBefore = (() => {
-                            try { return localStorage.getItem(localKey) || ''; } catch (_) { return ''; }
-                        })();
-                        console.log('[chat][openApiCallModal] onSelect refId=', refId, 'refType=', refType, 'localStorage写=', __diagBefore, 'hasBridge=', !!window.__appRendererBridge, 'hasInvalidate=', typeof window.invalidateRendererCache);
                         try {
                             if (typeof window.invalidateRendererCache === 'function') {
                                 window.invalidateRendererCache('chat', null);
@@ -9382,6 +13197,159 @@ ${messages || '(无对话记录)'}
             },
 
             /**
+             * ★ v0.72 群聊 API 调用设置
+             *   payload: { groupId, mode }
+             *   流程:
+             *     1) 读取 group.members 里的 AI 成员
+             *     2) 弹窗让用户选择为哪个 AI 成员设置 API
+             *     3) 选完后调 openApiCallModal(传入 aiPersonId)
+             */
+            openGroupApiCallModal(payload = {}) {
+                const groupId = String(payload?.groupId || '');
+                if (!groupId) {
+                    this.toolkit?.island?.notify?.('error', '打开失败', '缺少群 ID');
+                    return;
+                }
+                const sdk = window.settingsSdk;
+                if (!sdk?.chatGroups) {
+                    this.toolkit?.island?.notify?.('error', 'SDK 未就绪');
+                    return;
+                }
+                const defaultUser = sdk?.defaultUserCard?.getDefault?.() || sdk?.users?.getActive?.();
+                if (!defaultUser) {
+                    this.toolkit?.island?.notify?.('error', '未找到当前用户');
+                    return;
+                }
+                const mode = payload.mode || 'calendar';
+                const group = sdk.chatGroups.get(defaultUser, groupId, mode);
+                if (!group) {
+                    this.toolkit?.island?.notify?.('error', '找不到该群聊');
+                    return;
+                }
+
+                // 构造成员列表（包含用户本人）
+                const memberRows = [];
+                for (const aiPersonId of (group.members || [])) {
+                    // 判断是否是用户本人
+                    const isUserSelf = aiPersonId === defaultUser?.id;
+                    const ai = sdk?.aiPersons?.get?.(aiPersonId);
+                    const label = isUserSelf
+                        ? (defaultUser?.name || defaultUser?.socialProfiles?.chat?.nickname || '我')
+                        : (ai?.name || ai?.socialProfiles?.chat?.nickname || aiPersonId || '未知');
+
+                    // 获取当前 API 设置
+                    let savedKey = '';
+                    let savedLabel = '未设置';
+                    if (!isUserSelf) {
+                        try {
+                            const localKey = 'xiaoting::chat-default-api-key::' + aiPersonId;
+                            savedKey = localStorage.getItem(localKey) || '';
+                            if (savedKey) {
+                                const parts = savedKey.split('::');
+                                const refType = parts[0] || 'key';
+                                const refId = parts[1] || savedKey;
+                                const labelKey = 'xiaoting::api-label::' + refType + '::' + refId;
+                                savedLabel = localStorage.getItem(labelKey) || refId.slice(0, 12) + '...';
+                            }
+                        } catch (_) {}
+                    }
+
+                    memberRows.push({ id: aiPersonId, label, savedLabel, savedKey, isUserSelf });
+                }
+
+                if (memberRows.length === 0) {
+                    console.log('[openGroupApiCallModal] group.members=', group?.members);
+                    this.toolkit?.island?.notify?.('warning', '群里没有成员');
+                    return;
+                }
+
+                // ★ v0.75 群聊 API 设置：跟私聊一样弹 ApiCallModal
+                //   - 聚合群里所有 AI 成员 + 用户人设绑定的 API refs
+                //   - 保存时按 groupId 存一个"群默认 API"，群聊对话时优先用这个
+                const refsMap = new Map();
+                const apiSdk = window.__apiSdk;
+
+                function _pushRefs(refs, source) {
+                    if (!Array.isArray(refs)) return;
+                    for (const r of refs) {
+                        if (!r || typeof r !== 'object') continue;
+                        const refType = r.refType === 'group' ? 'group' : 'key';
+                        const refId = String(r.refId || '');
+                        if (!refId) continue;
+                        const dedupKey = refType + '::' + refId;
+                        if (refsMap.has(dedupKey)) continue;
+                        let label = r.name || refId;
+                        let model = '';
+                        let baseUrl = '';
+                        let subTitle = r.subTitle || '';
+                        let enabled = true;
+                        let keyCount = 0;
+                        if (refType === 'key' && apiSdk?.apiKeySdk?.get) {
+                            const k = apiSdk.apiKeySdk.get(refId);
+                            if (k) { label = k.label || label; model = k.model || ''; baseUrl = k.baseUrl || ''; enabled = k.enabled !== false; }
+                        } else if (refType === 'group' && apiSdk?.apiGroupSdk?.get) {
+                            const g = apiSdk.apiGroupSdk.get(refId);
+                            if (g) { label = g.name || label; keyCount = Array.isArray(g.apiKeyIds) ? g.apiKeyIds.length : 0; }
+                        }
+                        refsMap.set(dedupKey, { refId, type: refType, label, model, baseUrl, subTitle, enabled, source, keyCount });
+                    }
+                }
+
+                // 聚合非用户的 AI 成员的 refs
+                for (const row of memberRows) {
+                    if (!row.isUserSelf) {
+                        const ai = sdk?.aiPersons?.get?.(row.id);
+                        _pushRefs(ai?.boundResources?.apiRefs, 'ai');
+                    }
+                }
+                // 聚合用户人设的 refs
+                _pushRefs(defaultUser?.boundResources?.apiRefs, 'user');
+
+                const refs = Array.from(refsMap.values());
+                const localKey = 'xiaoting::chat-default-api-key::group::' + groupId;
+                let defaultRefId = '';
+                let defaultRefType = '';
+                try {
+                    const stored = localStorage.getItem(localKey) || '';
+                    if (stored.includes('::')) {
+                        const parts = stored.split('::');
+                        defaultRefType = parts[0] === 'group' ? 'group' : 'key';
+                        defaultRefId = parts[1] || '';
+                    } else {
+                        defaultRefId = stored;
+                    }
+                } catch (_) {}
+
+                chatModalManager.openApiCallModal({
+                    aiPersonId: groupId,
+                    contactName: group.name || '群聊',
+                    refs,
+                    defaultRefId,
+                    defaultRefType,
+                    onSelect: (refId, refType) => {
+                        // 保存到 groupId 下（群聊专用）
+                        try {
+                            const finalType = refType === 'group' ? 'group' : 'key';
+                            if (refId) {
+                                localStorage.setItem(localKey, finalType + '::' + refId);
+                            } else {
+                                localStorage.removeItem(localKey);
+                            }
+                        } catch (_) {}
+                        const matched = refs.find((r) => r.refId === refId);
+                        try {
+                            if (matched?.label) {
+                                const labelLocalKey = 'xiaoting::api-label::' + (refType === 'group' ? 'group::' : 'key::') + refId;
+                                localStorage.setItem(labelLocalKey, matched.label);
+                            }
+                        } catch (_) {}
+                        this.toolkit?.island?.notify?.(refId ? 'success' : 'info', refId ? '已设为群默认 API' : '已清除群默认 API', matched?.label || '');
+                    },
+                    onClose: () => {},
+                });
+            },
+
+            /**
              * ★ v0.62 真实 AI 对话 — 长按发送时调 AI SDK
              *   payload: { aiPersonId, mode, text }
              *   流程:
@@ -9394,22 +13362,29 @@ ${messages || '(无对话记录)'}
              *     - 此方法只负责"调 AI + 落盘 AI 回复",用户消息已经在 doSend 写盘了
              *     - 此方法不抛异常,所有失败走灵动岛通知
              *     - console.log 完整 prompt / AI 原文在 ai-service.js 内已完成
+             *     - ★ v0.71 新增 silentIsland:true → 跳过内部 notify(留给外层胶囊灵动岛显示进度)
              */
             async sendMessageWithAi(payload = {}) {
                 const aiPersonId = String(payload?.aiPersonId || '');
                 const mode = String(payload?.mode || 'calendar');
                 const text = String(payload?.text || '').trim();
+                // ★ v0.71:外部胶囊灵动岛已挂起进度提示时,本方法不再弹自己的 notify
+                const silentIsland = !!payload?.silentIsland;
+                const _notify = (state, title, body) => {
+                    if (silentIsland) return;
+                    this.toolkit?.island?.notify?.(state, title, body);
+                };
                 if (!aiPersonId) {
-                    this.toolkit?.island?.notify?.('error', 'AI 对话失败', '缺少 aiPersonId');
+                    _notify('error', 'AI 对话失败', '缺少 aiPersonId');
                     return null;
                 }
                 if (!text) {
-                    this.toolkit?.island?.notify?.('warning', '消息为空', '请先输入内容');
+                    _notify('warning', '消息为空', '请先输入内容');
                     return null;
                 }
 
-                // 1) 灵动岛「正在发送给 AI」(不阻塞主线程)
-                this.toolkit?.island?.notify?.('info', '正在发送给 AI…', text.slice(0, 30));
+                // 1) 灵动岛「正在发送给 AI」(silentIsland=true 时跳过)
+                _notify('info', '正在发送给 AI…', text.slice(0, 30));
                 const startTs = Date.now();
 
                 // 2) 后台调 AI(用户可以在这期间切到其他 app / 滑动屏幕)
@@ -9423,14 +13398,14 @@ ${messages || '(无对话记录)'}
                     });
                 } catch (err) {
                     console.error('[chat-app] sendMessageWithAi failed', err);
-                    this.toolkit?.island?.notify?.('error', 'AI 调用异常', err?.message || String(err));
+                    _notify('error', 'AI 调用异常', err?.message || String(err));
                     return null;
                 }
 
                 if (!result || result.ok === false) {
                     const err = result?.error || '未知错误';
                     // ★ v0.62.6 错误提示放宽到 200 字(friendly 文案可能较长)
-                    this.toolkit?.island?.notify?.('error', 'AI 回复失败', err.slice(0, 200));
+                    _notify('error', 'AI 回复失败', err.slice(0, 200));
                     return null;
                 }
 
@@ -9538,6 +13513,64 @@ ${messages || '(无对话记录)'}
                             }
                             continue; // call 不写消息卡片
                         }
+                        // ★ v0.79 AI 发朋友圈(由 [发朋友圈:内容] 触发)
+                        //   - 调用 chat-asset-service.aiSendMoment → 写完整朋友圈到 aiPerson.moments[]
+                        //     + 后台异步生成概要(summary) + 写一条 action_notify 系统消息
+                        //   - 这种 type='moment' 的 marker 不直接进 chatMessages(由 aiSendMoment 自己处理)
+                        //   - 一轮对话最多一次(moments[] 增加一条后,下次同样格式 token 系统照常处理,
+                        //     但 AI 自己会被 prompt 里的「不要每条消息都发朋友圈」约束)
+                        if (msg.type === 'moment') {
+                            try {
+                                const { aiSendMoment } = await import('./services/chat-asset-service.js');
+                                const res = await aiSendMoment({
+                                    aiPersonId,
+                                    mode,
+                                    content: msg.momentContent || msg.content || '',
+                                });
+                                if (!res?.ok) {
+                                    console.warn('[chat-app] aiSendMoment failed', res?.error);
+                                    continue;
+                                }
+                                // ★ 朋友圈写入成功:灵动岛提示
+                                try {
+                                    const aiInst = sdk?.aiPersons?.get?.(aiPersonId);
+                                    const aiName = aiInst?.name || 'AI';
+                                    this.toolkit?.island?.notify?.(
+                                        'success',
+                                        `${aiName} 发了一条朋友圈`,
+                                        (msg.momentContent || msg.content || '').slice(0, 30),
+                                    );
+                                } catch (_) {}
+                            } catch (momentErr) {
+                                console.warn('[chat-app] aiSendMoment error', momentErr);
+                            }
+                            continue; // moment 不直接写 chatMessages(type='moment' 是 marker)
+                        }
+                        // 四叶草送礼（由 [送礼:] / [匿名送礼:] 触发）。
+                        // 同样是 marker：真正的扣款 + 写订单 + 勾心愿单 + 产出礼物卡
+                        // 全在 shop 那边做，这里只负责把动作转过去。
+                        // 走 window.__shopGift 而不是 import —— chat 不该知道购物软件的
+                        // 内部模块长什么样，而且它可能根本没装（那时候这段就静默跳过）。
+                        if (msg.type === 'shop_gift_request') {
+                            try {
+                                const bridge = window.__shopGift;
+                                if (!bridge?.aiGiftToUser || !bridge.isReady?.()) {
+                                    console.warn('[chat-app] 四叶草没准备好，这次送礼跳过');
+                                    continue;
+                                }
+                                const res = await bridge.aiGiftToUser({
+                                    aiPersonId, mode, ...(msg.shopGift || {}),
+                                });
+                                if (!res?.ok) {
+                                    // 余额不够是**正常结果**不是异常：AI 想买但买不起。
+                                    // 不写卡片、不报错弹窗，只留一条能搜到的日志。
+                                    console.warn('[chat-app] AI 送礼没成功：', res?.error);
+                                }
+                            } catch (giftErr) {
+                                console.warn('[chat-app] AI 送礼出错', giftErr);
+                            }
+                            continue;
+                        }
                         // ★ v0.64 AI sticker 解析 + 偷表情包:
                         //   - 拿 msg.url(原图 base64)+ stickerCode + 触发「偷」机制
                         //   - 偷成功 → 立即 invalidateRendererCache 让 prompt-manager 重画
@@ -9572,6 +13605,17 @@ ${messages || '(无对话记录)'}
                         }
                         const saved = await sdk.chatMessages?.add?.(sender, aiPersonId, mode, resolvedMsg);
                         if (!saved) continue;
+                        // ★ AI 用 [一起听:歌名] 发起一起听:通知音乐 App 开会话并放歌
+                        if (saved.type === 'listen_together_invite' && saved.listenTogetherRequest) {
+                            try {
+                                window.dispatchEvent(new CustomEvent('chat:listen-together-request', {
+                                    detail: {
+                                        aiId: aiPersonId,
+                                        song: saved.listenTogetherRequest.song || '',
+                                    },
+                                }));
+                            } catch (_) {}
+                        }
                         // 立即追加到当前私聊页 DOM(若还在)
                         try {
                             const chatPrivate = document.querySelector(
@@ -9582,8 +13626,10 @@ ${messages || '(无对话记录)'}
                                 if (messagesContainer) {
                                     const contactName =
                                         chatPrivate.querySelector('.chat-header-name')?.textContent || 'AI';
-                                    const { renderTextBubble } = await import('./components/text-bubble.js');
-                                    const html = renderTextBubble(
+                                    // 用总渲染器分发:卡片类消息(歌曲/歌单/一起听/位置/红包…)
+                                    // 走 renderTextBubble 会画成一句纯文本
+                                    const { renderMessage } = await import('./components/message-renderer.js');
+                                    const html = renderMessage(
                                         saved,
                                         { name: contactName, senderName: saved.senderName },
                                         { aiPersonId, mode }
@@ -9618,13 +13664,12 @@ ${messages || '(无对话记录)'}
                     window.__appRendererBridge?.syncNow?.({ force: true });
                 } catch (_) {}
 
-                // 5) 灵动岛最终通知(切走也看得到)
-                const elapsed = ((Date.now() - startTs) / 1000).toFixed(1);
-                this.toolkit?.island?.notify?.(
-                    'success',
-                    `AI 已回复 (${aiMessages.length} 条 · ${elapsed}s)`,
-                    result.raw?.slice(0, 60) || ''
-                );
+                // 5) 不再弹「AI 已回复」灵动岛。
+                //    用户就在聊天页看着，消息已经追加到 DOM 了，再弹一个岛是重复信息，
+                //    而且会把音乐/通话那类常驻岛顶掉（AGENTS2 §1.3）。
+                //    「发出去了 / 还在等」这件事由顶栏的「对方正在输入中」表达，
+                //    由 _longPressInvokeAi 那层负责开关（见 services/typing-indicator.js）。
+                void startTs;
 
                 // 6) 派发事件给消息列表页,刷新预览
                 try {
@@ -9634,6 +13679,216 @@ ${messages || '(无对话记录)'}
                 } catch (_) {}
 
                 return result;
+            },
+
+            // ============================================================
+            // ★ v0.87 群聊记忆互通 — 设置详情页交互方法(8 个)
+            //   - 全部走 data-app-action 派发,framework 调到这里
+            //   - 写完 SDK → 二段式(invalidateRendererCache + syncNow)重画
+            // ============================================================
+
+            /**
+             * 切总开关(整体开启 / 关闭群聊记忆互通)
+             *   - payload: 无
+             *   - 走 sdk.groupMemorySync.toggleGlobal(user)
+             */
+            async toggleGroupMemorySyncGlobal() {
+                try {
+                    const sdk = window.settingsSdk;
+                    if (!sdk?.groupMemorySync) {
+                        this.toolkit?.island?.notify?.('warning', 'SDK 未就绪');
+                        return;
+                    }
+                    const user = sdk?.defaultUserCard?.getDefault?.() || sdk?.users?.getActive?.();
+                    if (!user) {
+                        this.toolkit?.island?.notify?.('warning', '未找到当前用户');
+                        return;
+                    }
+                    const cur = sdk.groupMemorySync.getGlobalConfig(user) || { enabled: false, aiIds: [] };
+                    await sdk.groupMemorySync.toggleGlobal(user);
+                    const after = sdk.groupMemorySync.getGlobalConfig(user) || { enabled: false, aiIds: [] };
+                    if (typeof window.invalidateRendererCache === 'function') {
+                        window.invalidateRendererCache('chat', null);
+                    }
+                    if (window.__appRendererBridge?.syncNow) {
+                        window.__appRendererBridge.syncNow({ force: true });
+                    }
+                    this.toolkit?.island?.notify?.(
+                        after.enabled ? 'success' : 'info',
+                        after.enabled ? '群聊记忆互通已开启' : '群聊记忆互通已关闭',
+                        `已选 ${after.aiIds.length} 个 AI`
+                    );
+                } catch (err) {
+                    console.warn('[chat-app] toggleGroupMemorySyncGlobal failed:', err);
+                    this.toolkit?.island?.notify?.('error', '切换失败', String(err?.message || err));
+                }
+            },
+
+            /**
+             * 切换 AI 是否在互通名单里(点 AI 行)
+             *   - payload: { aiPersonId }
+             *   - 在名单里 → 移除;不在 → 追加
+             */
+            async toggleGroupMemorySyncAiMembership(payload = {}) {
+                try {
+                    const aiPersonId = String(payload.aiPersonId || '');
+                    if (!aiPersonId) return;
+                    const sdk = window.settingsSdk;
+                    if (!sdk?.groupMemorySync) {
+                        this.toolkit?.island?.notify?.('warning', 'SDK 未就绪');
+                        return;
+                    }
+                    const user = sdk?.defaultUserCard?.getDefault?.() || sdk?.users?.getActive?.();
+                    if (!user) return;
+                    const cur = sdk.groupMemorySync.getGlobalConfig(user) || { enabled: false, aiIds: [] };
+                    if (cur.aiIds.includes(aiPersonId)) {
+                        await sdk.groupMemorySync.removeAi(user, aiPersonId);
+                    } else {
+                        await sdk.groupMemorySync.addAi(user, aiPersonId);
+                    }
+                    if (typeof window.invalidateRendererCache === 'function') {
+                        window.invalidateRendererCache('chat', null);
+                    }
+                    if (window.__appRendererBridge?.syncNow) {
+                        window.__appRendererBridge.syncNow({ force: true });
+                    }
+                } catch (err) {
+                    console.warn('[chat-app] toggleGroupMemorySyncAiMembership failed:', err);
+                    this.toolkit?.island?.notify?.('error', '操作失败', String(err?.message || err));
+                }
+            },
+
+            /**
+             * 切换某个 AI 的个人 enabled 开关
+             *   - payload: { aiPersonId }
+             */
+            async toggleGroupMemorySyncAiEnabled(payload = {}) {
+                try {
+                    const aiPersonId = String(payload.aiPersonId || '');
+                    if (!aiPersonId) return;
+                    const sdk = window.settingsSdk;
+                    if (!sdk?.groupMemorySync) return;
+                    await sdk.groupMemorySync.toggleAi(aiPersonId);
+                    if (typeof window.invalidateRendererCache === 'function') {
+                        window.invalidateRendererCache('chat', null);
+                    }
+                    if (window.__appRendererBridge?.syncNow) {
+                        window.__appRendererBridge.syncNow({ force: true });
+                    }
+                } catch (err) {
+                    console.warn('[chat-app] toggleGroupMemorySyncAiEnabled failed:', err);
+                }
+            },
+
+            /**
+             * 步进:某个 AI 的「读今天群聊回合数」+1(上限 50)
+             */
+            async incrementGroupMemorySyncRounds(payload = {}) {
+                const aiPersonId = String(payload.aiPersonId || '');
+                if (!aiPersonId) return;
+                const sdk = window.settingsSdk;
+                if (!sdk?.groupMemorySync) return;
+                const cur = sdk.groupMemorySync.getAiConfig(aiPersonId);
+                const next = Math.min(50, (Number(cur.contextRounds) || 0) + 1);
+                await sdk.groupMemorySync.setAiContextRounds(aiPersonId, next);
+                await this._rerenderGroupMemorySync();
+            },
+
+            /**
+             * 步进:某个 AI 的「读今天群聊回合数」-1(下限 0)
+             */
+            async decrementGroupMemorySyncRounds(payload = {}) {
+                const aiPersonId = String(payload.aiPersonId || '');
+                if (!aiPersonId) return;
+                const sdk = window.settingsSdk;
+                if (!sdk?.groupMemorySync) return;
+                const cur = sdk.groupMemorySync.getAiConfig(aiPersonId);
+                const next = Math.max(0, (Number(cur.contextRounds) || 0) - 1);
+                await sdk.groupMemorySync.setAiContextRounds(aiPersonId, next);
+                await this._rerenderGroupMemorySync();
+            },
+
+            /**
+             * 步进:某个 AI 的「读往期群聊概要数」+1(上限 10)
+             */
+            async incrementGroupMemorySyncSummaries(payload = {}) {
+                const aiPersonId = String(payload.aiPersonId || '');
+                if (!aiPersonId) return;
+                const sdk = window.settingsSdk;
+                if (!sdk?.groupMemorySync) return;
+                const cur = sdk.groupMemorySync.getAiConfig(aiPersonId);
+                const next = Math.min(10, (Number(cur.summaryReadCount) || 0) + 1);
+                await sdk.groupMemorySync.setAiSummaryReadCount(aiPersonId, next);
+                await this._rerenderGroupMemorySync();
+            },
+
+            /**
+             * 步进:某个 AI 的「读往期群聊概要数」-1(下限 0)
+             */
+            async decrementGroupMemorySyncSummaries(payload = {}) {
+                const aiPersonId = String(payload.aiPersonId || '');
+                if (!aiPersonId) return;
+                const sdk = window.settingsSdk;
+                if (!sdk?.groupMemorySync) return;
+                const cur = sdk.groupMemorySync.getAiConfig(aiPersonId);
+                const next = Math.max(0, (Number(cur.summaryReadCount) || 0) - 1);
+                await sdk.groupMemorySync.setAiSummaryReadCount(aiPersonId, next);
+                await this._rerenderGroupMemorySync();
+            },
+
+            /**
+             * 全选:把所有 AI 都加入互通名单
+             */
+            async selectAllGroupMemorySyncAi() {
+                const sdk = window.settingsSdk;
+                if (!sdk?.groupMemorySync || !sdk?.aiPersons) return;
+                const user = sdk?.defaultUserCard?.getDefault?.() || sdk?.users?.getActive?.();
+                if (!user) return;
+                const allIds = (() => {
+                    try {
+                        if (typeof sdk.aiPersons.list === 'function') {
+                            return (sdk.aiPersons.list() || []).map((ai) => ai.id).filter(Boolean);
+                        }
+                        const cache = sdk.aiPersons.cache;
+                        if (cache instanceof Map) {
+                            return Array.from(cache.keys()).filter(Boolean);
+                        }
+                        return [];
+                    } catch (_) { return []; }
+                })();
+                await sdk.groupMemorySync.setGlobalConfig(user, { aiIds: allIds });
+                await this._rerenderGroupMemorySync();
+            },
+
+            /**
+             * 取消全选
+             */
+            async deselectAllGroupMemorySyncAi() {
+                const sdk = window.settingsSdk;
+                if (!sdk?.groupMemorySync) return;
+                const user = sdk?.defaultUserCard?.getDefault?.() || sdk?.users?.getActive?.();
+                if (!user) return;
+                await sdk.groupMemorySync.setGlobalConfig(user, { aiIds: [] });
+                await this._rerenderGroupMemorySync();
+            },
+
+            /**
+             * 内部 helper:写完 SDK 后强制重画当前页
+             *   - 走 AGENTS.md §32 的二段式:invalidateRendererCache + syncNow
+             */
+            async _rerenderGroupMemorySync() {
+                try {
+                    if (typeof window.invalidateRendererCache === 'function') {
+                        window.invalidateRendererCache('chat', null);
+                    }
+                } catch (_) {}
+                try {
+                    if (window.__appRendererBridge?.syncNow) {
+                        window.__appRendererBridge.syncNow({ force: true });
+                    } else if (typeof window !== 'undefined' && window.__detailRenderTick) {
+                        window.__detailRenderTick.value++;
+                    }
+                } catch (_) {}
             },
         },
     };

@@ -12,6 +12,7 @@ import {
     resolveAttrKey,
 } from './form-schema.js';
 import { ACCESS_FREQUENCIES } from './geo/geo-constants.js';
+import { LANDMARK_ICONS, renderLandmarkSvg } from './landmark-icons.js';
 
 const defaultCheckedAttr = (v) => (v ? 'checked' : '');
 
@@ -283,6 +284,7 @@ const renderField = (field, model, schema, ctx) => {
     switch (field.type) {
         case 'group':           return renderGroup(field, model, schema, ctx);
         case 'text':            return renderRow(field, model, schema, ctx, renderTextInput(field, model, schema, ctx, e));
+        case 'landmark-icon':   return renderRow(field, model, schema, ctx, renderLandmarkIconInput(field, model, schema, ctx, e));
         case 'textarea':        return renderRow(field, model, schema, ctx, renderTextarea(field, model, schema, ctx, e));
         case 'number':          return renderRow(field, model, schema, ctx, renderNumberInput(field, model, schema, ctx, e));
         case 'color':           return renderRow(field, model, schema, ctx, renderColorInput(field, model, schema, ctx, e));
@@ -357,7 +359,18 @@ const renderGroupChild = (field, model, schema, ctx) => {
             inputHtml = renderSelect(field, model, schema, ctx, e);
             break;
         }
+        // ★ 缺了这条，group 里的颜色字段会渲染成空字符串 ——
+        //   「地标配色 / 描边色选不了」就是这么来的（DOM 里压根没有 input）
+        case 'color': {
+            inputHtml = renderColorInput(field, model, schema, ctx, e);
+            break;
+        }
+        case 'landmark-icon': {
+            inputHtml = renderLandmarkIconInput(field, model, schema, ctx, e);
+            break;
+        }
         default:
+            console.warn('[form-renderer] group 子字段类型未支持:', field.type, field);
             inputHtml = '';
     }
     html += inputHtml;
@@ -388,6 +401,23 @@ const renderNumberInput = (field, model, schema, ctx, e) => {
     return `<input class="wv-editor__input ${e(numClass)}" type="number"
         data-${schema.fieldNamespace}-field="${e(resolveAttrKey(field, schema, ctx))}"
         placeholder="${e(field.placeholder || '')}" value="${e(value)}">`;
+};
+
+const renderLandmarkIconInput = (field, model, schema, ctx, e) => {
+    const value = coerceWriteValue(field, readModelValue(field, model, ctx)) || 'pin';
+    const ns = schema.fieldNamespace;
+    const key = resolveAttrKey(field, schema, ctx);
+    return `
+        <div class="wv-iconpick">
+            <input type="hidden" data-${ns}-field="${e(key)}" value="${e(value)}">
+            ${LANDMARK_ICONS.map((icon) => `
+                <button type="button" class="wv-iconpick__item ${icon.id === value ? 'is-on' : ''}"
+                    data-wv-icon-pick="${e(icon.id)}" title="${e(icon.label)}" aria-label="${e(icon.label)}">
+                    ${renderLandmarkSvg(icon.id, 14)}
+                </button>
+            `).join('')}
+        </div>
+    `;
 };
 
 const renderColorInput = (field, model, schema, ctx, e) => {

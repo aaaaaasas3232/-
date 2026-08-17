@@ -1,195 +1,141 @@
 /**
- * chat-app / 游戏排行榜页面
+ * chat-app / 战绩排行榜
  *
- * Phase 11 UI 复原
+ * ★ 这一页之前是个空壳：`DEMO_LEADERBOARD.users = []`，永远显示空白。
+ *   参考实现里它读的是 `GameStats`，而 `games.js` 根本不在参考包里 ——
+ *   点进玩家详情会直接 `GameStats is not defined`。
  *
- * 功能:
- *   - 积分排行榜
- *   - 狼人杀/谁是卧底 胜率数据
- *   - 角色统计
+ *   现在读 `games/core/record.js` 的真实统计（对局正常结束时写入）。
+ *   放弃的局不进榜，所以榜上的场次是真的打完的。
  *
- * 当前阶段:1:1 复原 UI,模拟效果
+ * 分 Tab：总榜 + 三个游戏各一个。细项按游戏不同：
+ *   狼人杀 —— 好人局 / 狼人局分别的胜率
+ *   谁是卧底 —— 平民 / 卧底分别的胜率
+ *   大富翁 —— 破产次数
  */
 
 import { escapeHtml } from '@/src/core/escape.js';
+import { act } from '../games/components/ui.js';
+import { buildLeaderboard, GAME_META, GAME_IDS } from '../games/index.js';
 
-// Demo 排行榜数据
-const DEMO_LEADERBOARD = {
-    users: [
-        {
-            id: 'ai-1',
-            name: '小美',
-            avatarBg: '#FF9ECD',
-            totalScore: 2850,
-            werewolfGames: 23,
-            werewolfWinRate: 0.65,
-            undercoverGames: 18,
-            undercoverWinRate: 0.72,
-            badges: ['狼王', '卧神'],
-        },
-        {
-            id: 'ai-2',
-            name: '小明',
-            avatarBg: '#A8C8EC',
-            totalScore: 2340,
-            werewolfGames: 19,
-            werewolfWinRate: 0.58,
-            undercoverGames: 22,
-            undercoverWinRate: 0.55,
-            badges: ['预言家'],
-        },
-        {
-            id: 'ai-3',
-            name: '小蓝',
-            avatarBg: '#B8E6CF',
-            totalScore: 1980,
-            werewolfGames: 15,
-            werewolfWinRate: 0.47,
-            undercoverGames: 20,
-            undercoverWinRate: 0.65,
-            badges: ['平民之光'],
-        },
-        {
-            id: 'user',
-            name: '我',
-            avatarBg: '#FFD700',
-            totalScore: 1650,
-            werewolfGames: 12,
-            werewolfWinRate: 0.50,
-            undercoverGames: 10,
-            undercoverWinRate: 0.60,
-            badges: [],
-        },
-    ],
-};
+const TABS = [
+    { key: 'all', label: '总榜' },
+    { key: GAME_IDS.WEREWOLF, label: '狼人杀' },
+    { key: GAME_IDS.UNDERCOVER, label: '谁是卧底' },
+    { key: GAME_IDS.MONOPOLY, label: '大富翁' },
+];
 
-// 头像背景色工具
-function getAvatarColor(id) {
-    const palette = ['#A8C8EC', '#F4A6CD', '#B8D4F0', '#FFD4E5', '#C8E6F4', '#FFC8DD', '#B8E6CF', '#D4B8F0'];
-    let hash = 0;
-    for (let i = 0; i < (id || '').length; i++) {
-        hash = (hash * 31 + id.charCodeAt(i)) & 0xffffffff;
-    }
-    return palette[Math.abs(hash) % palette.length];
+/** 当前 Tab。纯界面态，不落盘。 */
+let activeTab = 'all';
+
+export function setLeaderboardTab(key) {
+    activeTab = TABS.some((t) => t.key === key) ? key : 'all';
 }
 
-// 渲染排名徽章
-function renderRankBadge(rank) {
-    if (rank === 1) {
-        return `<div class="lb-rank-badge lb-rank-gold">
-            <svg viewBox="0 0 24 24" fill="#FFD700" width="20" height="20">
-                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
-            </svg>
-        </div>`;
-    } else if (rank === 2) {
-        return `<div class="lb-rank-badge lb-rank-silver">
-            <svg viewBox="0 0 24 24" fill="#C0C0C0" width="18" height="18">
-                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
-            </svg>
-        </div>`;
-    } else if (rank === 3) {
-        return `<div class="lb-rank-badge lb-rank-bronze">
-            <svg viewBox="0 0 24 24" fill="#CD7F32" width="16" height="16">
-                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
-            </svg>
-        </div>`;
-    }
-    return `<div class="lb-rank-number">${rank}</div>`;
-}
+export function renderGameLeaderboardPage() {
+    const { rows, history } = buildLeaderboard(activeTab);
 
-/**
- * 渲染游戏排行榜页面
- *
- * @param {Object} app - app 配置
- * @returns {string} HTML 字符串
- */
-export function renderGameLeaderboardPage(app) {
-    const users = DEMO_LEADERBOARD.users;
+    const tabs = TABS.map((t) => `
+        <button type="button" class="cg-lbtab${activeTab === t.key ? ' is-on' : ''}"
+                ${act('gameLeaderboardTab', { key: t.key })}>${escapeHtml(t.label)}</button>
+    `).join('');
 
-    // 顶部 header
-    const headerHtml = `
-        <div class="lb-topbar">
-            <button class="lb-back-btn" data-app-action='{"action":"appMethod","appId":"chat","method":"closeDetail"}'>
-                <svg viewBox="0 0 24 24">
-                    <polyline points="15 18 9 12 15 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-            </button>
-            <div class="lb-title">积分排行榜</div>
-            <div style="width:32px;"></div>
+    const podium = rows.slice(0, 3).map((r, i) => `
+        <div class="cg-podium__item" data-rank="${i + 1}"${r.isUser ? ' data-me="1"' : ''}>
+            <span class="cg-podium__av" data-hue="${hue(r.id)}">${escapeHtml((r.name || '?').charAt(0))}</span>
+            <span class="cg-podium__name">${escapeHtml(r.name)}</span>
+            <span class="cg-podium__wins">${r.wins} 胜</span>
+            <span class="cg-podium__rate">${r.winRate}%</span>
         </div>
-    `;
+    `).join('');
 
-    // 渲染排名列表
-    const rankListHtml = users.map((user, index) => {
-        const rank = index + 1;
-        const rankBadge = renderRankBadge(rank);
-        const isCurrentUser = user.id === 'user';
-        const badgesHtml = user.badges.map(badge => `
-            <span class="lb-badge">${escapeHtml(badge)}</span>
-        `).join('');
+    const list = rows.map((r, i) => `
+        <div class="cg-lbrow${r.isUser ? ' is-me' : ''}">
+            <span class="cg-lbrow__rank" data-rank="${i + 1}">${i + 1}</span>
+            <span class="cg-lbrow__av" data-hue="${hue(r.id)}">${escapeHtml((r.name || '?').charAt(0))}</span>
+            <span class="cg-lbrow__main">
+                <span class="cg-lbrow__name">${escapeHtml(r.name)}</span>
+                <span class="cg-lbrow__sub">${escapeHtml(detailText(activeTab, r))}</span>
+            </span>
+            <span class="cg-lbrow__score">
+                <b>${r.winRate}%</b>
+                <i>${r.wins}/${r.games}</i>
+            </span>
+        </div>
+    `).join('');
 
-        return `
-            <div class="lb-item ${isCurrentUser ? 'lb-item-current' : ''}" data-user-id="${escapeHtml(user.id)}">
-                <div class="lb-rank">${rankBadge}</div>
-                <div class="lb-avatar" style="background:${user.avatarBg || getAvatarColor(user.id)};">
-                    ${escapeHtml(user.name.charAt(0))}
-                </div>
-                <div class="lb-info">
-                    <div class="lb-name">
-                        ${escapeHtml(user.name)}
-                        ${badgesHtml}
+    const historyHtml = history.length ? `
+        <section class="cg-panel">
+            <header class="cg-panel__head"><span class="cg-panel__title">最近对局</span></header>
+            <div class="cg-panel__body">
+                ${history.slice(0, 10).map((h) => `
+                    <div class="cg-histrow">
+                        <span class="cg-histrow__game" data-tone="${escapeHtml(GAME_META[h.gameId]?.tone || 'blue')}">${escapeHtml(GAME_META[h.gameId]?.name || h.gameId)}</span>
+                        <span class="cg-histrow__text">${escapeHtml(h.summary || '')}</span>
+                        <span class="cg-histrow__time">${formatWhen(h.at)}</span>
                     </div>
-                    <div class="lb-stats">
-                        <span>狼人杀 ${user.werewolfGames}场 ${Math.round(user.werewolfWinRate * 100)}%</span>
-                        <span class="lb-stats-sep">·</span>
-                        <span>卧底 ${user.undercoverGames}场 ${Math.round(user.undercoverWinRate * 100)}%</span>
-                    </div>
-                </div>
-                <div class="lb-score">
-                    <div class="lb-score-value">${user.totalScore}</div>
-                    <div class="lb-score-label">积分</div>
-                </div>
+                `).join('')}
             </div>
-        `;
-    }).join('');
+        </section>
+    ` : '';
 
     return `
-        <div class="lb-page">
-            ${headerHtml}
-            <div class="lb-content">
-                <!-- 前三名展示 -->
-                <div class="lb-top3">
-                    ${users.slice(0, 3).map((user, index) => {
-                        const rank = index + 1;
-                        const medals = ['🥇', '🥈', '🥉'];
-                        const medalColors = ['#FFD700', '#C0C0C0', '#CD7F32'];
-                        const isCurrentUser = user.id === 'user';
+        <div class="cg-lb">
+            <header class="cg-topbar">
+                <button type="button" class="cg-topbar__back" aria-label="返回" ${act('closeDetail')}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 18 9 12 15 6" />
+                    </svg>
+                </button>
+                <div class="cg-topbar__copy"><div class="cg-topbar__title">战绩排行榜</div></div>
+                <div class="cg-topbar__right"></div>
+            </header>
 
-                        return `
-                            <div class="lb-top3-item ${isCurrentUser ? 'lb-top3-current' : ''}" style="--medal-color: ${medalColors[index]};">
-                                <div class="lb-top3-avatar" style="background:${user.avatarBg || getAvatarColor(user.id)}; border-color: ${medalColors[index]};">
-                                    ${escapeHtml(user.name.charAt(0))}
-                                </div>
-                                <div class="lb-top3-medal" style="color: ${medalColors[index]};">${medals[index]}</div>
-                                <div class="lb-top3-name">${escapeHtml(user.name)}</div>
-                                <div class="lb-top3-score">${user.totalScore}</div>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
+            <div class="cg-lb__tabs">${tabs}</div>
 
-                <!-- 排名列表 -->
-                <div class="lb-list">
-                    <div class="lb-list-header">
-                        <span>排名</span>
-                        <span>玩家</span>
-                        <span>积分</span>
-                    </div>
-                    ${rankListHtml}
-                </div>
+            <div class="cg-lb__body">
+                ${rows.length ? `<div class="cg-podium">${podium}</div>` : ''}
+                ${rows.length
+                    ? `<div class="cg-lblist">${list}</div>`
+                    : `<div class="cg-empty">
+                            <div class="cg-empty__text">还没有战绩</div>
+                            <div class="cg-empty__sub">打完一整局（不是中途退出）之后就会出现在这里</div>
+                       </div>`}
+                ${historyHtml}
             </div>
         </div>
     `;
+}
+
+function detailText(tab, r) {
+    const d = r.detail || {};
+    if (tab === GAME_IDS.WEREWOLF) {
+        const good = `好人 ${d.villageWins || 0}/${d.villageGames || 0}`;
+        const wolf = `狼人 ${d.wolfWins || 0}/${d.wolfGames || 0}`;
+        return `${good} · ${wolf}`;
+    }
+    if (tab === GAME_IDS.UNDERCOVER) {
+        return `平民 ${d.civilWins || 0}/${d.civilGames || 0} · 卧底 ${d.spyWins || 0}/${d.spyGames || 0}`;
+    }
+    if (tab === GAME_IDS.MONOPOLY) {
+        return `破产 ${d.bankrupt || 0} 次`;
+    }
+    return `共 ${r.games} 场`;
+}
+
+function formatWhen(ts) {
+    const diff = Date.now() - (Number(ts) || 0);
+    if (diff < 60000) return '刚刚';
+    if (diff < 3600000) return `${Math.floor(diff / 60000)} 分钟前`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)} 小时前`;
+    return `${Math.floor(diff / 86400000)} 天前`;
+}
+
+function hue(seed) {
+    const s = String(seed || '');
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 997;
+    return h % 12;
 }
 
 export default renderGameLeaderboardPage;

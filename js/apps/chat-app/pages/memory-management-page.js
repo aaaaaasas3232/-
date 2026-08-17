@@ -22,16 +22,9 @@
  */
 
 import { escapeHtml } from '@/src/core/escape.js';
+import { resolveAiAvatar } from '../aiMeta.js';
 
-// 头像背景色工具(同 calendar-view-page)
-function getAvatarColor(id) {
-    const palette = ['#A8C8EC', '#F4A6CD', '#B8D4F0', '#FFD4E5', '#C8E6F4', '#FFC8DD'];
-    let hash = 0;
-    for (let i = 0; i < (id || '').length; i++) {
-        hash = (hash * 31 + id.charCodeAt(i)) & 0xffffffff;
-    }
-    return palette[Math.abs(hash) % palette.length];
-}
+// ★ v0.71 头像背景色已统一到 aiMeta.resolveAiAvatar,删除本地 getAvatarColor 重复实现
 
 /**
  * 渲染顶部 header
@@ -54,20 +47,20 @@ function renderHeaderBar() {
  * 渲染单层配置项
  *   - level.editable=false → 周期 input 不可改 + 无删除按钮
  *   - level.editable=true  → 可改 + 可删
+ *
+ *   层级关系(从顶到底): L4(顶层,周期最大) → L3 → L2 → L1(底层,周期最小)
+ *   - upperLevel = order 更大 = 数组中 idx+1 = 周期更大的上层
+ *   - lowerLevel = order 更小 = 数组中 idx-1 = 周期更小的下层
  */
-function renderLevelItem(level, prevLevel, nextLevel, aiPersonId) {
+function renderLevelItem(level, upperLevel, lowerLevel, aiPersonId) {
     const editable = !!level.editable;
     const deletable = !!level.deletable;
     // 校验当前值
     const cycleNum = Math.max(1, Number(level.cycle) || 1);
-    // 上层 = order 更小;下层 = order 更大
-    const upperLevel = prevLevel;
-    const lowerLevel = nextLevel;
-    // 改周期:内联 input + 旁边一个保存按钮(framework 顶层 click 委托派发)
-    // 实时校验 + 红框提示,但只有点保存按钮才提交
-    const constraintHint = lowerLevel
-        ? `需 > ${lowerLevel.name}(${lowerLevel.cycle})` + (upperLevel ? ` · < ${upperLevel.name}(${upperLevel.cycle})` : '')
-        : (upperLevel ? `需 < ${upperLevel.name}(${upperLevel.cycle})` : '');
+    // 约束提示:上层周期更大(需<上层),下层周期更小(需>下层)
+    const constraintHint = upperLevel
+        ? `需 < ${upperLevel.name}(${upperLevel.cycle})` + (lowerLevel ? ` · > ${lowerLevel.name}(${lowerLevel.cycle})` : '')
+        : (lowerLevel ? `需 > ${lowerLevel.name}(${lowerLevel.cycle})` : '');
     return `
         <div class="memory-mgmt-level-item" data-level-id="${escapeHtml(level.id)}">
             <div class="memory-mgmt-level-info">
@@ -75,52 +68,59 @@ function renderLevelItem(level, prevLevel, nextLevel, aiPersonId) {
                     <span class="memory-mgmt-level-id">${escapeHtml(level.id)}</span>
                     <span class="memory-mgmt-level-name-text">${escapeHtml(level.name)}</span>
                     ${!editable ? '<span class="memory-mgmt-level-fixed">固定</span>' : ''}
+                    ${editable && constraintHint ? `<span class="memory-mgmt-level-hint">${escapeHtml(constraintHint)}</span>` : ''}
                 </div>
                 <div class="memory-mgmt-level-cycle-row">
                     <span class="memory-mgmt-level-cycle-label">周期</span>
                     <input type="number"
                            class="memory-mgmt-level-cycle-input"
                            data-level-id="${escapeHtml(level.id)}"
-                           data-prev-upper="${upperLevel ? upperLevel.cycle : ''}"
-                           data-prev-lower="${lowerLevel ? lowerLevel.cycle : ''}"
-                           data-prev-upper-name="${upperLevel ? upperLevel.name : ''}"
-                           data-prev-lower-name="${lowerLevel ? lowerLevel.name : ''}"
+                           data-upper-cycle="${upperLevel ? upperLevel.cycle : ''}"
+                           data-lower-cycle="${lowerLevel ? lowerLevel.cycle : ''}"
+                           data-upper-name="${upperLevel ? upperLevel.name : ''}"
+                           data-lower-name="${lowerLevel ? lowerLevel.name : ''}"
                            value="${cycleNum}"
                            min="1"
                            step="1"
                            ${editable ? '' : 'disabled'} />
                     <span class="memory-mgmt-level-cycle-unit">天</span>
-                    ${editable ? `
-                    <button type="button" class="memory-mgmt-level-save-btn"
-                        data-level-id="${escapeHtml(level.id)}"
-                        data-app-action='${escapeHtml(JSON.stringify({
-                            action: 'appMethod',
-                            appId: 'chat',
-                            method: 'saveUpdateLevelCycle',
-                            payload: { aiPersonId, levelId: level.id },
-                        }))}'
-                        aria-label="保存周期">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="20 6 9 17 4 12"/>
-                        </svg>
-                    </button>
-                    ` : ''}
                 </div>
-                ${editable && constraintHint ? `<div class="memory-mgmt-level-hint">${escapeHtml(constraintHint)}</div>` : ''}
             </div>
-            ${editable ? `
             <div class="memory-mgmt-level-actions">
-                <button type="button" class="memory-mgmt-level-remove-btn"
-                    data-app-action='{"action":"appMethod","appId":"chat","method":"openRemoveLevelModal","payload":{"levelId":"${escapeHtml(level.id)}"}}'
-                    aria-label="删除层级">
+                ${editable ? `
+                <button type="button" class="memory-mgmt-level-save-btn"
+                    data-level-id="${escapeHtml(level.id)}"
+                    data-app-action='${escapeHtml(JSON.stringify({
+                        action: 'appMethod',
+                        appId: 'chat',
+                        method: 'saveUpdateLevelCycle',
+                        payload: { aiPersonId, levelId: level.id },
+                    }))}'
+                    aria-label="保存周期">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="3 6 5 6 21 6"/>
-                        <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/>
-                        <path d="M10 11v6M14 11v6"/>
+                        <polyline points="20 6 9 17 4 12"/>
                     </svg>
                 </button>
+                ` : ''}
+                ${deletable ? `
+                <button type="button" class="memory-mgmt-level-remove-btn"
+                    data-app-action='${escapeHtml(JSON.stringify({
+                        action: 'appMethod',
+                        appId: 'chat',
+                        method: 'openRemoveLevelModal',
+                        payload: { aiPersonId, levelId: level.id },
+                    }))}'
+                    aria-label="删除层级">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 6h18"/>
+                        <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                        <path d="M10 11v6M14 11v6"/>
+                        <path d="M9 6V3h6v3"/>
+                    </svg>
+                </button>
+                ` : ''}
             </div>
-            ` : '<div class="memory-mgmt-level-actions-spacer"></div>'}
         </div>
     `;
 }
@@ -169,31 +169,42 @@ export function renderMemoryManagementPage(app, pageId) {
     // 按 order 升序
     levels.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
 
-    // 渲染层级列表(每层要知道 upper/lower 才能显示约束)
+    // 渲染层级列表(数组是升序:L1 → L2 → L3 → L4)
+    // upperLevel = idx+1(order更大) = 上层; lowerLevel = idx-1(order更小) = 下层
     const levelItemsHtml = levels.map((lvl, idx) => {
-        // prevLevel = 数组中 idx-1 = order 更小的(上层)
-        // nextLevel = 数组中 idx+1 = order 更大的(下层)
-        return renderLevelItem(lvl, levels[idx - 1], levels[idx + 1], aiPersonId);
+        const upperLevel = levels[idx + 1] || null; // idx+1 = order 更大 = 上层
+        const lowerLevel = levels[idx - 1] || null;  // idx-1 = order 更小 = 下层
+        return renderLevelItem(lvl, upperLevel, lowerLevel, aiPersonId);
     }).join('');
 
     // 头部信息(联系人名 + aiPerson 头像)
     let contactName = aiPersonId;
-    let avatarColor = getAvatarColor(aiPersonId);
-    let avatarText = '?';
+    // ★ v0.71 头像 url/bg/text 都从 aiMeta 拿实时数据(优先 socialProfiles.chat.*)
+    const avInfo = resolveAiAvatar(aiPersonId);
+    let avatarUrl = avInfo.url;
+    let avatarColor = avInfo.bg;
+    let avatarText = avInfo.text;
     try {
         const sdk = window.settingsSdk;
         const ai = sdk?.aiPersons?.get?.(aiPersonId);
         if (ai) {
             const chatProfile = ai.socialProfiles?.chat || {};
             contactName = chatProfile.nickname || ai.name || aiPersonId;
+            // ★ 再覆盖一次(防止 aiMeta 缓存滞后)
+            if (chatProfile.avatar) avatarUrl = chatProfile.avatar;
+            if (chatProfile.avatarBg) avatarColor = chatProfile.avatarBg;
         }
     } catch (_) {}
     avatarText = String(contactName || '?').charAt(0);
 
+    const avatarInner = avatarUrl
+        ? `<img src="${escapeHtml(avatarUrl)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`
+        : `<span class="memory-mgmt-header-avatar-text">${escapeHtml(avatarText)}</span>`;
+
     const headerHtml = `
         <div class="memory-mgmt-header">
-            <div class="memory-mgmt-header-avatar" data-avatar-color="${escapeHtml(avatarColor)}">
-                <span class="memory-mgmt-header-avatar-text">${escapeHtml(avatarText)}</span>
+            <div class="memory-mgmt-header-avatar" data-avatar-color="${escapeHtml(avatarColor)}" style="background:${escapeHtml(avatarColor)};">
+                ${avatarInner}
             </div>
             <div class="memory-mgmt-header-text">
                 <div class="memory-mgmt-header-name">${escapeHtml(contactName)}</div>

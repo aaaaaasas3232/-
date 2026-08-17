@@ -1,0 +1,261 @@
+/**
+ * 气泡机 · 界面配色 token
+ *
+ * ★ 这个文件是整个 App 界面颜色的**唯一真相**。
+ *   其他 CSS 只允许写 `var(--bb-*)`,JS 里一个 hex 都不许出现。
+ *   (气泡本身的色值是用户内容,由 inline style 给出,不走这套变量。)
+ *
+ * ★ 主题怎么切
+ *   `.app-shell[data-app-id="bubble-maker"]` 上挂
+ *   `data-bb-theme="porcelain|macaron|matcha|ink"`。
+ *   用户自定义色由 JS 往同一个元素 `style.setProperty('--bb-xxx', value)` 覆盖 ——
+ *   这是**允许 JS 出现颜色值的唯一场景**:值来自用户,编译期不可能知道。
+ *
+ * ★ 每套主题写了**两个**选择器:shell 自身,以及 shell 内任意带这个属性的后代。
+ *   后一个不是冗余 —— `theme-tokens.js` 的 `readPresetColors()` 靠往 shell 里塞
+ *   一个隐藏探针 div、给它挂 `data-bb-theme` 再 `getComputedStyle` 读值,
+ *   来拿到「另一套主题长什么样」(主题卡片的迷你预览就靠这个)。
+ *   只写 shell 自身的话探针永远匹配不上,四张预览卡会**全部显示成当前主题** ——
+ *   而且它不报错,只是看起来「预览坏了」。
+ *
+ * ★ 派生规则
+ *   `-soft` / `-strong` 是同色系的浅 / 深版本,`-overlay` / `-shadow` 一律 rgba。
+ *   新增颜色前先问一句「能不能从已有 token 派生」—— token 越多,
+ *   用户配一套颜色就越痛苦。
+ *
+ * ★ 全 App 禁用渐变。所有 token 都是纯色或 rgba,没有一个 linear-gradient。
+ */
+
+/* ============================================================
+   白瓷 —— 默认。主体纯白,只用马卡龙色做点缀
+   ============================================================ */
+.app-shell[data-app-id="bubble-maker"],
+.app-shell[data-app-id="bubble-maker"][data-bb-theme="porcelain"],
+.app-shell[data-app-id="bubble-maker"] [data-bb-theme="porcelain"] {
+    /* 底与面 */
+    --bb-bg: #FBFAF9;
+    --bb-surface: #FFFFFF;
+    --bb-surface-2: #F6F4F3;
+    --bb-sunken: #F1EEED;
+    --bb-divider: rgba(74, 66, 71, 0.08);
+    --bb-border: rgba(74, 66, 71, 0.12);
+
+    /* 文字 */
+    --bb-text: #4A4247;
+    --bb-text-secondary: #7C7278;
+    --bb-text-tertiary: #A9A0A5;
+    --bb-text-inverse: #FFFFFF;
+
+    /* 主色 */
+    --bb-primary: #F2A9BE;
+    --bb-primary-soft: rgba(242, 169, 190, 0.16);
+    --bb-primary-strong: #E28AA4;
+    --bb-on-primary: #FFFFFF;
+    --bb-accent: #9BCFC4;
+    --bb-accent-soft: rgba(155, 207, 196, 0.18);
+
+    /* 控件 */
+    --bb-input-bg: #FFFFFF;
+    --bb-input-border: rgba(74, 66, 71, 0.14);
+    --bb-input-focus: rgba(242, 169, 190, 0.32);
+    --bb-placeholder: #BCB3B8;
+    --bb-track: #EDE8E9;
+    --bb-thumb: #F2A9BE;
+    --bb-switch-off: #DFD9DB;
+    --bb-switch-on: #9BCFC4;
+
+    /* 按钮 */
+    --bb-btn-bg: #FFFFFF;
+    --bb-btn-border: rgba(74, 66, 71, 0.14);
+    --bb-btn-text: #5C5257;
+    --bb-btn-press: #F3EFF0;
+    --bb-btn-shadow: rgba(74, 66, 71, 0.16);
+
+    /* 标签与状态 */
+    --bb-tag-bg: rgba(242, 169, 190, 0.16);
+    --bb-tag-text: #C0708B;
+    --bb-success: #6FBFA4;
+    --bb-warning: #E5B45F;
+    --bb-danger: #E28080;
+
+    /* 预览台 */
+    --bb-stage-bg: #F3F1EF;
+    --bb-stage-line: rgba(74, 66, 71, 0.07);
+    --bb-stage-label: #A9A0A5;
+
+    /* 遮罩与阴影 */
+    --bb-overlay: rgba(58, 50, 55, 0.32);
+    --bb-shadow: rgba(74, 66, 71, 0.14);
+    --bb-scrollbar: rgba(74, 66, 71, 0.18);
+
+    /* ── 以下不进色板(派生值),用户不用管 ── */
+    --bb-home-indicator: rgba(74, 66, 71, 0.28);
+}
+
+/* ============================================================
+   马卡龙 —— 奶油粉调
+   ============================================================ */
+.app-shell[data-app-id="bubble-maker"][data-bb-theme="macaron"],
+.app-shell[data-app-id="bubble-maker"] [data-bb-theme="macaron"] {
+    --bb-bg: #FFF7F4;
+    --bb-surface: #FFFFFF;
+    --bb-surface-2: #FDF0EC;
+    --bb-sunken: #FBE7E1;
+    --bb-divider: rgba(140, 90, 96, 0.10);
+    --bb-border: rgba(140, 90, 96, 0.16);
+
+    --bb-text: #6B4A50;
+    --bb-text-secondary: #97757B;
+    --bb-text-tertiary: #BD9EA3;
+    --bb-text-inverse: #FFFFFF;
+
+    --bb-primary: #F2A9BE;
+    --bb-primary-soft: rgba(242, 169, 190, 0.22);
+    --bb-primary-strong: #DE86A1;
+    --bb-on-primary: #FFFFFF;
+    --bb-accent: #F5CF8E;
+    --bb-accent-soft: rgba(245, 207, 142, 0.26);
+
+    --bb-input-bg: #FFFFFF;
+    --bb-input-border: rgba(140, 90, 96, 0.18);
+    --bb-input-focus: rgba(242, 169, 190, 0.36);
+    --bb-placeholder: #C9AFB3;
+    --bb-track: #F6E2E4;
+    --bb-thumb: #EE9BB3;
+    --bb-switch-off: #EBD5D8;
+    --bb-switch-on: #9BCFC4;
+
+    --bb-btn-bg: #FFFFFF;
+    --bb-btn-border: rgba(140, 90, 96, 0.18);
+    --bb-btn-text: #7A585E;
+    --bb-btn-press: #FBEDEF;
+    --bb-btn-shadow: rgba(190, 130, 145, 0.28);
+
+    --bb-tag-bg: rgba(245, 207, 142, 0.3);
+    --bb-tag-text: #A9793A;
+    --bb-success: #6FBFA4;
+    --bb-warning: #E0A85C;
+    --bb-danger: #E07E86;
+
+    --bb-stage-bg: #FBEEE9;
+    --bb-stage-line: rgba(140, 90, 96, 0.08);
+    --bb-stage-label: #BD9EA3;
+
+    --bb-overlay: rgba(90, 55, 62, 0.32);
+    --bb-shadow: rgba(160, 105, 118, 0.20);
+    --bb-scrollbar: rgba(160, 105, 118, 0.24);
+
+    --bb-home-indicator: rgba(107, 74, 80, 0.28);
+}
+
+/* ============================================================
+   抹茶 —— 清浅绿意
+   ============================================================ */
+.app-shell[data-app-id="bubble-maker"][data-bb-theme="matcha"],
+.app-shell[data-app-id="bubble-maker"] [data-bb-theme="matcha"] {
+    --bb-bg: #F7FAF6;
+    --bb-surface: #FFFFFF;
+    --bb-surface-2: #EFF5EC;
+    --bb-sunken: #E6EFE1;
+    --bb-divider: rgba(70, 96, 76, 0.10);
+    --bb-border: rgba(70, 96, 76, 0.16);
+
+    --bb-text: #40564A;
+    --bb-text-secondary: #6D8377;
+    --bb-text-tertiary: #9AAB9F;
+    --bb-text-inverse: #FFFFFF;
+
+    --bb-primary: #8FC6A4;
+    --bb-primary-soft: rgba(143, 198, 164, 0.2);
+    --bb-primary-strong: #6FAE88;
+    --bb-on-primary: #FFFFFF;
+    --bb-accent: #E9C98A;
+    --bb-accent-soft: rgba(233, 201, 138, 0.26);
+
+    --bb-input-bg: #FFFFFF;
+    --bb-input-border: rgba(70, 96, 76, 0.18);
+    --bb-input-focus: rgba(143, 198, 164, 0.36);
+    --bb-placeholder: #A8B8AC;
+    --bb-track: #E3EBDF;
+    --bb-thumb: #8FC6A4;
+    --bb-switch-off: #D9E2D5;
+    --bb-switch-on: #8FC6A4;
+
+    --bb-btn-bg: #FFFFFF;
+    --bb-btn-border: rgba(70, 96, 76, 0.18);
+    --bb-btn-text: #52685A;
+    --bb-btn-press: #EDF3EA;
+    --bb-btn-shadow: rgba(90, 128, 102, 0.24);
+
+    --bb-tag-bg: rgba(143, 198, 164, 0.22);
+    --bb-tag-text: #4F8767;
+    --bb-success: #6FBFA4;
+    --bb-warning: #DCA95A;
+    --bb-danger: #D9807C;
+
+    --bb-stage-bg: #EEF4EA;
+    --bb-stage-line: rgba(70, 96, 76, 0.08);
+    --bb-stage-label: #9AAB9F;
+
+    --bb-overlay: rgba(45, 66, 52, 0.32);
+    --bb-shadow: rgba(70, 96, 76, 0.16);
+    --bb-scrollbar: rgba(70, 96, 76, 0.2);
+
+    --bb-home-indicator: rgba(64, 86, 74, 0.28);
+}
+
+/* ============================================================
+   夜阑 —— 深色
+   ============================================================ */
+.app-shell[data-app-id="bubble-maker"][data-bb-theme="ink"],
+.app-shell[data-app-id="bubble-maker"] [data-bb-theme="ink"] {
+    --bb-bg: #1E1B1F;
+    --bb-surface: #2A262C;
+    --bb-surface-2: #332E35;
+    --bb-sunken: #221F24;
+    --bb-divider: rgba(255, 255, 255, 0.08);
+    --bb-border: rgba(255, 255, 255, 0.14);
+
+    --bb-text: #EDE7EA;
+    --bb-text-secondary: #B4A9B0;
+    --bb-text-tertiary: #857C83;
+    --bb-text-inverse: #221F24;
+
+    --bb-primary: #E9A0B7;
+    --bb-primary-soft: rgba(233, 160, 183, 0.2);
+    --bb-primary-strong: #F3B8CB;
+    --bb-on-primary: #2A1E24;
+    --bb-accent: #8FC6BA;
+    --bb-accent-soft: rgba(143, 198, 186, 0.2);
+
+    --bb-input-bg: #221F24;
+    --bb-input-border: rgba(255, 255, 255, 0.16);
+    --bb-input-focus: rgba(233, 160, 183, 0.36);
+    --bb-placeholder: #7A7178;
+    --bb-track: #3B353D;
+    --bb-thumb: #E9A0B7;
+    --bb-switch-off: #443E47;
+    --bb-switch-on: #8FC6BA;
+
+    --bb-btn-bg: #332E35;
+    --bb-btn-border: rgba(255, 255, 255, 0.14);
+    --bb-btn-text: #DCD4D9;
+    --bb-btn-press: #3D3740;
+    --bb-btn-shadow: rgba(0, 0, 0, 0.5);
+
+    --bb-tag-bg: rgba(233, 160, 183, 0.18);
+    --bb-tag-text: #F0B9CA;
+    --bb-success: #7FC8AE;
+    --bb-warning: #E3B872;
+    --bb-danger: #E58E8E;
+
+    --bb-stage-bg: #262229;
+    --bb-stage-line: rgba(255, 255, 255, 0.06);
+    --bb-stage-label: #857C83;
+
+    --bb-overlay: rgba(10, 8, 11, 0.6);
+    --bb-shadow: rgba(0, 0, 0, 0.5);
+    --bb-scrollbar: rgba(255, 255, 255, 0.18);
+
+    --bb-home-indicator: rgba(237, 231, 234, 0.3);
+}

@@ -2,6 +2,14 @@
     padding: 0;
 }
 
+/* 岛体一律纯黑：任何带透明度或灰阶渐变的底都会在浅色 App 背景上透出灰边 */
+.dynamic-island.has-template {
+    background: #000 !important;
+    background-color: #000 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
 .dynamic-island.has-template.mini {
     width: 180px;
     height: 36px;
@@ -34,8 +42,8 @@
     align-items: center;
     justify-content: center;
     height: 100%;
-    padding: 0 12px;
-    gap: 8px;
+    padding: 0 10px;
+    gap: 7px;
     flex-direction: row;
 }
 
@@ -68,10 +76,13 @@
 .island-template-music-mini-wave span:nth-child(2) { animation-delay: 0.2s; }
 .island-template-music-mini-wave span:nth-child(3) { animation-delay: 0.4s; }
 
+/* 这一行放的是"正在唱的那句歌词"（没歌词才回落歌名），
+   比歌名长，所以放宽一点、字重轻一点，超出照 iOS 的做法截断 */
 .island-template-music-mini-label {
-    max-width: 92px;
-    font-size: 12px;
-    font-weight: 600;
+    max-width: 110px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.2px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -174,26 +185,34 @@
 .island-template-music-progress-bar {
     width: 100%;
     height: 100%;
-    background: #404040;
+    background: rgba(255, 255, 255, 0.22);
     border-radius: 3.5px;
-    overflow: hidden;
+    /* 不裁切子元素:圆点需要露出上下边界 */
+    overflow: visible;
 }
 
 .island-template-music-progress-fill {
     height: 100%;
+    /* fill 必须有兜底底色:JS 只改 width,若模板未带 background 就只剩一个圆点在动 */
+    background: #fb7299;
     border-radius: 3.5px;
     position: relative;
     transition: width 0.18s linear;
+    min-width: 2px;
 }
 
-.island-template-music-progress-fill::after {
+/* 白色进度圆点:
+   - 8px 直径,完全位于 fill 内部(高度 7px,圆点 8px 仅溢出 0.5px,两侧都不超)
+   - 圆点用 ::before 在 fill 内部画,不再用 ::after 越界
+   - overflow:visible 让 .5px 溢出也能显示完整圆形 */
+.island-template-music-progress-fill::before {
     content: '';
     position: absolute;
-    right: -5px;
+    right: -4px;
     top: 50%;
-    transform: translateY(-55%);
-    width: 12px;
-    height: 12px;
+    transform: translate(50%, -50%);
+    width: 8px;
+    height: 8px;
     background: #fff;
     border-radius: 50%;
     box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
@@ -350,3 +369,78 @@
     0%, 100% { height: 4px; }
     50% { height: 16px; }
 }
+
+/* ============================================================
+   点灯 · 词条岛（starlit-dict）
+   ------------------------------------------------------------
+   放这个文件里是因为它必须和音乐岛同一条加载路径:
+   dev 走 <link>，单文件构建由 vite.config.single.js 把整个文件
+   替换进 island-templates.js 的 __MUSIC_ISLAND_CSS__ 占位符。
+   写进 css/apps/starlit/index.css 的话，单文件模式下这个岛会没样式。
+   岛画在手机屏幕最上层，够不着 --sl-* 那套变量，所以这里写死颜色。
+   ============================================================ */
+.sl-isl {
+    width: 100%;
+    color: #f2efe8;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+}
+
+.sl-isl--mini {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 4px;
+    overflow: hidden;
+    white-space: nowrap;
+}
+.sl-isl-dot {
+    flex: 0 0 auto;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #d98552;
+}
+.sl-isl-front { font-size: 13px; font-weight: 650; }
+.sl-isl-pos { font-size: 10px; font-style: italic; color: #9b968c; }
+.sl-isl-back {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+    color: #b9d8e8;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sl-isl--medium { padding: 4px 6px 2px; }
+.sl-isl-main { margin-bottom: 8px; }
+.sl-isl-term { font-size: 19px; font-weight: 700; letter-spacing: 0.3px; }
+.sl-isl-term i { margin-left: 5px; font-size: 11px; font-style: italic; color: #9b968c; font-weight: 400; }
+.sl-isl-mean { margin-top: 2px; font-size: 13px; color: #c7d9e4; }
+.sl-isl-hint { margin-top: 3px; font-size: 10.5px; color: #8a857c; }
+
+.sl-isl-row { display: flex; gap: 4px; }
+.sl-isl-row--sub { margin-top: 5px; }
+.sl-isl-btn {
+    flex: 1;
+    padding: 6px 2px;
+    border: 1px solid rgba(242, 239, 232, 0.22);
+    border-radius: 9px;
+    background: transparent;
+    color: #f2efe8;
+    font-size: 11px;
+    cursor: pointer;
+}
+.sl-isl-btn--on { border-color: #7fc79a; color: #7fc79a; }
+.sl-isl-btn--wide { flex: 1 0 100%; background: rgba(217, 133, 82, 0.2); border-color: #d98552; color: #f0b183; }
+.sl-isl-btn:active { background: rgba(255, 255, 255, 0.1); }
+.sl-isl-tag {
+    flex: 1;
+    padding: 4px 2px;
+    border: 0;
+    border-radius: 7px;
+    background: rgba(255, 255, 255, 0.07);
+    color: #a8a49c;
+    font-size: 10px;
+    cursor: pointer;
+}
+.sl-isl-tag:active { background: rgba(255, 255, 255, 0.15); }

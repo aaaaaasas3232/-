@@ -49,8 +49,6 @@ import {
     initEventHandlers,
     setOnChange,
     setOnApply,
-    // 序列化
-    serialize as serializeCaseState,
 } from './phone-case/index.js';
 
 // 屏幕墙纸模块（新增）
@@ -148,7 +146,6 @@ function renderDesktopGridPicker(ui) {
 
     const rowsRow = renderRow({
         label: '行数',
-        description: `当前 ${currentRows} 行（每页图标行数，可翻页）`,
         trailing: renderChipGroup({
             presets: rowsChips,
             currentValue: currentRows,
@@ -192,15 +189,21 @@ export function renderAppearanceSection(app) {
     });
 
     // ---- 电量 ----
+    // ★ 电量绑定给氧气（blog）期间，整个调节条 div 消失，换成一行说明；
+    //   解除绑定后（batteryUnbind）调节条原样恢复。绑定状态由氧气通过
+    //   settings 的 batteryBridge 服务写入 device-theme 记录。
+    const batteryBoundByOxygen = ui.batteryBoundByOxygen === true;
     const capacityPct = pct(ui.batteryCapacity);
-    const capacitySlider = renderSlider({
-        min: 0,
-        max: 100,
-        step: 5,
-        value: capacityPct,
-        field: 'batteryCapacity',
-        method: COLOR_METHOD,
-    });
+    const capacitySlider = batteryBoundByOxygen
+        ? '<div class="battery-oxygen-note">电量已交给氧气。解除绑定后可手动调节。</div>'
+        : renderSlider({
+            min: 0,
+            max: 100,
+            step: 5,
+            value: capacityPct,
+            field: 'batteryCapacity',
+            method: COLOR_METHOD,
+        });
 
     // ---- 高度拉条（始终可调，450-720）----
     const phoneHeightPx = Math.max(
@@ -212,7 +215,6 @@ export function renderAppearanceSection(app) {
     );
     const phoneHeightRow = renderRow({
         label: '手机高度',
-        description: `当前 ${phoneHeightPx}px（${PHONE_HEIGHT_MIN}-${PHONE_HEIGHT_MAX}）`,
         trailing: renderSlider({
             min: PHONE_HEIGHT_MIN,
             max: PHONE_HEIGHT_MAX,
@@ -236,7 +238,6 @@ export function renderAppearanceSection(app) {
     );
     const phoneYOffsetRow = renderRow({
         label: '垂直位置',
-        description: `当前偏移 ${phoneYOffsetPx}px（${PHONE_Y_OFFSET_MIN}~${PHONE_Y_OFFSET_MAX}，负数上移）`,
         trailing: renderSlider({
             min: PHONE_Y_OFFSET_MIN,
             max: PHONE_Y_OFFSET_MAX,
@@ -396,7 +397,6 @@ function initAppearanceSection(app) {
     applyStatusBarExternalState({
         showStatusBar: app.state.ui.appearance.showStatusBar,
         statusBarTimeColor: app.state.ui.appearance.statusBarTimeColor,
-        statusBarSignalColor: app.state.ui.appearance.statusBarSignalColor,
         statusBarFiveGColor: app.state.ui.appearance.statusBarFiveGColor,
         statusBarFiveGLabel: app.state.ui.appearance.statusBarFiveGLabel,
     });

@@ -1,0 +1,122 @@
+/* 灯塔 · 小剧场 */
+
+.app-shell[data-app-id="job"] .jb-th__hero { margin-bottom: 18px; }
+
+.app-shell[data-app-id="job"] .jb-th__title {
+    margin: 0 0 5px;
+    font-size: 19px;
+    font-weight: 650;
+    line-height: 1.35;
+    color: var(--jb-text);
+}
+
+.app-shell[data-app-id="job"] .jb-th__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 10px;
+    font-size: 11.5px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-th__meta span + span::before {
+    content: '·';
+    margin-right: 8px;
+    color: var(--jb-line-strong);
+}
+
+.app-shell[data-app-id="job"] .jb-th__score {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--jb-line-soft);
+}
+
+.app-shell[data-app-id="job"] .jb-th__lv {
+    padding: 3px 10px;
+    border: 1px solid var(--jb-primary);
+    border-radius: 11px;
+    background: var(--jb-primary-soft);
+    color: var(--jb-primary-strong);
+    font-size: 12px;
+    font-weight: 580;
+}
+
+.app-shell[data-app-id="job"] .jb-th__nopay {
+    font-size: 11.5px;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-th__note {
+    margin: 8px 0 0;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--jb-text-2);
+}
+
+/* 正文：每一场一块，旁白和台词的层次靠缩进和颜色拉开，不靠框 */
+
+.app-shell[data-app-id="job"] .jb-th__scene {
+    margin-bottom: 22px;
+    padding-left: 12px;
+    border-left: 2px solid var(--jb-line);
+}
+
+.app-shell[data-app-id="job"] .jb-th__place {
+    margin: 0 0 9px;
+    font-size: 11.5px;
+    letter-spacing: 1.5px;
+    color: var(--jb-accent);
+}
+
+.app-shell[data-app-id="job"] .jb-th__narration {
+    margin: 0 0 13px;
+    font-size: 12.5px;
+    line-height: 1.9;
+    color: var(--jb-text-3);
+}
+
+.app-shell[data-app-id="job"] .jb-th__line { margin-bottom: 12px; }
+
+.app-shell[data-app-id="job"] .jb-th__who {
+    display: block;
+    margin-bottom: 3px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--jb-primary-strong);
+}
+
+.app-shell[data-app-id="job"] .jb-th__text {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.85;
+    color: var(--jb-text);
+    white-space: pre-wrap;
+}
+
+.app-shell[data-app-id="job"] .jb-th__closing {
+    margin: 0 0 20px;
+    padding: 13px 15px;
+    border-radius: 13px;
+    background: var(--jb-surface-2);
+    font-size: 13px;
+    line-height: 1.85;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-th__digest {
+    margin: 0 0 10px;
+    font-size: 12.5px;
+    line-height: 1.8;
+    color: var(--jb-text-2);
+}
+
+.app-shell[data-app-id="job"] .jb-th__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--jb-line-soft);
+}

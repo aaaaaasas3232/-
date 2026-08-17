@@ -12,7 +12,7 @@
  */
 
 import { SDK_STORES } from './defaults.js';
-import { createPersister, loadFromDb, mergePatch, mapGet, now } from './helpers.js';
+import { createPersister, loadFromDb, mergePatch, now } from './helpers.js';
 
 // ============================================
 // 工厂

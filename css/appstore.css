@@ -1,12 +1,5 @@
-/* ============================================
- * App Store · CSS（独立样式文件，不污染 main.css）
- *
- * 视觉风格：
- *  - Apple Store 风格 / iOS 系统列表
- *  - 选粉 + 蓝配色（#FF69B4 / #FF8FAB / #007AFF）
- *  - 圆角 14-20px / 玻璃感 / 柔阴影
- *  - 完全自包含，不与 main.css 类名冲突
- * ============================================ */
+/*  App Store · CSS（独立样式文件，不污染 main.css）
+  */
 
 /* ---------- 颜色变量 ---------- */
 :root {
@@ -26,6 +19,10 @@
 }
 
 /* ---------- 总容器 ---------- */
+.app-shell[data-app-id="appstore"] .app-content {
+    padding: 0;
+}
+
 .appstore-app {
     background: var(--appstore-bg);
     color: var(--appstore-text);
@@ -35,9 +32,16 @@
     padding-bottom: 80px;
 }
 
+/* 让内容占满宽度（app-screen-panel 是 appstore-app 的父元素） */
+.app-screen-panel > .appstore-app,
+.app-screen-panel > .appstore-detail {
+    margin-left: -14px;
+    margin-right: -14px;
+}
+
 /* ---------- 顶栏 ---------- */
 .appstore-topbar {
-    padding: 40px 20px 8px;
+    padding: 40px 16px 8px;
     background: transparent;
     position: relative;
     z-index: 10;
@@ -61,7 +65,7 @@
 
 /* ---------- 通用板块 ---------- */
 .appstore-section {
-    padding: 0 20px 22px;
+    padding: 0 16px 22px;
 }
 
 .appstore-section-head {
@@ -69,6 +73,7 @@
     font-weight: 700;
     line-height: 1.2;
     margin: 8px 0 12px;
+    padding: 0 2px;
 }
 
 /* ---------- 大特色卡 ---------- */
@@ -181,12 +186,15 @@
 .appstore-btn-get {
     background: linear-gradient(135deg, var(--appstore-pink-1), var(--appstore-pink-2));
     color: #FFFFFF;
+    border: none;
     box-shadow: 0 2px 6px rgba(255, 105, 180, 0.32);
 }
 
 .appstore-btn-open {
-    background: #E5E5EA;
-    color: var(--appstore-pink-1);
+    background: linear-gradient(135deg, var(--appstore-blue), #5AC8FA);
+    color: #FFFFFF;
+    border: none;
+    box-shadow: 0 2px 6px #a490ff52;
 }
 
 .appstore-btn-large {
@@ -682,9 +690,13 @@
     font-size: 22px;
 }
 
-.appstore-preview-card span {
-    font-size: 14px;
-    opacity: 0.88;
+.appstore-preview-subtitle {
+    font-size: 13px;
+    opacity: 0.9;
+    color: #fff;
+    text-align: center;
+    max-width: 80%;
+    line-height: 1.4;
 }
 
 .appstore-text-button {
@@ -693,6 +705,69 @@
     color: var(--appstore-pink-1);
 }
 
-.appstore-tab-spacer {
-    height: 80px;
+/* ---------- 教程 / 常见问题 折叠面板 ---------- */
+.appstore-section--soft {
+    padding-top: 4px;
+}
+
+.appstore-faq-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    background: var(--appstore-card);
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.appstore-faq-item {
+    border-bottom: 0.5px solid var(--appstore-divider);
+}
+
+.appstore-faq-item:last-child {
+    border-bottom: none;
+}
+
+.appstore-faq-q {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    cursor: pointer;
+    font-size: 15px;
+    color: var(--appstore-text);
+    line-height: 1.4;
+    gap: 12px;
+    transition: background 0.12s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.appstore-faq-q:active {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.appstore-faq-q span:first-child {
+    flex: 1;
+    min-width: 0;
+}
+
+.appstore-faq-chevron {
+    font-size: 18px;
+    color: var(--appstore-muted);
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+    transform: rotate(0deg);
+    line-height: 1;
+}
+
+.appstore-faq-chevron.is-open {
+    transform: rotate(90deg);
+}
+
+.appstore-faq-a {
+    padding: 0 16px 14px;
+    font-size: 14px;
+    color: var(--appstore-sub);
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
 }

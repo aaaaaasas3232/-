@@ -21,6 +21,9 @@ import {
     renderRow,
 } from '../../ui-components.js';
 
+import { getClockMode } from '@/js/apps/setting/world/chronology-clock.js';
+import { CLOCK_MODES } from '@/js/apps/setting/world/sdk/chronology/chronology-constants.js';
+
 const COLOR_METHOD = 'updateAppearanceField';
 const APP_ID = 'settings';
 
@@ -29,6 +32,40 @@ const STATUS_BAR_TABS = [
     { id: 'show', label: '显示' },
     { id: 'hide', label: '隐藏' },
 ];
+
+// 顶部时间显示模式（真实 / 世界观纪时 / 同世界不同地区的时差）
+const CLOCK_MODE_TABS = [
+    { id: CLOCK_MODES.REAL, label: '真实' },
+    { id: CLOCK_MODES.CHRONOLOGY, label: '纪时' },
+    { id: CLOCK_MODES.OFFSET, label: '时差' },
+];
+
+/**
+ * 顶部时间显示模式的分段控件。
+ * 走 data-app-action → methods.setStatusBarClockMode(mode)。
+ * 模式本身存 localStorage（不是 IndexedDB）—— 状态栏每秒要同步读一次，
+ * 详见 js/apps/setting/world/chronology-clock.js 顶部注释。
+ */
+function renderClockModeSegmentedTabs() {
+    const active = getClockMode();
+    const tabs = CLOCK_MODE_TABS.map((tab) => {
+        const action = {
+            action: 'appMethod',
+            appId: APP_ID,
+            method: 'setStatusBarClockMode',
+            payload: { mode: tab.id },
+        };
+        const actionAttr = ` data-app-action='${escapeHtml(JSON.stringify(action))}'`;
+        return `
+            <button type="button"
+                    class="settings-row__segmented-tab ${tab.id === active ? 'is-active' : ''}"
+                    data-clock-mode-tab="${escapeHtml(tab.id)}"${actionAttr}>
+                ${escapeHtml(tab.label)}
+            </button>
+        `;
+    }).join('');
+    return `<div class="settings-row__segmented-tabs">${tabs}</div>`;
+}
 
 /**
  * 渲染状态栏整体开关的分段控件（iPhone 风格）。
@@ -57,9 +94,9 @@ function renderStatusBarSegmentedTabs(currentShow) {
 
 /**
  * 渲染「状态栏」分组。包含：
- *   - 整体状态栏开关（关闭后顶部时间 / 信号 / 5G / 电池全部隐藏）
+ *   - 整体状态栏开关（关闭后顶部时间 / 5G / 电池全部隐藏）
  *
- * 颜色字段（时间 / 信号 / 5G）和 5G 文案替换继续保留。
+ * 颜色字段（时间 / 5G）和 5G 文案替换继续保留。
  * 所有颜色字段为空字符串时表示「跟随 App 默认颜色」（activeApp.statusBarColor）。
  */
 export function renderStatusBarGroup(ui) {
@@ -68,16 +105,15 @@ export function renderStatusBarGroup(ui) {
         trailing: renderStatusBarSegmentedTabs(ui.showStatusBar),
     });
 
+    const clockModeRow = renderRow({
+        label: '顶部时间',
+        trailing: renderClockModeSegmentedTabs(),
+    });
+
     const timeColorPicker = renderRowColorPicker({
         label: '时间颜色',
         value: (typeof ui.statusBarTimeColor === 'string') ? ui.statusBarTimeColor : '',
         field: 'statusBarTimeColor',
-    });
-
-    const signalColorPicker = renderRowColorPicker({
-        label: '信号颜色',
-        value: (typeof ui.statusBarSignalColor === 'string') ? ui.statusBarSignalColor : '',
-        field: 'statusBarSignalColor',
     });
 
     const fiveGColorPicker = renderRowColorPicker({
@@ -92,14 +128,16 @@ export function renderStatusBarGroup(ui) {
         placeholder: '5G',
     });
 
-    const rows = [overallRow, timeColorPicker, signalColorPicker, fiveGColorPicker, fiveGTextField];
-   
+    // 信号格已于 2026-08-13 从状态栏彻底移除，这里不再有「信号颜色」。
+    const rows = [overallRow, clockModeRow, timeColorPicker, fiveGColorPicker, fiveGTextField];
+
     const content = rows.join('');
 
     return renderGroup({
         title: '状态栏',
         content,
-        footer: '整体开关不影响灵动岛。颜色字段留空 = 跟随当前 App 状态栏颜色。',
+        footer: '整体开关不影响灵动岛。颜色字段留空 = 跟随当前 App 状态栏颜色。'
+            + '「顶部时间」选纪时 / 时差时，读的是当前世界观里配置的纪时系统；世界观没开纪时会自动显示真实时间。',
     });
 }
 

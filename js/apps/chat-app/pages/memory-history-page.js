@@ -21,20 +21,19 @@
  */
 
 import { escapeHtml } from '@/src/core/escape.js';
-import { chatModalManager } from '../components/chat-modal-registry.js';
 
 const DEFAULT_LEVEL_LABELS = Object.freeze({
-    L1: '日',
-    L2: '周',
-    L3: '月',
-    L4: '年',
-    L5: '季',
-    L6: '十年',
+    L1: 'L1',
+    L2: 'L2',
+    L3: 'L3',
+    L4: 'L4',
+    L5: 'L5',
+    L6: 'L6',
 });
 
 function _shortName(level) {
     const id = String(level?.id || '');
-    return DEFAULT_LEVEL_LABELS[id] || (String(level?.name || id).slice(0, 2));
+    return DEFAULT_LEVEL_LABELS[id] || id;
 }
 
 /**
@@ -72,7 +71,6 @@ function renderLevelTabs(aiPersonId, mode, levels, activeLevelId) {
                 data-level-id="${escapeHtml(lvl.id)}"
                 data-app-action='${escapeHtml(action)}'>
                 <span class="memory-history-level-tab-label">${escapeHtml(_shortName(lvl))}</span>
-                <span class="memory-history-level-tab-name">${escapeHtml(lvl.name)}</span>
                 ${Number(lvl.count) > 0 ? `<span class="memory-history-level-tab-count">${lvl.count}</span>` : ''}
             </button>
         `;
@@ -93,6 +91,19 @@ function renderSummaryCard(summary, aiPersonId, mode) {
     const previewShort = preview.length > 80 ? preview.slice(0, 80) + '…' : preview;
     const sourceText = `来源 ${summary.messageCount || 0} 条消息`;
     const isActive = summary.asPrompt && summary.asPrompt.active !== false;
+    const applyAction = isActive
+        ? JSON.stringify({
+            action: 'appMethod',
+            appId: 'chat',
+            method: 'toggleMemorySummaryPromptActive',
+            payload: { aiPersonId, mode, summaryId: summary.id, active: false },
+          })
+        : JSON.stringify({
+            action: 'appMethod',
+            appId: 'chat',
+            method: 'applyMemorySummaryToPromptManager',
+            payload: { aiPersonId, mode, summaryId: summary.id },
+          });
     return `
         <div class="memory-history-card" data-summary-id="${escapeHtml(summary.id)}">
             <div class="memory-history-card-head">
@@ -102,13 +113,7 @@ function renderSummaryCard(summary, aiPersonId, mode) {
             <div class="memory-history-card-preview">${escapeHtml(previewShort || '(无内容)')}</div>
             <div class="memory-history-card-apply-row">
                 <button type="button" class="memory-history-card-apply-btn ${isActive ? 'is-applied' : ''}"
-                    ${isActive ? 'disabled' : ''}
-                    data-app-action='${escapeHtml(JSON.stringify({
-                        action: 'appMethod',
-                        appId: 'chat',
-                        method: 'applyMemorySummaryToPromptManager',
-                        payload: { aiPersonId, mode, summaryId: summary.id },
-                    }))}'>
+                    data-app-action='${escapeHtml(applyAction)}'>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M9 12l2 2 4-4"/>
                         <circle cx="12" cy="12" r="10"/>
@@ -178,7 +183,8 @@ export function renderMemoryHistoryPage(app, pageId) {
             summariesByLevel = sdk.memorySummaries.listByLevel(aiPersonId) || {};
         }
     } catch (_) {}
-    const levels = (config.levels || []).slice().sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
+    // config.levels 已经是升序排列(L1→L2→L3→L4),直接使用
+    const levels = (config.levels || []).slice();
 
     // 当前激活层(从 window 读 / 默认 L1)
     let activeLevelId = 'L1';

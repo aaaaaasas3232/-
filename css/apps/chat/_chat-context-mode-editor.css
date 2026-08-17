@@ -1,0 +1,103 @@
+/**
+ * chat-app / 当前模式提示词编辑弹窗 (ContextModeEditorModal) 样式
+ *
+ * ★ v0.72 改 AcModal:
+ *   - 外壳 / 关闭按钮 / 取消+保存按钮由 AcModal 提供
+ *   - 4-tab 内部布局 + textarea + 恢复默认按钮作为业务内容
+ *   - selector hook:.cmd-modal(class 透传到 .ac-overlay)
+ *
+ * 风格:
+ *   - 4 个 tab 按钮:跟底部「保存」按钮一样(.ac-btn .ac-btn-primary 蓝底白字)
+ *   - textarea:粉蓝边框聚焦,等宽字体
+ *   - 恢复默认:白底蓝字(.ac-btn .ac-btn-secondary 默认样式)
+ */
+
+/* ============================
+   Tabs (4 个 tab:聊天/语音/视频/游戏)
+   - 直接用 .ac-btn .ac-btn-primary 样式(跟底部「保存」按钮一致)
+   ============================ */
+.app-shell[data-app-id="chat"] .cmd-modal .cmd-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 9px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.app-shell[data-app-id="chat"] .cmd-modal .cmd-tab {
+    padding: 8px 14px;
+}
+
+.app-shell[data-app-id="chat"] .cmd-modal .cmd-tab.is-active {
+    /* 视觉下沉：切换到 secondary 白底蓝字风格, 阴影贴底, 微微下移 */
+    background: #FFFFFF;
+    color: var(--ac-color-primary);
+    box-shadow: 0 1px 0 var(--ac-shadow-secondary);
+    transform: translateY(2px);
+}
+
+/* ============================
+   Panels (textarea 容器)
+   ============================ */
+.app-shell[data-app-id="chat"] .cmd-modal .cmd-panels {
+    /* 默认 AcModal body 已 overflow-y:auto,这里只控制内边距 */
+    padding: 0;
+}
+
+.app-shell[data-app-id="chat"] .cmd-modal .cmd-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.app-shell[data-app-id="chat"] .cmd-modal .cmd-panel[hidden] {
+    display: none;
+}
+
+.app-shell[data-app-id="chat"] .cmd-modal .cmd-textarea {
+    width: 100%;
+    height: 180px;
+    padding: 12px 14px;
+    border: 1.5px solid rgba(91, 142, 201, 0.18);
+    border-radius: 12px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Courier New", monospace;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: #2c3e50;
+    resize: vertical;
+    box-sizing: border-box;
+    background: #FAFBFD;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    scrollbar-width: none; /* Firefox */
+}
+
+.app-shell[data-app-id="chat"] .cmd-modal .cmd-textarea::-webkit-scrollbar {
+    display: none; /* Chrome / Safari / Edge */
+}
+
+.app-shell[data-app-id="chat"] .cmd-modal .cmd-textarea:hover {
+    border-color: rgba(91, 142, 201, 0.35);
+}
+
+.app-shell[data-app-id="chat"] .cmd-modal .cmd-textarea:focus {
+    outline: none;
+    border-color: #a8c8ed;
+    background: #FFFFFF;
+    box-shadow: 0 0 0 3px rgba(168, 200, 237, 0.25);
+}
+
+/* ============================
+   Footer 「恢复默认」 按钮
+   - 走 ac-btn-secondary 风格(白底 + 蓝色文字 + 投影),跟其他弹窗一致
+   ============================ */
+/* 恢复默认按钮不需要额外覆盖样式,完全用 .ac-btn-secondary 默认外观 */
+
+/* ============================
+   小屏适配
+   ============================ */
+@media (max-width: 480px) {
+    .app-shell[data-app-id="chat"] .cmd-modal .cmd-textarea {
+        min-height: 320px;
+    }
+}

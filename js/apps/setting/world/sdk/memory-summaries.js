@@ -68,13 +68,29 @@ const VALID_FIELDS = new Set([
 ]);
 
 const DEFAULT_LEVELS = Object.freeze([
-    Object.freeze({ id: 'L1', name: '日概要', cycle: 1,   order: 1, editable: false, deletable: false }),
-    Object.freeze({ id: 'L2', name: '周概要', cycle: 7,   order: 2, editable: true,  deletable: true  }),
-    Object.freeze({ id: 'L3', name: '月概要', cycle: 30,  order: 3, editable: true,  deletable: true  }),
-    Object.freeze({ id: 'L4', name: '年概要', cycle: 360, order: 4, editable: true,  deletable: true  }),
+    Object.freeze({ id: 'L1', name: '第一层概要', cycle: 1,   order: 1, editable: false, deletable: false }),
+    Object.freeze({ id: 'L2', name: '第二层概要', cycle: 7,   order: 2, editable: true,  deletable: true  }),
+    Object.freeze({ id: 'L3', name: '第三层概要', cycle: 30,  order: 3, editable: true,  deletable: true  }),
+    Object.freeze({ id: 'L4', name: '第四层概要', cycle: 360, order: 4, editable: true,  deletable: true  }),
 ]);
 
 const CONFIG_VERSION = '1.0';
+
+// ★ v0.72 层级名称迁移:旧名称 → 新名称
+const LEGACY_LEVEL_NAMES = {
+    '日概要': '第一层概要',
+    '周概要': '第二层概要',
+    '月概要': '第三层概要',
+    '年概要': '第四层概要',
+    '季概要': '第五层概要',
+};
+
+function _migrateLevelName(name) {
+    if (typeof name === 'string' && LEGACY_LEVEL_NAMES[name]) {
+        return LEGACY_LEVEL_NAMES[name];
+    }
+    return name;
+}
 
 function _generateId() {
     return `ms-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -87,6 +103,10 @@ function _now() {
 /**
  * 生成下一个可用的层级 id(用户添加层级时用)
  * 默认 L1~L4,用户加的层级从 L5 开始
+ */
+/**
+ * 生成下一个可用层级 ID
+ * 默认 L1~L4 存在,用户添加的层级从 L5 开始
  */
 function _generateLevelId(existingLevels) {
     const used = new Set((existingLevels || []).map((l) => String(l.id || '')));
@@ -143,9 +163,11 @@ function _normalizeSummary(raw) {
  */
 function _normalizeLevel(raw, fallbackOrder = 0) {
     if (!raw || typeof raw !== 'object') return null;
+    // ★ v0.72 迁移旧名称
+    const migratedName = _migrateLevelName(raw.name);
     const out = {
         id: String(raw.id || ''),
-        name: String(raw.name || '未命名层级'),
+        name: String(migratedName || '未命名层级'),
         cycle: Math.max(1, Number(raw.cycle) || 1),
         order: Number(raw.order) || fallbackOrder,
         editable: raw.editable !== false,
@@ -172,6 +194,11 @@ function _sortByGeneratedAt(list) {
     return list.slice().sort((a, b) => (Number(b?.generatedAt) || 0) - (Number(a?.generatedAt) || 0));
 }
 
+/**
+ * 按 order 升序排列(L1 在前,order=1; L4 在后,order=4)
+ * 数组中前面的层级是"下层"(周期小),后面的是"上层"(周期大)
+ * 校验时:cur(i) < next(i+1) 即下层周期 < 上层周期
+ */
 function _sortLevels(levels) {
     return levels.slice().sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
 }
@@ -221,9 +248,9 @@ function validateCycleConstraints(levels) {
         }
         const next = sorted[i + 1];
         if (next) {
-            // 上层 = i,下层 = i+1,要求 上层 > 下层
-            if (cur.cycle <= next.cycle) {
-                return { ok: false, error: `${cur.id} 周期(${cur.cycle}) 必须 > ${next.id} 周期(${next.cycle})` };
+            // 升序排列:cur(i) < next(i+1) 即下层周期 < 上层周期
+            if (cur.cycle >= next.cycle) {
+                return { ok: false, error: `${cur.id} 周期(${cur.cycle}) 必须 < ${next.id} 周期(${next.cycle})` };
             }
         }
     }
@@ -302,7 +329,37 @@ export function createMemorySummariesApi(sdk) {
         /** 读某 AI 人设的层级配置 */
         getConfig(aiPersonId) {
             const person = _getAiPerson(aiPersonId);
-            return _readConfig(person);
+            const config = _readConfig(person);
+
+            // ★ v0.72 检测原始数据中是否有旧名称需要迁移
+            const raw = person?.socialProfiles?.chat?.memoryConfig;
+            const needsMigrate = raw?.levels?.some?.((l) => {
+                const name = String(l?.name || '');
+                return LEGACY_LEVEL_NAMES[name] !== undefined;
+            });
+
+            if (needsMigrate && person) {
+                // 立即更新内存中的原始数据(保证返回正确名称)
+                raw.levels = raw.levels.map((l) => ({
+                    ...l,
+                    name: _migrateLevelName(l.name) || l.name,
+                }));
+                // 重新读取配置
+                const migratedConfig = _readConfig(person);
+                config.levels = migratedConfig.levels;
+
+                // 异步保存到持久化
+                setTimeout(() => {
+                    try {
+                        sdk.aiPersons.update(aiPersonId, {
+                            socialProfiles: person.socialProfiles,
+                        });
+                    } catch (err) {
+                        console.warn('[memorySummaries] 层级名称迁移保存失败', err);
+                    }
+                }, 0);
+            }
+            return config;
         },
 
         /**
@@ -339,6 +396,8 @@ export function createMemorySummariesApi(sdk) {
             await sdk.aiPersons.update(aiPersonId, {
                 socialProfiles: { ...person.socialProfiles, chat: { ...(person.socialProfiles?.chat || {}), memoryConfig: config } },
             });
+            // ★ v0.75 清除缓存并触发重渲染
+            _triggerRerender();
             return { ok: true, levels: sorted };
         },
 
@@ -378,13 +437,10 @@ export function createMemorySummariesApi(sdk) {
             };
             // 临时构建完整列表(给新层级一个整型 order)
             const tmp = config.levels.map((l) => ({ ...l }));
-            const anchorIdx = order !== Math.floor(order) && position.startsWith('after')
-                ? tmp.findIndex((l) => (Number(l.order) || 0) >= Math.floor(order)) + 0
-                : tmp.findIndex((l) => (Number(l.order) || 0) > Math.floor(order)) + 0;
-            // 简化:直接插到锚点旁边,然后整体重新分配 order 1..N
+            // 添加新层级并按 order 升序排列
             tmp.push(newLevel);
             tmp.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
-            // 重新分配整型 order
+            // 重新分配整型 order(升序 1,2,3...)，后续 _sortLevels 会转为降序
             tmp.forEach((l, idx) => { l.order = idx + 1; });
             const check = validateCycleConstraints(tmp);
             if (!check.ok) return { ok: false, error: check.error };
@@ -395,6 +451,8 @@ export function createMemorySummariesApi(sdk) {
             await sdk.aiPersons.update(aiPersonId, {
                 socialProfiles: { ...person.socialProfiles, chat: { ...(person.socialProfiles?.chat || {}), memoryConfig: bucketConfig } },
             });
+            // ★ v0.75 清除缓存并触发重渲染
+            _triggerRerender();
             return { ok: true, level: newLevel };
         },
 
@@ -415,9 +473,10 @@ export function createMemorySummariesApi(sdk) {
             if (!target) return { ok: false, error: `层级 ${levelId} 不存在` };
             if (!target.deletable) return { ok: false, error: `${levelId} 不可删除` };
 
-            // 从配置中移除该层级 + 重新分配 order
+            // 从配置中移除该层级(先升序排列) + 重新分配 order 1,2,3...
             const newLevels = config.levels
                 .filter((l) => l.id !== levelId)
+                .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
                 .map((l, idx) => ({ ...l, order: idx + 1 }));
             const check = validateCycleConstraints(newLevels);
             if (!check.ok) return { ok: false, error: check.error };
@@ -445,6 +504,8 @@ export function createMemorySummariesApi(sdk) {
                     },
                 },
             });
+            // ★ v0.75 清除缓存并触发重渲染
+            _triggerRerender();
             return { ok: true };
         },
 
@@ -499,6 +560,8 @@ export function createMemorySummariesApi(sdk) {
                     },
                 },
             });
+            // ★ v0.75 清除缓存并触发重渲染
+            _triggerRerender();
             return { ok: true, clearedCount: cleared };
         },
 
@@ -944,4 +1007,25 @@ function _emptyApi() {
         DEFAULT_LEVELS,
         hydrate: async () => {},
     };
+}
+
+/**
+ * 触发 framework 重新渲染层级管理页面
+ * ★ v0.75 修复:层级增删改后列表不刷新问题
+ */
+function _triggerRerender() {
+    try {
+        // 1. 清除渲染缓存
+        if (typeof window.invalidateRendererCache === 'function') {
+            window.invalidateRendererCache('chat', null);
+        }
+        // 2. 递增 detail tick
+        if (window.__detailRenderTick && typeof window.__detailRenderTick.value === 'number') {
+            window.__detailRenderTick.value++;
+        }
+        // 3. 强制 sync
+        if (window.__appRendererBridge && typeof window.__appRendererBridge.syncNow === 'function') {
+            window.__appRendererBridge.syncNow({ force: true });
+        }
+    } catch (_) { /* 静默忽略 */ }
 }

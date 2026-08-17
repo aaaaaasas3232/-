@@ -354,7 +354,7 @@ export async function cloneParO(sdk, entityType, personaId, overrides = {}) {
     const api = pickEntityApi(sdk, entityType);
     const parent = api.get(personaId);
     if (!parent) return null;
-    const newId = overrides.id || genParOId(parentId);
+    const newId = overrides.id || genParOId(personaId);
     const parO = {
         ...JSON.parse(JSON.stringify(parent)),
         ...overrides,

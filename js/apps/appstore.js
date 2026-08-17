@@ -1,24 +1,16 @@
 import { externalAppRegistry } from '@/src/core/app-registry.js';
 import {
     APP_INSTALLATION_CHANGED_EVENT,
+    WORLD_AVAILABILITY_CHANGED_EVENT,
     installApp,
     isAppInstalled,
     requiresAppInstallation,
 } from '@/src/core/app-installation.js';
+import { isAppAvailableForWorld, readWorldProfile } from '@/src/core/world-profile.js';
 import { escapeHtml } from '@/src/core/escape.js';
 
 const APP_STORE_ICON = `
-    <svg viewBox="0 0 60 60" width="56" height="56" xmlns="http://www.w3.org/2000/svg" style="display:block;">
-        <defs>
-            <linearGradient id="appstore-tile" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stop-color="#5AC8FA" />
-                <stop offset="100%" stop-color="#007AFF" />
-            </linearGradient>
-        </defs>
-        <rect width="60" height="60" rx="14" fill="url(#appstore-tile)" />
-        <path d="M20 42h20M25 38l11-20M35 38L24 18" fill="none" stroke="#FFFFFF" stroke-width="4.5" stroke-linecap="round" />
-    </svg>
-`;
+<svg viewBox="0 0 60 60" style="width:115%;height:115%;"><defs><linearGradient id="appstoreBg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#18BFFF"/><stop offset="50%" stop-color="#1A9FFF"/><stop offset="100%" stop-color="#0D6EFF"/></linearGradient><filter id="asShadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="1" stdDeviation="1" flood-color="#000" flood-opacity="0.15"/></filter></defs><rect width="60" height="60" rx="15" fill="url(#appstoreBg)"/><g transform="rotate(-15, 25, 25)"><rect x="10" y="10" width="30" height="30" rx="6" fill="rgba(255,255,255,0.4)"/></g><g transform="rotate(8, 31, 31)"><rect x="16" y="16" width="30" height="30" rx="6" fill="rgba(255,255,255,0.7)" filter="url(#asShadow)"/></g><g><rect x="20" y="20" width="32" height="32" rx="7" fill="white" filter="url(#asShadow)"/></g></svg>`;
 
 const TAB_DEFS = [
     { id: 'today', label: '今天', icon: '' },
@@ -48,16 +40,26 @@ function getStoreMeta(app) {
 }
 
 function listStoreApps() {
+    const profile = readWorldProfile();
     return externalAppRegistry.apps
-        .filter(app => app?.id && app.id !== 'appstore')
-        .map((app, index) => ({
+        .filter(app => app?.id && app.id !== 'appstore' && isAppAvailableForWorld(app, profile))
+        .map((app) => ({
             id: app.id,
             app,
             icon: app.icon || '',
             name: app.name || app.id,
-            rank: index + 1,
             requiresInstall: requiresAppInstallation(app),
             ...getStoreMeta(app),
+        }))
+        .sort((a, b) => {
+            // nook 永远排第一
+            if (a.id === 'settings') return -1;
+            if (b.id === 'settings') return 1;
+            return 0;
+        })
+        .map((item, index) => ({
+            ...item,
+            rank: index + 1,
         }));
 }
 
@@ -165,9 +167,19 @@ function createStoreComponent(initialTab) {
             isExpanded(key) {
                 return !!this.expanded[key];
             },
-            ratingStars(rating) {
-                const safeRating = Math.max(0, Math.min(5, Math.round(Number(rating) || 0)));
-                return '★'.repeat(safeRating) + '☆'.repeat(5 - safeRating);
+            getAppTutorial() {
+                const app = this.selectedApp?.app;
+                if (!app) return [];
+                const as = app?.distribution?.appStore;
+                if (!as) return [];
+                return Array.isArray(as.tutorial) ? as.tutorial : [];
+            },
+            getAppFaqs() {
+                const app = this.selectedApp?.app;
+                if (!app) return [];
+                const as = app?.distribution?.appStore;
+                if (!as) return [];
+                return Array.isArray(as.faqs) ? as.faqs : [];
             },
             onInstallationChanged() {
                 this.installedVersion += 1;
@@ -175,9 +187,11 @@ function createStoreComponent(initialTab) {
         },
         mounted() {
             window.addEventListener(APP_INSTALLATION_CHANGED_EVENT, this.onInstallationChanged);
+            window.addEventListener(WORLD_AVAILABILITY_CHANGED_EVENT, this.onInstallationChanged);
         },
         beforeUnmount() {
             window.removeEventListener(APP_INSTALLATION_CHANGED_EVENT, this.onInstallationChanged);
+            window.removeEventListener(WORLD_AVAILABILITY_CHANGED_EVENT, this.onInstallationChanged);
             for (const timer of this.downloadTimers.values()) window.clearInterval(timer);
             this.downloadTimers.clear();
         },
@@ -198,49 +212,50 @@ function createStoreComponent(initialTab) {
                                         <span v-if="isDownloading(selectedApp)" class="appstore-download-ring" :style="progressStyle(selectedApp)"><i></i></span>
                                         <span>{{ buttonLabel(selectedApp) }}</span>
                                     </button>
-                    </div>
-                </div>
-            </div>
-            <div class="appstore-stats">
-                <div class="appstore-stats-cell">
-                                <div class="appstore-stats-cell-cap">{{ selectedApp.ratingsCount }} 个评分</div>
-                                <div class="appstore-stats-cell-val">{{ selectedApp.rating }}</div>
-                                <div class="appstore-rating-stars">{{ ratingStars(selectedApp.rating) }}</div>
-                </div>
-                <div class="appstore-stats-cell">
-                    <div class="appstore-stats-cell-cap">年龄</div>
-                                <div class="appstore-stats-cell-val">{{ selectedApp.age }}</div>
-                    <div class="appstore-stats-cell-foot">岁</div>
-                </div>
-                <div class="appstore-stats-cell">
-                                <div class="appstore-stats-cell-cap">类别</div>
-                                <div class="appstore-stats-cell-val appstore-stat-category">{{ selectedApp.category }}</div>
-                                <div class="appstore-stats-cell-foot">App</div>
-                </div>
-            </div>
+                                </div>
+                            </div>
+                        </div>
                         <section class="appstore-section appstore-detail-preview">
-                <div class="appstore-section-heading"><h3>预览</h3></div>
+                            <div class="appstore-section-heading"><h3>预览</h3></div>
                             <div class="appstore-preview-card" :style="{ background: selectedApp.accent }">
                                 <div class="appstore-preview-icon appstore-icon-frame" :style="{ background: selectedApp.app.iconBg || 'transparent' }" v-html="selectedApp.icon"></div>
                                 <strong>{{ selectedApp.name }}</strong>
-                                <span>{{ selectedApp.subtitle }}</span>
-                </div>
+                                <span v-if="selectedApp.subtitle" class="appstore-preview-subtitle">{{ selectedApp.subtitle }}</span>
+                            </div>
                         </section>
                         <section class="appstore-section">
-                            <div class="appstore-section-heading"><h3>新功能</h3><span class="appstore-section-heading-sub">版本 {{ selectedApp.version }}</span></div>
-                            <div class="appstore-text" :class="isExpanded('new-' + selectedApp.id) ? '' : 'clamp-3'">{{ selectedApp.whatsNew }}</div>
-                            <button type="button" class="appstore-expand-btn appstore-text-button" @click="toggleExpanded('new-' + selectedApp.id)">{{ isExpanded('new-' + selectedApp.id) ? '收起' : '更多' }}</button>
-                        </section>
-                        <section class="appstore-section">
-                <div class="appstore-section-heading"><h3>描述</h3></div>
+                            <div class="appstore-section-heading"><h3>描述</h3></div>
                             <div class="appstore-text" :class="isExpanded('desc-' + selectedApp.id) ? '' : 'clamp-4'">{{ selectedApp.description }}</div>
                             <button type="button" class="appstore-expand-btn appstore-text-button" @click="toggleExpanded('desc-' + selectedApp.id)">{{ isExpanded('desc-' + selectedApp.id) ? '收起' : '更多' }}</button>
                         </section>
-                        <section class="appstore-section">
-                            <div class="appstore-row"><span class="appstore-row-label">供应商</span><span class="appstore-row-value">XiaoTing Studio</span></div>
-                            <div class="appstore-row"><span class="appstore-row-label">大小</span><span class="appstore-row-value">{{ selectedApp.size }}</span></div>
-                            <div class="appstore-row"><span class="appstore-row-label">兼容性</span><span class="appstore-row-value">小听系统</span></div>
-                        </section>
+                        <template v-if="getAppTutorial().length > 0">
+                            <section class="appstore-section appstore-section--soft">
+                                <div class="appstore-section-heading"><h3>教程</h3></div>
+                                <div class="appstore-faq-list">
+                                    <div v-for="(item, idx) in getAppTutorial()" :key="'tut-' + idx" class="appstore-faq-item">
+                                        <div class="appstore-faq-q" @click="toggleExpanded('tut-' + selectedApp.id + '-' + idx)">
+                                            <span>{{ item.title }}</span>
+                                            <span class="appstore-faq-chevron" :class="isExpanded('tut-' + selectedApp.id + '-' + idx) ? 'is-open' : ''">›</span>
+                                        </div>
+                                        <div v-if="isExpanded('tut-' + selectedApp.id + '-' + idx)" class="appstore-faq-a">{{ item.content }}</div>
+                                    </div>
+                                </div>
+                            </section>
+                        </template>
+                        <template v-if="getAppFaqs().length > 0">
+                            <section class="appstore-section appstore-section--soft">
+                                <div class="appstore-section-heading"><h3>常见问题</h3></div>
+                                <div class="appstore-faq-list">
+                                    <div v-for="(item, idx) in getAppFaqs()" :key="'faq-' + idx" class="appstore-faq-item">
+                                        <div class="appstore-faq-q" @click="toggleExpanded('faq-' + selectedApp.id + '-' + idx)">
+                                            <span>{{ item.question }}</span>
+                                            <span class="appstore-faq-chevron" :class="isExpanded('faq-' + selectedApp.id + '-' + idx) ? 'is-open' : ''">›</span>
+                                        </div>
+                                        <div v-if="isExpanded('faq-' + selectedApp.id + '-' + idx)" class="appstore-faq-a">{{ item.answer }}</div>
+                                    </div>
+                                </div>
+                            </section>
+                        </template>
                     </article>
                 </template>
 
@@ -254,7 +269,6 @@ function createStoreComponent(initialTab) {
                         <section v-for="item in featuredApps" :key="item.id" class="appstore-section">
                             <article class="appstore-featured" @click="openDetail(item)">
                                 <div class="appstore-featured-cover" :style="{ background: item.accent }">
-                                    <div class="appstore-featured-tag">{{ item.requiresInstall && !isInstalled(item) ? '全新 APP' : '系统精选' }}</div>
                                     <div class="appstore-featured-icon appstore-icon-frame" :style="{ background: item.app.iconBg || 'transparent' }" v-html="item.icon"></div>
             </div>
                                 <div class="appstore-featured-meta">
@@ -290,7 +304,6 @@ function createStoreComponent(initialTab) {
             </div>
                         <div v-else class="appstore-empty"><div class="appstore-empty-text">暂无游戏</div></div>
                     </section>
-                    <div class="appstore-tab-spacer"></div>
                 </template>
             </div>
         `,
