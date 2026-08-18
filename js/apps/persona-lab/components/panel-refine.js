@@ -124,7 +124,7 @@ export const PlPanelRefine = {
         <div class="pl-refine">
             <!-- 顾问结论 -->
             <section v-if="note" class="pl-refine-note">
-                <PlIcon name="spark" />
+                <PlIcon name="wand" />
                 <p>{{ note }}</p>
             </section>
 

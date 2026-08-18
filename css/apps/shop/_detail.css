@@ -116,10 +116,7 @@
     align-items: center;
     gap: 9px;
     padding: 11px 16px;
-    /* 底栏已经用 --app-safe-bottom 让过一次指示条了，
-       但详情页盖在 tab 栏之上，所以这里要自己让 */
-    padding-bottom: calc(14px + var(--app-safe-bottom, 0px));
-    border-top: 1px solid var(--sp-line);
+
     background: var(--sp-elevated);
 }
 

@@ -69,14 +69,14 @@ export const DwSheets = {
                 { id: 'drawer:chapters', icon: 'list', label: '目录', value: `${state.chapters.length} 章` },
                 { id: 'drawer:context', icon: 'layers', label: '上下文管理', value: '看这次发什么' },
                 { id: 'drawer:timeline', icon: 'timeline', label: '时间线', value: `${(book.timelineEvents || []).length} 条` },
-                { id: 'drawer:tools', icon: 'sparkle', label: '衍生创作', value: 'IF线 / 小剧场 / 杀青梗' },
+                { id: 'drawer:tools', icon: 'heart', label: '衍生创作', value: 'IF线 / 小剧场 / 杀青梗' },
                 { id: 'quick-settings', icon: 'settings', label: '快捷设置条', value: this.quickOn ? '已展开' : '已收起' },
-                { id: 'if-line-panel', icon: 'magic', label: 'IF 线工作台', value: `${(book.ifLineArchives || []).length} 条存档` },
+                { id: 'if-line-panel', icon: 'wand', label: 'IF 线工作台', value: `${(book.ifLineArchives || []).length} 条存档` },
                 { id: 'chapter-info', icon: 'note', label: '章节信息', value: '梗概 / 视角 / 上下文' },
                 { id: 'finale', icon: 'tv', label: '杀青梗', value: '社交模拟' },
                 { id: 'background-upload', icon: 'image', label: '聊天背景', value: book.customBackground ? '本书已设置' : (library.settings.customBackground ? '全局设置' : '默认') },
                 { id: 'generate-mode', icon: 'book', label: '生成模式', value: modeLabel },
-                { id: 'input-mode-manage', icon: 'sparkle', label: '生成模式管理', value: `${activeModes} 个已激活` },
+                { id: 'input-mode-manage', icon: 'heart', label: '生成模式管理', value: `${activeModes} 个已激活` },
                 { id: 'api-switch', icon: 'zap', label: 'API 配置', value: this.apiLabel },
                 { id: 'display-settings', icon: 'palette', label: '显示设置', value: '' },
                 { id: 'regex-replace', icon: 'regex', label: '正则替换系统', value: `${rules} 条规则` },
@@ -339,7 +339,7 @@ export const DwSheets = {
                 :key="item.id"
                 :label="item.label"
                 :hint="item.hint || ''"
-                icon-name="sparkle"
+                icon-name="heart"
                 @click="onPickGenerator(item)"
             />
         </DwSheet>
@@ -362,7 +362,7 @@ export const DwSheets = {
         </DwSheet>
 
         <DwSheet v-else-if="type === 'generate-mode'" title="生成模式" @close="close">
-            <DwMenuItem label="文段" hint="一次生成一段,便于把控节奏" icon-name="book" @click="onPickGenerateMode('paragraph')" />
+            <DwMenuItem label="文段" hint="一次只写一段,大约一两百到四百字" icon-name="book" @click="onPickGenerateMode('paragraph')" />
             <DwMenuItem label="整章" hint="一次铺开一整章" icon-name="layers" @click="onPickGenerateMode('chapter')" />
         </DwSheet>
 

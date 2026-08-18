@@ -156,9 +156,8 @@ export function splitBubbles(text, opts = {}) {
 /**
  * 把老师给的翻译对齐到气泡上。
  *
- * 老师可以给一个数组（每泡一条），也可能只给一整段（老协议）。
- * 数量对不上时**不强行分摊** —— 把整段挂在第一个气泡上，
- * 让用户看到完整翻译，好过被切得七零八落还对不上号。
+ * 老师可以给一个数组（每泡一条），也可能只给一整段。
+ * 数量对不上、或一整段中文被堆在第一个气泡上时，按句切开再按气泡宽度分摊。
  *
  * @param {string[]} bubbles
  * @param {string[]|string} gloss
@@ -168,23 +167,98 @@ export function alignGloss(bubbles, gloss) {
     const list = Array.isArray(bubbles) ? bubbles : [];
     if (!list.length) return [];
 
-    const out = new Array(list.length).fill('');
+    const pieces = Array.isArray(gloss)
+        ? gloss.map((g) => String(g || '').trim()).filter(Boolean)
+        : String(gloss || '').trim() ? [String(gloss).trim()] : [];
+    if (!pieces.length) return list.map(() => '');
 
-    if (Array.isArray(gloss)) {
-        const clean = gloss.map((g) => String(g || '').trim());
-        if (clean.length === list.length) return clean;
-        // 数量对不上：能对齐几条算几条，剩下的并到最后一条有内容的位置
-        for (let i = 0; i < Math.min(clean.length, list.length); i += 1) out[i] = clean[i];
-        if (clean.length > list.length) {
-            const rest = clean.slice(list.length).filter(Boolean).join(' ');
-            if (rest) out[list.length - 1] = [out[list.length - 1], rest].filter(Boolean).join(' ');
-        }
-        return out;
+    if (pieces.length === list.length && !glossNeedsRedistribute(list, pieces)) {
+        return pieces;
     }
 
-    const single = String(gloss || '').trim();
-    if (single) out[0] = single;
-    return out;
+    const sentences = pieces.flatMap((p) => {
+        const paras = String(p).split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean);
+        const src = paras.length ? paras : [p];
+        return src.flatMap((para) => splitSentences(para));
+    }).filter(Boolean);
+
+    if (!sentences.length) return list.map(() => '');
+    if (sentences.length === list.length) return sentences;
+    return distributeByWidth(sentences, list);
+}
+
+function compactText(value) {
+    return String(value || '').replace(/\s+/g, '');
+}
+
+/** 某一条译文明显装着后面几泡的内容，就要重切 */
+function glossNeedsRedistribute(bodies, glosses) {
+    for (let i = 0; i < bodies.length; i += 1) {
+        const g = compactText(glosses[i]);
+        if (!g) continue;
+        if (visualWidth(glosses[i]) > visualWidth(bodies[i]) * 1.8 && splitSentences(glosses[i]).length > 1) {
+            return true;
+        }
+        for (let j = i + 1; j < bodies.length; j += 1) {
+            const later = compactText(bodies[j]);
+            if (later.length > 6 && g.includes(later)) return true;
+        }
+    }
+    return false;
+}
+
+function joinGlossParts(parts) {
+    let s = '';
+    for (const p of parts) {
+        const t = String(p || '').trim();
+        if (!t) continue;
+        if (!s) { s = t; continue; }
+        s += /[。！？；、…)]$/.test(s) ? t : ` ${t}`;
+    }
+    return s;
+}
+
+function distributeByWidth(sentences, bubbles) {
+    const buckets = bubbles.map(() => []);
+    const totalBody = bubbles.reduce((sum, b) => sum + Math.max(visualWidth(b), 1), 0);
+    const totalGloss = sentences.reduce((sum, g) => sum + visualWidth(g), 0) || 1;
+    let si = 0;
+    for (let bi = 0; bi < bubbles.length; bi += 1) {
+        if (bi === bubbles.length - 1) {
+            while (si < sentences.length) buckets[bi].push(sentences[si++]);
+            break;
+        }
+        const target = (Math.max(visualWidth(bubbles[bi]), 1) / totalBody) * totalGloss;
+        let acc = 0;
+        while (si < sentences.length) {
+            const leftBubbles = bubbles.length - bi;
+            const leftSentences = sentences.length - si;
+            if (buckets[bi].length && leftSentences < leftBubbles) break;
+            const w = visualWidth(sentences[si]);
+            if (acc > 0 && acc + w > target * 1.25) break;
+            buckets[bi].push(sentences[si]);
+            acc += w;
+            si += 1;
+            if (acc >= target * 0.7 && leftSentences - 1 >= leftBubbles - 1) break;
+        }
+    }
+    return buckets.map(joinGlossParts);
+}
+
+/**
+ * 上课气泡的最终正文 / 描边。
+ *
+ * 模型有时把课上要说的话只写进 gloss、正文留空。
+ * 那种情况把 gloss 当正文用，描边也挂上同一句 —— 语言课必须看得见中文描边。
+ */
+export function resolveLessonBubbles(text, gloss, opts = {}) {
+    const glossList = Array.isArray(gloss)
+        ? gloss.map((g) => String(g || '').trim()).filter(Boolean)
+        : String(gloss || '').trim() ? [String(gloss).trim()] : [];
+    const bodies = splitBubbles(text, opts);
+    if (bodies.length) return { bodies, glosses: alignGloss(bodies, glossList) };
+    if (glossList.length) return { bodies: glossList, glosses: [...glossList] };
+    return { bodies: [], glosses: [] };
 }
 
 export default splitBubbles;

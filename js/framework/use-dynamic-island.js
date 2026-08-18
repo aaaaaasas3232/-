@@ -436,15 +436,18 @@ export function useDynamicIsland() {
     }
 
     /**
-     * 长按处理：仅 mini 形态生效
-     *   - notification 形态不响应
-     *   - medium/large 不响应
-     *   - 触发顺序：先调 onLongPress（app 自己决定要不要 stopPropagation / 暂停音乐），
-     *               再 closeIsland('userLongPress')
+     * 长按关岛。
+     *   - notification 不响应
+     *   - 默认只在 mini 生效（音乐这类还能点开一档的岛，长按收掉）
+     *   - minSize === maxSize：这座岛锁在一档，点它不会变大小，
+     *     长按是唯一的「收掉」手势（梦境编织选段岛就锁在 medium）
      */
     function handleIslandLongPress() {
         if (islandMode.value !== 'info') return;
-        if (islandSize.value !== 'mini') return;
+        const floor = islandContent.value.minSize;
+        const cap = islandContent.value.maxSize;
+        const locked = Boolean(floor && cap && floor === cap);
+        if (islandSize.value !== 'mini' && !locked) return;
         safeCall(islandContent.value?.onLongPress, { mode: islandMode.value, size: islandSize.value });
         closeIsland(ISLAND_CLOSE_REASONS.USER_LONG_PRESS);
     }

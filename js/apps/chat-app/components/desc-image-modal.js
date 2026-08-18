@@ -9,6 +9,7 @@
  */
 
 import { escapeHtml } from '@/src/core/escape.js';
+import { AcModal } from './ac-modal.js';
 
 // ============================================
 // Vue 组件: 图片描述详情弹窗
@@ -16,11 +17,13 @@ import { escapeHtml } from '@/src/core/escape.js';
 
 export const DescImageDetailModal = {
     name: 'DescImageDetailModal',
+    components: { AcModal },
     props: {
         description: { type: String, default: '' },
         cardColor: { type: String, default: '#FFE4EC' },
         textColor: { type: String, default: '#D4728A' },
         borderColor: { type: String, default: '#C0607A' },
+        favorited: { type: Boolean, default: false },
     },
     emits: ['close', 'favorite', 'share'],
     computed: {
@@ -33,48 +36,45 @@ export const DescImageDetailModal = {
         safeBorderColor() {
             return escapeHtml(this.borderColor || '#C0607A');
         },
-        safeDesc() {
-            return escapeHtml(this.description || '');
-        },
     },
     template: `
-        <div class="desc-image-modal-overlay" @click.self="$emit('close')">
-            <div class="desc-image-modal">
-                <!-- 按钮区域 -->
-                <div class="desc-image-modal-actions">
-                    <button class="desc-image-modal-action-btn" @click.stop="$emit('favorite')">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                        </svg>
-                        收藏
-                    </button>
-                    <button class="desc-image-modal-action-btn" @click.stop="$emit('share')">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="18" cy="5" r="3"/>
-                            <circle cx="6" cy="12" r="3"/>
-                            <circle cx="18" cy="19" r="3"/>
-                            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
-                            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-                        </svg>
-                        分享
-                    </button>
-                </div>
-                <!-- 图片内容区域 -->
-                <div class="desc-image-modal-card"
-                     :style="{ background: safeCardColor, borderColor: safeBorderColor }">
-                    <div class="desc-image-modal-card-img" :style="{ color: safeTextColor }">
-                        <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor" style="opacity: 0.6;">
-                            <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
-                        </svg>
-                        <div class="desc-image-modal-card-label">文字描述图片</div>
-                    </div>
-                </div>
-                <!-- 描述文字 -->
-                <div class="desc-image-modal-content">
-                    <div class="desc-image-modal-desc">{{ description }}</div>
+        <AcModal
+            class="desc-image-detail-modal"
+            title="图片"
+            :show-close="true"
+            :close-on-backdrop="true"
+            :max-width="'320px'"
+            @close="$emit('close')"
+        >
+            <div class="desc-image-modal-card"
+                 :style="{ background: safeCardColor, borderColor: safeBorderColor }">
+                <div class="desc-image-modal-card-img" :style="{ color: safeTextColor }">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor" style="opacity: 0.6;">
+                        <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                    </svg>
+                    <div class="desc-image-modal-card-label">文字描述图片</div>
                 </div>
             </div>
-        </div>
+            <div class="desc-image-modal-content">
+                <div class="desc-image-modal-desc">{{ description }}</div>
+            </div>
+            <template #footer>
+                <button type="button" class="card-detail-icon-btn" :class="{ 'is-on': favorited }" aria-label="收藏" @click="$emit('favorite')">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                    </svg>
+                </button>
+                <button type="button" class="card-detail-icon-btn" aria-label="分享" @click="$emit('share')">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="18" cy="5" r="3"/>
+                        <circle cx="6" cy="12" r="3"/>
+                        <circle cx="18" cy="19" r="3"/>
+                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                    </svg>
+                </button>
+            </template>
+        </AcModal>
     `,
 };
 

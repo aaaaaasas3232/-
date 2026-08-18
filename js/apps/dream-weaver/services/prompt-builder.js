@@ -43,8 +43,8 @@
  */
 
 import { createContextComposer } from '@/src/core/context-composer.js';
-import { CONTEXT_SECTIONS, POV_OPTIONS, VIEWPOINT_OPTIONS, NARRATIVE_OPTIONS, REPLY_DIRECTION_OPTIONS, GENERATE_MODE_OPTIONS, AUTHOR_STYLE_OPTIONS } from '../constants.js';
-import { htmlToText, truncate, findById, isSameId, compareStoryTime } from '../utils.js';
+import { CONTEXT_SECTIONS, POV_OPTIONS, VIEWPOINT_OPTIONS, NARRATIVE_OPTIONS, REPLY_DIRECTION_OPTIONS, GENERATE_MODE_OPTIONS, AUTHOR_STYLE_OPTIONS, resolveWordRange } from '../constants.js';
+import { htmlToText, findById, isSameId } from '../utils.js';
 
 const composer = createContextComposer({ namespace: 'dream-weaver' });
 
@@ -174,14 +174,13 @@ function buildLocationsPart(book) {
 function buildTimelinePart(book) {
     const events = (book.timelineEvents || []).filter((e) => e.includeInPrompt !== false);
     if (events.length === 0) return '';
-    const sorted = events.slice().sort((a, b) => compareStoryTime(a.time, b.time));
-    const lines = sorted.map((event) => {
+    const lines = events.map((event) => {
         const time = event.time ? `[${event.time}] ` : '';
         const desc = event.description ? ` —— ${event.description}` : '';
         return `${time}${event.title}${desc}`;
     });
     const now = book.worldTime ? `\n\n当前故事时间: ${book.worldTime}` : '';
-    return `已经发生的事(按故事内时间排序):\n${lines.join('\n')}${now}`;
+    return `已经发生的事(按时间线顺序):\n${lines.join('\n')}${now}`;
 }
 
 function buildAuthorStylePart(book, library) {
@@ -192,6 +191,13 @@ function buildAuthorStylePart(book, library) {
         ['文风', style],
         ['作者习惯', summary],
     ]);
+}
+
+function lengthRule(mode, wordRange) {
+    const span = `${wordRange.min}-${wordRange.max} 字`;
+    if (mode === 'sentence') return `${span},只写一两句就停,不要写成一段`;
+    if (mode === 'chapter') return `${span},宁可写足也不要草草收尾`;
+    return `${span},只写一段。这段的动作或氛围收住就停,不要另起下一段,不要写成一章`;
 }
 
 function buildNarrativePart(book, chapter, settings, wordRange) {
@@ -207,7 +213,7 @@ function buildNarrativePart(book, chapter, settings, wordRange) {
     - 叙事手法: ${labelOf(NARRATIVE_OPTIONS, settings.narrativeMethod)}
     - 侧重: ${labelOf(REPLY_DIRECTION_OPTIONS, settings.replyDirection)}
     - 生成粒度: ${labelOf(GENERATE_MODE_OPTIONS, settings.generateMode)}
-    - 篇幅: ${wordRange.min}-${wordRange.max} 字,宁可写足也不要草草收尾`;
+    - 篇幅: ${lengthRule(settings.generateMode, wordRange)}`;
 }
 
 /**
@@ -235,38 +241,6 @@ function buildChapterContextPart(chapter) {
     return body;
 }
 
-/**
- * 近期往来 —— 按当前输入模式的 `historyStrategy` 决定带多少。
- *
- * 这一段和「本章已有内容」的区别:那一段是**成文的正文**,
- * 这一段带上「我发的指令」,让 AI 知道用户是怎么引导的。
- */
-function buildMessageContextPart(chapter, mode) {
-    if (!chapter) return '';
-    const strategy = mode?.historyStrategy || 'latest_only';
-    if (strategy === 'none') return '';
-
-    let messages = chapter.messages.slice();
-    if (strategy === 'latest_only') {
-        messages = messages.slice(-2);
-    } else if (strategy === 'recent_n') {
-        const n = Math.max(1, Number(mode?.recentN) || 5);
-        messages = messages.slice(-n * 2);
-    }
-    // accumulate_all 走全量
-
-    const lines = messages
-        .map((message) => {
-            const text = htmlToText(message.content);
-            if (!text) return '';
-            if (message.role === 'user') return `我: ${text}`;
-            if (message.role === 'note') return `(备注) ${text}`;
-            return `正文: ${truncate(text, 400)}`;
-        })
-        .filter(Boolean);
-    return lines.join('\n');
-}
-
 function buildCustomPromptsPart(book) {
     const list = (book.customPrompts || []).filter((p) => p.enabled !== false && String(p.content || '').trim());
     if (list.length === 0) return '';
@@ -287,16 +261,15 @@ function buildCustomPromptsPart(book) {
  * @param {object[]} ctx.orderedChapters  按目录顺序排好的全部章节
  * @param {object} ctx.chapter            当前章
  * @param {object} ctx.library            设置 / 风格总结
- * @param {object} [ctx.mode]             当前输入模式
  * @param {{min:number,max:number}} [ctx.wordRange]
  * @returns {import('@/src/core/context-composer.js').ContextPart[]}
  */
 export function buildContextParts(ctx = {}) {
-    const { book, orderedChapters = [], chapter, library, mode } = ctx;
+    const { book, orderedChapters = [], chapter, library } = ctx;
     if (!book || !library) return [];
 
     const settings = library.settings;
-    const wordRange = ctx.wordRange || settings.defaultWordRange;
+    const wordRange = ctx.wordRange || resolveWordRange(settings);
     const config = book.contextConfig || {};
 
     const bodies = {
@@ -311,7 +284,6 @@ export function buildContextParts(ctx = {}) {
         narrative: buildNarrativePart(book, chapter, settings, wordRange),
         chapterSummaries: buildChapterSummariesPart(orderedChapters, chapter?.id),
         chapterContext: buildChapterContextPart(chapter),
-        messageContext: buildMessageContextPart(chapter, mode),
         customPrompts: buildCustomPromptsPart(book),
     };
 
@@ -354,7 +326,7 @@ export function buildPrompt(ctx = {}) {
 export function buildUserTurn({ mode, input, wordRange }) {
     const text = String(input || '').trim();
     const template = mode?.promptTemplate || '{内容}';
-    const range = wordRange || { min: 500, max: 1500 };
+    const range = wordRange || { min: 150, max: 350 };
     return template
         .replace(/\{内容\}/g, text)
         .replace(/\{min\}/g, String(range.min))
@@ -372,7 +344,7 @@ export function buildUserTurn({ mode, input, wordRange }) {
  */
 export function buildToolTurn({ kind, library, payload = {}, wordRange }) {
     const prompts = library?.settings?.generationPrompts?.typePrompts || {};
-    const range = wordRange || library?.settings?.defaultWordRange || { min: 500, max: 1500 };
+    const range = wordRange || resolveWordRange(library?.settings) || { min: 150, max: 350 };
     const instruction = prompts[kind] || prompts.continue || '请继续创作。';
 
     switch (kind) {

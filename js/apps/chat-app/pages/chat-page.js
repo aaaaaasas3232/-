@@ -26,10 +26,12 @@ import { renderMessage, renderMessageList, renderVoiceBubble } from '../componen
 import { renderEmojiPickerPanel } from '../components/emoji-picker-panel.js';
 import { chatModalManager } from '../components/chat-modal-registry.js';
 import {
-    DEFAULT_AI_AVATAR_BG,
     resolveContactDisplay,
     resolveAiAvatar,
+    resolveAiAvatarAsync,
     resolveUserAvatar,
+    resolveUserAvatarAsync,
+    renderAvatarHtml,
 } from '../aiMeta.js';
 
 /**
@@ -227,7 +229,7 @@ function renderToolbarButton(action, label, iconSvg) {
  *   contactId 参数 = `private-<aiPersonId>-${mode}` 拦截剩下的部分
  *   解析得到 aiPersonId + mode,从 sdk.chatFriends 读取对应 entry。
  */
-export function renderPrivateChatPage(app, contactId) {
+export async function renderPrivateChatPage(app, contactId) {
     let contact = { id: contactId, name: '未知联系人', status: 'offline', type: 'ai' };
 
     // v0.28 解析 pageId: 'private-{aiPersonId}-{mode}'
@@ -246,32 +248,29 @@ export function renderPrivateChatPage(app, contactId) {
         }
     }
 
+    await Promise.all([
+        resolveAiAvatarAsync(aiPersonId),
+        resolveUserAvatarAsync(),
+    ]);
     try {
         const sdk = window.settingsSdk;
         const defaultUser = sdk?.defaultUserCard?.getDefault?.() || sdk?.users?.getActive();
         const entry = (sdk && defaultUser)
             ? sdk.chatFriends?.get?.(defaultUser, aiPersonId, mode)
             : null;
-        if (entry) {
-            // ★ v0.31 实时读 aiPerson.socialProfiles.chat.*(网名/头像/背景),
-            //   故事模式和日历模式都用同一个 aiPerson 数据。
-            //   备注(remark)优先于社媒名(per-mode 字段,排在最外)。
-            const display = resolveContactDisplay(entry, aiPersonId);
-            contact = {
-                ...contact,
-                id: aiPersonId,
-                name: display.nickname,
-                // ★ v0.31 实时 avatar / avatarBg(原本是 entry 快照,改为 aiPerson 实时)
-                avatar: display.avatar,
-                avatarBg: display.avatarBg,
-                aiPersonId: entry.aiPersonId,
-                recordMode: entry.recordMode || mode,
-                remark: entry.remark || '',
-                chatBackground: entry.chatBackground || '', // 聊天背景 per-mode 保留 entry 快照
-                status: 'online',
-            };
-        }
-        // ★ 已移除 DEMO_CONTACTS fallback — 没真实联系人就保持「未知联系人」
+        const display = resolveContactDisplay(entry, aiPersonId);
+        contact = {
+            ...contact,
+            id: aiPersonId,
+            name: display.nickname || contact.name,
+            avatar: display.avatar,
+            avatarBg: display.avatarBg,
+            aiPersonId: entry?.aiPersonId || aiPersonId,
+            recordMode: entry?.recordMode || mode,
+            remark: entry?.remark || '',
+            chatBackground: entry?.chatBackground || '',
+            status: entry ? 'online' : contact.status,
+        };
     } catch (_) {}
 
     // ★ 已删除:statusText / statusColor(原用于 chat-header-status「在线」展示)
@@ -455,11 +454,7 @@ export function renderPrivateChatPage(app, contactId) {
                             <polyline points="15 18 9 12 15 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </button>
-                    <div class="chat-header-avatar" style="background: ${escapeHtml(contact.avatarBg || DEFAULT_AI_AVATAR_BG)};">
-                        ${contact.avatar
-                            ? `<img src="${escapeHtml(contact.avatar)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;" />`
-                            : escapeHtml((contact.name || '?').charAt(0))}
-                    </div>
+                    ${renderAvatarHtml(resolveAiAvatar(aiPersonId), 'chat-header-avatar')}
                     <div class="chat-header-info">
                         <div class="chat-header-name">${escapeHtml(contact.name)}</div>
                         <!-- ★ 已删除:chat-header-status「在线」标签不再展示 -->

@@ -1,7 +1,7 @@
 /**
  * 梦境编织 · 时间线面板
  *
- * 记录故事内发生过的事,按故事内时间排序,可以选择性注入 prompt。
+ * 记录故事内发生过的事,按你排的顺序显示,可以选择性注入 prompt。
  *
  * ── 清理掉的历史包袱 ──────────────────────────────────────────────
  *
@@ -17,7 +17,7 @@
 import * as store from '../../store.js';
 import { SHARED_COMPONENTS } from '../shared.js';
 import { resolveCharacterName } from '../../services/prompt-builder.js';
-import { compareStoryTime, parseStoryTime, findById, truncate } from '../../utils.js';
+import { parseStoryTime, findById, truncate } from '../../utils.js';
 
 export const DwTimelinePanel = {
     name: 'DwTimelinePanel',
@@ -29,14 +29,10 @@ export const DwTimelinePanel = {
     emits: ['notify'],
     computed: {
         events() {
-            return (this.book.timelineEvents || []).slice().sort((a, b) => compareStoryTime(a.time, b.time));
+            return this.book.timelineEvents || [];
         },
         injectedCount() {
             return this.events.filter((e) => e.includeInPrompt !== false).length;
-        },
-        /** 有几条事件的时间写法解析不出来 —— 它们排不了序,值得提示用户 */
-        unsortableCount() {
-            return this.events.filter((e) => e.time && !parseStoryTime(e.time).sortable).length;
         },
         /**
          * 角色年龄:现算,不存快照。
@@ -76,6 +72,14 @@ export const DwTimelinePanel = {
         onToggleInject(event) {
             store.updateTimelineEvent(this.book.id, event.id, { includeInPrompt: event.includeInPrompt === false });
         },
+        onMove(event, delta) {
+            store.moveTimelineEvent(this.book.id, event.id, delta);
+        },
+        canMove(event, delta) {
+            const i = this.events.findIndex((e) => e.id === event.id);
+            const j = i + delta;
+            return i >= 0 && j >= 0 && j < this.events.length;
+        },
         onSetWorldTime() {
             store.openModal('rename', {
                 title: '当前故事时间',
@@ -102,11 +106,6 @@ export const DwTimelinePanel = {
                 chevron
                 @click="onSetWorldTime"
             />
-
-            <p v-if="unsortableCount" class="dw-panel-note">
-                有 {{ unsortableCount }} 条事件的时间写法排不了序(会排在最后)。
-                写成「2024-03-15」或「第7天」就能自动排序。
-            </p>
 
             <DwSection v-if="ages.length" title="此刻的角色年龄" subtitle="由出生年和当前故事时间现算" collapsible :default-open="false">
                 <div class="dw-age-grid">
@@ -141,6 +140,22 @@ export const DwTimelinePanel = {
                         <p v-if="bindLabel(event)" class="dw-timeline-bind">{{ bindLabel(event) }}</p>
                     </div>
                     <div class="dw-timeline-actions">
+                        <button
+                            type="button"
+                            class="dw-nav-icon-btn"
+                            aria-label="上移"
+                            title="上移"
+                            :disabled="!canMove(event, -1)"
+                            @click="onMove(event, -1)"
+                        ><DwIcon name="chevronUp" /></button>
+                        <button
+                            type="button"
+                            class="dw-nav-icon-btn"
+                            aria-label="下移"
+                            title="下移"
+                            :disabled="!canMove(event, 1)"
+                            @click="onMove(event, 1)"
+                        ><DwIcon name="chevronDown" /></button>
                         <button
                             type="button"
                             class="dw-nav-icon-btn"

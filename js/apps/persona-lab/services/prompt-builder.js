@@ -150,9 +150,11 @@ function buildQuiz(quiz) {
     if (Array.isArray(quiz.options) && quiz.options.length) {
         lines.push('可选项:');
         quiz.options.forEach((opt, i) => lines.push(`  ${i + 1}. ${opt}`));
-        lines.push('回答时可以挑一个,也可以说都不是——挑不出来本身就是有用的信息。');
+        lines.push('这是选择题,必须从上面挑一项,不能说都不是,也不能另起一项。');
+        lines.push('第一句里原样带上你选的那一项原文,然后再用自己的话说为什么。');
     }
     if (quiz.answer) lines.push(`她刚才的回答: ${truncate(quiz.answer, 300)}`);
+    if (quiz.pick) lines.push(`落到的选项: ${quiz.pick}`);
     return lines.join('\n');
 }
 
@@ -196,13 +198,16 @@ export function buildPersonaPrompt(ctx = {}) {
     const { draft, quiz } = ctx;
     const card = draft?.personaId ? readCard(draft.scope, draft.personaId) : null;
 
+    const quizHasOptions = Array.isArray(quiz?.options) && quiz.options.length > 0;
     const bodies = {
         duty: DUTY_PERSONA,
         persona: String(draft?.text || '').trim(),
         world: readWorldContext(card),
         partner: readPartnerContext(),
         quiz: buildQuiz(quiz),
-        format: FORMAT_PERSONA,
+        format: quizHasOptions
+            ? `${FORMAT_PERSONA}\n  - 当前是选择题:第一句必须原样带上你选的那一项原文`
+            : FORMAT_PERSONA,
     };
 
     return composer.composeAndSave(

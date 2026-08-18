@@ -177,7 +177,7 @@ export const DwProfile = {
                 </DwRow>
             </DwSection>
 
-            <DwSection title="生成" icon-name="sparkle">
+            <DwSection title="生成" icon-name="heart">
                 <DwRow label="流式生成" hint="边生成边显示,可中途停止">
                     <template #trailing>
                         <DwSwitch :model-value="settings.useStreamMode" label="流式生成" @update:model-value="patch('useStreamMode', $event)" />

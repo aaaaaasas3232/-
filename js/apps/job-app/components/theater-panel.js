@@ -74,6 +74,9 @@ export const JbTheaterPanel = {
             const sc = this.draft.scenes.find((x) => x.id === sceneId);
             if (sc) sc.narration = text;
         },
+        setDigest(text) {
+            if (this.draft) this.draft.digest = String(text || '');
+        },
         dropLine(sceneId, lineId) {
             const sc = this.draft.scenes.find((x) => x.id === sceneId);
             if (sc) sc.lines = sc.lines.filter((x) => x.id !== lineId);
@@ -167,9 +170,16 @@ export const JbTheaterPanel = {
                 <p v-if="view.closing" class="jb-th__closing">{{ view.closing }}</p>
 
                 <!-- 当天梗概 -->
-                <jb-section title="这天的工作记录" sub="以后生成小剧场时会读它">
+                <jb-section title="这天的工作记录" sub="以后生成小剧场时会读它，点「改」也能自己写">
                     <div class="jb-card jb-card--pad">
-                        <p v-if="t.digest" class="jb-th__digest">{{ t.digest }}</p>
+                        <jb-textarea
+                            v-if="editing"
+                            :model-value="draft.digest || ''"
+                            :rows="4"
+                            placeholder="给后面几天看的工作记录，自己写也行"
+                            @update:model-value="setDigest"
+                        />
+                        <p v-else-if="t.digest" class="jb-th__digest">{{ t.digest }}</p>
                         <p v-else-if="digesting" class="jb-panel__note">正在写…</p>
                         <p v-else class="jb-panel__note">
                             这天还没有记录。没有记录的话，后面几天的剧情接不上这一天。

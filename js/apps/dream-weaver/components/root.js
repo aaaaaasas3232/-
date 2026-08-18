@@ -52,7 +52,7 @@ export function createDreamWeaverRoot() {
             app: { type: Object, required: true },
         },
         data() {
-            return { toast: '', TABS };
+            return { TABS };
         },
         computed: {
             state() { return store.getState(); },
@@ -194,16 +194,19 @@ export function createDreamWeaverRoot() {
             closePage() { store.closePage(); },
 
             // ── 提示 ──────────────────────────
+            // 页内不再叠一条 toast:和岛上那句重复,挡住正文。
             notify(message) {
                 if (!message) return;
-                this.toast = String(message);
-                if (this._toastTimer) clearTimeout(this._toastTimer);
-                this._toastTimer = setTimeout(() => { this.toast = ''; this._toastTimer = null; }, 2600);
-
-                // 顺带发一条灵动岛通知:用户可能已经切到别的 App,生成完成这类消息值得穿透出去
+                const text = String(message);
+                const failed = /失败|不允许|打不开|不能/.test(text);
                 try {
-                    this.app?.toolkit?.island?.notify?.('info', '梦境编织', String(message));
-                } catch (_) { /* 岛不可用不影响页内提示 */ }
+                    this.app?.toolkit?.island?.notify?.(
+                        failed ? 'error' : 'info',
+                        '梦境编织',
+                        text,
+                        { kind: 'action' },
+                    );
+                } catch (_) { /* 岛不可用就静默,不再回落到页内条 */ }
             },
         },
         mounted() {
@@ -247,7 +250,6 @@ export function createDreamWeaverRoot() {
         window.addEventListener('dream-weaver:open-ifline', this._onOpenIfLine);
     },
     beforeUnmount() {
-        if (this._toastTimer) clearTimeout(this._toastTimer);
         window.removeEventListener('pagehide', this._onHide);
         document.removeEventListener('visibilitychange', this._onHide);
         window.removeEventListener('dream-weaver:run-generator', this._onGenerator);
@@ -332,11 +334,6 @@ export function createDreamWeaverRoot() {
                     <DwChapterInfoModal v-else-if="modal.type === 'chapter-info'" :payload="modal.payload" @close="closeModal" @notify="notify" />
                     <DwBackgroundModal v-else-if="modal.type === 'background'" :payload="modal.payload" @close="closeModal" @notify="notify" />
                 </template>
-
-                <!-- 提示 -->
-                <transition name="dw-toast">
-                    <p v-if="toast" class="dw-toast" role="status">{{ toast }}</p>
-                </transition>
             </div>
         `,
     };

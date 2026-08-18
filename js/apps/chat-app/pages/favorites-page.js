@@ -165,8 +165,13 @@ function getSourceIcon(sourceType) {
 /**
  * 获取类型图标
  */
+function normalizeFavType(type) {
+    if (type === 'descriptive_image') return 'image';
+    return type || 'text';
+}
+
 function getTypeIcon(type) {
-    const cat = CATEGORIES.find(c => c.id === type);
+    const cat = CATEGORIES.find(c => c.id === normalizeFavType(type));
     return cat ? cat.icon : ICON_TEXT;
 }
 
@@ -174,7 +179,7 @@ function getTypeIcon(type) {
  * 获取类型标签
  */
 function getTypeLabel(type) {
-    const cat = CATEGORIES.find(c => c.id === type);
+    const cat = CATEGORIES.find(c => c.id === normalizeFavType(type));
     return cat ? cat.label : '文字';
 }
 
@@ -372,7 +377,7 @@ function renderFavoriteItem(item, isExpanded = false) {
 
     // 根据类型渲染不同内容
     let contentHtml = '';
-    if (type === 'image') {
+    if (normalizeFavType(type) === 'image') {
         contentHtml = `
             <div class="fav-image-preview" style="background: ${escapeHtml(cardColor || '#FFE4EC')};">
                 <div class="fav-image-icon">
@@ -380,7 +385,7 @@ function renderFavoriteItem(item, isExpanded = false) {
                         <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
                     </svg>
                 </div>
-                <div class="fav-image-text">${escapeHtml(imagePreview || '图片')}</div>
+                <div class="fav-image-text">${escapeHtml(imagePreview || item.imageDescription || content || '图片')}</div>
             </div>
         `;
     } else if (type === 'location') {
@@ -577,7 +582,7 @@ function renderFavoriteList(favorites, category = 'all', state = {}) {
         ? state.expandedContext
         : new Set(Array.isArray(state.expandedContext) ? state.expandedContext : []);
     if (favorites.length === 0) {
-        const label = category === 'all' ? '对话片段' : getTypeLabel(category);
+        const label = category === 'all' ? '' : getTypeLabel(category);
         return `
             <div class="fav-empty">
                 <div class="fav-empty-icon">${ICON_STAR_OUTLINE}</div>
@@ -586,13 +591,10 @@ function renderFavoriteList(favorites, category = 'all', state = {}) {
         `;
     }
 
-    const showConversation = category === 'all';
     return favorites.map(item => {
         const favId = item.id || item.favoriteId;
-        const contentHtml = showConversation
-            // 全部分类:渲染对话片段
+        const contentHtml = item.type === 'conversation'
             ? renderConversationItem(item, expandedConv.has(favId))
-            // 其他分类:渲染单条收藏
             : renderFavoriteItem(item, expandedContext.has(favId));
         // 每条都包一层「左滑露出分享/编辑/删除」的外壳。
         // 手势由 src/core/components/swipe-actions.js 统一处理，
@@ -627,16 +629,14 @@ function countByCategory(favorites, options = {}) {
         );
     }
 
-    // 全部:只统计对话片段
     const conversationCount = filtered.filter(f => f.type === 'conversation').length;
-
-    // 单条收藏:按类型统计
-    const singleCounts = { all: conversationCount };
+    const singleCounts = { all: filtered.length };
     CATEGORIES.forEach(cat => {
         if (cat.id !== 'all') {
-            singleCounts[cat.id] = filtered.filter(f => f.type === cat.id).length;
+            singleCounts[cat.id] = filtered.filter(f => normalizeFavType(f.type) === cat.id).length;
         }
     });
+    singleCounts._conversation = conversationCount;
 
     return singleCounts;
 }
@@ -714,11 +714,9 @@ export function renderFavoritesPage(app, options = {}) {
     // 根据分类过滤
     let filteredByCategory;
     if (initialCategory === 'all') {
-        // 全部:只显示对话片段
-        filteredByCategory = filteredFavorites.filter(f => f.type === 'conversation');
+        filteredByCategory = filteredFavorites;
     } else {
-        // 其他分类:显示对应类型的单条收藏
-        filteredByCategory = filteredFavorites.filter(f => f.type === initialCategory);
+        filteredByCategory = filteredFavorites.filter(f => normalizeFavType(f.type) === initialCategory);
     }
 
     const favoriteListHtml = renderFavoriteList(filteredByCategory, initialCategory, state);
@@ -774,7 +772,7 @@ export function renderFavoritesPage(app, options = {}) {
 
                 <!-- 列表标题 -->
                 <div class="chat-favorites-section-title">
-                    ${initialCategory === 'all' ? '收藏的对话片段' : `${getTypeLabel(initialCategory)}收藏`}
+                    ${initialCategory === 'all' ? '全部收藏' : `${getTypeLabel(initialCategory)}收藏`}
                 </div>
 
                 <!-- 收藏列表 -->

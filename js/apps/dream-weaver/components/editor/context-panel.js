@@ -25,6 +25,7 @@ import { SHARED_COMPONENTS } from '../shared.js';
 import { ContextPreview } from '@/src/core/components/context-preview.js';
 import { buildPrompt, buildUserTurn } from '../../services/prompt-builder.js';
 import { listApiRefs, resolveApiRef } from '../../services/ai-service.js';
+import { resolveWordRange } from '../../constants.js';
 
 export const DwContextPanel = {
     name: 'DwContextPanel',
@@ -50,14 +51,13 @@ export const DwContextPanel = {
                 orderedChapters: this.orderedChapters,
                 chapter: this.chapter,
                 library: this.library,
-                mode: this.mode,
             });
         },
         userTurnPreview() {
             return buildUserTurn({
                 mode: this.mode,
                 input: this.draftInput || '(这里会替换成你输入的内容)',
-                wordRange: this.library.settings.defaultWordRange,
+                wordRange: resolveWordRange(this.library.settings),
             });
         },
         apiRefs() {

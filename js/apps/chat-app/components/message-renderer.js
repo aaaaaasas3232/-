@@ -151,7 +151,12 @@ function renderGroupNoticeBubble(msg, contact = {}, options = {}) {
  * @returns {string} HTML 字符串
  */
 export function renderMessage(msg, contact = {}, options = {}) {
-    const { type, sender } = msg;
+    let { type } = msg;
+    // 工具栏「图片」/ AI 段可能写成 image 且没有真实 url，按描述图卡片画
+    if (type === 'image' && !(msg.url || msg.imageUrl)) {
+        type = 'descriptive_image';
+        msg = { ...msg, type };
+    }
 
     // 系统消息 - 日期分割线
     if (type === 'system') {

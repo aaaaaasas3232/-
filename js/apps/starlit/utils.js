@@ -67,30 +67,98 @@ export function truncate(value, max = 120) {
 
 /**
  * 从 AI 回复里抠一个 JSON 对象或数组。
- * 模型经常在 JSON 前后多说几句或加围栏，所以先直解、再按括号切。
+ * 模型经常在 JSON 前后多说几句、加围栏、字符串里直接回车、尾巴多个逗号。
  */
 export function extractJson(raw) {
     const text = String(raw ?? '').trim();
     if (!text) return null;
-    const tryParse = (s) => {
-        try { return JSON.parse(s); } catch (_) { return null; }
-    };
-    const direct = tryParse(text);
-    if (direct && typeof direct === 'object') return direct;
 
-    const stripped = text
-        .replace(/^[\s\S]*?```(?:json)?\s*/i, '')
-        .replace(/```[\s\S]*$/, '')
-        .trim();
-    const fenced = tryParse(stripped);
-    if (fenced && typeof fenced === 'object') return fenced;
+    const direct = tryParseJson(text);
+    if (direct) return direct;
 
-    for (const [open, close] of [['{', '}'], ['[', ']']]) {
-        const start = text.indexOf(open);
-        const end = text.lastIndexOf(close);
-        if (start !== -1 && end > start) {
-            const hit = tryParse(text.slice(start, end + 1));
-            if (hit && typeof hit === 'object') return hit;
+    const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (fenced) {
+        const hit = tryParseJson(fenced[1].trim()) || scanFirstJson(fenced[1]);
+        if (hit) return hit;
+    }
+
+    return scanFirstJson(text);
+}
+
+function tryParseJson(src) {
+    const text = String(src || '').trim();
+    if (!text) return null;
+    try {
+        const v = JSON.parse(text);
+        if (v && typeof v === 'object') return v;
+    } catch (_) { /* 继续修 */ }
+
+    try {
+        const v = JSON.parse(softenJson(text));
+        if (v && typeof v === 'object') return v;
+    } catch (_) { /* 这次切片放弃 */ }
+    return null;
+}
+
+function softenJson(text) {
+    return escapeRawBreaksInStrings(String(text || ''))
+        .replace(/[“”]/g, '"')
+        .replace(/[‘’]/g, "'")
+        .replace(/,\s*([}\]])/g, '$1');
+}
+
+function escapeRawBreaksInStrings(text) {
+    let out = '';
+    let inStr = false;
+    let esc = false;
+    for (const ch of String(text || '')) {
+        if (inStr) {
+            if (esc) { out += ch; esc = false; continue; }
+            if (ch === '\\') { out += ch; esc = true; continue; }
+            if (ch === '"') { out += ch; inStr = false; continue; }
+            if (ch === '\n') { out += '\\n'; continue; }
+            if (ch === '\r') continue;
+            out += ch;
+            continue;
+        }
+        if (ch === '"') inStr = true;
+        out += ch;
+    }
+    return out;
+}
+
+function scanFirstJson(text) {
+    const src = String(text || '');
+    for (let i = 0; i < src.length; i += 1) {
+        const ch = src[i];
+        if (ch !== '{' && ch !== '[') continue;
+        const scanned = scanJsonValue(src, i);
+        if (!scanned) continue;
+        const hit = tryParseJson(scanned);
+        if (hit) return hit;
+    }
+    return null;
+}
+
+function scanJsonValue(text, start) {
+    const first = text[start];
+    if (first !== '{' && first !== '[') return null;
+    let depth = 0;
+    let inStr = false;
+    let esc = false;
+    for (let i = start; i < text.length; i += 1) {
+        const ch = text[i];
+        if (inStr) {
+            if (esc) { esc = false; continue; }
+            if (ch === '\\') { esc = true; continue; }
+            if (ch === '"') inStr = false;
+            continue;
+        }
+        if (ch === '"') { inStr = true; continue; }
+        if (ch === '{' || ch === '[') depth += 1;
+        else if (ch === '}' || ch === ']') {
+            depth -= 1;
+            if (depth === 0) return text.slice(start, i + 1);
         }
     }
     return null;

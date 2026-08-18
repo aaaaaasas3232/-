@@ -104,7 +104,7 @@ export const DwToolsPanel = {
                 />
             </DwSection>
 
-            <DwSection title="衍生创作" icon-name="sparkle">
+            <DwSection title="衍生创作" icon-name="heart">
                 <DwRow
                     label="小剧场"
                     hint="番外向的短片段"

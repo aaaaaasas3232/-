@@ -747,6 +747,7 @@
 .app-shell[data-app-id="dream-weaver"] .dw-option-icon--display-settings { color: var(--dw-text); }
 .app-shell[data-app-id="dream-weaver"] .dw-option-icon--regex-replace { color: var(--dw-tertiary); }
 .app-shell[data-app-id="dream-weaver"] .dw-option-icon--quick-settings { color: var(--dw-warning); }
+.app-shell[data-app-id="dream-weaver"] .dw-option-icon--if-line-panel { color: var(--dw-accent); }
 
 .app-shell[data-app-id="dream-weaver"] .dw-option-label {
     flex: 1;

@@ -36,13 +36,27 @@
 
 import { escapeHtml } from '@/src/core/escape.js';
 import { renderAppPromptCardPreview } from '@/js/apps/chat-app/components/app-prompt-card.js'; // ★ v0.61.5 第三方 App Prompt 卡片预览
-import { SPECIAL_ACTIONS_HELP, REPLY_STYLE_INSTRUCTIONS, USER_MOMENTS_INSTRUCTIONS, AI_MOMENTS_INSTRUCTIONS } from '@/js/apps/chat-app/services/reply-format-instructions.js';
+import {
+    SPECIAL_ACTIONS_HELP,
+    REPLY_STYLE_INSTRUCTIONS,
+    USER_MOMENTS_INSTRUCTIONS,
+    AI_MOMENTS_INSTRUCTIONS,
+    CHAT_PREAMBLE_INSTRUCTIONS,
+} from '@/js/apps/chat-app/services/reply-format-instructions.js';
 import contextMode from '@/js/apps/chat-app/services/context-mode.js';
 import { writeContextPreview } from '@/js/apps/chat-app/services/context-preview.js';
 import { wrapPromptBlock, resolveTagName } from '@/js/apps/chat-app/services/prompt-tags.js';
+// 实时块(一起听 / 四叶草 / 灯塔 / 日记)的唯一声明。预览和 ai-service 发送时读同一份。
+import { LIVE_CONTEXT_BLOCKS, collectLiveContextBlocks } from '@/js/apps/chat-app/services/live-context-registry.js';
+// 整组开关 + 新卡片开关。ai-service 也读这两张表,保证「关了就真的不发」。
+import { makeOwnerKey, isGroupEnabled, isCardEnabled } from '@/js/apps/chat-app/services/prompt-toggles.js';
+import { isGroupOpen, isItemOpen } from '@/js/apps/chat-app/services/prompt-fold-state.js';
+import { estimateTokens } from '@/src/core/context-composer.js';
 import { resolveAiAvatar } from '../aiMeta.js';
 // Prompt 变量系统（{{aiName}} 这类占位符的唯一一份替换实现）
 import { renderPromptVariables, buildPromptVariableContext } from '@/src/core/prompt-variables.js';
+import { resolvePersonaContextText } from '@/js/apps/setting/persona/context-text.js';
+import { buildGroupAdminPromptBlock } from '@/js/apps/chat-app/services/group-admin-service.js';
 
 // ============================================================
 // 工具函数
@@ -97,6 +111,113 @@ function parseContactId(contactId) {
         }
     }
     return { aiPersonId: id, mode: 'calendar', isGroup: false };
+}
+
+// ============================================================
+// 「当前上下文」的默认排序
+//
+// 以前是「用户自定义全部在前 + 系统卡按 push 顺序」,拼出来的 pre 里
+// **对话历史夹在一堆规则中间**,后面还跟着记忆概要 —— 时间轴是倒的,
+// 模型很容易拿几个月前的概要当成刚刚发生的事。
+//
+// 现在按「读的人需要的顺序」排:先说怎么读(总纲),再说你是谁(世界观/人设),
+// 然后是越来越近的记忆(概要 → 朋友圈 → App 实时状态),最后才是格式约束和
+// **刚刚发生的对话** —— 离用户这句话最近的东西放最后,是长上下文里最稳的做法。
+//
+// 用户拖过顺序(contextOrder)时以用户的为准,这里只决定「没拖过的默认长什么样」。
+// ============================================================
+const CONTEXT_RANK_BY_ID = {
+    'chat-preamble': 5,
+    'group-info': 16,
+    'sticker-library': 50,
+    'reply-format': 55,
+    'context-mode': 60,
+    'context-rounds': 90,
+    'user-moments': 32,
+    'ai-moments': 30,
+};
+
+const CONTEXT_RANK_BY_SOURCE = {
+    'nook-world': 10,
+    'nook-ai': 12,
+    'nook-user': 14,
+};
+
+function defaultContextRank(card) {
+    if (!card) return 70;
+    const id = String(card.id || '');
+    const source = String(card.source || '');
+    if (CONTEXT_RANK_BY_ID[id] != null) return CONTEXT_RANK_BY_ID[id];
+    if (CONTEXT_RANK_BY_SOURCE[source] != null) return CONTEXT_RANK_BY_SOURCE[source];
+    if (card._kind === 'custom') return 18;          // 用户自己写的,紧跟在人设后面
+    if (source.startsWith('memory-summary')) return 20;
+    if (card._live) return 40;                        // 一起听 / 四叶草 / 灯塔 / 日记
+    if (id.startsWith('app-prompt::')) return 45;
+    return 70;
+}
+
+/**
+ * 折叠组头上的「整组开关」。
+ *
+ * 关掉整组 = 这一组里所有卡片都不进 pre,但各卡片自己的开关**原样保留** ——
+ * 再打开时用户之前一张张调好的状态还在,不用重新点一遍。
+ */
+function renderGroupSwitch({ source, active, aiPersonId, isGroup = false, groupId = null, mode = 'calendar' }) {
+    const payload = JSON.stringify({
+        action: 'appMethod',
+        appId: 'chat',
+        method: 'togglePromptGroupInject',
+        payload: isGroup
+            ? { aiPersonId, source, isGroup: true, groupId, mode }
+            : { aiPersonId, source },
+    });
+    return `
+        <span class="pm-app-group__switch pm-segmented-tabs" data-group-source="${escapeHtml(source)}">
+            <button type="button" class="pm-segmented-tab ${active ? '' : 'is-active'}"
+                data-app-action='${escapeHtml(payload)}'
+                data-target="close">关闭</button>
+            <button type="button" class="pm-segmented-tab ${active ? 'is-active' : ''}"
+                data-app-action='${escapeHtml(payload)}'
+                data-target="enable">启用</button>
+        </span>
+    `;
+}
+
+/** 一个 prompt 段最多列这么多个表情名。再多就不是「告诉它有什么」而是拿名字挤对话历史了。 */
+const STICKER_NAME_LIMIT = 120;
+
+/**
+ * 「AI 表情包库」卡的正文。预览里长什么样,AI 收到的就是什么样 —— 没有第二份。
+ *
+ * @param {Array<{groupName:string, names:string[]}>} groups
+ * @param {number} groupCount 绑定的图组数(可能有组是空的)
+ * @param {number} total      实际可用的表情张数
+ */
+function buildStickerLibraryText(groups, groupCount, total) {
+    if (!Array.isArray(groups) || groups.length === 0 || total === 0) {
+        const why = groupCount > 0
+            ? `绑定了 ${groupCount} 个图组,但组里还没有图片。`
+            : '还没有绑定任何表情图组(设置 → 人设 → 资源绑定)。';
+        return `# AI 表情包库\n\n${why}当前没有可发的表情包,不要输出 [表情包:…]。\n用户发过的表情会自动进库,那之后你才能同名发送。`;
+    }
+    const lines = [
+        '# AI 表情包库',
+        '',
+        `你可以发下面这些表情,格式 [表情包:名称],名称一字不差地照抄:`,
+        '',
+    ];
+    let used = 0;
+    for (const g of groups) {
+        if (used >= STICKER_NAME_LIMIT) break;
+        const names = (g.names || []).slice(0, STICKER_NAME_LIMIT - used);
+        if (names.length === 0) continue;
+        used += names.length;
+        lines.push(`- ${g.groupName || '未命名图组'}: ${names.join(' / ')}`);
+    }
+    if (total > used) lines.push(`- （另有 ${total - used} 个未列出,没列出来的就当没有）`);
+    lines.push('');
+    lines.push('清单以外的名称一律不要用 —— 发出去是空白气泡。');
+    return lines.join('\n');
 }
 
 // ============================================================
@@ -349,124 +470,14 @@ function renderRowActions({ aiPersonId, promptId, isActive = true, locked = fals
  *       ...
  */
 export function buildUserPersonaContextText(user) {
-    if (!user) return '';
-    const sections = [];
-    const name = user.name || user.chineseName || '';
-
-    // 标题
-    sections.push(`# 角色卡${name ? ': ' + name : ''}`);
-    sections.push('');
-
-    // 1. 基本信息
-    const basicFields = [];
-    if (user.chineseName || user.name) basicFields.push(`chineseName: ${user.chineseName || user.name}`);
-    if (user.gender) basicFields.push(`gender: ${user.gender}`);
-    if (user.age != null) basicFields.push(`age: ${user.age}`);
-    if (user.identity) basicFields.push(`identity: ${user.identity}`);
-    if (user.bio) basicFields.push(`bio: ${user.bio}`);
-    if (user.personality) basicFields.push(`personality: ${user.personality}`);
-
-    if (basicFields.length > 0) {
-        sections.push('# 1. 基本信息');
-        sections.push(basicFields.join('\n'));
-        sections.push('');
-    }
-
-    // 2. 外貌与体征
-    if (user.appearance) {
-        sections.push('# 2. 外貌与体征');
-        sections.push(`appearance: ${user.appearance}`);
-        sections.push('');
-    }
-
-    // 3. 性格特质
-    if (user.personality || user.personalityTraits || user.currentOccupation) {
-        sections.push('# 3. 性格特质');
-        sections.push(`traits: ${user.personality || ''}`);
-        sections.push('');
-    }
-
-    // 4. 背景
-    if (user.bio || user.background) {
-        sections.push('# 4. 背景');
-        sections.push(`experience: ${user.bio || user.background || ''}`);
-        sections.push('');
-    }
-
-    // 5. 偏好
-    const prefMod = user.preferences || {};
-    const hobbies = Array.isArray(prefMod.hobbies) ? prefMod.hobbies : [];
-    const likes = Array.isArray(prefMod.likes) ? prefMod.likes : [];
-    const dislikes = Array.isArray(prefMod.dislikes) ? prefMod.dislikes : [];
-
-    if (prefMod.enabled && (hobbies.length || likes.length || dislikes.length)) {
-        sections.push('# 5. 偏好');
-        if (hobbies.length) sections.push(`hobbies: ${hobbies.join(', ')}`);
-        if (likes.length) sections.push(`likes: ${likes.join(', ')}`);
-        if (dislikes.length) sections.push(`dislikes: ${dislikes.join(', ')}`);
-        sections.push('');
-    }
-
-    return sections.filter(s => s !== '').join('\n');
+    return resolvePersonaContextText(user, 'user');
 }
 
 /**
  * 构建 AI 人设的完整上下文文本（与 settings app 的人设上下文格式一致）
  */
 export function buildAiPersonaContextText(ai) {
-    if (!ai) return '';
-    const sections = [];
-    const name = ai.name || '';
-
-    // 标题
-    sections.push(`# 角色卡${name ? ': ' + name : ''}`);
-    sections.push('');
-
-    // 1. 基本信息
-    const basicFields = [];
-    if (ai.name) basicFields.push(`chineseName: ${ai.name}`);
-    if (ai.gender) basicFields.push(`gender: ${ai.gender}`);
-    if (ai.age != null) basicFields.push(`age: ${ai.age}`);
-    if (ai.role) basicFields.push(`identity: ${ai.role}`);
-    if (ai.bio) basicFields.push(`bio: ${ai.bio}`);
-    if (ai.personality) basicFields.push(`personality: ${ai.personality}`);
-    if (ai.tone) basicFields.push(`tone: ${ai.tone}`);
-
-    if (basicFields.length > 0) {
-        sections.push('# 1. 基本信息');
-        sections.push(basicFields.join('\n'));
-        sections.push('');
-    }
-
-    // 2. 外貌与体征
-    if (ai.appearance) {
-        sections.push('# 2. 外貌与体征');
-        sections.push(`appearance: ${ai.appearance}`);
-        sections.push('');
-    }
-
-    // 3. 性格特质
-    if (ai.personality || ai.personalityTraits) {
-        sections.push('# 3. 性格特质');
-        sections.push(`traits: ${ai.personality || ''}`);
-        sections.push('');
-    }
-
-    // 4. 背景
-    if (ai.bio || ai.background) {
-        sections.push('# 4. 背景');
-        sections.push(`experience: ${ai.bio || ai.background || ''}`);
-        sections.push('');
-    }
-
-    // 5. 行为规则
-    if (Array.isArray(ai.rules) && ai.rules.length > 0) {
-        sections.push('# 5. 行为规则');
-        ai.rules.forEach((r) => sections.push(`- ${r}`));
-        sections.push('');
-    }
-
-    return sections.filter(s => s !== '').join('\n');
+    return resolvePersonaContextText(ai, 'ai');
 }
 
 function buildPersonaPromptFromUser(user, overrides = null) {
@@ -583,8 +594,9 @@ function renderPromptCard({
     const extraAttrs = draggable ? `data-pm-draggable="true"` : '';
     // ★ v0.61.8.7 作用域 class:仅用于 DOM 区分「当前上下文区」,不改样式
     const cls = `pm-card pm-item pm-item--in-context${extraClass ? ' ' + extraClass : ''}`;
+    const openAttr = isItemOpen(promptId) ? ' open' : '';
     return `
-        <details class="${cls}" data-prompt-id="${escapeHtml(promptId)}" data-order="${escapeHtml(String(order ?? ''))}" ${extraAttrs}>
+        <details class="${cls}" data-prompt-id="${escapeHtml(promptId)}" data-order="${escapeHtml(String(order ?? ''))}" ${extraAttrs}${openAttr}>
             <summary class="pm-item-summary">
                 ${indexHtml}
                 <div class="pm-item-main">
@@ -621,6 +633,10 @@ function renderPromptControlCard({
     extraBody = '',
     skipDefaultContent = false,
 }) {
+    // ★ fullContent 传**原文**,转义在这里统一做一次。
+    //   历史上有一半调用方自己先 escapeHtml 了一遍,于是正文里的 & < > 引号被转义两次,
+    //   展开卡片看到的是 `&amp;lt;用户人设开始&amp;gt;` 这种。聊天回合那张卡最明显 ——
+    //   用户消息里但凡有个 & 就会露馅。
     const dataKindAttr = dataKind ? `data-kind="${escapeHtml(dataKind)}"` : '';
     // ★ v0.61.7.2 加上 pm-card 类(与 renderPromptCard 对齐),
     //   这样 savePromptManagerChanges / drag-controller 才能同时收集到
@@ -635,8 +651,9 @@ function renderPromptControlCard({
     const defaultContentHtml = skipDefaultContent
         ? ''
         : `<div class="pm-item-content">${escapeHtml(fullContent || '')}</div>`;
+    const openAttr = isItemOpen(promptId) ? ' open' : '';
     return `
-        <details class="${cls}" data-prompt-id="${escapeHtml(promptId)}" ${dataKindAttr}>
+        <details class="${cls}" data-prompt-id="${escapeHtml(promptId)}" ${dataKindAttr}${openAttr}>
             <summary class="pm-item-summary">
                 <div class="pm-item-main">
                     <div class="pm-item-head">
@@ -867,8 +884,9 @@ function renderSummaryItem(s, index, kind) {
  */
 function renderPromptLibraryItem({ entry, isImported, aiPersonId, isGroup = false, groupId = null, mode = 'calendar' }) {
     const pr = entry.prompt || {};
-    const title = escapeHtml(pr.text?.split('\n')[0]?.slice(0, 24) || pr.id || '未命名');
-    const fullText = escapeHtml(pr.text || '');
+    // title / fullText 都传原文 —— renderPromptControlCard 内部统一转义一次
+    const title = pr.text?.split('\n')[0]?.slice(0, 24) || pr.id || '未命名';
+    const fullText = String(pr.text || '');
     // ★ v0.61.8.10 拉取按钮:已拉取时禁用(灰态 + 文字「已拉取」),不换成对勾
     //   防止用户重复点击拉取(SDK 内部已有 sourceLibraryPromptId 去重,但 UI 上要明确反馈)
     const pullBtnClass = isImported ? 'pm-chip pm-chip--pull pm-chip--pulled' : 'pm-chip pm-chip--pull';
@@ -915,6 +933,13 @@ export async function renderPromptManagerPage(app, contactId) {
     const isGroup = parsed.isGroup === true;
     const groupId = parsed.groupId || null;
 
+    // 整组开关 + 新卡片开关。两张表都存在模块单例里,`ai-service` 发送时读的是同一份 ——
+    // 「预览里关掉了、发送时照样发」这件事在结构上就发生不了。
+    const ownerKey = makeOwnerKey({ aiPersonId, isGroup, groupId });
+    const groupEnabled = (source) => isGroupEnabled(ownerKey, source || 'nook');
+    const cardEnabled = (cardId) => isCardEnabled(ownerKey, cardId);
+    const preambleActive = cardEnabled('chat-preamble');
+
     // ===== 1. 读联系人 / 用户 / AI 人设 =====
     let displayName = aiPersonId;
     let avatarUrl = '';
@@ -932,9 +957,14 @@ export async function renderPromptManagerPage(app, contactId) {
             // 群聊入口:读 group,拿 name + 拼接的群头像
             groupDefaultUser = defaultUser;
             if (defaultUser && groupId) {
-                for (const m of ['calendar', 'story']) {
-                    const e = sdk.chatGroups?.get?.(defaultUser, groupId, m);
-                    if (e) { groupEntry = e; break; }
+                const preferred = sdk.chatGroups?.get?.(defaultUser, groupId, mode);
+                if (preferred) {
+                    groupEntry = preferred;
+                } else {
+                    for (const m of ['calendar', 'story']) {
+                        const e = sdk.chatGroups?.get?.(defaultUser, groupId, m);
+                        if (e) { groupEntry = e; break; }
+                    }
                 }
             }
             if (groupEntry) {
@@ -1061,7 +1091,12 @@ export async function renderPromptManagerPage(app, contactId) {
         nookAll = [...memberItems, ...(userItem ? [userItem] : [])];
     } else {
         // 私聊版:从 nookSdk.prompts.list(aiPersonId) 拿(原有逻辑)
-        nookAll = window.settingsSdk?.nookSdk?.prompts?.list?.(aiPersonId) || [];
+        try {
+            nookAll = window.settingsSdk?.nookSdk?.prompts?.list?.(aiPersonId) || [];
+        } catch (err) {
+            console.warn('[prompt-manager] nook prompts.list 失败', err);
+            nookAll = [];
+        }
     }
     const nookSystem = nookAll.filter((p) => p && p.system).map((p) => {
         const kind = p.systemKind === 'ai' ? 'ai' : 'user';
@@ -1071,11 +1106,17 @@ export async function renderPromptManagerPage(app, contactId) {
         }
         // 私聊版:把 override 应用到 content(原 v0.82 行为)
         const override = getOverride(kind);
+        let content = p.content || '';
+        try {
+            content = kind === 'ai'
+                ? buildPersonaPromptFromAi(aiPersonObj, override)
+                : buildPersonaPromptFromUser(userPersona, override);
+        } catch (err) {
+            console.warn('[prompt-manager] 拼人设卡失败', kind, err);
+        }
         return {
             ...p,
-            content: kind === 'ai'
-                ? buildPersonaPromptFromAi(aiPersonObj, override)
-                : buildPersonaPromptFromUser(userPersona, override),
+            content,
             locked: true,
         };
     });
@@ -1130,17 +1171,31 @@ export async function renderPromptManagerPage(app, contactId) {
     stickerLibraryInjectMap = stickerLibraryInjectMap || {};
     const stickerLibraryInjectAvailable = stickerLibraryInjectMap[aiPersonId] !== false;
 
-    // ★ v0.64 算 AI 当前绑定表情包张数(只读 aiPerson.boundResources.stickerGroupIds 数量,
-    //   真实 names 列表由 prompt-builder 注入到 systemPrompt;这张卡只展示「N 张」)
-    let stickerCount = 0;
+    // 「AI 表情包库」:真的把名字列出来。
+    //
+    // 这张卡原来的正文写着「详细名称列表已注入到 systemPrompt(不在预览中完整展开)」——
+    // 而 pre 就是 systemPrompt,里面一个名字都没有。同时「回复格式」那段还写着
+    // 「表情包只能用表情包库里已列出的名称」,于是模型被要求遵守一份不存在的清单,
+    // 只能自己编名字,编出来的名字在用户历史里反查不到,发出去就是空白气泡。
+    //
+    // 现在按组读出真实名称拼进正文。渲染函数本来就是 async,这一次 db 读发生在
+    // 无头刷新阶段(refreshContextPreview),不挡任何交互。
+    const aiStickerIds = Array.isArray(aiPersonObj?.boundResources?.stickerGroupIds)
+        ? aiPersonObj.boundResources.stickerGroupIds
+        : [];
+    const stickerCount = aiStickerIds.length;
+    let stickerGroups = [];
     try {
-        const aiStickerIds = Array.isArray(aiPersonObj?.boundResources?.stickerGroupIds)
-            ? aiPersonObj.boundResources.stickerGroupIds
-            : [];
-        // 这里不异步查 db 拿每个 group 的 image 数(会阻塞 render),只展示「绑了 N 个图组」,
-        // 实际张数由 prompt-builder 注入的 systemPrompt 显示。这里保留 group 数量已足够区分「有 / 没有」。
-        stickerCount = aiStickerIds.length;
-    } catch (_) { stickerCount = 0; }
+        if (aiStickerIds.length > 0) {
+            const { listBoundStickerNames } = await import('@/js/apps/chat-app/components/emoji-picker-panel.js');
+            stickerGroups = await listBoundStickerNames(aiStickerIds);
+        }
+    } catch (err) {
+        console.warn('[prompt-manager] 读表情包名称失败', err);
+        stickerGroups = [];
+    }
+    const stickerTotal = stickerGroups.reduce((n, g) => n + (g.names?.length || 0), 0);
+    const stickerLibraryText = buildStickerLibraryText(stickerGroups, stickerCount, stickerTotal);
 
     // ★ v0.61.7.1 当前上下文只显示用户自定义的 prompt(来自 replyPrompts SDK)
     //   ★ v0.61.8.8 防御性:从 prompt 库拉过来的条目(sourceLibraryPromptId 存在)
@@ -1233,30 +1288,43 @@ export async function renderPromptManagerPage(app, contactId) {
     //   - calendarSummaries(active) - 日历概要
     //   - storySummaries(active)    - 故事概要
     //   - contextRounds 文本(用 computeContextRoundsPrompt 实时算)
-    // ★ v0.82 群聊版:概要 / 当前聊天回合 都是 AI 维度,群聊无单一 AI,
-    //   这些读全部返回空,只展示群聊自己的 prompts[]。
+    // 群聊不读单 AI 的日历/故事概要；当前聊天回合改为读本群消息。
     const summarySdk = window.settingsSdk;
     const activeCalSummaries = isGroup ? [] : (summarySdk?.calendarSummaries?.listActive?.(aiPersonId) || []);
     const activeStorySummaries = isGroup ? [] : (summarySdk?.storySummaries?.listActive?.(aiPersonId) || []);
     const rollingCfg = isGroup ? null : (summarySdk?.rollingSummaries?.getRollingConfig?.(aiPersonId) || null);
-    // ★ v0.61.5 第三方 App Prompt 列表(从注册 SDK 读)
-    // ★ v0.82 群聊版:第三方 App Prompt 暂时也按 aiPersonId 过滤(音乐 / 天气注册时自带 aiPersonId 维度)
-    //   但群聊里多个 AI 各自绑定的 App 都可能有用,所以保留。后续如果要按群维度过滤再调整。
-    const appPromptsList = summarySdk?.appPrompts?.list?.() || [];
-    // 读 messages 用于实时算 contextRounds
+    // 群聊只留 nook / murmur + 群信息，不带音乐 / 天气 / 购物等第三方 App 卡
+    const appPromptsList = isGroup ? [] : (summarySdk?.appPrompts?.list?.() || []);
+    // 读 messages 用于实时算 contextRounds。群聊也要带本群最近对话，否则 AI 只看得见人设。
     let liveMessages = [];
     try {
         const user = summarySdk?.defaultUserCard?.getDefault?.() || summarySdk?.users?.getActive?.();
-        // ★ v0.82 群聊版:liveMessages 不传 aiPersonId(那是单 AI 维度),传空数组即可
-        liveMessages = (isGroup || !summarySdk?.chatMessages?.list)
-            ? []
-            : (summarySdk.chatMessages.list(user, aiPersonId, 'calendar') || []);
+        if (summarySdk?.chatMessages?.list && user) {
+            liveMessages = isGroup
+                ? (summarySdk.chatMessages.list(user, groupId, mode) || [])
+                : (summarySdk.chatMessages.list(user, aiPersonId, 'calendar') || []);
+        }
     } catch (_) { liveMessages = []; }
-    const contextRoundsText = isGroup
-        ? ''
-        : (app?.methods?.computeContextRoundsPrompt
-            ? app.methods.computeContextRoundsPrompt(aiPersonId, liveMessages, Number(rollingCfg?.contextRounds) || 20)
-            : '');
+    if (isGroup && groupEntry && groupDefaultUser && liveMessages.length) {
+        liveMessages = liveMessages.map((m) => {
+            if (!m || String(m.senderName || '').trim()) return m;
+            const sid = m.sender === 'user'
+                ? groupDefaultUser.id
+                : (m.senderId || '');
+            if (!sid) return m;
+            const name = window.settingsSdk?.chatGroups?.resolveMemberName?.(
+                window.settingsSdk, groupEntry, sid, groupDefaultUser.id, groupDefaultUser.name || '我',
+            );
+            return name ? { ...m, senderName: name } : m;
+        });
+    }
+    const contextRoundsText = app?.methods?.computeContextRoundsPrompt
+        ? app.methods.computeContextRoundsPrompt(
+            isGroup ? groupId : aiPersonId,
+            liveMessages,
+            Number(rollingCfg?.contextRounds) || 20,
+        )
+        : '';
     // contextRounds 启用状态（默认 true）
     const contextRoundsActive = (app?.state?.chat?.contextRoundsActive?.[aiPersonId]) !== false;
 
@@ -1421,53 +1489,9 @@ export async function renderPromptManagerPage(app, contactId) {
         </div>
     `;
 
-    // ★ 统计:只数「当前上下文」section 里实际显示的条目
-    //   = activeList + active summaries + context rounds(若有)
-    //   ★ v0.66.x:记忆概要 active=未关掉的部分(注入 injectMap = !false)
-    const activeMemorySummaryCount = Array.isArray(memorySummariesList)
-        ? memorySummariesList.filter((s) => {
-            if (!s || !s.id) return false;
-            const aiMap = memorySummaryInjectMap[aiPersonId] || {};
-            return aiMap[s.id] !== false;
-        }).length
-        : 0;
-    const _summaryItemCount =
-        activeCalSummaries.length +
-        activeStorySummaries.length +
-        (contextRoundsText && contextRoundsActive ? 1 : 0) +
-        activeMemorySummaryCount; // ★ v0.66.x 记忆概要 active 部分
-    const activeTotal = activeList.length + _summaryItemCount;
-    const totalCount = activeList.length + inactiveList.length;
-
-    // 头部信息卡
-    const headerInfo = `
-        <div class="pm-header-info">
-            <div class="pm-header-avatar" data-avatar-color="${escapeHtml(avatarColor)}">
-                ${avatarUrl
-                    ? `<img src="${escapeHtml(avatarUrl)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;" />`
-                    : `<span class="pm-header-avatar-text">${escapeHtml(avatarText)}</span>`}
-            </div>
-            <div class="pm-header-text">
-                <div class="pm-header-name">${escapeHtml(displayName)}</div>
-                <div class="pm-header-stat">已启用 ${activeTotal} / 共 ${totalCount} 条</div>
-            </div>
-            <button type="button" class="pm-add-btn"
-                data-app-action='${escapeHtml(JSON.stringify({
-                    action: 'appMethod',
-                    appId: 'chat',
-                    method: 'openCreateReplyPromptModal',
-                    // ★ v0.82 群聊版:同时带 isGroup + groupId + mode
-                    payload: isGroup
-                        ? { aiPersonId, isGroup: true, groupId, mode }
-                        : { aiPersonId },
-                }))}'>
-                <span>新增</span>
-            </button>
-        </div>
-    `;
-
-    // ===== 3.5 injectMap 已在前面计算 =====
-    // 注意: activeTotal / totalCount 已在 headerInfo 上方声明
+    // 头部统计的算法在下面 —— 它得等 orderedCards 拼完才知道「真正会发出去几条」。
+    // 老算法只数用户自定义 prompt + 概要,把人设 / 世界观 / 回复格式 / App prompt
+    // 十几张卡全漏了,于是十几段内容的 pre 上面写着「已启用 2 / 共 3 条」。
 
     // ===== 5. 第一部分:当前上下文(用户自定义 active real prompts + 概要 + context rounds) =====
 
@@ -1543,6 +1567,17 @@ function buildActiveSection({ fullContextPreview, activeHtml, summarySubItemsHtm
     //   - 启用后,要在「当前上下文」底部单独显示,跟用户自定义 prompt 平级
     //   - 预览 (fullContextPreview) 也要包含它们
     const systemActiveItems = [];
+    // 0) 对话总则 —— pre 的第一段,告诉模型「下面这十几段该怎么读」。
+    //    在这之前 pre 直接以 <用户人设开始> 打头,模型没有任何关于结构和优先级的交代。
+    if (preambleActive) {
+        systemActiveItems.push({
+            id: 'chat-preamble',
+            title: '对话总则',
+            content: CHAT_PREAMBLE_INSTRUCTIONS,
+            source: 'murmur',
+            group: 'murmur',
+        });
+    }
     // 1) 系统人设 prompt(用户/AI)
     visibleSystemPrompts.forEach((sp) => {
         if (sp?.content) {
@@ -1551,6 +1586,7 @@ function buildActiveSection({ fullContextPreview, activeHtml, summarySubItemsHtm
                 title: sp.title || (sp.systemKind === 'ai' ? '当前 AI 人设' : '当前用户人设'),
                 content: sp.content,
                 source: sp.systemKind === 'ai' ? 'nook-ai' : 'nook-user',
+                group: 'nook',
             });
         }
     });
@@ -1561,7 +1597,32 @@ function buildActiveSection({ fullContextPreview, activeHtml, summarySubItemsHtm
             title: worldPrompt.title || '当前世界观',
             content: worldPrompt.content,
             source: 'nook-world',
+            group: 'nook',
         });
+    }
+    // 群信息：名称 / 公告 / 备注 / 成员群昵称。发送时还会按发言 AI 现算一遍。
+    let groupInfoContent = '';
+    if (isGroup && groupEntry && groupDefaultUser) {
+        try {
+            groupInfoContent = buildGroupAdminPromptBlock({
+                sdk: window.settingsSdk,
+                user: groupDefaultUser,
+                group: groupEntry,
+                selfId: '',
+            }) || '';
+        } catch (err) {
+            console.warn('[prompt-manager] 拼群信息失败', err);
+        }
+        if (groupInfoContent && cardEnabled('group-info') && groupEnabled('murmur')) {
+            systemActiveItems.push({
+                id: 'group-info',
+                title: '群信息',
+                content: groupInfoContent,
+                source: 'murmur',
+                group: 'murmur',
+                tag: '群信息',
+            });
+        }
     }
     // 3) 当前聊天回合
     if (contextRoundsText && contextRoundsActive) {
@@ -1570,6 +1631,7 @@ function buildActiveSection({ fullContextPreview, activeHtml, summarySubItemsHtm
             title: '当前聊天回合',
             content: contextRoundsText,
             source: 'murmur',
+            group: 'murmur',
         });
     }
     // 4) 当前模式(单张动态卡；启用时正文直接进入 orderedCards → pre)
@@ -1579,18 +1641,20 @@ function buildActiveSection({ fullContextPreview, activeHtml, summarySubItemsHtm
             title: `当前模式 · ${currentContextModeDefinition?.label || '普通聊天'}`,
             content: currentContextModePrompt,
             source: `context-mode-${currentContextMode}`,
+            group: 'murmur',
         });
     }
     // 5) ★ v0.62.x 回复格式与聊天风格(虚拟卡片,只在「可用 Prompt → Murmur」启用时出现)
     //   - 内容 = SPECIAL_ACTIONS_HELP + REPLY_STYLE_INSTRUCTIONS(从 prompt-builder 导入)
     //   - 头像/source 标记「reply-format」,跟「当前聊天回合」区分
     //   - 拖拽后会进 contextOrder 列表(被 _endDrag() → reorderContextPrompts 写入)
-    if (replyFormatInjectAvailable) {
+    if (!isGroup && replyFormatInjectAvailable) {
         systemActiveItems.push({
             id: 'reply-format',
             title: '回复格式与聊天风格',
             content: [SPECIAL_ACTIONS_HELP, REPLY_STYLE_INSTRUCTIONS].join('\n\n'),
             source: 'reply-format',
+            group: 'murmur',
         });
     }
     // 5.5) ★ v0.79 + v0.86 用户朋友圈(虚拟卡片,只在「可用 Prompt → Murmur」启用时出现)
@@ -1604,7 +1668,7 @@ function buildActiveSection({ fullContextPreview, activeHtml, summarySubItemsHtm
     //       同时兼容 user-moments-v1(历史用户可能已经写在那里),先读 user-moments-v1
     //       再读 chat-user-moments,合并去重后按时间倒序排序。
     //   - 关闭 → 整张卡不 push,「当前上下文」消失
-    if (userMomentsInjectAvailable) {
+    if (!isGroup && userMomentsInjectAvailable) {
         // ★ v0.86 修复:chatFriends.get 的 mode 必须用当前 prompt-manager 的 mode(可能 story)
         //   之前写死 'calendar' → 故事模式下永远拿不到 entry,fallback aiPerson.momentsReadConfig
         //   也修复 Number(cfg.user) || 3:用户设 0 表示「不读取朋友圈」,不应该被 || 兜底成 3
@@ -1680,6 +1744,7 @@ function buildActiveSection({ fullContextPreview, activeHtml, summarySubItemsHtm
             title: '用户朋友圈',
             content: USER_MOMENTS_INSTRUCTIONS + userMomentsDataLines,
             source: 'user-moments',
+            group: 'murmur',
         });
     }
     // 5.6) ★ v0.79 + v0.86 AI 朋友圈概要(虚拟卡片,只在「可用 Prompt → Murmur」启用时出现)
@@ -1687,7 +1752,7 @@ function buildActiveSection({ fullContextPreview, activeHtml, summarySubItemsHtm
     //     → 条数从 entry.momentsReadConfig.self 读(默认 3)
     //     → 数据从 sdk.moments.buildMomentsContext 读(已经是 summary 倒序 + 取 N 条)
     //   ★ v0.86:与 user-moments 同款修复(chatFriends.get mode 用变量 + Number 0 兼容)
-    if (aiMomentsInjectAvailable) {
+    if (!isGroup && aiMomentsInjectAvailable) {
         let aiMomentsReadCount = 3;
         try {
             const defaultUser = window.settingsSdk?.defaultUserCard?.getDefault?.()
@@ -1715,53 +1780,45 @@ function buildActiveSection({ fullContextPreview, activeHtml, summarySubItemsHtm
             title: 'AI 朋友圈概要',
             content: AI_MOMENTS_INSTRUCTIONS + aiMomentsDataLines,
             source: 'ai-moments',
+            group: 'murmur',
         });
     }
-    // 5) ★ v0.64 「AI 表情包库」 — 跟「回复格式」并列的虚拟系统级卡
-    //   - 在「可用 Prompt → Nook」用 segmented-tabs 控制是否注入 prompt-builder
-    //   - 启用后这里 push 占位 summary(用户能看到「AI 表情包库」出现在「当前上下文」)
-    //   - 真实 names 列表在 prompt-builder 已经注入到 systemPrompt,这张卡只展示「N 个图组」元信息
-    //   - ★ 注意:这里的 content 是「占位」,跟 systemPrompt 实际内容可能有微小差别(只展示开关)
-    //     AGENTS.md §34 同样规则:不要在 previewParts 末尾再兜底 push(否则 pre 重复)
-    if (stickerLibraryInjectAvailable) {
+    // 5) 「AI 表情包库」 — 跟「回复格式」并列的虚拟系统级卡。
+    //   正文里现在是**真实的表情名清单**(见 buildStickerLibraryText)。
+    //   在这之前这张卡写的是「详细名称列表已注入到 systemPrompt」,而 pre 就是
+    //   systemPrompt —— 那句话从来没有兑现过,模型只能编名字。
+    if (!isGroup && stickerLibraryInjectAvailable) {
         systemActiveItems.push({
             id: 'sticker-library',
             title: 'AI 表情包库',
-            content: stickerCount > 0
-                ? `# AI 表情包库\n\n当前已绑定 ${stickerCount} 个表情图组。AI 可使用 [表情包:名称] 格式发送表情。详细名称列表已注入到 systemPrompt(不在预览中完整展开)。`
-                : `# AI 表情包库\n\n尚未绑定任何表情图组。AI 可用表情包为空,可在「设置 → 人设 → 资源绑定」添加。`,
+            content: stickerLibraryText,
             source: 'sticker-library',
+            group: 'nook',
         });
     }
-    // 5.5) 「一起听」虚拟系统级卡 —— 只在音乐 App 正跟当前 AI 一起听时出现。
-    //   内容由 music app 现算(当前歌 / 唱到哪句 / 已听多久 / 这首听过几次)。
-    //   注意:发送时 ai-service 会把这段剪掉再拼一份最新的,所以这里主要是给用户"看得见"。
-    try {
-        const ltBlock = window.__musicListenTogether?.getContext?.(aiPersonId) || '';
-        if (ltBlock) {
-            systemActiveItems.push({
-                id: 'listen-together',
-                title: '一起听（实时）',
-                content: ltBlock,
-                source: 'listen-together',
-            });
-        }
-    } catch (_) { /* 音乐 App 没装就跳过 */ }
-
-    // 5.6) 「日记本」虚拟系统级卡 —— 同「一起听」的道理：
-    //   生理期还有几天、倒计时还剩几天，都是随日子走的，pre 存不住。
-    //   这里画出来只为让用户看得见，发送时 ai-service 会剪掉重拼一份最新的。
-    try {
-        const diaryBlock = window.__diaryContext?.getContext?.(aiPersonId) || '';
-        if (diaryBlock) {
-            systemActiveItems.push({
-                id: 'diary-live',
-                title: '日记本（实时）',
-                content: diaryBlock,
-                source: 'diary',
-            });
-        }
-    } catch (_) { /* 日记 App 没装就跳过 */ }
+    // 5.5) 实时块(一起听 / 四叶草 / 灯塔 / 日记)。
+    //
+    //   这四段发送时会被 ai-service 剪掉重拼一份最新的,所以这里画的是"当前这一刻"的快照,
+    //   目的是让用户**看得见**、并且**关得掉**。
+    //
+    //   历史:这里只画了一起听和日记两张,四叶草和灯塔完全没画 —— 它们只在 ai-service
+    //   里被追加,用户在预览里永远看不到心愿单和工作近况已经发给了每个 AI。四段现在
+    //   统一从 live-context-registry 取,预览端和发送端不可能再分叉。
+    const liveBlocks = isGroup ? [] : collectLiveContextBlocks(aiPersonId, {
+        isEnabled: (b) => groupEnabled(b.group) && cardEnabled(b.id),
+    });
+    const liveBlockIds = new Set(liveBlocks.map((b) => b.id));
+    liveBlocks.forEach((b) => {
+        systemActiveItems.push({
+            id: b.id,
+            title: b.title,
+            content: b.content,
+            source: b.group,
+            tag: b.tag,
+            group: b.group,
+            _live: true,
+        });
+    });
 
     // 5.7) ★ v0.87 第三方 App Prompt(音乐 / 天气 / 未来 N 个 App 通过 sdk.appPrompts.register 注册)
     //   历史 bug:这些卡片只渲染在「可用 Prompt」折叠区,启用后 **不进 orderedCards**,
@@ -1785,6 +1842,7 @@ function buildActiveSection({ fullContextPreview, activeHtml, summarySubItemsHtm
                     title: p.label || p.promptId,
                     content,
                     source: p.appId || 'default',
+                    group: p.appId || 'default',
                 });
             });
     }
@@ -1802,6 +1860,7 @@ function buildActiveSection({ fullContextPreview, activeHtml, summarySubItemsHtm
                 title: `记忆概要 · ${s.title || '未命名'}`,
                 content: content || '(空概要)',
                 source: `memory-summary-${s.storageLevel || 'L1'}`,
+                group: 'murmur',
             });
         });
     }
@@ -1810,9 +1869,14 @@ function buildActiveSection({ fullContextPreview, activeHtml, summarySubItemsHtm
     //   - 拖拽换位后,顺序存到 app.state.chat.contextOrder[aiPersonId]
     //   - 渲染按 contextOrder 排序;序号 = 在有序数组中的真实位置 + 1
     //   - 顺序直接影响 prompt 拼装顺序(详见 prompt-builder contextOrder 参数)
-    const customActive = activeList.map((p) => ({ ...p, _kind: 'custom' }));
+    const customActive = activeList.map((p) => ({ ...p, _kind: 'custom', group: 'nook' }));
     const systemActive = systemActiveItems.map((p) => ({ ...p, _kind: 'system' }));
-    const allCards = [...customActive, ...systemActive];
+    // ★ 整组开关是「总闸」:关掉整组 → 这组所有卡片都不进 pre,但各卡片自己的开关
+    //   原封不动地留着,再打开时不用一张张重新点。
+    //   过滤放在这里(而不是各 push 点),是为了让「哪些东西真的会发出去」只有一处判断。
+    const allCards = [...customActive, ...systemActive]
+        .filter((c) => groupEnabled(c.group || 'nook'))
+        .sort((a, b) => defaultContextRank(a) - defaultContextRank(b));
     // ★ v0.61.7.3 ★ contextOrder 也要从 localStorage 兜底加载
     //   - 历史 bug:reorderContextPrompts 只写内存,刷新后 state.chat.contextOrder 空
     //   - 解决:内存为空时直接读 localStorage,跟 systemPromptOverrides 同样的兜底
@@ -1867,15 +1931,34 @@ function buildActiveSection({ fullContextPreview, activeHtml, summarySubItemsHtm
     //   pre 是十几段正文用 \n\n 硬拼的,只靠各自的 `#` 一级标题,AI 经常把相邻两段串在一起
     //   (「用户朋友圈」和「AI 朋友圈概要」尤其容易)。显式边界让模型知道每段到哪儿为止。
     //   附带好处:按段替换/剪切(一起听、当前聊天回合)不用再靠「找下一个一级标题」的启发式。
+    //
+    // 日历 / 故事概要在界面上是单独一块(.pm-summary-item),但在 pre 里必须按时间轴落位:
+    // 它们讲的是「更早发生的事」,要排在「当前聊天回合」**前面**。原来它们无条件拼在
+    // 最末尾 —— 也就是排在刚刚发生的对话之后,模型很容易把几个月前的概要当成新消息。
+    const summaryPreviewCards = [
+        ...activeCalSummaries.map((s) => ({
+            id: `cal-summary::${s.id}`,
+            tag: s.title || '日历概要',
+            content: s.content ? `# ${s.title || '日历概要'}\n${s.content}` : '',
+        })),
+        ...activeStorySummaries.map((s) => ({
+            id: `story-summary::${s.id}`,
+            tag: s.title || '故事概要',
+            content: s.content ? `# ${s.title || '故事概要'}\n${s.content}` : '',
+        })),
+    ].filter((c) => c.content);
+
+    const previewCards = orderedCards.slice();
+    if (summaryPreviewCards.length > 0) {
+        // 插在「当前聊天回合」之前;没有那张卡就落到末尾。用户拖过顺序时同样成立。
+        let at = previewCards.findIndex((c) => c.id === 'context-rounds');
+        if (at < 0) at = previewCards.length;
+        previewCards.splice(at, 0, ...summaryPreviewCards);
+    }
+
     const previewParts = [];
-    orderedCards.forEach((p) => {
+    previewCards.forEach((p) => {
         if (p.content) previewParts.push(wrapPromptBlock(resolveTagName(p), p.content));
-    });
-    activeCalSummaries.forEach((s) => {
-        if (s.content) previewParts.push(wrapPromptBlock(s.title || '日历概要', `# ${s.title || '日历概要'}\n${s.content}`));
-    });
-    activeStorySummaries.forEach((s) => {
-        if (s.content) previewParts.push(wrapPromptBlock(s.title || '故事概要', `# ${s.title || '故事概要'}\n${s.content}`));
     });
     // ★ v0.62.x 「回复格式 + 短句风格」不再额外 push:
     //   orderedCards → systemActiveItems 已经把 reply-format 卡的 content
@@ -1891,6 +1974,40 @@ function buildActiveSection({ fullContextPreview, activeHtml, summarySubItemsHtm
     // 把已启用的系统级控制卡内容也拼到预览(已在 fullContextPreview 中,这里不再重复)
     const finalContextPreview = fullContextPreview;
 
+    // ===== 头部统计 =====
+    // 只报「这一刻真的会发出去多少」。老算法只数用户自定义 prompt 和概要,把人设 /
+    // 世界观 / 回复格式 / App prompt 十几张卡全漏了 —— 十几段的 pre 上面写着
+    // 「已启用 2 / 共 3 条」。每组各自还有 N/M,分组那个数才是「可用多少」。
+    const activeTotal = previewCards.filter((c) => c && c.content).length;
+    const previewTokens = estimateTokens(fullContextPreview);
+
+    // 头部信息卡
+    const headerInfo = `
+        <div class="pm-header-info">
+            <div class="pm-header-avatar" data-avatar-color="${escapeHtml(avatarColor)}">
+                ${avatarUrl
+                    ? `<img src="${escapeHtml(avatarUrl)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;" />`
+                    : `<span class="pm-header-avatar-text">${escapeHtml(avatarText)}</span>`}
+            </div>
+            <div class="pm-header-text">
+                <div class="pm-header-name">${escapeHtml(displayName)}</div>
+                <div class="pm-header-stat">发给 AI ${activeTotal} 段 · 约 ${previewTokens} tokens</div>
+            </div>
+            <button type="button" class="pm-add-btn"
+                data-app-action='${escapeHtml(JSON.stringify({
+                    action: 'appMethod',
+                    appId: 'chat',
+                    method: 'openCreateReplyPromptModal',
+                    // ★ v0.82 群聊版:同时带 isGroup + groupId + mode
+                    payload: isGroup
+                        ? { aiPersonId, isGroup: true, groupId, mode }
+                        : { aiPersonId },
+                }))}'>
+                <span>新增</span>
+            </button>
+        </div>
+    `;
+
     // ★ v0.61.7 可用 Prompt 区域：按 App 分组折叠
     //   - nook 组：当前用户人设、当前 AI 人设、世界观 + 从 prompt 库拉取过来的用户 prompt
     //   - murmur 组：当前聊天回合 + 回复格式与聊天风格(★ v0.62.x 新增)
@@ -1905,6 +2022,8 @@ function buildActiveSection({ fullContextPreview, activeHtml, summarySubItemsHtm
         contextModeInjectAvailable,
         replyFormatInjectAvailable, // ★ v0.62.x 新增
         appPromptsList,
+        groupInfoContent,
+        groupInfoActive: isGroup ? cardEnabled('group-info') : false,
         injectMap,
         aiPersonId,
         // ★ v0.85 群聊参数(必须透传,跨函数不能读闭包)
@@ -1928,6 +2047,18 @@ function buildActiveSection({ fullContextPreview, activeHtml, summarySubItemsHtm
         // ★ v0.79 「用户朋友圈」 + 「AI 朋友圈概要」启用状态(必须透传,跨函数不能读闭包)
         userMomentsInjectAvailable,
         aiMomentsInjectAvailable,
+        // 对话总则(pre 第一段)的开关状态
+        preambleActive,
+        // 实时块:声明恒定(四条),内容有没有取决于对应 App 装没装 / 有没有数据。
+        //   卡片**始终列出来**(哪怕当前没内容),否则用户根本不知道有这么个东西可以关。
+        liveBlockStates: isGroup ? [] : LIVE_CONTEXT_BLOCKS.map((b) => ({
+            ...b,
+            active: cardEnabled(b.id),
+            hasContent: liveBlockIds.has(b.id),
+            installed: typeof window !== 'undefined' && !!window[b.globalKey],
+        })),
+        // 组开关状态查询(闭包传进去,子函数不重复读存储)
+        groupEnabled,
     });
 
     const availableSection = `
@@ -2061,12 +2192,16 @@ async function _loadPromptLibrarySafely() {
 
 const APP_GROUP_LABELS = {
     'nook': { name: 'Nook', icon: '🌿', color: '#7CB342', desc: '当前用户人设 / AI 人设 / 世界观' },
-    'murmur': { name: 'Murmur', icon: '💬', color: '#4A6FA5', desc: '当前聊天回合等实时计算内容' },
-    'chat': { name: 'Murmur', icon: '💬', color: '#4A6FA5', desc: '当前聊天回合等实时计算内容' },
+    'murmur': { name: 'Murmur', icon: '💬', color: '#4A6FA5', desc: '当前聊天回合 / 群信息' },
+    'chat': { name: 'Murmur', icon: '💬', color: '#4A6FA5', desc: '当前聊天回合 / 群信息' },
     'music': { name: '音乐', icon: '🎵', color: '#E91E63', desc: '音乐 App 提供的提示词' },
     'weather': { name: '天气', icon: '☀️', color: '#FF9800', desc: '天气 App 提供的提示词' },
     'focus': { name: '专注', icon: '⏱️', color: '#9C27B0', desc: '专注 App 提供的提示词' },
     'gallery': { name: '图库', icon: '🖼️', color: '#2196F3', desc: '图库 App 提供的提示词' },
+    'shop': { name: '四叶草', icon: '🍀', color: '#4CAF50', desc: '心愿单与购物近况' },
+    'job': { name: '灯塔', icon: '💼', color: '#795548', desc: '在职状态与工作近况' },
+    'diary': { name: '日记', icon: '📔', color: '#F4A6CD', desc: '生理期、倒计时这类每天都在变的数字' },
+    'blog': { name: '氧气', icon: '💧', color: '#00BCD4', desc: '氧气提供的提示词' },
     'default': { name: '其他', icon: '📦', color: '#607D8B', desc: '其他 App' },
 };
 
@@ -2081,7 +2216,7 @@ function getAppGroupInfo(source) {
  *   - ★ v0.61.7 复用 .pm-item 主结构(对齐当前用户人设)
  */
 function renderContextRoundsGroupItem({ text, aiPersonId, active = true }) {
-    const fullContent = escapeHtml(text);
+    const fullContent = String(text || '');
     const isActive = active;
     const actionPayload = JSON.stringify({
         action: 'appMethod',
@@ -2142,7 +2277,7 @@ function renderContextModeGroupItem({ aiPersonId, modeDefinition, promptText, ac
     return renderPromptControlCard({
         promptId: 'context-mode',
         title: `当前模式 · ${modeDefinition?.label || '普通聊天'}`,
-        fullContent: escapeHtml(promptText),
+        fullContent: String(promptText || ''),
         dataKind: `context-mode-${modeDefinition?.key || 'chat'}`,
         extraClass: 'pm-item--context-mode',
         actionsHtml,
@@ -2158,7 +2293,7 @@ function renderContextModeGroupItem({ aiPersonId, modeDefinition, promptText, ac
  *   - 关闭时 prompt-builder 不注入这段;开启时注入到 systemPrompt 末尾
  */
 function renderReplyFormatInstructionsGroupItem({ aiPersonId, active = true }) {
-    const fullContent = escapeHtml([SPECIAL_ACTIONS_HELP, REPLY_STYLE_INSTRUCTIONS].join('\n\n'));
+    const fullContent = [SPECIAL_ACTIONS_HELP, REPLY_STYLE_INSTRUCTIONS].join('\n\n');
     const isActive = active;
     const actionPayload = JSON.stringify({
         action: 'appMethod',
@@ -2193,10 +2328,8 @@ function renderReplyFormatInstructionsGroupItem({ aiPersonId, active = true }) {
  *   - 关闭时 prompt-builder 不注入用户朋友圈;开启时注入到 systemPrompt
  */
 function renderUserMomentsGroupItem({ aiPersonId, active = true }) {
-    const fullContent = escapeHtml(
-        USER_MOMENTS_INSTRUCTIONS
-        + '\n\n# 备注\n实际朋友圈条目由 prompt-builder 自动拼接(根据用户在「可读取朋友圈 → 用户」配置的条数)。'
-    );
+    const fullContent = USER_MOMENTS_INSTRUCTIONS
+        + '\n\n# 备注\n真实的朋友圈条目在上面「当前上下文」那张卡的正文里(条数按「可读取朋友圈 → 用户」的设置)。';
     const isActive = active;
     const actionPayload = JSON.stringify({
         action: 'appMethod',
@@ -2231,10 +2364,8 @@ function renderUserMomentsGroupItem({ aiPersonId, active = true }) {
  *   - 关闭时 prompt-builder 不注入 AI 朋友圈概要;开启时注入到 systemPrompt
  */
 function renderAiMomentsGroupItem({ aiPersonId, active = true }) {
-    const fullContent = escapeHtml(
-        AI_MOMENTS_INSTRUCTIONS
-        + '\n\n# 备注\n实际朋友圈概要由 prompt-builder 自动从 aiPerson.moments[].summary 注入(根据「可读取朋友圈 → 自己」配置的条数)。'
-    );
+    const fullContent = AI_MOMENTS_INSTRUCTIONS
+        + '\n\n# 备注\n真实的朋友圈概要在上面「当前上下文」那张卡的正文里(条数按「可读取朋友圈 → 自己」的设置)。';
     const isActive = active;
     const actionPayload = JSON.stringify({
         action: 'appMethod',
@@ -2273,7 +2404,7 @@ function renderAiMomentsGroupItem({ aiPersonId, active = true }) {
 function renderMemorySummaryGroupItem({ aiPersonId, summary, active = true }) {
     const isActive = active;
     const content = String(summary.content || '').trim();
-    const fullContent = escapeHtml(content || '(空概要内容)');
+    const fullContent = content || '(空概要内容)';
     const preview = content.length > 120 ? content.slice(0, 120) + '…' : content;
     // ★ 概要 id 是真实 sdk.memorySummaries 记录的 id(summary.id),不是 'memory-summary' 这种虚拟 id
     const actionPayload = JSON.stringify({
@@ -2321,6 +2452,75 @@ function renderMemorySummaryGroupItem({ aiPersonId, summary, active = true }) {
 }
 
 /**
+ * 只有「关闭 / 启用」一个开关的通用卡(对话总则用它)。
+ * 状态存 prompt-toggles 的卡片表,和整组开关同一套存储。
+ */
+function renderSimpleToggleGroupItem({
+    aiPersonId, cardId, title, fullContent, dataKind = '', active = true,
+    isGroup = false, groupId = null, mode = 'calendar', extraClass = '',
+}) {
+    const payload = JSON.stringify({
+        action: 'appMethod',
+        appId: 'chat',
+        method: 'togglePromptCardInject',
+        payload: isGroup
+            ? { aiPersonId, cardId, isGroup: true, groupId, mode }
+            : { aiPersonId, cardId },
+    });
+    const actionsHtml = `
+        <div class="pm-segmented-tabs" data-prompt-id="${escapeHtml(cardId)}">
+            <button type="button" class="pm-segmented-tab ${active ? '' : 'is-active'}"
+                data-app-action='${escapeHtml(payload)}'
+                data-target="close">关闭</button>
+            <button type="button" class="pm-segmented-tab ${active ? 'is-active' : ''}"
+                data-app-action='${escapeHtml(payload)}'
+                data-target="enable">启用</button>
+        </div>`;
+    return renderPromptControlCard({
+        promptId: cardId,
+        title,
+        fullContent,
+        dataKind,
+        extraClass,
+        actionsHtml,
+    });
+}
+
+/**
+ * 实时块卡(一起听 / 四叶草 / 灯塔 / 日记)。
+ *
+ * 正文里写清楚「这段是发送时现算的」——它和别的卡最大的区别就在这:
+ * 展开看到的是刚才那一刻的快照,真正发出去的是按发送键那一刻重算的那份。
+ */
+function renderLiveBlockGroupItem({ aiPersonId, block, isGroup = false, groupId = null, mode = 'calendar' }) {
+    const status = !block.installed
+        ? `${block.title.replace('（实时）', '')}还没装，或者还没配置好，这一段现在是空的。`
+        : (block.hasContent
+            ? '现在有内容，已经进入上面的「当前上下文」。'
+            : '现在没有内容（没有正在进行的状态），这一轮不会占任何篇幅。');
+    const body = [
+        `# ${block.title}`,
+        '',
+        block.desc,
+        '',
+        '这一段是**发送时现算**的：展开看到的是刚才那一刻的快照，真正发出去的是按下发送那一刻重新算的那份。',
+        `状态：${status}`,
+    ].join('\n');
+    return renderSimpleToggleGroupItem({
+        aiPersonId,
+        cardId: block.id,
+        title: block.title,
+        fullContent: body,
+        dataKind: `live-${block.id}`,
+        active: block.active,
+        isGroup,
+        groupId,
+        mode,
+        extraClass: 'pm-item--live-block',
+    });
+}
+
+/**
  * 渲染按 App 分组的折叠列表（可用 Prompt 区域）
  * @param {object} ctx 包含所有需要渲染的分组数据
  *   - systemPrompts: nook 系统 prompt（用户人设 + AI 人设）
@@ -2347,6 +2547,8 @@ function renderAppPromptGroupSection(ctx) {
         // ★ v0.79 「AI 朋友圈概要」启用状态
         aiMomentsInjectAvailable = true,
         appPromptsList = [],
+        groupInfoContent = '',
+        groupInfoActive = true,
         injectMap = {},
         aiPersonId = '',
         // ★ v0.85 群聊参数(必须透传,跨函数不能读闭包)
@@ -2366,6 +2568,12 @@ function renderAppPromptGroupSection(ctx) {
         // ★ v0.66.x 记忆概要 injectMap(用于计算 active 视觉状态,
         //   全集进 murmur,但 toggle 高亮跟 user 关停同步)
         memorySummaryInjectMap = {},
+        // 对话总则(pre 第一段)
+        preambleActive = true,
+        // 四条实时块的声明 + 开关 + 「此刻有没有内容」
+        liveBlockStates = [],
+        // 整组开关查询
+        groupEnabled = () => true,
     } = ctx;
 
     // 收集所有分组
@@ -2441,12 +2649,16 @@ function renderAppPromptGroupSection(ctx) {
     const showUserMoments = !isGroup;
     const showAiMoments = !isGroup;
     const showMemorySummaries = !isGroup && Array.isArray(memorySummariesList) && memorySummariesList.length > 0;
-    if (
-        contextModePrompt || contextRoundsText || (showReplyFormat && replyFormatInjectAvailable)
-        || (showUserMoments && userMomentsInjectAvailable) || (showAiMoments && aiMomentsInjectAvailable)
-        || showMemorySummaries
-    ) {
+    {
         const items = [];
+        // 对话总则永远排第一张 —— 它是 pre 的第一段,位置和语义一致,用户找起来不用猜。
+        items.push({
+            id: 'chat-preamble',
+            title: '对话总则',
+            content: CHAT_PREAMBLE_INSTRUCTIONS,
+            active: preambleActive,
+            _isPreamble: true,
+        });
         if (contextModePrompt) {
             items.push({
                 id: 'context-mode',
@@ -2454,6 +2666,15 @@ function renderAppPromptGroupSection(ctx) {
                 content: contextModePrompt,
                 active: contextModeInjectAvailable,
                 _isContextMode: true,
+            });
+        }
+        if (isGroup && groupInfoContent) {
+            items.push({
+                id: 'group-info',
+                title: '群信息',
+                content: groupInfoContent,
+                active: groupInfoActive,
+                _isGroupInfo: true,
             });
         }
         // 当前聊天回合(只在实时计算文本非空时出现)
@@ -2525,6 +2746,32 @@ function renderAppPromptGroupSection(ctx) {
             source: 'murmur',
             items,
             renderItem: (item) => {
+                if (item._isPreamble) {
+                    return renderSimpleToggleGroupItem({
+                        aiPersonId,
+                        cardId: 'chat-preamble',
+                        title: '对话总则',
+                        fullContent: CHAT_PREAMBLE_INSTRUCTIONS,
+                        dataKind: 'chat-preamble',
+                        active: item.active,
+                        isGroup,
+                        groupId,
+                        mode,
+                    });
+                }
+                if (item._isGroupInfo) {
+                    return renderSimpleToggleGroupItem({
+                        aiPersonId,
+                        cardId: 'group-info',
+                        title: '群信息',
+                        fullContent: item.content || '',
+                        dataKind: 'group-info',
+                        active: item.active,
+                        isGroup,
+                        groupId,
+                        mode,
+                    });
+                }
                 if (item._isContextMode) {
                     return renderContextModeGroupItem({
                         aiPersonId,
@@ -2550,18 +2797,47 @@ function renderAppPromptGroupSection(ctx) {
         });
     }
 
-    // 3. 第三方 App Prompt（按 appId 分组）
+    // 3. 第三方 App Prompt（按 appId 分组）。群聊只要 nook / murmur，不列音乐天气购物。
     const appPromptsByApp = {};
-    for (const p of appPromptsList) {
-        const appId = p.appId || 'other';
-        if (!appPromptsByApp[appId]) appPromptsByApp[appId] = [];
-        appPromptsByApp[appId].push(p);
+    if (!isGroup) {
+        for (const p of appPromptsList) {
+            const appId = p.appId || 'other';
+            if (!appPromptsByApp[appId]) appPromptsByApp[appId] = [];
+            appPromptsByApp[appId].push(p);
+        }
     }
     for (const [appId, items] of Object.entries(appPromptsByApp)) {
         groups.push({
             source: appId,
             items,
             renderItem: (item) => renderAppPromptItem(item),
+        });
+    }
+
+    // 3.5 实时块(一起听 / 四叶草 / 灯塔 / 日记)进各自 App 的组。
+    //     这四张卡以前根本没有开关:一起听和日记只在「当前上下文」里露个脸,
+    //     四叶草和灯塔连脸都不露 —— 心愿单和工作近况被无声地发给每一个 AI。
+    //     现在跟别的卡一样有关闭/启用,也吃所在组的总闸。
+    for (const lb of liveBlockStates) {
+        if (isGroup) break; // 实时块都是「跟这个 AI 之间」的状态,群聊里没有单一对象
+        let target = groups.find((g) => g.source === lb.group);
+        if (!target) {
+            // 这个 App 没注册过静态 prompt(比如四叶草),但它有实时块 —— 单开一组,
+            // 否则那段内容会继续处在「发得出去但界面上不存在」的状态。
+            target = { source: lb.group, items: [], renderItem: () => '' };
+            groups.push(target);
+        }
+        const prevRender = target.renderItem;
+        target.renderItem = (item, i, total) => (item._isLiveBlock
+            ? renderLiveBlockGroupItem({ aiPersonId, block: item._block, isGroup, groupId, mode })
+            : prevRender(item, i, total));
+        target.items.push({
+            id: lb.id,
+            title: lb.title,
+            content: lb.desc,
+            active: lb.active,
+            _isLiveBlock: true,
+            _block: lb,
         });
     }
 
@@ -2586,19 +2862,30 @@ function renderAppPromptGroupSection(ctx) {
     const groupHtmls = groups.map((group) => {
         const info = getAppGroupInfo(group.source);
         const count = group.items.length;
-        const activeCount = group.items.filter(p => p.active !== false).length;
+        const groupOn = groupEnabled(group.source) !== false;
+        // 组关掉时计数显示 0 —— 「0/6」是这一刻真正会进 pre 的条数,
+        // 显示「4/6」但一条都没发出去才是最容易骗到人的那种 UI。
+        const activeCount = groupOn ? group.items.filter((p) => p.active !== false).length : 0;
         const itemsHtml = group.items.map((p, i) => group.renderItem(p, i, group.items.length)).join('');
 
         return `
-            <details class="pm-app-group" data-source="${escapeHtml(group.source)}" open>
+            <details class="pm-app-group${groupOn ? '' : ' pm-app-group--off'}" data-source="${escapeHtml(group.source)}"${isGroupOpen(group.source) ? ' open' : ''}>
                 <summary class="pm-app-group__summary">
                     <div class="pm-app-group__header">
                         <div class="pm-app-group__text">
                             <span class="pm-app-group__name">${escapeHtml(info.name)}</span>
-                            <span class="pm-app-group__desc">${escapeHtml(info.desc || '')}</span>
+                            <span class="pm-app-group__desc">${escapeHtml(groupOn ? (info.desc || '') : '整组已关闭，下面的卡片都不会发给 AI')}</span>
                         </div>
                     </div>
                     <span class="pm-app-group__count">${activeCount}/${count}</span>
+                    ${renderGroupSwitch({
+                        source: group.source,
+                        active: groupOn,
+                        aiPersonId,
+                        isGroup,
+                        groupId,
+                        mode,
+                    })}
                     <svg class="pm-app-group__arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="6 9 12 15 18 9"/>
                     </svg>
@@ -2637,7 +2924,7 @@ function renderAppPromptItem(prompt) {
     const hasVisualCard = ['music-card', 'red-packet-card', 'location-card'].includes(previewType);
     const hidePreview = prompt?.hidePreview === true || !hasVisualCard;
     const isActive = prompt?.active !== false;
-    const contentPreview = escapeHtml(previewText(prompt?.content || '(空内容)', 120));
+    const contentPreview = previewText(prompt?.content || '(空内容)', 120);
     const cardPreviewHtml = hidePreview ? '' : renderAppPromptCardPreview({
         previewType,
         previewData: prompt?.customPreviewData || prompt?.previewData,

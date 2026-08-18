@@ -77,7 +77,7 @@ export const POV_SHORT = Object.freeze({ first: '一', second: '二', third: '�
 export const VIEWPOINT_SHORT = Object.freeze({ god: '上帝', character: '角色' });
 
 export const GENERATE_MODE_OPTIONS = Object.freeze([
-    { id: 'paragraph', label: '段落', hint: '一次生成完整段落' },
+    { id: 'paragraph', label: '文段', hint: '一次只写一段' },
     { id: 'sentence', label: '短句', hint: '一次一两句,便于把控' },
     { id: 'chapter', label: '整章', hint: '一次铺开一整章' },
 ]);
@@ -95,11 +95,7 @@ export const AUTHOR_STYLE_OPTIONS = Object.freeze([
 // ============================================================
 
 /**
- * `historyStrategy` 决定这条输入携带多少历史进 prompt:
- *   latest_only    只带最近一条 —— 适合「剧情指令」这种一次性指示
- *   accumulate_all 带整章 —— 适合 Pia 戏这种需要完整上下文的共创
- *   recent_n       带最近 N 条
- *   none           不带历史
+ * 旧字段,存档里还在。上下文只走「本章已有内容」,不再按模式切一段「近期往来」。
  */
 export const HISTORY_STRATEGIES = Object.freeze([
     { id: 'latest_only', label: '仅最近一条' },
@@ -288,6 +284,43 @@ export const COMMENT_TYPES = Object.freeze([
 
 export const DEFAULT_WORD_RANGE = Object.freeze({ min: 500, max: 1500 });
 
+/**
+ * 生成粒度真正决定篇幅。快捷设置的短/中/长只在这一档里伸缩。
+ *
+ * 以前 generateMode 只写进 prompt 当标签,字数永远走 defaultWordRange(默认 500-1500),
+ * 再配一句「宁可写足」,文段模式也会铺成一章。
+ */
+const WORD_RANGE_BY_MODE = Object.freeze({
+    sentence: {
+        short: { min: 40, max: 100 },
+        medium: { min: 60, max: 140 },
+        long: { min: 90, max: 180 },
+    },
+    paragraph: {
+        short: { min: 80, max: 200 },
+        medium: { min: 150, max: 350 },
+        long: { min: 250, max: 480 },
+    },
+    chapter: {
+        short: { min: 400, max: 800 },
+        medium: { min: 800, max: 1500 },
+        long: { min: 1200, max: 2500 },
+    },
+});
+
+export function wordRangeTier(range) {
+    const max = Number(range?.max) || 1500;
+    if (max <= 500) return 'short';
+    if (max <= 1000) return 'medium';
+    return 'long';
+}
+
+export function resolveWordRange(settings = {}) {
+    const mode = WORD_RANGE_BY_MODE[settings.generateMode] ? settings.generateMode : 'paragraph';
+    const tier = wordRangeTier(settings.defaultWordRange);
+    return { ...WORD_RANGE_BY_MODE[mode][tier] };
+}
+
 export const WORD_RANGE_PRESETS = Object.freeze([
     { min: 200, max: 500, label: '短' },
     { min: 500, max: 1500, label: '中' },
@@ -365,7 +398,6 @@ export function createDefaultContextConfig() {
         narrative: true,
         chapterSummaries: true,
         chapterContext: true,
-        messageContext: true,
         authorStyle: true,
         customPrompts: true,
     };
@@ -384,7 +416,6 @@ export const CONTEXT_SECTIONS = Object.freeze([
     { id: 'narrative', tag: '叙事要求', label: '叙事要求', desc: '人称 / 视角 / 手法 / 字数' },
     { id: 'chapterSummaries', tag: '前情提要', label: '前情提要', desc: '之前章节的梗概' },
     { id: 'chapterContext', tag: '本章已有内容', label: '本章已有内容', desc: '当前章节正文' },
-    { id: 'messageContext', tag: '近期往来', label: '近期往来', desc: '最近的输入与生成' },
     { id: 'customPrompts', tag: '自定义提示词', label: '自定义提示词', desc: '你为这本书写的额外要求' },
 ]);
 
@@ -402,5 +433,5 @@ export const EDITOR_PANELS = Object.freeze([
     { id: 'chapters', label: '目录', icon: 'list' },
     { id: 'context', label: '上下文', icon: 'layers' },
     { id: 'timeline', label: '时间线', icon: 'clock' },
-    { id: 'tools', label: '工具', icon: 'sparkle' },
+    { id: 'tools', label: '工具', icon: 'heart' },
 ]);

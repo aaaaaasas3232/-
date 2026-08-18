@@ -2,6 +2,10 @@
  * Nook prompt SDK (v0.61).
  * Virtual context prompts are derived from settings entities; custom nook prompts
  * are persisted on the active AI person's top-level `nookPrompts` field.
+ *
+ * ★ 这里只做轻量占位。完整人设卡由 murmur 的 prompt-manager 用
+ *   `resolvePersonaContextText` 覆盖 content —— 不要在这里 import 人设生成，
+ *   否则 settings-sdk 热更新会重建实例，内存里的 appPrompts 注册表会被清空。
  */
 
 const now = () => Date.now();

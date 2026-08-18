@@ -15,6 +15,7 @@
  */
 
 import { escapeHtml } from '@/src/core/escape.js';
+import { resolvePersonaContextText } from '@/js/apps/setting/persona/context-text.js';
 
 // ============================================================
 // ★ v0.61.7 提示词卡片组件(当前上下文长款 = renderPromptCard)
@@ -32,65 +33,7 @@ import { escapeHtml } from '@/src/core/escape.js';
  * @returns {string}
  */
 export function buildUserPersonaContextText(user) {
-    if (!user) return '';
-    const sections = [];
-    const name = user.name || user.chineseName || '';
-
-    // 标题
-    sections.push(`# 角色卡${name ? ': ' + name : ''}`);
-    sections.push('');
-
-    // 1. 基本信息
-    const basicFields = [];
-    if (user.chineseName || user.name) basicFields.push(`chineseName: ${user.chineseName || user.name}`);
-    if (user.gender) basicFields.push(`gender: ${user.gender}`);
-    if (user.age != null) basicFields.push(`age: ${user.age}`);
-    if (user.identity) basicFields.push(`identity: ${user.identity}`);
-    if (user.bio) basicFields.push(`bio: ${user.bio}`);
-    if (user.personality) basicFields.push(`personality: ${user.personality}`);
-
-    if (basicFields.length > 0) {
-        sections.push('# 1. 基本信息');
-        sections.push(basicFields.join('\n'));
-        sections.push('');
-    }
-
-    // 2. 外貌与体征
-    if (user.appearance) {
-        sections.push('# 2. 外貌与体征');
-        sections.push(`appearance: ${user.appearance}`);
-        sections.push('');
-    }
-
-    // 3. 性格特质
-    if (user.personality || user.personalityTraits || user.currentOccupation) {
-        sections.push('# 3. 性格特质');
-        sections.push(`traits: ${user.personality || ''}`);
-        sections.push('');
-    }
-
-    // 4. 背景
-    if (user.bio || user.background) {
-        sections.push('# 4. 背景');
-        sections.push(`experience: ${user.bio || user.background || ''}`);
-        sections.push('');
-    }
-
-    // 5. 偏好
-    const prefMod = user.preferences || {};
-    const hobbies = Array.isArray(prefMod.hobbies) ? prefMod.hobbies : [];
-    const likes = Array.isArray(prefMod.likes) ? prefMod.likes : [];
-    const dislikes = Array.isArray(prefMod.dislikes) ? prefMod.dislikes : [];
-
-    if (prefMod.enabled && (hobbies.length || likes.length || dislikes.length)) {
-        sections.push('# 5. 偏好');
-        if (hobbies.length) sections.push(`hobbies: ${hobbies.join(', ')}`);
-        if (likes.length) sections.push(`likes: ${likes.join(', ')}`);
-        if (dislikes.length) sections.push(`dislikes: ${dislikes.join(', ')}`);
-        sections.push('');
-    }
-
-    return sections.filter(s => s !== '').join('\n');
+    return resolvePersonaContextText(user, 'user');
 }
 
 /**
@@ -99,59 +42,7 @@ export function buildUserPersonaContextText(user) {
  * @returns {string}
  */
 export function buildAiPersonaContextText(ai) {
-    if (!ai) return '';
-    const sections = [];
-    const name = ai.name || '';
-
-    // 标题
-    sections.push(`# 角色卡${name ? ': ' + name : ''}`);
-    sections.push('');
-
-    // 1. 基本信息
-    const basicFields = [];
-    if (ai.name) basicFields.push(`chineseName: ${ai.name}`);
-    if (ai.gender) basicFields.push(`gender: ${ai.gender}`);
-    if (ai.age != null) basicFields.push(`age: ${ai.age}`);
-    if (ai.role) basicFields.push(`identity: ${ai.role}`);
-    if (ai.bio) basicFields.push(`bio: ${ai.bio}`);
-    if (ai.personality) basicFields.push(`personality: ${ai.personality}`);
-    if (ai.tone) basicFields.push(`tone: ${ai.tone}`);
-
-    if (basicFields.length > 0) {
-        sections.push('# 1. 基本信息');
-        sections.push(basicFields.join('\n'));
-        sections.push('');
-    }
-
-    // 2. 外貌与体征
-    if (ai.appearance) {
-        sections.push('# 2. 外貌与体征');
-        sections.push(`appearance: ${ai.appearance}`);
-        sections.push('');
-    }
-
-    // 3. 性格特质
-    if (ai.personality || ai.personalityTraits) {
-        sections.push('# 3. 性格特质');
-        sections.push(`traits: ${ai.personality || ''}`);
-        sections.push('');
-    }
-
-    // 4. 背景
-    if (ai.bio || ai.background) {
-        sections.push('# 4. 背景');
-        sections.push(`experience: ${ai.bio || ai.background || ''}`);
-        sections.push('');
-    }
-
-    // 5. 行为规则
-    if (Array.isArray(ai.rules) && ai.rules.length > 0) {
-        sections.push('# 5. 行为规则');
-        ai.rules.forEach((r) => sections.push(`- ${r}`));
-        sections.push('');
-    }
-
-    return sections.filter(s => s !== '').join('\n');
+    return resolvePersonaContextText(ai, 'ai');
 }
 
 /**

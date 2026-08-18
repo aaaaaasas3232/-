@@ -77,7 +77,7 @@ export const DwWeiboCard = {
                 />
                 <div class="dw-weibo-topic-actions">
                     <button type="button" class="dw-weibo-topic-action-btn" title="AI 填充" aria-label="AI 填充" @click="act('ai-fill')">
-                        <DwIcon name="sparkle" />
+                        <DwIcon name="heart" />
                     </button>
                     <button type="button" class="dw-weibo-topic-action-btn" title="删除话题" aria-label="删除话题" @click="act('delete-topic')">
                         <DwIcon name="trash" />
@@ -116,7 +116,7 @@ export const DwWeiboCard = {
                         <DwIcon name="chat" />评论
                     </button>
                     <button type="button" class="dw-weibo-post-action-btn" @click="act('ai-comment', { postIndex: pi })">
-                        <DwIcon name="sparkle" />AI 评论
+                        <DwIcon name="heart" />AI 评论
                     </button>
                     <button type="button" class="dw-weibo-post-action-btn" @click="act('delete-post', { postIndex: pi })">
                         <DwIcon name="trash" />删除
@@ -227,7 +227,7 @@ export const DwGroupChatCard = {
                 />
                 <div class="dw-group-chat-actions">
                     <button type="button" class="dw-group-chat-action-btn" title="AI 填充" aria-label="AI 填充" @click="act('ai-fill')">
-                        <DwIcon name="sparkle" />
+                        <DwIcon name="heart" />
                     </button>
                     <button type="button" class="dw-group-chat-action-btn" title="删除群聊" aria-label="删除群聊" @click="act('delete-group')">
                         <DwIcon name="trash" />
@@ -300,7 +300,7 @@ export const DwTwitterCard = {
                 />
                 <div class="dw-weibo-topic-actions">
                     <button type="button" class="dw-weibo-topic-action-btn" title="AI 填充" aria-label="AI 填充" @click="act('ai-fill')">
-                        <DwIcon name="sparkle" />
+                        <DwIcon name="heart" />
                     </button>
                     <button type="button" class="dw-weibo-topic-action-btn" title="删除" aria-label="删除" @click="act('delete-tweet')">
                         <DwIcon name="trash" />
@@ -408,7 +408,7 @@ export const DwReviewCard = {
 
                 <div class="dw-weibo-topic-actions">
                     <button type="button" class="dw-weibo-topic-action-btn" title="AI 填充" aria-label="AI 填充" @click="act('ai-fill')">
-                        <DwIcon name="sparkle" />
+                        <DwIcon name="heart" />
                     </button>
                     <button type="button" class="dw-weibo-topic-action-btn" title="删除" aria-label="删除" @click="act('delete-review')">
                         <DwIcon name="trash" />
@@ -480,7 +480,7 @@ export const DwForumCard = {
                 />
                 <div class="dw-weibo-topic-actions">
                     <button type="button" class="dw-weibo-topic-action-btn" title="AI 填充" aria-label="AI 填充" @click="act('ai-fill')">
-                        <DwIcon name="sparkle" />
+                        <DwIcon name="heart" />
                     </button>
                     <button type="button" class="dw-weibo-topic-action-btn" title="删除" aria-label="删除" @click="act('delete-forum')">
                         <DwIcon name="trash" />

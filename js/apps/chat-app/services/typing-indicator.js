@@ -26,6 +26,9 @@
 
 const TYPING_TEXT = '对方正在输入中';
 const TYPING_CLASS = 'chat-header-name--typing';
+const GROUP_TYPING_TEXT = 'AI正在回复';
+const GROUP_IDLE_TEXT = '长按发送触发回复';
+const SUBTITLE_TYPING_CLASS = 'chat-header-subtitle--typing';
 
 /** convKey -> { startedAt } */
 const _typing = new Map();
@@ -53,6 +56,26 @@ function findChatRoot(conversationType, id) {
 /** 顶栏那块显示名字的元素（私聊和群聊用的是同一个 class） */
 function findNameEl(root) {
     return root?.querySelector('.chat-header-name') || null;
+}
+
+function findSubtitleHint(root) {
+    return root?.querySelector('.chat-header-subtitle .status-hint')
+        || root?.querySelector('.chat-header-subtitle')
+        || null;
+}
+
+function paintGroupTyping(root) {
+    const hint = findSubtitleHint(root);
+    if (!hint) return;
+    hint.classList.add(SUBTITLE_TYPING_CLASS);
+    hint.textContent = GROUP_TYPING_TEXT;
+}
+
+function paintGroupIdle(root) {
+    const hint = findSubtitleHint(root);
+    if (!hint) return;
+    hint.classList.remove(SUBTITLE_TYPING_CLASS);
+    hint.textContent = GROUP_IDLE_TEXT;
 }
 
 function paintTyping(nameEl) {
@@ -84,6 +107,11 @@ function paintIdle(nameEl) {
 export function applyTypingToDom(conversationType, id) {
     const root = findChatRoot(conversationType, id);
     if (!root) return;
+    if (conversationType === 'group') {
+        if (isTyping(conversationType, id)) paintGroupTyping(root);
+        else paintGroupIdle(root);
+        return;
+    }
     const nameEl = findNameEl(root);
     if (!nameEl) return;
     if (isTyping(conversationType, id)) paintTyping(nameEl);
@@ -101,9 +129,14 @@ export function applyTypingToRoot(rootEl) {
         ? (rootEl.getAttribute('data-group-id') || '')
         : (rootEl.getAttribute('data-contact-id') || '');
     if (!id) return;
+    if (isGroup) {
+        if (isTyping('group', id)) paintGroupTyping(rootEl);
+        else paintGroupIdle(rootEl);
+        return;
+    }
     const nameEl = findNameEl(rootEl);
     if (!nameEl) return;
-    if (isTyping(isGroup ? 'group' : 'private', id)) paintTyping(nameEl);
+    if (isTyping('private', id)) paintTyping(nameEl);
     else paintIdle(nameEl);
 }
 

@@ -14,7 +14,7 @@
 import { escapeHtml } from '@/src/core/escape.js';
 import { createDetailAction, createActionAttr } from '@/src/core/actions.js';
 import { getChatRecordMode, getModeConfig } from '../chat-mode.js';
-import { getAiMeta, resolveContactDisplay, resolveAiAvatar, DEFAULT_AI_AVATAR_BG } from '../aiMeta.js';
+import { getAiMeta, resolveContactDisplay, resolveAiAvatar, resolveUserAvatar, withUserInGroupMembers, DEFAULT_AI_AVATAR_BG } from '../aiMeta.js';
 import { SNAIL_EMPTY_SVG } from '../snail-icon.js';
 
 /**
@@ -111,24 +111,24 @@ function bindMessageSentListener() {
  * 与 chat-group-page.js 的 renderGroupAvatar 保持一致
  */
 function renderGroupListAvatar(members, size = 44) {
-    const gridSize = Math.min(members.length, 4);
+    const list = withUserInGroupMembers(members);
+    const gridSize = Math.min(list.length, 4);
     const gap = 1;
 
     let cellsHtml = '';
     for (let i = 0; i < 4; i++) {
         if (i < gridSize) {
-            const member = members[i];
-            // ★ v0.71 群成员头像统一从 aiMeta.resolveAiAvatar 拿(优先 member 已有,缺失就 aiMeta)
-            const av = resolveAiAvatar(member.id || member.name || '');
+            const member = list[i];
+            const isUser = !!(member.isUser || member.kind === 'user');
+            const av = isUser ? resolveUserAvatar() : resolveAiAvatar(member.id || member.name || '');
             const bg = member.avatarBg || av.bg;
-            // ★ 首字母:member.name 优先,aiMeta fallback
-            const char = (member.name || av.text || '?').charAt(0);
+            const char = (member.name || av.text || (isUser ? '我' : '?')).charAt(0);
             const fontSize = Math.round(size * 0.28);
-            // ★ 头像 URL 优先,没有就显示首字母
-            const inner = member.avatar
-                ? `<img src="${escapeHtml(member.avatar)}" alt="" style="width:100%;height:100%;object-fit:cover;" />`
+            const url = member.avatar || av.url || '';
+            const inner = url
+                ? `<img src="${escapeHtml(url)}" alt="" style="width:100%;height:100%;object-fit:cover;" />`
                 : escapeHtml(char);
-            cellsHtml += `<div style="background:${bg};display:flex;align-items:center;justify-content:center;font-size:${fontSize}px;color:white;font-weight:500;">${inner}</div>`;
+            cellsHtml += `<div style="background:${escapeHtml(bg)};display:flex;align-items:center;justify-content:center;font-size:${fontSize}px;color:white;font-weight:500;">${inner}</div>`;
         } else {
             cellsHtml += `<div style="background:#E8E8E8;"></div>`;
         }
@@ -250,7 +250,7 @@ function renderChatItem(item, index) {
                     <div class="chat-name-row">
                         ${pinIcon}
                         <span class="chat-name">${escapeHtml(displayName)}</span>
-                        ${isGroup ? `<span class="chat-tag">${item.members.length + 1}人</span>` : ''}
+                        ${isGroup ? `<span class="chat-tag">${(item.members || []).some((m) => m?.isUser || m?.kind === 'user') ? item.members.length : (item.members || []).length + 1}人</span>` : ''}
                     </div>
                     <span class="chat-time">${timeText}</span>
                 </div>
@@ -345,7 +345,7 @@ function loadContactsForMode(mode) {
     const groupChats = groupList.map((g) => {
         // 解析每个成员的头像信息
         const memberIds = g.members || [];
-        const resolvedMembers = memberIds.map((id) => _resolveGroupMemberInfo(id));
+        const resolvedMembers = withUserInGroupMembers(memberIds.map((id) => _resolveGroupMemberInfo(id)));
         return {
             id: g.id,
             type: 'group',

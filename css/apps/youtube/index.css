@@ -964,7 +964,8 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
-    padding: 8px 18px 16px;
+    /* 底距交给 .yt-ob__foot，避免和指示条让位叠两次 */
+    padding: 8px 18px 0;
 }
 .app-shell[data-app-id="youtube"] .yt-ob__stage {
     flex: 1;
@@ -1117,6 +1118,8 @@
     flex-direction: column;
     gap: 10px;
     padding-top: 10px;
+    /* 引导页没有 tab 栏，这里自己让开 Home 指示条（候鸟 / 四叶草同款） */
+    padding-bottom: calc(16px + var(--app-safe-bottom, 0px));
 }
 .app-shell[data-app-id="youtube"] .yt-ob__dots { display: flex; gap: 6px; justify-content: center; }
 .app-shell[data-app-id="youtube"] .yt-ob__dot {

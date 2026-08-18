@@ -57,6 +57,19 @@ export const PlPanelAsk = {
             return '问她点什么…';
         },
 
+        /**
+         * 题干下面那一行状态。
+         *
+         * ★ 答过就应落到某一项。没选项的开放题才只显示「已答」。
+         */
+        quizState() {
+            if (!this.quiz?.answer) return null;
+            if (this.quiz.pickIndex >= 0) {
+                return { loose: false, text: `她选了第 ${this.quiz.pickIndex + 1} 项` };
+            }
+            return { loose: true, text: '已答' };
+        },
+
         canSend() {
             if (this.busy) return false;
             if (this.mode === 'advisor') return true;
@@ -196,9 +209,6 @@ export const PlPanelAsk = {
         },
 
         // ── 题库 ──────────────────────────────
-        onPickOption(option) {
-            store.setComposer(option);
-        },
         onStepQuiz(delta) {
             if (!store.stepQuiz(this.draft.id, delta)) {
                 this.$emit('notify', delta > 0 ? '已经是最后一题了' : '已经是第一题了');
@@ -246,18 +256,29 @@ export const PlPanelAsk = {
                     </button>
                 </header>
                 <p class="pl-quiz-q">{{ quiz.question }}</p>
-                <div v-if="quiz.options.length" class="pl-quiz-options">
-                    <button
+                <!--
+                    选项是给**她**挑的,不是给用户点的。
+                    以前这里是按钮,点一下把选项填进输入框 —— 发出去就变成
+                    「用户拿这句话在提问」,等于替角色答了题。
+                -->
+                <ul v-if="quiz.options.length" class="pl-quiz-options">
+                    <li
                         v-for="(opt, i) in quiz.options"
                         :key="i"
-                        type="button"
                         class="pl-quiz-opt"
-                        @click="onPickOption(opt)"
-                    >{{ opt }}</button>
-                </div>
+                        :data-picked="i === quiz.pickIndex ? '1' : null"
+                    >
+                        <PlIcon v-if="i === quiz.pickIndex" name="check" />
+                        <span>{{ opt }}</span>
+                    </li>
+                </ul>
                 <div class="pl-quiz-nav">
                     <PlButton label="上一题" icon-name="back" size="sm" variant="quiet" @click="onStepQuiz(-1)" />
-                    <span v-if="quiz.answer" class="pl-quiz-answered">已答</span>
+                    <span
+                        v-if="quizState"
+                        class="pl-quiz-answered"
+                        :data-loose="quizState.loose ? '1' : null"
+                    >{{ quizState.text }}</span>
                     <PlButton label="下一题" size="sm" variant="quiet" @click="onStepQuiz(1)" />
                 </div>
             </div>

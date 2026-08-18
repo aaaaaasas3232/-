@@ -23,7 +23,11 @@
  */
 
 import { readContextPreview, writeContextPreview } from './context-preview.js';
-import { wrapPromptBlock, replacePromptBlock, hasPromptBlock, stripPromptBlock } from './prompt-tags.js';
+import { wrapPromptBlock, replacePromptBlock, readPromptBlock, hasPromptBlock, stripPromptBlock } from './prompt-tags.js';
+// 一起听 / 四叶草 / 灯塔 / 日记这四段实时块的唯一声明。prompt-manager 画预览用同一份,
+// 所以「预览里看到的段落」和「真正发出去的段落」不可能对不上号。
+import { collectLiveContextBlocks, stripLiveContextBlocks } from './live-context-registry.js';
+import { makeOwnerKey, isGroupEnabled, isCardEnabled } from './prompt-toggles.js';
 
 // ★ v0.88:这里原来有个 `generateKChainSummary()` —— 第一版 K 链「攒够 N 轮就
 //   单独发一次压缩请求」的实现。K 链 SDK 2026-08-09 被删之后它就没人调了,
@@ -856,8 +860,14 @@ export async function callAiAndSplit(opts = {}) {
     //    今天新聊的回合、刚改的人设、新装 App 的 prompt 全都进不去
     //    （从没打开过时更惨，下面直接报错发不出去）。
     //    这里是"发送前"这个时机的补刷；"打开私聊"那个时机在 index.js 里。
+    //    群聊必须刷 `group_<id>-<mode>` 那份，不能去刷发言 AI 的私聊 pre ——
+    //    私聊 pre 带着音乐 / 天气 / 购物等第三方卡，群聊只要 nook + murmur + 群信息。
+    const isGroupCall = !!groupId;
+    const previewPersonId = isGroupCall ? `group_${groupId}-${mode}` : aiPersonId;
     try {
-        await window.__chatRefreshContextPreview?.({ aiPersonId, mode });
+        await window.__chatRefreshContextPreview?.(isGroupCall
+            ? { isGroup: true, groupId, mode, aiPersonId }
+            : { aiPersonId, mode });
     } catch (err) {
         console.warn('[chat-ai-service] 发送前刷新 pre 失败，继续用缓存那份', err);
     }
@@ -865,7 +875,7 @@ export async function callAiAndSplit(opts = {}) {
     // 1) 读取 prompt-manager 已按卡片顺序生成的最终 pre。
     let systemPrompt = '';
     try {
-        systemPrompt = readContextPreview({ aiPersonId, mode }) || '';
+        systemPrompt = readContextPreview({ aiPersonId: previewPersonId, mode }) || '';
         if (!systemPrompt) {
             return { ok: false, error: 'prompt-manager 预览还没生成,请先在 prompt 管理页确认内容' };
         }
@@ -874,99 +884,96 @@ export async function callAiAndSplit(opts = {}) {
         return { ok: false, error: '读取 prompt 预览失败:' + (err?.message || String(err)) };
     }
 
-    // 1.5) 一起听：pre 是 prompt-manager 生成时的快照，歌词进度和已听时长会过期。
-    //      发送前把旧段落剪掉，换成音乐 App 现算的这一份。
-    //      音乐 App 没装 / 没在一起听时，getContext 返回空串，这里什么都不做。
+    // 1.5) 实时块（一起听 / 四叶草 / 灯塔 / 日记）。
+    //
+    //      pre 是 prompt-manager 生成那一刻的快照，而这四段过期得特别快：歌词进度、
+    //      心愿单里谁买过、这个月发没发工资、经期第几天。而且后三段**对每个 AI
+    //      内容还不一样**（匿名礼物不能互相泄漏），一份共用快照根本做不到。
+    //      所以统一剪掉旧的、拼一份发送这一刻现算的。
+    //
+    //      开关在这里生效：用户在 prompt 管理页把某张实时卡（或它所在的整组）关掉了，
+    //      这里就只剪不拼。以前这段是四个写死的 try 块，既不看开关、四叶草和灯塔还
+    //      压根没在预览里出现过 —— 用户看不见、关不掉，照样每轮都发。
+    //      群聊不要这些第三方实时块：只剪干净，不再拼回去。
     try {
-        const lt = window.__musicListenTogether;
-        if (lt?.strip) systemPrompt = lt.strip(systemPrompt);
-        const ltBlock = lt?.getContext?.(aiPersonId) || '';
-        // 补回去时也要带标签，跟 pre 里其他段落保持同一种边界写法
-        if (ltBlock) systemPrompt = `${systemPrompt}\n\n${wrapPromptBlock('一起听', ltBlock)}`.trim();
+        systemPrompt = stripLiveContextBlocks(systemPrompt);
+        if (!isGroupCall) {
+            const liveOwnerKey = makeOwnerKey({ aiPersonId });
+            const liveBlocks = collectLiveContextBlocks(aiPersonId, {
+                isEnabled: (b) => isGroupEnabled(liveOwnerKey, b.group) && isCardEnabled(liveOwnerKey, b.id),
+            });
+            for (const b of liveBlocks) {
+                systemPrompt = `${systemPrompt}\n\n${wrapPromptBlock(b.tag, b.content)}`.trim();
+            }
+        }
     } catch (err) {
-        console.warn('[chat-ai-service] 注入一起听上下文失败', err);
-    }
-
-    // 1.55) 四叶草购物：和一起听同一个理由，但多一条 —— 这段上下文
-    //       **对每个 AI 内容不一样**（心愿单里谁买过、匿不匿名）。
-    //       pre 是一份共用的快照，它做不到「按对话方分内容」。
-    try {
-        const shop = window.__shopContext;
-        if (shop?.strip) systemPrompt = shop.strip(systemPrompt);
-        const shopBlock = shop?.getContext?.(aiPersonId) || '';
-        if (shopBlock) systemPrompt = `${systemPrompt}\n\n${wrapPromptBlock('四叶草购物', shopBlock)}`.trim();
-    } catch (err) {
-        console.warn('[chat-ai-service] 注入四叶草上下文失败', err);
-    }
-
-    // 1.56) 灯塔求职：和四叶草同一条路。这段同样**对每个 AI 内容不一样** ——
-    //       同事知道办公室里发生了什么，不对付的那位立场相反，
-    //       毫无关系的第三个人只知道「她最近在上班」。
-    try {
-        const job = window.__jobContext;
-        if (job?.strip) systemPrompt = job.strip(systemPrompt);
-        const jobBlock = job?.getContext?.(aiPersonId) || '';
-        if (jobBlock) systemPrompt = `${systemPrompt}\n\n${wrapPromptBlock('灯塔求职', jobBlock)}`.trim();
-    } catch (err) {
-        console.warn('[chat-ai-service] 注入灯塔上下文失败', err);
-    }
-
-    // 1.565) 日记：和上面几段同一条路，但过期得更快 ——
-    //        「还有两天就要来月经」这句话每过一天就得变一次，
-    //        而 pre 只在用户打开 prompt 管理页时才重生成。
-    //        另外这段里有「她今天明确记录了还没来」这种**必须准确**的信息，
-    //        用过期快照会让 AI 说出用户当场就能发现的错话。
-    try {
-        const diary = window.__diaryContext;
-        if (diary?.strip) systemPrompt = diary.strip(systemPrompt);
-        const diaryBlock = diary?.getContext?.(aiPersonId) || '';
-        if (diaryBlock) systemPrompt = `${systemPrompt}\n\n${wrapPromptBlock('日记本', diaryBlock)}`.trim();
-    } catch (err) {
-        console.warn('[chat-ai-service] 注入日记上下文失败', err);
+        console.warn('[chat-ai-service] 注入实时上下文失败', err);
     }
 
     // 1.57) K 链记忆：和上面几段同一条路 —— pre 是快照，而「现在攒够几个回合了」
     //       每一轮都在变，快照必然过期。
     //       两段分开：当前记忆总是带；「顺手生成新记忆」那段**只在该压缩的那一轮才拼**，
     //       其余轮次一个字都不发（用户明确要求的省 token 点，那段指令两百来字）。
+    //       群聊没有单一 AI 的滚动记忆，这段跳过。
     let kChainPending = 0;
     let kChainRequested = false;
-    try {
-        const kc = window.__chatKChain;
-        if (kc) {
-            systemPrompt = stripPromptBlock(stripPromptBlock(systemPrompt, kc.tag), kc.requestTag);
-            const kBlock = kc.getContext?.(aiPersonId, mode) || '';
-            if (kBlock) systemPrompt = `${systemPrompt}\n\n${wrapPromptBlock(kc.tag, kBlock)}`.trim();
+    if (!isGroupCall) {
+        try {
+            const kc = window.__chatKChain;
+            if (kc) {
+                systemPrompt = stripPromptBlock(stripPromptBlock(systemPrompt, kc.tag), kc.requestTag);
+                const kBlock = kc.getContext?.(aiPersonId, mode) || '';
+                if (kBlock) systemPrompt = `${systemPrompt}\n\n${wrapPromptBlock(kc.tag, kBlock)}`.trim();
 
-            kChainPending = kc.countPending?.(aiPersonId, mode) || 0;
-            const kReq = kc.getRequest?.(aiPersonId, mode, kChainPending) || '';
-            if (kReq) {
-                kChainRequested = true;
-                systemPrompt = `${systemPrompt}\n\n${wrapPromptBlock(kc.requestTag, kReq)}`.trim();
+                kChainPending = kc.countPending?.(aiPersonId, mode) || 0;
+                const kReq = kc.getRequest?.(aiPersonId, mode, kChainPending) || '';
+                if (kReq) {
+                    kChainRequested = true;
+                    systemPrompt = `${systemPrompt}\n\n${wrapPromptBlock(kc.requestTag, kReq)}`.trim();
+                }
+            }
+        } catch (err) {
+            console.warn('[chat-ai-service] 注入 K 链失败', err);
+        }
+    }
+
+    // 1.6) 群聊：群名称 / 公告 / 备注 / 成员职务与群昵称在发送时现算。
+    //      预览里那份没有「就是你」，发言 AI 必须按 selfId 重算；
+    //      群主是谁、谁改了群昵称随时在变，快照必然过期。
+    if (isGroupCall) {
+        try {
+            systemPrompt = stripPromptBlock(stripPromptBlock(systemPrompt, '群信息'), '群成员与职务');
+            const groupOwnerKey = makeOwnerKey({ isGroup: true, groupId });
+            if (isGroupEnabled(groupOwnerKey, 'murmur') && isCardEnabled(groupOwnerKey, 'group-info')) {
+                const groupUser = sdk.defaultUserCard?.getDefault?.() || sdk.users?.getActive?.();
+                const group = groupUser ? sdk.chatGroups?.get?.(groupUser, groupId, mode) : null;
+                if (group) {
+                    const { buildGroupAdminPromptBlock } = await import('./group-admin-service.js');
+                    const block = buildGroupAdminPromptBlock({
+                        sdk, user: groupUser, group, selfId: aiPersonId,
+                    });
+                    if (block) systemPrompt = `${systemPrompt}\n\n${wrapPromptBlock('群信息', block)}`.trim();
+                }
+            }
+        } catch (err) {
+            console.warn('[chat-ai-service] 注入群信息失败', err);
+        }
+    }
+
+    // 1.7) 把「当前聊天回合」挪到最末尾。
+    //      上面这些块全都是往末尾追加的，于是刚刚发生的对话被一堆背景资料压在了中间，
+    //      离用户这句话最远。长上下文里模型对「最后出现」的内容最敏感，聊天记录理应
+    //      占那个位置。pre 里它本来就排在最后一张卡，这里只是把追加打乱的顺序摆回去。
+    try {
+        if (hasPromptBlock(systemPrompt, '当前聊天回合')) {
+            const rounds = readPromptBlock(systemPrompt, '当前聊天回合');
+            if (rounds) {
+                systemPrompt = stripPromptBlock(systemPrompt, '当前聊天回合');
+                systemPrompt = `${systemPrompt}\n\n${wrapPromptBlock('当前聊天回合', rounds)}`.trim();
             }
         }
     } catch (err) {
-        console.warn('[chat-ai-service] 注入 K 链失败', err);
-    }
-
-    // 1.6) 群聊：把「群成员与职务」这一段在发送时现算并追加。
-    //      和一起听同一个理由（§4.1）——群主是谁、谁是管理员、谁改了群昵称
-    //      随时都在变，pre 是快照，快照必然过期；而且这些数据挂在群上，
-    //      单 AI 维度的 pre 里本来就没有它。
-    if (groupId) {
-        try {
-            const groupUser = sdk.defaultUserCard?.getDefault?.() || sdk.users?.getActive?.();
-            const group = groupUser ? sdk.chatGroups?.get?.(groupUser, groupId, mode) : null;
-            if (group) {
-                const { buildGroupAdminPromptBlock } = await import('./group-admin-service.js');
-                const block = buildGroupAdminPromptBlock({
-                    sdk, user: groupUser, group, selfId: aiPersonId,
-                });
-                if (block) systemPrompt = `${systemPrompt}\n\n${wrapPromptBlock('群成员与职务', block)}`.trim();
-            }
-        } catch (err) {
-            console.warn('[chat-ai-service] 注入群成员与职务失败', err);
-        }
+        console.warn('[chat-ai-service] 归位当前聊天回合失败', err);
     }
 
     console.log('[chat-ai-service] systemPrompt ====== START ======');

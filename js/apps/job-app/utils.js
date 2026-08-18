@@ -69,36 +69,104 @@ export function truncate(text, n = 40) {
 /**
  * 从模型输出里抠出 JSON。
  *
- * 三步加固：剥 ``` 围栏 → 从第一个 { 或 [ 截到最后一个 } 或 ] → parse。
- * **失败明确返回 null，不往 UI 里填乱码假装成功。**
+ * 模型经常在 JSON 前后多说几句、加围栏、字符串里直接回车、尾巴多个逗号。
+ * 这里尽量修好再 parse；真抠不出来才返回 null，不往 UI 里填乱码。
  */
 export function extractJson(raw) {
-    let text = String(raw || '').trim();
+    const text = String(raw || '').trim();
     if (!text) return null;
 
-    const fence = text.match(/^```(?:json)?\s*\n([\s\S]*?)\n?```$/);
-    if (fence) text = fence[1].trim();
+    const direct = tryParseJson(text);
+    if (direct) return direct;
 
-    const firstObj = text.indexOf('{');
-    const firstArr = text.indexOf('[');
-    let start = -1;
-    let endChar = '}';
-    if (firstArr >= 0 && (firstObj < 0 || firstArr < firstObj)) {
-        start = firstArr;
-        endChar = ']';
-    } else if (firstObj >= 0) {
-        start = firstObj;
-        endChar = '}';
+    const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (fenced) {
+        const hit = tryParseJson(fenced[1].trim()) || scanFirstJson(fenced[1]);
+        if (hit) return hit;
     }
-    if (start < 0) return null;
-    const end = text.lastIndexOf(endChar);
-    if (end <= start) return null;
+
+    return scanFirstJson(text);
+}
+
+function tryParseJson(src) {
+    const text = String(src || '').trim();
+    if (!text) return null;
+    try {
+        const v = JSON.parse(text);
+        if (v && typeof v === 'object') return v;
+    } catch (_) { /* 继续修 */ }
 
     try {
-        return JSON.parse(text.slice(start, end + 1));
-    } catch (_) {
-        return null;
+        const v = JSON.parse(softenJson(text));
+        if (v && typeof v === 'object') return v;
+    } catch (_) { /* 这次切片放弃 */ }
+    return null;
+}
+
+/** 中文引号、尾巴逗号、字符串里的裸换行 —— 模型最常犯的三件 */
+function softenJson(text) {
+    return escapeRawBreaksInStrings(String(text || ''))
+        .replace(/[“”]/g, '"')
+        .replace(/[‘’]/g, "'")
+        .replace(/,\s*([}\]])/g, '$1');
+}
+
+function escapeRawBreaksInStrings(text) {
+    let out = '';
+    let inStr = false;
+    let esc = false;
+    for (const ch of String(text || '')) {
+        if (inStr) {
+            if (esc) { out += ch; esc = false; continue; }
+            if (ch === '\\') { out += ch; esc = true; continue; }
+            if (ch === '"') { out += ch; inStr = false; continue; }
+            if (ch === '\n') { out += '\\n'; continue; }
+            if (ch === '\r') continue;
+            out += ch;
+            continue;
+        }
+        if (ch === '"') inStr = true;
+        out += ch;
     }
+    return out;
+}
+
+/** 从左往右找每一段完整的 {...} / [...]，字符串里的括号不算 */
+function scanFirstJson(text) {
+    const src = String(text || '');
+    for (let i = 0; i < src.length; i += 1) {
+        const ch = src[i];
+        if (ch !== '{' && ch !== '[') continue;
+        const scanned = scanJsonValue(src, i);
+        if (!scanned) continue;
+        const hit = tryParseJson(scanned);
+        if (hit) return hit;
+    }
+    return null;
+}
+
+function scanJsonValue(text, start) {
+    const first = text[start];
+    if (first !== '{' && first !== '[') return null;
+    let depth = 0;
+    let inStr = false;
+    let esc = false;
+    for (let i = start; i < text.length; i += 1) {
+        const ch = text[i];
+        if (inStr) {
+            if (esc) { esc = false; continue; }
+            if (ch === '\\') { esc = true; continue; }
+            if (ch === '"') inStr = false;
+            continue;
+        }
+        if (ch === '"') { inStr = true; continue; }
+        if (ch === '{' || ch === '[') depth += 1;
+        else if (ch === '}' || ch === ']') {
+            depth -= 1;
+            if (depth === 0) return text.slice(start, i + 1);
+        }
+    }
+    return null;
 }
 
 // ============================================================

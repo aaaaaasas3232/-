@@ -2372,6 +2372,36 @@
 }
 
 /* ============================================
+ * 整组开关（折叠头右侧的「关闭 / 启用」）
+ *   - 复用 .pm-segmented-tabs 的胶囊样式，只补间距和不换行
+ *   - 整组关掉时组内卡片整体压暗：一眼能看出「这些现在都不发」，
+ *     但仍然可点（用户要能进去改单卡状态，再打开总闸就是他要的样子）
+ * ============================================ */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-app-group__switch {
+    margin-left: 8px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-app-group--off {
+    border-color: rgba(0, 0, 0, 0.06);
+    background: #FAFAFA;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-app-group--off .pm-app-group__name {
+    color: #9CA3AF;
+}
+
+.app-shell[data-app-id="chat"] .prompt-manager .pm-app-group--off .pm-app-group__body {
+    opacity: 0.45;
+    filter: grayscale(0.6);
+}
+
+/* 实时卡（一起听 / 四叶草 / 灯塔 / 日记）：虚线左沿提示「正文发送时才现算」 */
+.app-shell[data-app-id="chat"] .prompt-manager .pm-item--live-block .pm-item-content {
+    border-left: 3px dashed rgba(244, 166, 205, 0.7);
+}
+
+/* ============================================
  * ★ v0.61.8 App Prompt 预览编辑器弹窗样式(v0.71 迁移到 AcModal 后,样式已在 _chat-private.css 下)
  *   - 旧 .reply-prompt-modal.app-prompt-preview-modal 外壳样式已废弃
  *   - 新样式:挂在 .app-prompt-preview-modal 类名下(在 _chat-private.css 里)

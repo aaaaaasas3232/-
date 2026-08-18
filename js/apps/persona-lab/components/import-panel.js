@@ -230,7 +230,7 @@ export const PlImport = {
                     :disabled="!source.trim()"
                     @click="onConvert"
                 >
-                    <PlIcon name="spark" />
+                    <PlIcon name="heart" />
                     <span>转换为人设卡</span>
                 </button>
 

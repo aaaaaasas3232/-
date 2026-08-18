@@ -40,4 +40,15 @@ try {
             await page.clickText('.rx-toypage-actions .rx-btn', '应用到主体');
             await sleep(400);
             await page.clickText('.rx-toypage-back', '返回');
-            await page.waitFor(`!documen
+            await page.waitFor(`!document.querySelector('.rx-toypage')`);
+            await page.clickText('[role="tab"]', '舞台');
+            await sleep(1100);
+            console.log(`${name}:`, await page.screenshot(`stage-${name}`));
+
+            if (name === group.presets[group.presets.length - 1]) break;
+            await openEditor();
+        }
+    }
+} finally {
+    await close();
+}

@@ -119,7 +119,7 @@ export const PlLibrary = {
 
                 <PlEmpty
                     v-if="!drafts.length"
-                    icon-name="spark"
+                    icon-name="wand"
                     title="还没有在改的人设"
                     hint="从下面拉一张 nook 的卡进来，或者直接新建一张空白卡。"
                     action-label="新建一张"

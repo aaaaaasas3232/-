@@ -8,7 +8,9 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(91, 142, 201, 0.35);
+    backdrop-filter: blur(14px) saturate(1.2);
+    -webkit-backdrop-filter: blur(14px) saturate(1.2);
     z-index: 9999;
     display: flex;
     align-items: center;
@@ -63,8 +65,8 @@
 }
 
 .desc-image-modal-desc {
-    font-size: 12px;
-    color: white;
+    font-size: 13px;
+    color: #2C4A7A;
     line-height: 1.6;
     max-height: 200px;
     overflow-y: auto;
@@ -414,4 +416,61 @@
         padding: 6px 10px;
         font-size: 11px;
     }
+}
+
+.app-shell[data-app-id="chat"] .desc-image-detail-modal.ac-overlay,
+.app-shell[data-app-id="chat"] .location-card-detail-modal.ac-overlay {
+    background: rgba(91, 142, 201, 0.35);
+    backdrop-filter: blur(14px) saturate(1.2);
+    -webkit-backdrop-filter: blur(14px) saturate(1.2);
+}
+
+.app-shell[data-app-id="chat"] .desc-image-detail-modal .ac-modal-footer,
+.app-shell[data-app-id="chat"] .location-card-detail-modal .ac-modal-footer {
+    justify-content: center;
+    gap: 14px;
+}
+
+.app-shell[data-app-id="chat"] .desc-image-detail-modal .desc-image-modal-content {
+    padding: 12px 0 0;
+}
+
+.app-shell[data-app-id="chat"] .location-card-detail-modal .location-card-modal-content {
+    margin: 8px 0 0;
+    padding: 10px 0 0;
+    background: transparent;
+}
+
+.app-shell[data-app-id="chat"] .card-detail-icon-btn {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: 12px;
+    border: 1.5px solid #5b8ec9;
+    background: #E8F2FF;
+    color: #5b8ec9;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: none;
+}
+
+.app-shell[data-app-id="chat"] .card-detail-icon-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: #5b8ec9;
+}
+
+.app-shell[data-app-id="chat"] .card-detail-icon-btn:hover {
+    background: #D6E8FF;
+}
+
+.app-shell[data-app-id="chat"] .card-detail-icon-btn:active {
+    transform: scale(0.96);
+}
+
+.app-shell[data-app-id="chat"] .card-detail-icon-btn.is-on {
+    background: #D6E4FF;
 }

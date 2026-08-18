@@ -9,9 +9,9 @@
  *
  *   抽出来时把这块行为参数化:
  *     - threshold: 长按阈值(私聊 1500ms,群聊 800ms)
- *     - requireTextOnStart: 群聊独有 —— 输入框为空时不启动长按
+ *     - requireTextOnStart: 为 true 时输入框为空不启动长按（现在群聊/私聊都允许空按）
  *     - onShortPress: 短按回调(默认调用传入的 doSend)
- *     - onLongPress: 长按回调(私聊:调 AI;群聊:doSend + 提示 AI 暂不支持)
+ *     - onLongPress: 长按回调；输入框没字时短按也走这条（请对方回一句）
  *
  * 用法:
  *   const { bindEnterToSend, bindPressToSend } = createChatSendHandlers({
@@ -95,7 +95,6 @@ export function createChatSendHandlers(opts) {
 
         const startPress = (ev) => {
             const inputText = readInputText(messageInput);
-            // ★ 群聊独有:输入框为空时不启动长按
             if (requireTextOnStart && !inputText) return;
             pressTriggered = false;
             longPressConsumed = false; // 新一次按下,重置长按消化标记
@@ -145,6 +144,11 @@ export function createChatSendHandlers(opts) {
                 ev?.preventDefault?.();
                 ev?.stopPropagation?.();
                 if (!inputText) {
+                    // 没字也算发送：走长按那条「请对方回一句」的路，不写空气泡
+                    if (typeof onLongPress === 'function') {
+                        onLongPress();
+                        return;
+                    }
                     _notifyEmpty();
                     return;
                 }

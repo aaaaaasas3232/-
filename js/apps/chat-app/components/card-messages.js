@@ -15,7 +15,7 @@
 import { escapeHtml } from '@/src/core/escape.js';
 import { renderSelectButton, renderTime } from './message-actions.js';
 import { renderShareCardWrapper } from './share-cards.js';
-import { DEFAULT_AI_AVATAR_BG, DEFAULT_USER_AVATAR_BG } from '../aiMeta.js';
+import { DEFAULT_AI_AVATAR_BG, DEFAULT_USER_AVATAR_BG, resolveBubbleAvatar } from '../aiMeta.js';
 
 /**
  * 格式化通话时长(秒 → "x分y秒" / "x秒")
@@ -170,6 +170,7 @@ export function renderDescImageBubble(msg, contact = {}, options = {}) {
     // 图片卡片气泡内容
     const bubbleHtml = `
         <div class="desc-image-card"
+             data-msg-id="${escapeHtml(msg.id || '')}"
              data-desc="${dataDesc}"
              data-color="${dataColor}"
              data-text-color="${dataTextColor}">
@@ -186,15 +187,10 @@ export function renderDescImageBubble(msg, contact = {}, options = {}) {
         </div>
     `;
 
-    const avatarBg = isUser ? DEFAULT_USER_AVATAR_BG : DEFAULT_AI_AVATAR_BG;
-    // ★ v0.45:透传 userAvatar/userAvatarBg 用于真实社媒头像
-    const userAvatarBg = options.userAvatarBg || '';
-    const userAvatar = options.userAvatar || '';
-    const aiAvatarBg = contact?.avatarBg || '';
-    const aiAvatar = contact?.avatar || '';
-    const finalAvatarBg = isUser ? (userAvatarBg || avatarBg) : (aiAvatarBg || avatarBg);
-    const avatarUrl = isUser ? userAvatar : aiAvatar;
-    return renderShareCardWrapper(msg, bubbleHtml, finalAvatarBg, options, avatarUrl);
+    const bubbleAv = resolveBubbleAvatar(msg, contact, options);
+    const finalAvatarBg = bubbleAv.bg || (isUser ? DEFAULT_USER_AVATAR_BG : DEFAULT_AI_AVATAR_BG);
+    const avatarUrl = bubbleAv.url;
+    return renderShareCardWrapper(msg, bubbleHtml, finalAvatarBg, contact, options, avatarUrl);
 }
 
 // ============================================
@@ -222,12 +218,9 @@ export function renderCallChatBubble(msg, contact = {}, options = {}) {
     const selectBtnHtml = renderSelectButton(msg.id, actionsCtx);
     const timeHtml = renderTime(msg.time);
 
-    const userAvatarBg = options.userAvatarBg || '';
-    const userAvatar = options.userAvatar || '';
-    const aiAvatarBg = contact?.avatarBg || '';
-    const aiAvatar = contact?.avatar || '';
-    const avatarBg = isUser ? (userAvatarBg || DEFAULT_USER_AVATAR_BG) : (aiAvatarBg || DEFAULT_AI_AVATAR_BG);
-    const avatarUrl = isUser ? userAvatar : aiAvatar;
+    const bubbleAv = resolveBubbleAvatar(msg, contact, options);
+    const avatarBg = bubbleAv.bg || (isUser ? DEFAULT_USER_AVATAR_BG : DEFAULT_AI_AVATAR_BG);
+    const avatarUrl = bubbleAv.url;
     const avatarChar = (content || '?').charAt(0);
 
     const avatarHtml = avatarUrl

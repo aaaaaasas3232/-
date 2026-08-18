@@ -5,8 +5,8 @@
  *
  * 功能:
  *   - 群头像(实时从成员 aiPerson 拼九宫格) + 群名称(可编辑) + 成员数
- *   - 群信息卡片:群名称 / 群公告 / 群二维码(预留) / 备注(可编辑) / 查找聊天记录(日历+故事双模式)
- *   - 消息设置卡片:置顶聊天 / 消息免打扰 / 消息提醒 / 聊天背景(per-mode 独立)
+ *   - 群信息卡片:群名称 / 群公告 / 群备注(可编辑)
+ *   - 消息设置卡片:置顶聊天 / 消息提醒 / 聊天背景(per-mode 独立)
  *   - 群管理卡片:群成员(实时头像) / 群聊设置(预留) / 聊天记录(日历+故事双模式)
  *   - 危险操作卡片:清空聊天记录 / 退出群聊
  *
@@ -23,7 +23,7 @@
  */
 
 import { escapeHtml } from '@/src/core/escape.js';
-import { getAiMeta, resolveAiAvatar } from '../aiMeta.js';
+import { getAiMeta, resolveAiAvatar, resolveUserAvatar, withUserInGroupMembers } from '../aiMeta.js';
 
 // ★ v0.80 移除 DEMO_GROUPS 占位群聊 — 真实群聊全部走 SDK chatGroups,
 //   找不到就显示「未知群聊」空状态,不再展示示例数据。
@@ -78,7 +78,7 @@ function loadGroupFromSdk(groupId) {
         const resolvedMembers = (sdk.chatGroups.resolveMembers && entry)
             ? sdk.chatGroups.resolveMembers(sdk, defaultUser, entry)
             : (entry.members || []).map((id) => ({ id }));
-        out.members = resolvedMembers.map((m) => {
+        out.members = withUserInGroupMembers(resolvedMembers.map((m) => {
             const id = m.id || m.aiPersonId;
             const meta = getAiMeta(id);
             // ★ v0.71 头像背景色统一:meta.avatarBg(aiMeta 实时) → resolveAiAvatar 默认
@@ -90,10 +90,17 @@ function loadGroupFromSdk(groupId) {
                 avatarBg: meta.exists ? meta.avatarBg : (m.avatarBg || aiAv.bg),
                 role: m.role || 'member',
             };
+        }));
+        const ownerId = String(entry.ownerId || defaultUser?.id || '');
+        out.members = out.members.map((m) => {
+            if (m.isUser || m.kind === 'user' || String(m.id) === String(defaultUser?.id || '')) {
+                return { ...m, role: String(m.id) === ownerId ? 'admin' : 'member' };
+            }
+            if (String(m.id) === ownerId) return { ...m, role: 'admin' };
+            return m;
         });
-        // ★ 算上用户本人：members 里只有 AI，用户不在里面。
-        //   两个 AI 的群，界面上应该写「3 位成员」。
-        out.memberCount = (out.members.length || entry.members?.length || 0) + 1;
+        // 用户已插进 members，人数不再 +1
+        out.memberCount = sdk.chatGroups.countMembers?.(entry) ?? out.members.length;
         return out;
     } catch (err) {
         console.warn('[chat-group-settings] loadGroupFromSdk failed', err);
@@ -162,18 +169,20 @@ function renderSectionTitle(svg, title, color = '#4A6FA5') {
 
 // 渲染群头像(九宫格拼接,实时从成员)
 function renderGroupAvatar(members, size = 80) {
-    const gridSize = Math.min(members.length, 4);
+    const list = withUserInGroupMembers(members);
+    const gridSize = Math.min(list.length, 4);
 
     let cellsHtml = '';
     for (let i = 0; i < 4; i++) {
         if (i < gridSize) {
-            const member = members[i];
-            // ★ v0.71 群成员头像统一从 aiMeta.resolveAiAvatar 拿
-            const av = resolveAiAvatar(member.id || '');
-            const char = (member.name || av.text || '?').charAt(0);
+            const member = list[i];
+            const isUser = !!(member.isUser || member.kind === 'user');
+            const av = isUser ? resolveUserAvatar() : resolveAiAvatar(member.id || '');
+            const char = (member.name || av.text || (isUser ? '我' : '?')).charAt(0);
             const bg = member.avatarBg || av.bg;
-            const inner = member.avatar
-                ? `<img src="${escapeHtml(member.avatar)}" alt="" style="width:100%;height:100%;object-fit:cover;" />`
+            const url = member.avatar || av.url || '';
+            const inner = url
+                ? `<img src="${escapeHtml(url)}" alt="" style="width:100%;height:100%;object-fit:cover;" />`
                 : escapeHtml(char);
             cellsHtml += `<div style="background:${escapeHtml(bg)};display:flex;align-items:center;justify-content:center;font-size:${size * 0.2}px;color:white;font-weight:500;">${inner}</div>`;
         } else {
@@ -190,12 +199,13 @@ function renderGroupAvatar(members, size = 80) {
 
 // 渲染成员头像(实时从 aiPerson 读 avatar/avatarBg)
 function renderMemberAvatar(member, size = 40) {
-    // ★ v0.71 头像背景:member.avatarBg (实时) → resolveAiAvatar 默认
-    const av = resolveAiAvatar(member.id || '');
+    const isUser = !!(member.isUser || member.kind === 'user');
+    const av = isUser ? resolveUserAvatar() : resolveAiAvatar(member.id || '');
     const bg = member.avatarBg || av.bg;
-    const char = (member.name || '?').charAt(0);
-    const inner = member.avatar
-        ? `<img src="${escapeHtml(member.avatar)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`
+    const char = (member.name || (isUser ? '我' : '?')).charAt(0);
+    const url = member.avatar || av.url || '';
+    const inner = url
+        ? `<img src="${escapeHtml(url)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`
         : escapeHtml(char);
     return `
         <div style="width:${size}px;height:${size}px;border-radius:50%;background:${escapeHtml(bg)};display:flex;align-items:center;justify-content:center;font-size:${size * 0.35}px;color:white;font-weight:500;overflow:hidden;">
@@ -340,20 +350,15 @@ export function renderGroupSettingsPage(app, groupId) {
                 onClickAction: editGroupAnnouncementAction,
             })}
             ${renderSettingItem({
-                id: 'group-qr',
-                label: '群二维码',
-                value: '查看',
-            })}
-            ${renderSettingItem({
                 id: 'group-remark',
-                label: '群昵称',
+                label: '群备注',
                 value: group.remark ? truncateText(group.remark, 24) : '未设置',
                 onClickAction: editGroupRemarkAction,
             })}
         </div>
     `;
 
-    // ★ 消息设置卡片(per-mode 独立,置顶/免打扰/提醒/背景)
+    // ★ 消息设置卡片(per-mode 独立,置顶/提醒/背景)
     const msgSettingsTitle = renderSectionTitle(
         '<svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
         '消息设置'
@@ -362,10 +367,6 @@ export function renderGroupSettingsPage(app, groupId) {
     const toggleGroupPinAction = {
         action: 'appMethod', appId: 'chat', method: 'toggleGroupSetting',
         payload: { groupId, mode: displayMode, field: 'isPinned' },
-    };
-    const toggleGroupMuteAction = {
-        action: 'appMethod', appId: 'chat', method: 'toggleGroupSetting',
-        payload: { groupId, mode: displayMode, field: 'isMuted' },
     };
     const toggleGroupRemindAction = {
         action: 'appMethod', appId: 'chat', method: 'toggleGroupSetting',
@@ -415,13 +416,6 @@ export function renderGroupSettingsPage(app, groupId) {
                 label: '置顶聊天',
                 checked: !!group.isPinned,
                 onToggleAction: toggleGroupPinAction,
-            })}
-            ${renderToggleItem({
-                id: 'group-is-muted',
-                label: '消息免打扰',
-                desc: '开启后不会收到推送通知',
-                checked: !!group.isMuted,
-                onToggleAction: toggleGroupMuteAction,
             })}
             ${renderToggleItem({
                 id: 'group-is-remind',
@@ -596,7 +590,7 @@ export function renderGroupSettingsPage(app, groupId) {
         </div>
     `;
 
-    // 顶部 header(返回按钮 + 游戏按钮)
+    // 顶部 header(返回按钮)
     const headerBarHtml = `
         <div class="chat-settings-topbar">
             <button class="chat-back-btn" data-app-action='{"action":"appMethod","appId":"chat","method":"closeDetail"}'>
@@ -604,14 +598,6 @@ export function renderGroupSettingsPage(app, groupId) {
                     <polyline points="15 18 9 12 15 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
             </button>
-            <div class="chat-settings-topbar-actions">
-                <button class="chat-settings-topbar-btn" id="group-settings-game-btn"
-                        data-app-action='{"action":"detail","appId":"chat","pageId":"game-selector-${escapeHtml(groupId)}"}'>
-                    <svg viewBox="0 0 24 24" fill="#9B7AA0">
-                        <path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zM11 13H8v3H6v-3H3v-2h3V8h2v3h3v2zm5-1.5c0 .28-.22.5-.5.5h-2v2H9v-2H8v-1c0-.28.22-.5.5-.5h2V8h1v1.5h1zm4 .5c0 .28-.22.5-.5.5h-1.5v1.5H14v-1.5H13V12h1.5c.28 0 .5.22.5.5v.5z"/>
-                    </svg>
-                </button>
-            </div>
         </div>
     `;
 

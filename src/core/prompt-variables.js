@@ -55,13 +55,13 @@ const VARIABLES = [
     },
     {
         name: 'aiPersona', group: '角色', label: 'AI 人设全文',
-        desc: 'AI 的八字段人设卡（名字/性别/年龄/外貌/性格/简介/经历）',
+        desc: 'AI 人设全文（与 nook「当前人设上下文」同一份）',
         example: '# 角色卡: 阿澈\n…',
         resolve: (c) => c.aiPersonaText || '',
     },
     {
         name: 'userPersona', group: '角色', label: '用户人设全文',
-        desc: '用户的八字段人设卡',
+        desc: '用户人设全文（与 nook「当前人设上下文」同一份）',
         example: '# 角色卡: 我\n…',
         resolve: (c) => c.userPersonaText || '',
     },

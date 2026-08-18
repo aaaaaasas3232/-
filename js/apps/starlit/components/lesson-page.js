@@ -15,7 +15,7 @@
  * 直接显示「你写的 → 应该怎么写」，不用滚回去找。
  */
 
-import { MODES } from '../constants.js';
+import { MODES, LONG_PRESS_MS } from '../constants.js';
 import { fmtTime, looksLikeChinese } from '../utils.js';
 import { UI } from './ui.js';
 import { SlCardChip } from './cards.js';
@@ -38,18 +38,28 @@ const SlBubble = {
         /** 'meme' 描边贴边上 | 'tap' 点开才展开 */
         glossMode: { type: String, default: 'meme' },
     },
-    emits: ['open-card', 'remove', 'translate'],
+    emits: ['open-card', 'remove', 'translate', 'move-gloss'],
     data() {
-        return { opened: false };
+        return {
+            opened: false,
+            glossDragging: false,
+            glossArmed: false,
+            liveX: 0,
+            liveY: 0,
+        };
     },
     computed: {
         mine() { return this.message.role === 'me'; },
         system() { return this.message.role === 'system'; },
         gloss() { return this.showGloss ? String(this.message.gloss || '').trim() : ''; },
-        /** 描边式：一直贴着 */
         memeGloss() { return this.glossMode === 'meme' ? this.gloss : ''; },
-        /** 微信式：点开才出现 */
         tapGloss() { return this.glossMode === 'tap' ? this.gloss : ''; },
+        glossStyle() {
+            const x = this.glossDragging ? this.liveX : (Number(this.message.glossX) || 0);
+            const y = this.glossDragging ? this.liveY : (Number(this.message.glossY) || 0);
+            const rot = this.mine ? 1 : -1.2;
+            return { transform: `translate(${x}px, ${y}px) rotate(${rot}deg)` };
+        },
         correction() { return this.message.correction || null; },
         myCards() {
             const ids = new Set((this.message.cardIds || []).map(String));
@@ -76,8 +86,18 @@ const SlBubble = {
                         @pointercancel="lpUp"
                     >{{ message.text }}</p>
 
-                    <!-- 描边中文：绝对定位，不参与气泡内部排版 -->
-                    <span v-if="memeGloss" class="sl-gloss" :data-gloss="memeGloss">{{ memeGloss }}</span>
+                    <!-- 描边中文：绝对定位，不参与气泡内部排版。长按可拖走。 -->
+                    <span
+                        v-if="memeGloss"
+                        class="sl-gloss"
+                        :class="{ 'is-dragging': glossDragging }"
+                        :style="glossStyle"
+                        :data-gloss="memeGloss"
+                        @pointerdown.stop="onGlossDown"
+                        @pointermove="onGlossMove"
+                        @pointerup="onGlossUp"
+                        @pointercancel="onGlossUp"
+                    >{{ memeGloss }}</span>
 
                     <!-- 微信式：一颗小按钮，点开才展开 -->
                     <button
@@ -114,6 +134,9 @@ const SlBubble = {
             </div>
         </div>
     `,
+    beforeUnmount() {
+        if (this._gTimer) clearTimeout(this._gTimer);
+    },
     methods: {
         fmt(ts) { return fmtTime(ts); },
         /** 长按气泡正文 → 翻译。划了词就只翻划中的那段 */
@@ -122,6 +145,54 @@ const SlBubble = {
                 const picked = String(window.getSelection?.() || '').trim();
                 this.$emit('translate', { text: picked || this.message.text });
             });
+        },
+        onGlossDown(event) {
+            this.glossArmed = false;
+            this.glossDragging = false;
+            this._gx = event.clientX;
+            this._gy = event.clientY;
+            this._gBaseX = Number(this.message.glossX) || 0;
+            this._gBaseY = Number(this.message.glossY) || 0;
+            this.liveX = this._gBaseX;
+            this.liveY = this._gBaseY;
+            this._gMoved = false;
+            if (this._gTimer) clearTimeout(this._gTimer);
+            this._gTimer = setTimeout(() => {
+                this._gTimer = null;
+                this.glossArmed = true;
+                this.glossDragging = true;
+                try { navigator.vibrate?.(10); } catch (_) { /* ignore */ }
+            }, LONG_PRESS_MS);
+            try { event.currentTarget.setPointerCapture(event.pointerId); } catch (_) { /* ignore */ }
+        },
+        onGlossMove(event) {
+            const dx = event.clientX - this._gx;
+            const dy = event.clientY - this._gy;
+            if (Math.abs(dx) > 4 || Math.abs(dy) > 4) this._gMoved = true;
+            if (!this.glossArmed) {
+                if (this._gMoved && this._gTimer) {
+                    clearTimeout(this._gTimer);
+                    this._gTimer = null;
+                }
+                return;
+            }
+            event.preventDefault();
+            this.liveX = this._gBaseX + dx;
+            this.liveY = this._gBaseY + dy;
+        },
+        onGlossUp(event) {
+            if (this._gTimer) { clearTimeout(this._gTimer); this._gTimer = null; }
+            try { event.currentTarget.releasePointerCapture(event.pointerId); } catch (_) { /* ignore */ }
+            const dragged = this.glossDragging;
+            this.glossArmed = false;
+            this.glossDragging = false;
+            if (dragged) {
+                this.$emit('move-gloss', {
+                    messageId: this.message.id,
+                    x: this.liveX,
+                    y: this.liveY,
+                });
+            }
         },
     },
 };
@@ -134,7 +205,7 @@ export const SlLessonPage = {
         topic: { type: Object, default: null },
         lesson: { type: Object, default: null },
     },
-    emits: ['back', 'send', 'start', 'end', 'open-card', 'notes', 'translate'],
+    emits: ['back', 'send', 'start', 'end', 'open-card', 'notes', 'translate', 'move-gloss'],
     data() {
         return { draft: '', showObjectives: false, warn: '' };
     },
@@ -245,6 +316,7 @@ export const SlLessonPage = {
                     :gloss-mode="glossMode"
                     @open-card="$emit('open-card', $event)"
                     @translate="$emit('translate', $event)"
+                    @move-gloss="$emit('move-gloss', $event)"
                 />
 
                 <SlLoading v-if="state.loading.reply" :lines="loadingLines" />

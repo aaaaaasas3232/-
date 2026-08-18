@@ -53,7 +53,20 @@ function skillSpec({ mode, allowPost = true, allowCode = false } = {}) {
 - \`texts\` 是**数组，一段一条，顺序和你正文里的空行分段一一对应**。
 - 你正文分了几段，这里就给几条，不能多也不能少。
 - 翻译要口语、地道，不要逐词直译。
-- 只有一段时也要写成数组：{"kind":"gloss","texts":["……"]}`);
+- 只有一段时也要写成数组：{"kind":"gloss","texts":["……"]}
+- **正文是给学生看的外文（或按浸没规则混写），gloss 只装中文。** 不要只输出 gloss 块、正文留空。
+- 围栏必须单独成行：先三个反引号和 starlit，换行，再写 JSON，最后单独一行三个反引号。
+  不要写成 \`starlit {"kind":"gloss"...}\` 这种（没有围栏、和 JSON 挤在一行）。
+
+完整样子：
+
+おはよう。今日は何を食べましたか。
+
+パンを食べました。
+
+\`\`\`starlit
+{"kind":"gloss","texts":["早上好。你今天吃了什么？","我吃了面包。"]}
+\`\`\``);
 
         lines.push(`### correct —— 批改学生刚才那句
 {"kind":"correct","original":"学生原话","fixed":"改对之后的写法","gloss":"学生那句话的中文意思","tip":"错在哪、为什么"}
@@ -323,6 +336,7 @@ export function buildLessonSystem(ctx = {}) {
 ## 语言模式的硬规矩
 ${immersionRule(topic, lesson)}
 - 每条回复都要附一个 gloss 块给中文翻译（学生看得到）。
+- 先写正文，再写围栏。不要只丢一个 gloss JSON、也不要把围栏名和 JSON 粘在一行。
 - 学生也要用目标语言跟你说。他要是用中文了，先温和地把他拽回来，
   再用 correct 块给出他那句中文对应的目标语说法。
 - 难度贴着他的水平走：他刚入门就用最简单的句子，别炫技。`

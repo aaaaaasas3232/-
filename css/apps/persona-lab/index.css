@@ -1241,6 +1241,10 @@
     flex-shrink: 0;
 }
 
+.app-shell[data-app-id="persona-lab"] .pl-lib-hero-actions .pl-btn[data-variant="ghost"] {
+    color: var(--pl-primary);
+}
+
 .app-shell[data-app-id="persona-lab"] .pl-lib-hero h1 {
     flex: 1;
     min-width: 0;
@@ -1602,20 +1606,32 @@
 
 .app-shell[data-app-id="persona-lab"] .pl-quiz-options::-webkit-scrollbar { display: none; }
 
+/* ★ 选项是给**她**挑的,不是给用户点的。所以这里没有 cursor、没有 :active ——
+   看起来就不该像按钮。她答完之后,落到的那一项才亮起来。 */
 .app-shell[data-app-id="persona-lab"] .pl-quiz-opt {
     flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     padding: 5px 11px;
-    border: 1px solid var(--pl-primary-line);
+    border: 1px dashed var(--pl-border-strong);
     border-radius: 999px;
     background: var(--pl-surface);
-    color: var(--pl-text);
+    color: var(--pl-text-secondary);
     font-size: 12px;
-    font-family: inherit;
     white-space: nowrap;
-    cursor: pointer;
 }
 
-.app-shell[data-app-id="persona-lab"] .pl-quiz-opt:active { background: var(--pl-primary-soft); }
+.app-shell[data-app-id="persona-lab"] .pl-quiz-opt[data-picked="1"] {
+    border-style: solid;
+    border-color: var(--pl-primary-line);
+    background: var(--pl-primary-soft);
+    color: var(--pl-text);
+    font-weight: 500;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-quiz-opt .pl-icon { color: var(--pl-primary); }
+.app-shell[data-app-id="persona-lab"] .pl-quiz-opt svg { width: 12px; height: 12px; }
 
 .app-shell[data-app-id="persona-lab"] .pl-quiz-nav {
     display: flex;
@@ -1627,6 +1643,9 @@
     font-size: 10.5px;
     color: var(--pl-ok);
 }
+
+/* 答了但没落到任何一项 —— 是个中性事实,不是成功,别用绿色 */
+.app-shell[data-app-id="persona-lab"] .pl-quiz-answered[data-loose="1"] { color: var(--pl-text-tertiary); }
 
 /* ── 输入区 ──────────────────────────────── */
 /* ★ 底栏已经用 --app-safe-bottom 让过指示条了,这里不能再加一遍,
@@ -2012,6 +2031,75 @@
 }
 
 .app-shell[data-app-id="persona-lab"] .pl-quiz-set .pl-tag { align-self: flex-start; margin-top: 3px; }
+
+/* 抽屉里两段(内置 / 我导入的)之间靠 pl-sheet-body 的 gap 撑开,
+   分区标题自己那 10px 再加上去就太散了 */
+.app-shell[data-app-id="persona-lab"] .pl-sheet-body .pl-section-title { margin-bottom: 0; }
+
+/* 自定义题库多一个删除按钮:整行是「选题库 + 删」两块 */
+.app-shell[data-app-id="persona-lab"] .pl-quiz-set-row {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-quiz-set-row .pl-quiz-set {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-quiz-set-kill {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    border: 1px solid var(--pl-border);
+    border-radius: var(--pl-radius);
+    background: var(--pl-surface);
+    color: var(--pl-text-tertiary);
+    cursor: pointer;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-quiz-set-kill:active {
+    background: var(--pl-danger-soft);
+    color: var(--pl-danger);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-quiz-set-kill svg { width: 15px; height: 15px; }
+
+/* ── 题库导入 ────────────────────────────── */
+
+.app-shell[data-app-id="persona-lab"] .pl-quiz-import-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-quiz-import-actions .pl-btn,
+.app-shell[data-app-id="persona-lab"] .pl-sheet-body .pl-section-title .pl-btn[data-variant="ghost"] {
+    color: var(--pl-primary);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-quiz-import-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 11px 12px;
+    border: 1px solid var(--pl-border);
+    border-radius: var(--pl-radius);
+    background: var(--pl-surface-soft);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-quiz-import-head {
+    font-size: 11.5px;
+    color: var(--pl-text-secondary);
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-quiz-import-note {
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--pl-text-tertiary);
+}
 
 /**
  * 人设机 · 弹窗皮肤

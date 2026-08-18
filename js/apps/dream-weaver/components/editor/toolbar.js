@@ -20,6 +20,7 @@
 import * as store from '../../store.js';
 import { DwIcon } from '../shared.js';
 import { DwSwipeSelector } from './swipe-selector.js';
+import { wordRangeTier } from '../../constants.js';
 
 export const DwToolbar = {
     name: 'DwToolbar',
@@ -68,10 +69,7 @@ export const DwToolbar = {
         },
         /** 快捷设置里的「字数」是三档,不是具体数值 —— 照抄原版的映射 */
         wordCountTier() {
-            const max = this.settings.defaultWordRange.max;
-            if (max <= 500) return 'short';
-            if (max <= 1000) return 'medium';
-            return 'long';
+            return wordRangeTier(this.settings.defaultWordRange);
         },
     },
     methods: {
@@ -102,7 +100,7 @@ export const DwToolbar = {
             this.$emit('notify', next ? '流式生成已开启' : '流式生成已关闭');
         },
         onBranchManage() {
-            store.openModal('branch-manager', { bookId: this.book.id });
+            store.openModal('branch-manager', { bookId: this.book.id, chapterId: this.chapter?.id });
         },
         onInspirationClip() {
             store.openPage('inspirations');

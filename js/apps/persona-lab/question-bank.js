@@ -17,7 +17,7 @@
 
 /** @typedef {{ id:string, name:string, desc:string, kind:'fixed'|'ladder', questions?:string[], options?:string[][], pool?:string[], rounds?:number }} QuestionSet */
 
-export const QUESTION_SETS = Object.freeze([
+export const BUILTIN_SETS = Object.freeze([
     {
         id: 'mbti',
         name: '性格倾向',
@@ -215,8 +215,40 @@ export const QUESTION_SETS = Object.freeze([
     },
 ]);
 
+// ============================================================
+// 自定义题库
+// ============================================================
+
+/**
+ * 用户导入的题库。
+ *
+ * ★ 真相在 IndexedDB 的 `plQuizSets`,这里只是一份**运行时副本** ——
+ *   `getQuestion` / `countQuestions` 被 store、工作台、prompt 三处调用,
+ *   要是每处都自己去查一遍库,就会出现「抽屉里删了但正在做的那套还在」。
+ *   store 是唯一往这里写的人(hydrate 和每次增删之后各同步一次)。
+ */
+let CUSTOM_SETS = [];
+
+export function registerCustomSets(list) {
+    CUSTOM_SETS = (Array.isArray(list) ? list : []).filter((s) => s && s.id);
+}
+
+export function listCustomSets() {
+    return CUSTOM_SETS;
+}
+
+/** 内置 + 自定义。挑题库的地方一律用它。 */
+export function listSets() {
+    return [...BUILTIN_SETS, ...CUSTOM_SETS];
+}
+
+export function isBuiltinSet(setId) {
+    return BUILTIN_SETS.some((s) => s.id === setId);
+}
+
 export function getSet(setId) {
-    return QUESTION_SETS.find((s) => s.id === setId) || null;
+    if (!setId) return null;
+    return listSets().find((s) => s.id === setId) || null;
 }
 
 /**
@@ -227,47 +259,184 @@ export function getSet(setId) {
  *
  * @param {string} setId
  * @param {number} index
- * @param {Record<number,string>} answers 已作答记录,擂台赛靠它算擂主
+ * @param {Record<number,string>} picks 各轮**落到的选项原文**,擂台赛靠它算擂主
+ *   (★ 不是她回答的原话 —— 原话是"我大概更愿意是猫吧",永远等不上池子里的"猫",
+ *    以前传的就是原话,于是擂主永远是池子第一个,整套擂台赛是死的)
  * @returns {{ question:string, options:string[], total:number, setName:string }|null}
  */
-export function getQuestion(setId, index, answers = {}) {
+export function getQuestion(setId, index, picks = {}) {
     const set = getSet(setId);
     if (!set) return null;
 
     if (set.kind === 'fixed') {
-        if (index < 0 || index >= set.questions.length) return null;
+        const questions = Array.isArray(set.questions) ? set.questions : [];
+        if (index < 0 || index >= questions.length) return null;
         return {
-            question: set.questions[index],
+            question: questions[index],
             options: set.options?.[index] || [],
-            total: set.questions.length,
+            total: questions.length,
             setName: set.name,
         };
     }
 
     // ladder
-    const total = Math.min(set.rounds, Math.max(0, set.pool.length - 1));
+    const pool = Array.isArray(set.pool) ? set.pool : [];
+    const total = Math.min(set.rounds || 0, Math.max(0, pool.length - 1));
     if (index < 0 || index >= total) return null;
 
-    let champion = set.pool[0];
+    let champion = pool[0];
     for (let i = 0; i < index; i += 1) {
-        const challenger = set.pool[i + 1];
-        const picked = answers[i];
+        const challenger = pool[i + 1];
+        const picked = picks?.[i];
         // 没答过的轮次:擂主留任。这样「跳着答」也不会让后面的对阵变成 undefined
         champion = picked === challenger ? challenger : champion;
     }
     return {
         question: index === 0 ? set.prompt : `${set.prompt}（第 ${index + 1} 轮）`,
-        options: [champion, set.pool[index + 1]],
+        options: [champion, pool[index + 1]],
         total,
         setName: set.name,
     };
+}
+
+// ============================================================
+// 把「她的回答」落到某个选项
+// ============================================================
+
+/** 比对用的归一化:去空白、去标点、大小写归一。选项和回答走同一套。 */
+function normalizeForMatch(raw) {
+    return String(raw ?? '')
+        .toLowerCase()
+        .replace(/\s+/g, '')
+        .replace(/[，。！？、；：""''「」『』（）()【】\[\]…·~—\-.,!?;:"']/g, '');
+}
+
+function toHalfDigit(ch) {
+    return String(ch ?? '').replace(/[１-９]/, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0));
+}
+
+function toLatinLetter(ch) {
+    return String(ch ?? '').replace(/[Ａ-Ｈ]/, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)).toUpperCase();
+}
+
+/** 「2」「B」这类记号 → 0-based 下标;认不出返回 -1 */
+function tokenToIndex(token) {
+    const digit = '123456789'.indexOf(toHalfDigit(token));
+    if (digit >= 0) return digit;
+    return 'ABCDEFGH'.indexOf(toLatinLetter(token));
+}
+
+/** 「2.」「B、」「②」这类开头的序号 → 0-based 下标;认不出返回 -1 */
+function markerIndex(reply) {
+    const head = String(reply ?? '').trim().slice(0, 4);
+    const digit = head.match(/^[(（]?([1-9１-９])[.、．:：)）]/);
+    if (digit) return tokenToIndex(digit[1]);
+    const letter = head.match(/^[(（]?([A-Ha-hＡ-Ｈ])[.、．:：)）]/);
+    if (letter) return tokenToIndex(letter[1]);
+    const circled = '①②③④⑤⑥⑦⑧'.indexOf(head[0]);
+    return circled;
+}
+
+/** 「我选第 3 个」「选 B」这类埋在句中的序号。多处命中取最后一次。 */
+function embeddedMarkerIndex(reply, optionCount) {
+    const raw = String(reply ?? '');
+    const patterns = [
+        /第\s*([1-9１-９A-Ha-hＡ-Ｈ])\s*[个项题选]/g,
+        /选(?:择)?(?:了|的是)?\s*第?\s*([1-9１-９A-Ha-hＡ-Ｈ])/g,
+        /选项\s*([1-9１-９A-Ha-hＡ-Ｈ])/g,
+        /([1-9１-９])\s*[号项]/g,
+    ];
+    let last = -1;
+    patterns.forEach((re) => {
+        let m = re.exec(raw);
+        while (m) {
+            const idx = tokenToIndex(m[1]);
+            if (idx >= 0 && idx < optionCount) last = idx;
+            m = re.exec(raw);
+        }
+    });
+    return last;
+}
+
+/** 选项按逗号拆开:「很主动，喜欢认识新的人」里只回了「很主动」也算落上。 */
+function optionFragments(opt) {
+    return String(opt ?? '')
+        .split(/[，,、；;／/]/)
+        .map((part) => normalizeForMatch(part))
+        .filter((part) => part.length >= 2);
+}
+
+/**
+ * 她这段回答落到了哪个选项。
+ *
+ * ★ 这是纯本地判定,不调 AI。题是选择题:只要她开口了,就必须落到一项。
+ *   空回答 / 没有选项才回 -1。
+ *
+ * 顺序:整句就是选项 → 开头写了序号 → 句中写了「第 N 个」→ 选项(或半句)
+ * 在回答里出现过 → 字面重合度最高的那项。多个选项都出现时取**最后出现**
+ * 的那个:中文习惯是"比起狗，她更愿意是猫",结论在后面。
+ *
+ * @returns {number} 0-based 下标,没答或没有选项时返回 -1
+ */
+export function matchOption(reply, options) {
+    const list = Array.isArray(options) ? options : [];
+    const raw = String(reply ?? '').trim();
+    if (!raw || !list.length) return -1;
+
+    const flat = normalizeForMatch(raw);
+    if (!flat) return -1;
+
+    const normalized = list.map(normalizeForMatch);
+
+    const exact = normalized.findIndex((opt) => opt && opt === flat);
+    if (exact >= 0) return exact;
+
+    const marked = markerIndex(raw);
+    if (marked >= 0 && marked < list.length) return marked;
+
+    const embedded = embeddedMarkerIndex(raw, list.length);
+    if (embedded >= 0) return embedded;
+
+    let hit = -1;
+    let hitAt = -1;
+    let hitLen = 0;
+    list.forEach((opt, i) => {
+        const parts = [normalized[i], ...optionFragments(opt)].filter(Boolean);
+        parts.forEach((part) => {
+            const at = flat.lastIndexOf(part);
+            if (at < 0) return;
+            if (at > hitAt || (at === hitAt && part.length > hitLen)) {
+                hit = i;
+                hitAt = at;
+                hitLen = part.length;
+            }
+        });
+    });
+    if (hit >= 0) return hit;
+
+    // 兜底:字面重合度。选项被改写过(「很主动」→「挺主动的」)时还能落上。
+    // 答了就必须选一项,不再设门槛把结果丢掉。
+    let best = -1;
+    let bestScore = -1;
+    normalized.forEach((opt, i) => {
+        if (!opt) return;
+        const uniq = [...new Set(opt)];
+        const shared = uniq.filter((ch) => flat.includes(ch)).length;
+        const score = shared / uniq.length;
+        if (score > bestScore) {
+            bestScore = score;
+            best = i;
+        }
+    });
+    if (best >= 0) return best;
+    return list.findIndex((opt) => String(opt ?? '').trim());
 }
 
 /** 这个题库一共几题 */
 export function countQuestions(setId) {
     const set = getSet(setId);
     if (!set) return 0;
-    return set.kind === 'fixed'
-        ? set.questions.length
-        : Math.min(set.rounds, Math.max(0, set.pool.length - 1));
+    if (set.kind === 'fixed') return Array.isArray(set.questions) ? set.questions.length : 0;
+    const pool = Array.isArray(set.pool) ? set.pool : [];
+    return Math.min(set.rounds || 0, Math.max(0, pool.length - 1));
 }

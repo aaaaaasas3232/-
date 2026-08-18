@@ -62,7 +62,7 @@ import { renderNewChatPage, renderNewChatPageAsync, getWorldAiPersons } from './
 import { renderNewGroupPage, renderNewGroupPageAsync } from './pages/new-group-page.js';
 import { renderCallRecordDetailPage } from './pages/call-record-detail-page.js';
 import { renderChatPostPage } from './pages/chat-post-page.js';
-import { DEFAULT_AI_AVATAR_BG, DEFAULT_USER_AVATAR_BG, resolveAiAvatar } from './aiMeta.js';
+import { DEFAULT_AI_AVATAR_BG, DEFAULT_USER_AVATAR_BG, resolveAiAvatar, prefetchAllAvatars } from './aiMeta.js';
 import { renderCalendarViewPage, renderCalendarDayPanel, groupMessagesByDate } from './pages/calendar-view-page.js';
 import { renderStoryManagementPage } from './pages/story-management-page.js';
 import { renderHistoryPage } from './pages/history-page.js'; // ★ v0.61.3 历史消息页(v0.65 已替换为 memory-history-page)
@@ -73,12 +73,16 @@ import { renderMemoryHistoryPage } from './pages/memory-history-page.js'; // ★
 import { callAiAndSplit, recomputeContextPreviewAfterReroll, _resolveAiStickerFromHistory } from './services/ai-service.js';
 // 「对方正在输入中」：发消息给 AI 的反馈长在聊天页顶栏，不弹灵动岛
 import { beginTyping, endTyping, applyTypingToRoot } from './services/typing-indicator.js';
+import { getGroupSendAsId, setGroupSendAsId, resolveGroupWriteIdentity } from './services/group-send-identity.js';
 import {
     buildUserPersonaContextText,
     buildAiPersonaContextText,
     defaultReplyNote,
     refreshContextPreview,
 } from './pages/prompt-manager-page.js';
+// 回复提示词的整组 / 卡片开关。prompt-manager 画状态、ai-service 发送时查,都读这一份。
+import { makeOwnerKey, toggleGroupEnabled, toggleCardEnabled } from './services/prompt-toggles.js';
+import { applyPromptFolds, installPromptFoldGuards } from './services/prompt-fold-state.js';
 import { renderFavoritesPage } from './pages/favorites-page.js';
 import { renderGameSelectorPage } from './pages/game-selector-page.js';
 import { renderGameLeaderboardPage, setLeaderboardTab } from './pages/game-leaderboard-page.js';
@@ -100,8 +104,6 @@ import { chatModalManager, DESC_IMAGE_PRESETS } from './components/chat-modal-re
 import './components/moment-share-modal.js'; // 朋友圈分享弹窗
 import { _getCurrentSummaryEditInstance } from './components/summary-edit-modal.js';
 import { externalAppRegistry } from '@/src/core/app-registry.js';
-// 当前上下文 pre 由 prompt-manager 生成；发送链路只读取同一份文本。
-import { readContextPreview } from './services/context-preview.js';
 // 「聊天回合」的唯一口径：1 回合 = 用户说一次 + AI 回一次
 import { takeRecentRounds, buildContextRoundsHeading } from './services/context-rounds.js';
 import { installKChainBridge, countPending as countKChainPending } from './services/k-chain-service.js';
@@ -674,6 +676,7 @@ if (typeof window !== 'undefined') {
                 }
                 targetTop = Math.max(0, Math.min(targetTop, Math.max(0, el.scrollHeight - el.clientHeight)));
                 el.scrollTop = targetTop;
+                try { applyPromptFolds(el); } catch (_) { /* ignore */ }
             } catch (_) { /* ignore */ }
         };
         tryRestore();
@@ -689,6 +692,7 @@ if (typeof window !== 'undefined') {
         } catch (_) {}
         return String(s).replace(/[^a-zA-Z0-9_-]/g, '\\$&');
     }
+    try { installPromptFoldGuards(); } catch (_) { /* ignore */ }
     window.__chatScrollCapture = _findChatScroller;
     window.__chatScrollRestore = _restoreChatScroller;
     // ★ v0.61.8.11 终极方案:MutationObserver 监听 .app-detail-panel 子树变化,
@@ -1191,6 +1195,72 @@ function buildGroupPickerCandidates(opts) {
     return out;
 }
 
+function loadGroupChatEntry(sdk, user, groupId, mode) {
+    if (!sdk?.chatGroups?.get || !user || !groupId) return null;
+    const hit = sdk.chatGroups.get(user, groupId, mode);
+    if (hit) return hit;
+    for (const m of ['calendar', 'story']) {
+        const e = sdk.chatGroups.get(user, groupId, m);
+        if (e) return e;
+    }
+    return null;
+}
+
+/**
+ * 群聊工具栏用的成员列表（自定义身份 / @ / 转账）。
+ * 默认不置灰任何人；owner-picker 那套 disabled 在这里清掉。
+ */
+function listGroupActionCandidates(sdk, user, groupId, mode, opts = {}) {
+    const {
+        includeUser = true,
+        includeAll = false,
+        excludeUser = false,
+        currentAsId = '',
+    } = opts;
+    const entry = loadGroupChatEntry(sdk, user, groupId, mode);
+    const resolved = (sdk?.chatGroups?.resolveMembers && entry)
+        ? sdk.chatGroups.resolveMembers(sdk, user, entry)
+        : (entry?.members || []).map((id) => ({ id }));
+    let candidates = buildGroupPickerCandidates({
+        resolvedMembers: resolved,
+        defaultUser: user,
+        currentOwnerId: entry?.ownerId || user?.id,
+        adminIds: entry?.adminIds || [],
+        memberNicknames: entry?.memberNicknames || {},
+        filter: 'all',
+    }).map((c) => ({ ...c, disabled: false, disabledReason: '' }));
+    if (!includeUser || excludeUser) {
+        candidates = candidates.filter((c) => !c.isCurrentUser);
+    }
+    const asId = String(currentAsId || '');
+    const userId = String(user?.id || '');
+    if (asId || opts.markSelfCurrent) {
+        for (const c of candidates) {
+            const isCurrent = asId
+                ? String(c.id) === asId
+                : !!c.isCurrentUser || String(c.id) === userId;
+            if (isCurrent) {
+                c.tag = c.tag ? `${c.tag} · 当前` : '当前';
+            }
+        }
+    }
+    if (includeAll) {
+        candidates.unshift({
+            id: '__all__',
+            label: '所有人',
+            avatar: '',
+            avatarBg: '#A8C8EC',
+            initial: '@',
+            kind: 'all',
+            isCurrentUser: false,
+            tag: '通知全体成员',
+            disabled: false,
+            disabledReason: '',
+        });
+    }
+    return { entry, candidates };
+}
+
 /**
  * 启发式 AI 群昵称生成器
  *
@@ -1598,7 +1668,7 @@ murmur 接住的是你与人设之间持续生长的关系。私聊也好，群�
             } else if (pageId.startsWith('private-')) {
                 // ★ v0.28 路由:private-{aiPersonId}-{mode} → 私聊详情页
                 //   完整 contactId 传给 renderPrivateChatPage,内部解析 aiPersonId + mode
-                html = renderPrivateChatPage(app, pageId);
+                html = await renderPrivateChatPage(app, pageId);
                 // ★ v0.61.3:实时计算「当前聊天回合」prompt 文本(只 contextRounds,无 K 链)
                 //   - 写入 app.state.chat.contextRoundsMap[aiPersonId] = { rounds, content, lastUpdated }
                 //   - 用途:prompt-manager「当前聊天回合」卡片 + 计算 realtime context prompt
@@ -2115,6 +2185,79 @@ murmur 接住的是你与人设之间持续生长的关系。私聊也好，群�
                     window.__appRendererBridge?.syncNow?.({ force: true });
                 } catch (_) {}
                 return st;
+            },
+
+            /**
+             * 整组开关：一次关掉 / 打开「可用 Prompt」里某个折叠组下的全部内容。
+             *
+             * payload: { aiPersonId, source, isGroup?, groupId?, mode? }
+             *   source = 'nook' | 'murmur' | appId
+             *
+             * 语义是「总闸」而不是「批量改单卡」：关掉整组时组内每张卡自己的开关原样保留，
+             * 再打开时用户之前一张张调好的状态还在。过滤只发生在 prompt-manager 拼 pre
+             * 的那一处，以及 ai-service 追加实时块的那一处 —— 两边读的是同一张表。
+             */
+            togglePromptGroupInject(payload = {}) {
+                const aiPersonId = String(payload?.aiPersonId || '');
+                const source = String(payload?.source || '');
+                if (!aiPersonId || !source) return null;
+                const ownerKey = makeOwnerKey({
+                    aiPersonId,
+                    isGroup: payload?.isGroup === true,
+                    groupId: payload?.groupId || '',
+                });
+                const next = toggleGroupEnabled(ownerKey, source);
+                this._preserveScrollAroundTick();
+                this.toolkit?.island?.notify?.(
+                    'info',
+                    next ? '整组已启用' : '整组已关闭',
+                    `${source} → ${next ? '这一组会发给 AI' : '这一组一条都不发'}`,
+                );
+                try {
+                    if (typeof window.invalidateRendererCache === 'function') {
+                        window.invalidateRendererCache('chat', null);
+                    }
+                } catch (_) {}
+                try {
+                    window.__appRendererBridge?.syncNow?.({ force: true });
+                } catch (_) {}
+                return next;
+            },
+
+            /**
+             * 卡片开关（对话总则 + 四张实时卡）。
+             *
+             * payload: { aiPersonId, cardId, isGroup?, groupId?, mode? }
+             *
+             * 实时卡（一起听 / 四叶草 / 灯塔 / 日记）以前**没有开关**：一起听和日记只在
+             * 「当前上下文」露个脸，四叶草和灯塔连脸都不露，但每一轮都在往 prompt 里塞。
+             * 现在关掉之后 ai-service 只剪不拼，AI 是真的收不到。
+             */
+            togglePromptCardInject(payload = {}) {
+                const aiPersonId = String(payload?.aiPersonId || '');
+                const cardId = String(payload?.cardId || '');
+                if (!aiPersonId || !cardId) return null;
+                const ownerKey = makeOwnerKey({
+                    aiPersonId,
+                    isGroup: payload?.isGroup === true,
+                    groupId: payload?.groupId || '',
+                });
+                const next = toggleCardEnabled(ownerKey, cardId);
+                this._preserveScrollAroundTick();
+                this.toolkit?.island?.notify?.(
+                    'info',
+                    '已更新上下文',
+                    `${cardId} → ${next ? '已启用' : '已停用'}`,
+                );
+                try {
+                    if (typeof window.invalidateRendererCache === 'function') {
+                        window.invalidateRendererCache('chat', null);
+                    }
+                } catch (_) {}
+                try {
+                    window.__appRendererBridge?.syncNow?.({ force: true });
+                } catch (_) {}
+                return next;
             },
 
             /**
@@ -3461,6 +3604,12 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
                     }
                     const contactName = (() => {
                         try {
+                            if (payload.conversationType === 'group') {
+                                const g = sdk.chatGroups?.get?.(user, aiPersonId, targetMode)
+                                    || sdk.chatGroups?.get?.(user, aiPersonId, 'calendar')
+                                    || sdk.chatGroups?.get?.(user, aiPersonId, 'story');
+                                return g?.name || '群聊';
+                            }
                             const meta = window.aiMeta?.getAiMeta?.(aiPersonId, targetMode);
                             return meta?.name || aiPersonId;
                         } catch (_) { return aiPersonId; }
@@ -3472,11 +3621,15 @@ _setSystemPromptOverride(aiPersonId, kind, { note, position }) {
                     }, {
                         contactName,
                         messageType: target.type || 'text',
+                        sourceType: payload.conversationType === 'group' ? 'group' : 'private',
+                        conversationId: aiPersonId,
                     });
                     if (window.__chatFavoritedIds) {
                         window.__chatFavoritedIds.add(`${aiPersonId}|${targetMode}|${messageId}`);
                     }
-                    window.__detailRenderTick && window.__detailRenderTick.value++;
+                    if (!payload.silentRerender) {
+                        window.__detailRenderTick && window.__detailRenderTick.value++;
+                    }
                     this.toolkit?.island?.notify?.('success', '已收藏', contactName);
                 } catch (err) {
                     console.warn('[chat] favoriteMessage failed', err);
@@ -7023,7 +7176,8 @@ ${messages || '(无对话记录)'}
                 const lines = [buildContextRoundsHeading(picked.length, contextRounds)];
                 picked.forEach((round, i) => {
                     for (const m of round) {
-                        const sender = m.sender === 'ai' ? 'AI' : '用户';
+                        const sender = String(m.senderName || '').trim()
+                            || (m.sender === 'ai' ? 'AI' : (m.sender === 'user' ? '用户' : (m.sender || '?')));
                         const text = String(m.content || '').replace(/\s+/g, ' ').trim();
 
                         // ★ v0.61.8.11 特殊消息永远显示完整内容,不做「空 content 才显示」的判断
@@ -8213,11 +8367,15 @@ ${messages || '(无对话记录)'}
                     // 模拟图片卡片点击 — 显示图片描述详情
                     const descImageCard = event.target.closest('.desc-image-card');
                     if (descImageCard) {
+                        const { collectCardContext } = await import('./services/card-detail-actions.js');
                         const desc = descImageCard.dataset.desc || '';
                         const cardColor = descImageCard.dataset.color || '#FFE4EC';
                         const textColor = descImageCard.dataset.textColor || '#D4728A';
                         const borderColor = Object.values(DESC_IMAGE_PRESETS || {}).find(p => p.cardColor === cardColor)?.borderColor || '#C0607A';
-                        chatModalManager.openDescImage({ description: desc, cardColor, textColor, borderColor });
+                        chatModalManager.openDescImage({
+                            description: desc, cardColor, textColor, borderColor,
+                            context: collectCardContext(descImageCard),
+                        });
                         event.preventDefault();
                         event.stopPropagation();
                         return;
@@ -8226,6 +8384,7 @@ ${messages || '(无对话记录)'}
                     // 地点卡片点击 — 显示地点详情弹窗
                     const locationCard = event.target.closest('.location-card-in-chat');
                     if (locationCard) {
+                        const { collectCardContext } = await import('./services/card-detail-actions.js');
                         const name = locationCard.dataset.locationName || '位置';
                         const address = locationCard.dataset.locationAddress || '';
                         const mapEl = locationCard.querySelector('.location-card-map');
@@ -8234,7 +8393,10 @@ ${messages || '(无对话记录)'}
                             'linear-gradient(135deg, #E8F2FF, #D6E4FF)'
                         ) : 'linear-gradient(135deg, #E8F2FF, #D6E4FF)';
 
-                        chatModalManager.openLocationCard({ name, address, style: { bgGradient } });
+                        chatModalManager.openLocationCard({
+                            name, address, style: { bgGradient },
+                            context: collectCardContext(locationCard),
+                        });
                         event.preventDefault();
                         event.stopPropagation();
                         return;
@@ -8707,65 +8869,20 @@ ${messages || '(无对话记录)'}
                 //   私聊独有逻辑:_longPressInvokeAi(读 pre 文本 → 调 AI)作为 onLongPress 传入
                 if (sendBtn) {
                     const PRESS_THRESHOLD_MS = 800; // ★ v0.62.5 长按 0.8 秒触发(降低等待焦虑)
-                    // 长按空输入框时，读取 prompt-manager 已生成好的最终 pre。
-                    function _readPromptPreviewText() {
-                        const { aiPersonId: aid, mode: m } = parseContactId(chatPrivate.dataset.contactId);
-                        try {
-                            return readContextPreview({ aiPersonId: aid, mode: m }) || '';
-                        } catch (_) {
-                            return '';
-                        }
-                    }
-
-                    // ★ v0.62.8 长按触发 AI 回复(独立入口,不依赖 doSend)
-                    //   - 长按 + 有文本 → 什么也不做(用户原话:输入框有内容时长按无效)
-                    //   - 长按 + 空文本 → 读 pre 内容,作为 userText 调 AI 回复(不写盘)
-                    // ★ 2026-08-13:等待反馈从「挂一个胶囊灵动岛」改成「顶栏名字变成
-                    //   闪烁的『对方正在输入中』」。只有「没东西可发」和「调用失败」
-                    //   这两种**用户可能不在页面上**的情况还弹岛。
-                    const _self = this; // 箭头函数捕获 this,避免 onLongPress() 调用时丢 this
                     const _longPressInvokeAi = async () => {
                         const { aiPersonId, mode } = parseContactId(chatPrivate.dataset.contactId);
                         const inputText = (messageInput?.innerText || messageInput?.textContent || '').trim();
-                        if (inputText) return; // 输入框有内容 → 长按无效(用户偏好)
-                        const sendText = _readPromptPreviewText();
-                        const island = _self?.toolkit?.island;
-                        if (!sendText) {
-                            try {
-                                if (island?.showInfo) {
-                                    island.showInfo('mini', {
-                                        type: 'warning',
-                                        title: '无可发送内容',
-                                        message: '输入框为空且未生成预览',
-                                        lifecycle: 'time',
-                                        duration: 2500,
-                                        maxSize: 'mini',
-                                        ownerId: 'chat-longpress-ai',
-                                    });
-                                } else {
-                                    window.__phoneIsland?.notify?.('warning', '无可发送内容', '输入框为空且未生成预览');
-                                }
-                            } catch (_) {}
-                            return;
-                        }
+                        const apiText = inputText || '（请根据当前对话上下文接着回复）';
 
-                        // ★ 1) 反馈长在聊天页顶栏：名字变成闪烁的「对方正在输入中」。
-                        //   以前这里挂的是一个 lifecycle:'manual' 的胶囊灵动岛。问题有两个：
-                        //     · 用户明明正盯着聊天页，再弹个岛属于重复告知；
-                        //     · 那个岛会把音乐/通话这类常驻岛顶掉（AGENTS2 §1.3）。
-                        //   现在改成 typing 状态：切出 murmur 再切回来会自动重放，
-                        //   直到 AI 消息真的被渲染出来才摘掉。
                         beginTyping('private', aiPersonId);
-
-                        // ★ 2) 调 AI（typing 挂着，不阻塞用户切页）
                         try {
+                            if (inputText) await doSend();
                             const inst = externalAppRegistry?.getApp?.('chat') || window.__chatAppSingleton;
                             if (inst?.methods?.sendMessageWithAi) {
-                                // silentIsland:true → sendMessageWithAi 内部的 notify 全部跳过
                                 await inst.methods.sendMessageWithAi({
                                     aiPersonId,
                                     mode,
-                                    text: sendText,
+                                    text: apiText,
                                     silentIsland: true,
                                 });
                             } else {
@@ -8774,10 +8891,8 @@ ${messages || '(无对话记录)'}
                             }
                         } catch (aiErr) {
                             console.warn('[chat-app] sendMessageWithAi invoke failed', aiErr);
-                            // 失败必须弹岛：typing 一摘就什么都不剩了，用户会以为消息发丢了
                             window.__phoneIsland?.notify?.('error', 'AI 调用失败', aiErr?.message || '');
                         } finally {
-                            // 不管成功失败都要摘掉，否则会留一个永远转不完的「正在输入中」
                             endTyping('private', aiPersonId);
                         }
                     };
@@ -11792,6 +11907,13 @@ async deleteReplyPrompt(payload = {}) {
                 const messagesContainer = chatGroup.querySelector('.chat-messages');
                 const groupId = chatGroup.dataset.conversationId || chatGroup.dataset.groupId || '';
                 const mode = chatGroup.dataset.mode || 'calendar';
+                const refreshGroupChat = () => {
+                    const gid = chatGroup.dataset.groupId || groupId || '';
+                    // pageId 是 group-${id}，只传裸 id 清不到缓存
+                    try { window.invalidateRendererCache?.('chat', `group-${gid}`); } catch (_) {}
+                    try { window.invalidateRendererCache?.('chat', gid); } catch (_) {}
+                    try { window.__appRendererBridge?.syncNow?.({ force: true }); } catch (_) {}
+                };
 
                 // ★ v0.70:抽到 components/chat-sender-profile.js
                 const { resolveSenderProfile } = await import('./components/chat-sender-profile.js');
@@ -11836,9 +11958,11 @@ async deleteReplyPrompt(payload = {}) {
                         }
                     } catch (_) {}
 
+                    const ident = resolveGroupWriteIdentity(sdk, sender, groupId, mode, senderName);
                     const msg = {
-                        sender: 'user',
-                        senderName,
+                        sender: ident.sender,
+                        senderName: ident.senderName,
+                        senderId: ident.senderId,
                         type: 'text',
                         content: text,
                         timestamp: Date.now(),
@@ -11853,11 +11977,10 @@ async deleteReplyPrompt(payload = {}) {
                         });
                         if (!saved) {
                             window.__phoneIsland?.notify?.('error', '发送失败', '请重试');
-                            return;
+                            return null;
                         }
                         // 清 renderer 缓存 + syncNow
-                        try { window.invalidateRendererCache?.('chat', chatGroup.dataset.groupId); } catch (_) {}
-                        try { window.__appRendererBridge?.syncNow?.({ force: true }); } catch (_) {}
+                        refreshGroupChat();
 
                         // ★ v0.62 群聊 lastMessage(消息列表页预览)
                         try {
@@ -11865,7 +11988,7 @@ async deleteReplyPrompt(payload = {}) {
                                 await sdk.chatGroups.updateLastMessage(sdk, sender, groupId, mode, {
                                     content: text,
                                     timestamp: saved.timestamp,
-                                    senderName,
+                                    senderName: ident.senderName,
                                     type: 'text',
                                 });
                             }
@@ -11881,30 +12004,45 @@ async deleteReplyPrompt(payload = {}) {
                                 detail: { groupId, mode, message: saved },
                             }));
                         } catch (_) {}
+                        return saved;
                     } catch (err) {
                         console.warn('[chat-app] group send text failed:', err);
                         window.__phoneIsland?.notify?.('error', '发送失败', err?.message || '请重试');
+                        return null;
                     }
                 };
 
-                // ★ v0.62 群聊页发送按钮也改造:长按→调 AI,短按→只发文字
-                //   ★ v0.70:startPress/endPress/Enter 监听抽到 components/chat-press-sender.js
-                //     群聊没有真正的 AI 长按(_longPressInvokeAi),仅 doSend + 「AI 暂未支持」提示
+                // 短按有字只发字；没字或长按都调 API。没字不写空气泡。
                 if (sendBtn) {
-                    const PRESS_THRESHOLD_MS = 800; // 群聊比私聊短
+                    const PRESS_THRESHOLD_MS = 800;
                     const { bindEnterToSend, bindPressToSend } = createChatSendHandlers({
                         sendBtn,
                         messageInput,
                         threshold: PRESS_THRESHOLD_MS,
-                        requireTextOnStart: true, // 群聊:输入框为空时不启动长按
+                        requireTextOnStart: false,
                         doSend,
                         onLongPress: async () => {
-                            // 群聊的 aiPersonId 不存在,sendMessageWithAi 不适用于群聊
-                            // 这里仅 doSend + 提示,实际 AI 调用留给 v0.63 群聊版本
-                            await doSend();
+                            const text = (messageInput?.innerText || messageInput?.textContent || '').trim();
+                            beginTyping('group', groupId);
                             try {
-                                window.__phoneIsland?.notify?.('info', '群聊 AI 对话', '暂未支持');
-                            } catch (_) {}
+                                if (text) {
+                                    const saved = await doSend();
+                                    if (!saved) return;
+                                }
+                                const inst = externalAppRegistry?.getApp?.('chat') || window.__chatAppSingleton;
+                                if (inst?.methods?.sendGroupMessageWithAi) {
+                                    await inst.methods.sendGroupMessageWithAi({
+                                        groupId, mode, text, silentIsland: true,
+                                    });
+                                } else {
+                                    window.__phoneIsland?.notify?.('error', '群聊 AI 入口未找到');
+                                }
+                            } catch (err) {
+                                console.warn('[chat-app] group long-press AI failed', err);
+                                window.__phoneIsland?.notify?.('error', 'AI 调用失败', err?.message || '');
+                            } finally {
+                                endTyping('group', groupId);
+                            }
                         },
                     });
                     bindEnterToSend();
@@ -11912,8 +12050,7 @@ async deleteReplyPrompt(payload = {}) {
                 }
 
                 /**
-                 * ★ v0.62 群聊工具栏处理器(image / voice / location / redpacket / transfer /
-                 *   mention / announcement / members / favorite / game)
+                 * 群聊工具栏：图片 / 语音 / 自定义 / 位置 / 红包 / 转账 / @成员 / 公告 / 成员 / 收藏
                  */
                 const handleGroupToolBar = async (action) => {
                     const sdk = window.settingsSdk;
@@ -11921,13 +12058,50 @@ async deleteReplyPrompt(payload = {}) {
                         window.__phoneIsland?.notify?.('error', 'SDK 未就绪');
                         return;
                     }
-                    // ★ v0.70:从 chat-sender-profile.js 拿 sender + senderName + avatar
                     const senderInfo = _resolveSenderInfo();
                     if (!senderInfo.sender) {
                         window.__phoneIsland?.notify?.('error', '未找到默认用户');
                         return;
                     }
                     const { sender, senderName, userAvatar, userAvatarBg } = senderInfo;
+                    const ident = resolveGroupWriteIdentity(sdk, sender, groupId, mode, senderName);
+                    const withIdent = (fields = {}) => ({
+                        ...fields,
+                        sender: ident.sender,
+                        senderName: ident.senderName,
+                        senderId: ident.senderId,
+                    });
+                    const updateGroupLast = async (content, type) => {
+                        try {
+                            if (sdk.chatGroups?.updateLastMessage) {
+                                await sdk.chatGroups.updateLastMessage(sdk, sender, groupId, mode, {
+                                    content, timestamp: Date.now(), senderName: ident.senderName, type,
+                                });
+                            }
+                        } catch (_) {}
+                    };
+                    const pickGroupMember = (pickerOpts = {}) => new Promise((resolve) => {
+                        const { candidates } = listGroupActionCandidates(sdk, sender, groupId, mode, {
+                            includeUser: pickerOpts.includeUser !== false,
+                            includeAll: !!pickerOpts.includeAll,
+                            excludeUser: !!pickerOpts.excludeUser,
+                            currentAsId: pickerOpts.markCurrentAs ? getGroupSendAsId(groupId, mode) : '',
+                            markSelfCurrent: !!pickerOpts.markCurrentAs && !getGroupSendAsId(groupId, mode),
+                        });
+                        if (!candidates.length) {
+                            window.__phoneIsland?.notify?.('warning', pickerOpts.emptyText || '没有可选成员');
+                            resolve(null);
+                            return;
+                        }
+                        chatModalManager.openGroupMemberPicker({
+                            title: pickerOpts.title || '选择成员',
+                            subtitle: pickerOpts.subtitle || '',
+                            confirmLabel: pickerOpts.confirmLabel || '确认',
+                            candidates,
+                            onPick: (member) => resolve(member || null),
+                            onClose: () => resolve(null),
+                        });
+                    });
 
                     if (action === 'image') {
                         chatModalManager.openDescImageSend({
@@ -11935,8 +12109,8 @@ async deleteReplyPrompt(payload = {}) {
                                 const now = Date.now();
                                 const msgId = `img-${now}`;
                                 try {
-                                    await sdk.chatMessages.add(sender, groupId, mode, {
-                                        id: msgId, sender: 'user', senderName,
+                                    await sdk.chatMessages.add(sender, groupId, mode, withIdent({
+                                        id: msgId,
                                         conversationType: 'group', conversationId: groupId,
                                         type: 'descriptive_image',
                                         content: result.description,
@@ -11944,16 +12118,42 @@ async deleteReplyPrompt(payload = {}) {
                                         cardColor: result.cardColor,
                                         textColor: result.textColor,
                                         timestamp: now,
-                                    });
+                                    }));
                                 } catch (err) { console.warn('[chat-app] group save image failed', err); }
-                                try { window.invalidateRendererCache?.('chat', chatGroup.dataset.groupId); } catch (_) {}
-                                try { window.__appRendererBridge?.syncNow?.({ force: true }); } catch (_) {}
                                 try {
-                                    if (sdk.chatGroups?.updateLastMessage) {
-                                        await sdk.chatGroups.updateLastMessage(sdk, sender, groupId, mode, {
-                                            content: '[图片]', timestamp: now, senderName, type: 'descriptive_image',
+                                    if (messagesContainer) {
+                                        const { renderDescImageBubble } = await import('./components/card-messages.js');
+                                        const injectMsg = withIdent({
+                                            id: msgId,
+                                            type: 'descriptive_image',
+                                            content: result.description,
+                                            imageDescription: result.description,
+                                            cardColor: result.cardColor,
+                                            textColor: result.textColor,
+                                            timestamp: now,
+                                            time: new Date(now).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+                                            conversationType: 'group',
+                                            conversationId: groupId,
                                         });
+                                        const html = renderDescImageBubble(injectMsg, {
+                                            name: senderName,
+                                            avatar: userAvatar,
+                                            avatarBg: userAvatarBg,
+                                        }, {
+                                            userAvatar, userAvatarBg,
+                                            aiPersonId: groupId,
+                                            mode,
+                                            conversationType: 'group',
+                                            isGroup: true,
+                                            showSendToAi: true,
+                                        });
+                                        messagesContainer.insertAdjacentHTML('beforeend', html);
+                                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
                                     }
+                                } catch (err) { console.warn('[chat-app] group inject image failed', err); }
+                                refreshGroupChat();
+                                try {
+                                    await updateGroupLast('[图片]', 'descriptive_image');
                                 } catch (e) {}
                                 window.__phoneIsland?.notify?.('success', '图片已发送');
                             },
@@ -11963,8 +12163,8 @@ async deleteReplyPrompt(payload = {}) {
                             onConfirm: async (result) => {
                                 const now = Date.now();
                                 try {
-                                    await sdk.chatMessages.add(sender, groupId, mode, {
-                                        id: `voice-${now}`, sender: 'user', senderName,
+                                    await sdk.chatMessages.add(sender, groupId, mode, withIdent({
+                                        id: `voice-${now}`,
                                         conversationType: 'group', conversationId: groupId,
                                         type: 'voice',
                                         content: '[语音消息]',
@@ -11972,16 +12172,11 @@ async deleteReplyPrompt(payload = {}) {
                                         voiceDuration: result.duration,
                                         duration: result.duration,
                                         timestamp: now,
-                                    });
+                                    }));
                                 } catch (err) { console.warn('[chat-app] group save voice failed', err); }
-                                try { window.invalidateRendererCache?.('chat', chatGroup.dataset.groupId); } catch (_) {}
-                                try { window.__appRendererBridge?.syncNow?.({ force: true }); } catch (_) {}
+                                refreshGroupChat();
                                 try {
-                                    if (sdk.chatGroups?.updateLastMessage) {
-                                        await sdk.chatGroups.updateLastMessage(sdk, sender, groupId, mode, {
-                                            content: '[语音]', timestamp: now, senderName, type: 'voice',
-                                        });
-                                    }
+                                    await updateGroupLast('[语音]', 'voice');
                                 } catch (e) {}
                                 window.__phoneIsland?.notify?.('success', '语音已发送', `${result.duration}秒`);
                             },
@@ -11991,8 +12186,8 @@ async deleteReplyPrompt(payload = {}) {
                             onSelect: async (locationData) => {
                                 const now = Date.now();
                                 try {
-                                    await sdk.chatMessages.add(sender, groupId, mode, {
-                                        id: `loc-${now}`, sender: 'user', senderName,
+                                    await sdk.chatMessages.add(sender, groupId, mode, withIdent({
+                                        id: `loc-${now}`,
                                         conversationType: 'group', conversationId: groupId,
                                         type: 'location', content: '[位置]',
                                         locationCard: {
@@ -12001,16 +12196,11 @@ async deleteReplyPrompt(payload = {}) {
                                             position: { x: locationData.position?.x ?? 0, y: locationData.position?.y ?? 0 },
                                         },
                                         timestamp: now,
-                                    });
+                                    }));
                                 } catch (err) { console.warn('[chat-app] group save location failed', err); }
-                                try { window.invalidateRendererCache?.('chat', chatGroup.dataset.groupId); } catch (_) {}
-                                try { window.__appRendererBridge?.syncNow?.({ force: true }); } catch (_) {}
+                                refreshGroupChat();
                                 try {
-                                    if (sdk.chatGroups?.updateLastMessage) {
-                                        await sdk.chatGroups.updateLastMessage(sdk, sender, groupId, mode, {
-                                            content: '[位置]', timestamp: now, senderName, type: 'location',
-                                        });
-                                    }
+                                    await updateGroupLast('[位置]', 'location');
                                 } catch (e) {}
                                 window.__phoneIsland?.notify?.('success', '位置已发送', locationData.name);
                             },
@@ -12021,77 +12211,104 @@ async deleteReplyPrompt(payload = {}) {
                             onConfirm: async (result) => {
                                 const now = Date.now();
                                 try {
-                                    await sdk.chatMessages.add(sender, groupId, mode, {
-                                        id: `rp-${now}`, sender: 'user', senderName,
+                                    await sdk.chatMessages.add(sender, groupId, mode, withIdent({
+                                        id: `rp-${now}`,
                                         conversationType: 'group', conversationId: groupId,
                                         type: 'redpacket', content: '[红包]',
                                         redpacketCard: { style: 'normal', message: result.message || '', opened: false },
                                         timestamp: now,
-                                    });
+                                    }));
                                 } catch (err) { console.warn('[chat-app] group save redpacket failed', err); }
-                                try { window.invalidateRendererCache?.('chat', chatGroup.dataset.groupId); } catch (_) {}
-                                try { window.__appRendererBridge?.syncNow?.({ force: true }); } catch (_) {}
+                                refreshGroupChat();
                                 window.__phoneIsland?.notify?.('success', '红包已发送');
                             },
                         });
                     } else if (action === 'transfer') {
+                        const toMember = await pickGroupMember({
+                            title: '转账给谁',
+                            subtitle: '选择要转给的群成员',
+                            confirmLabel: '下一步',
+                            excludeUser: true,
+                            emptyText: '没有可转账的成员',
+                        });
+                        if (!toMember) return;
                         chatModalManager.openTransferSend({
+                            title: `转账给 ${toMember.label}`,
                             onConfirm: async (result) => {
                                 const now = Date.now();
+                                const msgId = `tr-${now}`;
+                                const amount = Number(result.amount) || 0;
+                                const note = result.note || '转账';
                                 try {
-                                    await sdk.chatMessages.add(sender, groupId, mode, {
-                                        id: `tr-${now}`, sender: 'user', senderName,
+                                    const uid = sender.id;
+                                    const bal = sdk.assetFlow?.getBalance?.('user', uid) || 0;
+                                    if (bal < amount) {
+                                        window.__phoneIsland?.notify?.('warning', '余额不足', `当前余额不足，无法转账`);
+                                        return;
+                                    }
+                                    const flowRes = await sdk.assetFlow?.add?.({
+                                        type: 'transfer',
+                                        direction: 'out',
+                                        amount,
+                                        counterpartyType: toMember.kind === 'user' ? 'user' : 'ai',
+                                        counterpartyId: toMember.id,
+                                        counterpartyName: toMember.label,
+                                        sourceType: 'transfer',
+                                        sourceId: msgId,
+                                        note: `群转账给 ${toMember.label}:${note}`,
+                                    }, 'user', uid);
+                                    if (flowRes && flowRes.ok === false) {
+                                        window.__phoneIsland?.notify?.(
+                                            'warning',
+                                            flowRes.insufficientBalance ? '余额不足' : '转账失败',
+                                            flowRes.error || '',
+                                        );
+                                        return;
+                                    }
+                                    await sdk.chatMessages.add(sender, groupId, mode, withIdent({
+                                        id: msgId,
                                         conversationType: 'group', conversationId: groupId,
                                         type: 'transfer', content: '[转账]',
-                                        transferCard: { amount: result.amount || 0, note: result.note || '', received: false },
+                                        transferCard: {
+                                            amount,
+                                            note,
+                                            received: false,
+                                            toId: toMember.id,
+                                            toName: toMember.label,
+                                        },
                                         timestamp: now,
-                                    });
+                                    }));
                                 } catch (err) { console.warn('[chat-app] group save transfer failed', err); }
-                                try { window.invalidateRendererCache?.('chat', chatGroup.dataset.groupId); } catch (_) {}
-                                try { window.__appRendererBridge?.syncNow?.({ force: true }); } catch (_) {}
-                                window.__phoneIsland?.notify?.('success', '转账已发送');
+                                refreshGroupChat();
+                                window.__phoneIsland?.notify?.('success', '转账已发送', `给 ${toMember.label}`);
                             },
                         });
                     } else if (action === 'mention') {
-                        // ★ v0.62 @成员:从 chatGroup 解析成员列表
                         try {
-                            const { getMemberMeta } = await import('./pages/chat-group-page.js');
-                            let memberOptions = [];
-                            if (sdk.chatGroups?.resolveMembers) {
-                                const real = sdk.chatGroups.get?.(sender, groupId, mode);
-                                if (real) memberOptions = sdk.chatGroups.resolveMembers(sdk, sender, real);
-                            }
-                            const options = memberOptions.map((m) => {
-                                const id = m.id || m.aiPersonId;
-                                const meta = getMemberMeta(id, memberOptions);
-                                return { id, label: meta.nickname || id };
+                            const chosen = await pickGroupMember({
+                                title: '选择要@的成员',
+                                subtitle: '点选后会插入到输入框',
+                                confirmLabel: '@TA',
+                                includeAll: true,
+                                emptyText: '没有可@的成员',
                             });
-                            if (options.length === 0) {
-                                window.__phoneIsland?.notify?.('warning', '没有可@的成员');
-                                return;
-                            }
-                            if (chatModalManager.openMentionPicker) {
-                                chatModalManager.openMentionPicker({
-                                    members: options,
-                                    onSelect: (chosen) => {
-                                        if (!messageInput) return;
-                                        const cur = (messageInput.innerText || '').trim();
-                                        messageInput.innerText = `${cur} @${chosen.label} `;
-                                        messageInput.focus();
-                                    },
-                                });
-                            } else {
-                                const cur = (messageInput.innerText || '').trim();
-                                messageInput.innerText = `${cur} @${options[0].label} `;
-                                messageInput.focus();
-                                window.__phoneIsland?.notify?.('info', '@成员', `已输入 @${options[0].label}`);
-                            }
+                            if (!chosen || !messageInput) return;
+                            const label = chosen.id === '__all__' ? '所有人' : chosen.label;
+                            const cur = (messageInput.innerText || messageInput.textContent || '').replace(/\u00a0/g, ' ');
+                            const prefix = cur && !/\s$/.test(cur) ? `${cur} ` : cur;
+                            messageInput.innerText = `${prefix}@${label} `;
+                            messageInput.focus();
                         } catch (e) {
                             console.warn('[chat-app] group mention failed', e);
                             window.__phoneIsland?.notify?.('warning', '@成员失败');
                         }
                     } else if (action === 'announcement') {
-                        window.__phoneIsland?.notify?.('info', '公告', '群公告功能即将开放');
+                        try {
+                            await this.openGroupAnnouncementEdit({ groupId, mode });
+                        } catch (err) {
+                            console.warn('[chat-app] group announcement failed', err);
+                            window.__phoneIsland?.notify?.('warning', '打不开公告');
+                        }
                     } else if (action === 'members') {
                         try {
                             document.dispatchEvent(new CustomEvent('app:page-action', {
@@ -12104,27 +12321,24 @@ async deleteReplyPrompt(payload = {}) {
                             detail: { action: 'detail', appId: 'chat', pageId: `favorites-group_${groupId}` },
                             bubbles: true,
                         }));
-                    } else if (action === 'game') {
-                        // 带上 groupId：大厅要知道跟谁玩，也才能显示「继续上一局」
-                        document.dispatchEvent(new CustomEvent('app:page-action', {
-                            detail: { action: 'detail', appId: 'chat', pageId: `game-selector-${groupId}` },
-                            bubbles: true,
-                        }));
-                    } else if (action === 'call') {
-                        // ★ v0.69 群聊通话(语音/视频),暂用 voice,可后续加选择器
-                        try {
-                            const { callManager } = await import('./services/call-manager.js');
-                            await callManager.startOutgoingCall(groupId, 'voice', mode);
-                        } catch (err) {
-                            console.warn('[chat-app] group call failed', err);
-                            window.__phoneIsland?.notify?.('warning', '通话启动失败');
-                        }
-                    } else if (action === 'pat') {
-                        window.__phoneIsland?.notify?.('info', '拍一拍', '群拍一拍功能即将开放');
-                    } else if (action === 'card') {
-                        window.__phoneIsland?.notify?.('info', '群名片', '群名片功能即将开放');
                     } else if (action === 'custom') {
-                        window.__phoneIsland?.notify?.('info', '自定义', '自定义消息功能即将开放');
+                        const chosen = await pickGroupMember({
+                            title: '以谁的身份发送',
+                            subtitle: '之后发出的消息会显示成这个人',
+                            confirmLabel: '使用此身份',
+                            includeUser: true,
+                            markCurrentAs: true,
+                            emptyText: '没有可选身份',
+                        });
+                        if (!chosen) return;
+                        const asSelf = !!chosen.isCurrentUser || String(chosen.id) === String(sender.id);
+                        setGroupSendAsId(groupId, mode, asSelf ? '' : chosen.id);
+                        refreshGroupChat();
+                        if (asSelf) {
+                            window.__phoneIsland?.notify?.('info', '已恢复本人身份', '接下来以你自己发送');
+                        } else {
+                            window.__phoneIsland?.notify?.('success', '自定义身份', `接下来以 ${chosen.label} 发送`);
+                        }
                     } else {
                         window.__phoneIsland?.notify?.('info', '群聊工具', '功能即将开放');
                     }
@@ -12231,6 +12445,41 @@ async deleteReplyPrompt(payload = {}) {
                         }
                     }
 
+                    const descImageCard = event.target.closest('.desc-image-card');
+                    if (descImageCard) {
+                        const { collectCardContext } = await import('./services/card-detail-actions.js');
+                        const desc = descImageCard.dataset.desc || '';
+                        const cardColor = descImageCard.dataset.color || '#FFE4EC';
+                        const textColor = descImageCard.dataset.textColor || '#D4728A';
+                        const borderColor = Object.values(DESC_IMAGE_PRESETS || {}).find(p => p.cardColor === cardColor)?.borderColor || '#C0607A';
+                        chatModalManager.openDescImage({
+                            description: desc, cardColor, textColor, borderColor,
+                            context: collectCardContext(descImageCard),
+                        });
+                        event.preventDefault();
+                        event.stopPropagation();
+                        return;
+                    }
+
+                    const locationCard = event.target.closest('.location-card-in-chat');
+                    if (locationCard) {
+                        const { collectCardContext } = await import('./services/card-detail-actions.js');
+                        const name = locationCard.dataset.locationName || '位置';
+                        const address = locationCard.dataset.locationAddress || '';
+                        const mapEl = locationCard.querySelector('.location-card-map');
+                        const bgGradient = mapEl ? (
+                            mapEl.style.background ||
+                            'linear-gradient(135deg, #E8F2FF, #D6E4FF)'
+                        ) : 'linear-gradient(135deg, #E8F2FF, #D6E4FF)';
+                        chatModalManager.openLocationCard({
+                            name, address, style: { bgGradient },
+                            context: collectCardContext(locationCard),
+                        });
+                        event.preventDefault();
+                        event.stopPropagation();
+                        return;
+                    }
+
                     const toolBtn = event.target.closest('.toolbar-btn[data-action]');
                     if (toolBtn) {
                         const expandBtn = chatGroup.querySelector('.expand-toolbar-btn');
@@ -12240,7 +12489,7 @@ async deleteReplyPrompt(payload = {}) {
                         expandBtn?.setAttribute('aria-expanded', 'false');
 
                         const action = toolBtn.dataset.action;
-                        // ★ v0.69 群聊工具栏统一走 handleGroupToolBar(图片/语音/位置/红包/转账/通话/@成员/公告/成员/收藏/游戏/拍一拍/名片/自定义)
+                        // 群聊工具栏：图片/语音/自定义/位置/红包/转账/@成员/公告/成员/收藏
                         handleGroupToolBar(action).catch(err => {
                             console.error('[chat-app] group toolbar failed', err);
                             window.__phoneIsland?.notify?.('error', '操作失败', err?.message || '');
@@ -12290,9 +12539,9 @@ async deleteReplyPrompt(payload = {}) {
                     // 不打印 warn:页面未挂载是正常场景(没打开 prompt-manager 时)
                     return;
                 }
+                try { applyPromptFolds(pm); } catch (_) { /* ignore */ }
                 if (pm.__pmInteractionsBound) return;
                 pm.__pmInteractionsBound = true;
-                // 占位,所有交互由 framework data-app-action 派发
             },
 
             /** 注入 .chat-tab-indicator div(每次框架重渲后都补一遍,防 DOM 重建后丢失) */
@@ -12300,7 +12549,7 @@ async deleteReplyPrompt(payload = {}) {
                 // 只在 chat app 的 tab-bar 注入指示器
                 const tabBar = document.querySelector('.app-nav[data-app-id="chat"] .app-tab-bar');
                 if (!tabBar) {
-                    console.warn('[chat-app] mountNavIndicator: .app-tab-bar not found. nav HTML:', document.querySelector('.app-nav[data-app-id="chat"]')?.outerHTML?.slice(0, 400));
+                    // 详情页没有底栏是正常的，不必打 warn
                     return;
                 }
                 // 幂等:已存在就不重复插入;framework 重渲时 .app-tab-bar 会被整体替换,
@@ -12366,7 +12615,28 @@ async deleteReplyPrompt(payload = {}) {
                         const cardColor = descImage.dataset.color || descImage.dataset.textColor || '#FFE4EC';
                         const textColor = descImage.dataset.textColor || '#D4728A';
                         
-                        chatModalManager.openDescImage({ description: desc, cardColor, textColor });
+                        chatModalManager.openDescImage({
+                            description: desc,
+                            cardColor,
+                            textColor,
+                            context: {
+                                conversationId: 'moments',
+                                conversationType: 'private',
+                                mode: 'calendar',
+                                conversationName: '朋友圈',
+                                fallbackMessage: {
+                                    id: `moment-img-${String(desc).slice(0, 40)}`,
+                                    type: 'descriptive_image',
+                                    content: desc,
+                                    imageDescription: desc,
+                                    cardColor,
+                                    textColor,
+                                    sender: 'user',
+                                    senderName: '我',
+                                    timestamp: Date.now(),
+                                },
+                            },
+                        });
                         event.stopPropagation();
                         return;
                     }
@@ -12932,6 +13202,7 @@ async deleteReplyPrompt(payload = {}) {
                 // ★ v0.28 走顶层预热入口(幂等,可能已被 framework 启动过)
                 if (typeof window.whenSettingsSdkReady === 'function') {
                     await window.whenSettingsSdkReady(3000);
+                    try { await prefetchAllAvatars(); } catch (_) {}
                     return;
                 }
                 if (getSettingsSdk()) return;
@@ -12956,6 +13227,7 @@ async deleteReplyPrompt(payload = {}) {
                         const sdk = getSettingsSdk();
                         if (sdk) saveSnapshot(sdk);
                     } catch (_) {}
+                    try { prefetchAllAvatars(); } catch (_) {}
 
                     // ★ v0.44:从 sdk.chatFavorites 预填充 __chatFavoritedIds(用于按钮高亮)
                     try {
@@ -13378,10 +13650,7 @@ async deleteReplyPrompt(payload = {}) {
                     _notify('error', 'AI 对话失败', '缺少 aiPersonId');
                     return null;
                 }
-                if (!text) {
-                    _notify('warning', '消息为空', '请先输入内容');
-                    return null;
-                }
+                const apiText = text || '（请根据当前对话上下文接着回复）';
 
                 // 1) 灵动岛「正在发送给 AI」(silentIsland=true 时跳过)
                 _notify('info', '正在发送给 AI…', text.slice(0, 30));
@@ -13393,7 +13662,7 @@ async deleteReplyPrompt(payload = {}) {
                     result = await callAiAndSplit({
                         aiPersonId,
                         mode,
-                        userText: text,
+                        userText: apiText,
                         historyLimit: 12,
                     });
                 } catch (err) {
@@ -13679,6 +13948,43 @@ async deleteReplyPrompt(payload = {}) {
                 } catch (_) {}
 
                 return result;
+            },
+
+            /**
+             * 群聊长按发送后的 AI 回复。用户那条已经 doSend 写过了。
+             * payload: { groupId, mode, text, silentIsland? }
+             */
+            async sendGroupMessageWithAi(payload = {}) {
+                const groupId = String(payload?.groupId || '');
+                const mode = String(payload?.mode || 'calendar');
+                const text = String(payload?.text || '').trim();
+                const silentIsland = !!payload?.silentIsland;
+                const _notify = (state, title, body) => {
+                    if (silentIsland) return;
+                    this.toolkit?.island?.notify?.(state, title, body);
+                };
+                if (!groupId) {
+                    _notify('error', 'AI 对话失败', '缺少 groupId');
+                    return null;
+                }
+                try {
+                    const { replyInGroup } = await import('./services/group-ai-reply.js');
+                    const result = await replyInGroup({ groupId, mode, userText: text });
+                    if (!result?.ok) {
+                        this.toolkit?.island?.notify?.('error', 'AI 回复失败', (result?.error || '').slice(0, 200));
+                        return result;
+                    }
+                    try {
+                        window.dispatchEvent(new CustomEvent('chat:ai-message-received', {
+                            detail: { groupId, mode, conversationType: 'group' },
+                        }));
+                    } catch (_) {}
+                    return result;
+                } catch (err) {
+                    console.error('[chat-app] sendGroupMessageWithAi failed', err);
+                    this.toolkit?.island?.notify?.('error', 'AI 调用异常', err?.message || String(err));
+                    return null;
+                }
             },
 
             // ============================================================

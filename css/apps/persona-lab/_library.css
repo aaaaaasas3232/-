@@ -473,6 +473,17 @@
     gap: 10px;
 }
 
+.app-shell[data-app-id="persona-lab"] .pl-lib-hero-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="persona-lab"] .pl-lib-hero-actions .pl-btn[data-variant="ghost"] {
+    color: var(--pl-primary);
+}
+
 .app-shell[data-app-id="persona-lab"] .pl-lib-hero h1 {
     flex: 1;
     min-width: 0;

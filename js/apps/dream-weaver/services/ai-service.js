@@ -25,7 +25,7 @@
  */
 
 import { buildPrompt, buildUserTurn, buildToolTurn } from './prompt-builder.js';
-import { TIMEOUT } from '../constants.js';
+import { TIMEOUT, resolveWordRange } from '../constants.js';
 
 // ============================================================
 // API 选择
@@ -134,7 +134,7 @@ export async function generate(opts = {}) {
         return { ok: false, text: '', aborted: false, error: '数据还没加载完' };
     }
 
-    const wordRange = opts.wordRange || library.settings.defaultWordRange;
+    const wordRange = opts.wordRange || resolveWordRange(library.settings);
 
     // 1) 上下文 —— 和预览面板看到的是同一份
     const { text: systemPrompt } = buildPrompt({ book, orderedChapters, chapter, library, mode, wordRange });

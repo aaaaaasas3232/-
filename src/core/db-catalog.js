@@ -100,6 +100,7 @@ export const DB_STORES = [
     { name: 'dwChapters', category: 'creation', owner: 'dream-weaver', declaredIn: 'app', keyPath: 'id', desc: '梦境编织：章节', indexes: ['bookId'] },
     { name: 'dwLibrary', category: 'creation', owner: 'dream-weaver', declaredIn: 'app', keyPath: 'id', desc: '梦境编织：书库级设置与素材' },
     { name: 'plDrafts', category: 'creation', owner: 'persona-lab', declaredIn: 'app', keyPath: 'id', desc: '人设机：人设草稿（正文 + 对话 + 修改日志）', indexes: ['updatedAt'], note: '人设卡本体不在这里，真理之源是 sdkUsers / sdkAiPersons' },
+    { name: 'plQuizSets', category: 'creation', owner: 'persona-lab', declaredIn: 'app', keyPath: 'id', desc: '人设机：用户导入的题库', indexes: ['updatedAt'], note: '内置那 6 套是代码常量，不在这张表里' },
 
     // ── 解压 ───────────────────────────────────────────────────
     { name: 'relaxScenes', category: 'relax', owner: 'relax', declaredIn: 'app', keyPath: 'id', desc: '舞台存档', note: "id='current' 是当前正在用的那套，其余是另存的" },

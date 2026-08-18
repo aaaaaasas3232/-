@@ -125,6 +125,13 @@
     color: #FF9500;
 }
 
+.app-shell[data-app-id="chat"] .chat-group .status-hint.chat-header-subtitle--typing,
+.app-shell[data-app-id="chat"] .chat-group .chat-header-subtitle--typing {
+    color: #F4A6CD;
+    font-weight: 600;
+    animation: chatTypingBlink 1.2s ease-in-out infinite;
+}
+
 /* ---- 群聊消息区域 ---- */
 .app-shell[data-app-id="chat"] .chat-group .chat-messages {
     flex: 1;

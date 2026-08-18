@@ -170,11 +170,11 @@ export function normalizeChapter(raw = {}, bookId = '') {
         characterViews: Array.isArray(raw.characterViews) ? raw.characterViews : [],
 
         /**
-         * 分支:{ [messageId]: { currentIndex, alternatives: [{ content, createdAt }] } }
-         * 原版还支持 `followingMessages` / `nestedBranches` 嵌套,实际 UI 只用得到
-         * 「同一条消息的多个候选」,嵌套那部分从来没有入口能创建。这里只保留能用的部分。
+         * 分支挂在章上,按文段 id 分叉:
+         * { [messageId]: { currentIndex, alternatives: [{ id, name, content, createdAt, tail }] } }
+         * tail 是这条版本激活时「后面那些文段」的快照,切回去整条路一起回来。
          */
-        branches: raw.branches && typeof raw.branches === 'object' ? raw.branches : {},
+        branches: normalizeBranchesMap(raw.branches),
 
         createdAt: Number(raw.createdAt) || Date.now(),
         updatedAt: Number(raw.updatedAt) || Date.now(),
@@ -193,6 +193,42 @@ export function normalizeMessage(raw = {}) {
         error: '',
         timestamp: Number(raw.timestamp) || Date.now(),
     };
+}
+
+/** 一条岔路。name 空着时 UI 显示「分支 N」,tail 是这条路后面的文段快照。 */
+export function makeBranchAlt(raw = {}) {
+    return {
+        id: String(raw.id || makeId('alt')),
+        name: String(raw.name || '').trim(),
+        content: String(raw.content || ''),
+        createdAt: Number(raw.createdAt) || Date.now(),
+        tail: Array.isArray(raw.tail)
+            ? raw.tail.map((m) => normalizeMessage({ ...m, pending: false, error: '' }))
+            : [],
+    };
+}
+
+export function normalizeBranchRecord(raw) {
+    if (!raw || typeof raw !== 'object') {
+        return { currentIndex: 0, alternatives: [] };
+    }
+    const alternatives = (Array.isArray(raw.alternatives) ? raw.alternatives : []).map(makeBranchAlt);
+    let currentIndex = Number(raw.currentIndex) || 0;
+    if (currentIndex < 0) currentIndex = 0;
+    if (alternatives.length && currentIndex >= alternatives.length) {
+        currentIndex = alternatives.length - 1;
+    }
+    return { currentIndex, alternatives };
+}
+
+export function normalizeBranchesMap(raw) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+    const out = {};
+    for (const [key, val] of Object.entries(raw)) {
+        if (key == null || key === '') continue;
+        out[String(key)] = normalizeBranchRecord(val);
+    }
+    return out;
 }
 
 export function normalizeLibrary(raw = {}) {

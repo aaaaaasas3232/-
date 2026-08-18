@@ -201,11 +201,12 @@ const ICONS_NOT_IMPLEMENTED = {
  * @returns {string} HTML 字符串
  */
 export function renderMessageActions(msgId, ctx, options = {}) {
+    const opts = (options && typeof options === 'object') ? options : {};
     const {
         showEdit = true,
         showForward = true,
         showSendToAi = false, // ★ v0.85:默认不显示,群聊页面传 true
-    } = options;
+    } = opts;
 
     let buttons = renderCommonButtons({ ...ctx, messageId: msgId });
 

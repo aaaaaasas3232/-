@@ -64,8 +64,8 @@ export function getAiMeta(aiPersonId) {
 
         const chatProfile = person.socialProfiles?.chat || {};
         const nickname = chatProfile.nickname || person.name || aiPersonId;
-        // ★ v0.71 头像 url 走"直 url > avatarCode 缓存 > 空"三层
-        const avatar = chatProfile.avatar || person.avatar || '';
+        // 社媒头像以 avatarCode（图库）为准；同步渲染先吃缓存，未命中再排队解析。
+        const avatar = _peekAvatarUrl(chatProfile, person);
         const avatarBg = chatProfile.avatarBg || person.avatarBg || DEFAULT_AI_AVATAR_BG;
         const background = chatProfile.background || person.background || '';
         const patSetting = chatProfile.patSetting || '';
@@ -87,8 +87,33 @@ export function getAiMeta(aiPersonId) {
     }
 }
 
-// ★ v0.71 avatarCode → data url 缓存(避免重复 IO)
+// avatarCode → data url 缓存（避免重复 IO）
 const _avatarCodeCache = new Map();
+const _avatarCodeInflight = new Set();
+let _avatarRerenderTimer = 0;
+
+function _avatarCodeOf(chatProfile, person) {
+    return String(chatProfile?.avatarCode || person?.avatarCode || '').trim();
+}
+
+function _directAvatarOf(chatProfile, person) {
+    return String(chatProfile?.avatar || person?.avatar || '').trim();
+}
+
+/**
+ * 同步取头像 URL：已解析的 avatarCode > 直存 url > 空。
+ * 有 code 但还没进缓存时，排队解析，完成后只重画一次。
+ */
+function _peekAvatarUrl(chatProfile, person) {
+    const code = _avatarCodeOf(chatProfile, person);
+    if (code && _avatarCodeCache.has(code)) {
+        const cached = _avatarCodeCache.get(code);
+        if (cached) return cached;
+    }
+    if (code && !_avatarCodeCache.has(code)) _scheduleAvatarPrefetch(code);
+    return _directAvatarOf(chatProfile, person);
+}
+
 async function _resolveAvatarCodeUrl(code) {
     if (!code) return '';
     if (_avatarCodeCache.has(code)) return _avatarCodeCache.get(code);
@@ -97,33 +122,79 @@ async function _resolveAvatarCodeUrl(code) {
         _avatarCodeCache.set(code, url);
         return url;
     } catch (_) {
+        _avatarCodeCache.set(code, '');
         return '';
     }
 }
 
+function _requestAvatarRerender() {
+    if (_avatarRerenderTimer) return;
+    _avatarRerenderTimer = setTimeout(() => {
+        _avatarRerenderTimer = 0;
+        try { window.__appRendererBridge?.syncNow?.({ force: true }); } catch (_) {}
+    }, 40);
+}
+
+function _scheduleAvatarPrefetch(code) {
+    if (!code || _avatarCodeCache.has(code) || _avatarCodeInflight.has(code)) return;
+    _avatarCodeInflight.add(code);
+    _resolveAvatarCodeUrl(code).then((url) => {
+        if (url) _requestAvatarRerender();
+    }).finally(() => {
+        _avatarCodeInflight.delete(code);
+    });
+}
+
 /**
- * ★ v0.71 异步版 resolveAiAvatar — 支持 avatarCode 图床代码解析
- *   new-chat-page 等需要异步构造列表的页面用这个
- *   其他同步渲染(messages / contacts / header)继续用同步版
+ * 异步版：等 avatarCode 图库解析完再返回。
+ * 私聊页首屏应 await，避免先闪首字母再变成图。
  */
 export async function resolveAiAvatarAsync(aiPersonId) {
-    const sync = resolveAiAvatar(aiPersonId);
-    // 即使 sync.url 已有,也尝试覆盖 bg(用户可能改过 avatarBg 但没改 url)
     try {
         const sdk = window.settingsSdk;
         const person = sdk?.aiPersons?.get?.(aiPersonId);
         if (person) {
             const chatProfile = person.socialProfiles?.chat || {};
-            if (chatProfile.avatarBg) sync.bg = chatProfile.avatarBg;
-            if (chatProfile.avatar && !sync.url) sync.url = chatProfile.avatar;
-            const code = chatProfile.avatarCode || '';
-            if (!sync.url && code) {
-                const url = await _resolveAvatarCodeUrl(code);
-                if (url) sync.url = url;
+            const code = _avatarCodeOf(chatProfile, person);
+            if (code && !_avatarCodeCache.get(code)) {
+                await _resolveAvatarCodeUrl(code);
             }
         }
     } catch (_) {}
-    return sync;
+    return resolveAiAvatar(aiPersonId);
+}
+
+/** 用户社媒头像的异步版，和 resolveAiAvatarAsync 对称。 */
+export async function resolveUserAvatarAsync() {
+    try {
+        const sdk = window.settingsSdk;
+        const user = sdk?.defaultUserCard?.getDefault?.() || sdk?.users?.getActive?.();
+        if (user) {
+            const chatProfile = user.socialProfiles?.chat || {};
+            const code = _avatarCodeOf(chatProfile, user);
+            if (code && !_avatarCodeCache.get(code)) {
+                await _resolveAvatarCodeUrl(code);
+            }
+        }
+    } catch (_) {}
+    return resolveUserAvatar();
+}
+
+/**
+ * 把当前用户 + 所有 AI 人设的 avatarCode 预热进缓存。
+ * hydrate / SDK ready 后调一次，消息列表和通讯录首屏就能出图。
+ */
+export async function prefetchAllAvatars() {
+    try {
+        const sdk = window.settingsSdk;
+        if (!sdk) return;
+        const jobs = [resolveUserAvatarAsync()];
+        const list = typeof sdk.aiPersons?.list === 'function' ? sdk.aiPersons.list() : [];
+        for (const person of list || []) {
+            if (person?.id) jobs.push(resolveAiAvatarAsync(person.id));
+        }
+        await Promise.all(jobs);
+    } catch (_) {}
 }
 
 /**
@@ -213,6 +284,33 @@ export function resolveAiAvatar(aiPersonId) {
 }
 
 /**
+ * 消息气泡头像：跟顶栏同一条 resolveAiAvatar / resolveUserAvatar。
+ * 群聊 options.aiPersonId 是群 id，只能用 msg.senderId。
+ */
+export function resolveBubbleAvatar(msg, contact = {}, options = {}) {
+    const isUser = msg?.sender === 'user';
+    if (isUser) {
+        const live = resolveUserAvatar();
+        return {
+            url: options.userAvatar || live.url || '',
+            bg: options.userAvatarBg || live.bg || DEFAULT_USER_AVATAR_BG,
+            text: '我',
+        };
+    }
+    const isGroup = options.conversationType === 'group' || options.isGroup === true;
+    const peerId = msg?.senderId
+        || (isGroup
+            ? ''
+            : (options.aiPersonId || contact?.aiPersonId || contact?.id || ''));
+    const live = peerId ? resolveAiAvatar(peerId) : { url: '', bg: DEFAULT_AI_AVATAR_BG, text: '?' };
+    return {
+        url: contact?.avatar || live.url || '',
+        bg: contact?.avatarBg || live.bg || DEFAULT_AI_AVATAR_BG,
+        text: live.text || '?',
+    };
+}
+
+/**
  * 用户头像统一入口。
  *  - 从 sdk.defaultUserCard.getDefault() / sdk.users.getActive() 拿当前用户
  *  - 读 socialProfiles.chat.{avatar,avatarBg} 实时
@@ -230,7 +328,7 @@ export function resolveUserAvatar() {
         }
         const chatProfile = user.socialProfiles?.chat || {};
         return {
-            url: chatProfile.avatar || user.avatar || '',
+            url: _peekAvatarUrl(chatProfile, user),
             bg: chatProfile.avatarBg || user.avatarBg || DEFAULT_USER_AVATAR_BG,
             text: '我',
         };
@@ -281,4 +379,54 @@ export function renderAvatarHtmlLegacy(display, extraClass = '') {
         text: display.initial || '?',
     };
     return renderAvatarHtml(avatar, extraClass);
+}
+
+/**
+ * 当前用户作为群成员的展示项。
+ * group.members 只存 AI，拼群头像 / 成员预览时要自己把用户插进去。
+ */
+export function getCurrentUserGroupMember() {
+    const av = resolveUserAvatar();
+    try {
+        const sdk = window.settingsSdk;
+        const user = sdk?.defaultUserCard?.getDefault?.() || sdk?.users?.getActive?.();
+        const chatProfile = user?.socialProfiles?.chat || {};
+        const name = chatProfile.nickname || user?.name || '我';
+        return {
+            id: user?.id || 'user',
+            aiPersonId: user?.id || 'user',
+            name,
+            nickname: name,
+            displayName: name,
+            avatar: av.url,
+            avatarBg: av.bg,
+            isUser: true,
+            kind: 'user',
+        };
+    } catch (_) {
+        return {
+            id: 'user',
+            aiPersonId: 'user',
+            name: '我',
+            nickname: '我',
+            displayName: '我',
+            avatar: av.url,
+            avatarBg: av.bg,
+            isUser: true,
+            kind: 'user',
+        };
+    }
+}
+
+/** 群成员列表前面补上用户本人；已经有了就原样返回。 */
+export function withUserInGroupMembers(members) {
+    const user = getCurrentUserGroupMember();
+    const list = Array.isArray(members) ? members.slice() : [];
+    const uid = String(user.id || '');
+    const already = list.some((m) => {
+        if (!m) return false;
+        if (m.isUser || m.kind === 'user') return true;
+        return String(m.id || m.aiPersonId || '') === uid;
+    });
+    return already ? list : [user, ...list];
 }

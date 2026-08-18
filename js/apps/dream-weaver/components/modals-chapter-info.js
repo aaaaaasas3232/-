@@ -253,7 +253,7 @@ export const DwChapterInfoModal = {
                     />
                 </DwField>
                 <button type="button" class="cim-btn cim-btn-primary" :disabled="busy" @click="onGenerateSummary">
-                    <DwIcon name="sparkle" />{{ busy ? '生成中…' : 'AI 生成梗概' }}
+                    <DwIcon name="heart" />{{ busy ? '生成中…' : 'AI 生成梗概' }}
                 </button>
                 <p class="cim-hint">正文 {{ fullTokens }} tokens,梗概 {{ summaryTokens }} tokens,能省 {{ saved }}。</p>
             </section>
@@ -296,7 +296,7 @@ export const DwChapterInfoModal = {
                         <DwTextarea v-model="draftSummary" :rows="5" placeholder="看到了什么、想了什么、有什么变化" />
                     </DwField>
                     <button type="button" class="cim-btn cim-btn-secondary" :disabled="busy" @click="onGenerateView">
-                        <DwIcon name="sparkle" />{{ busy ? '生成中…' : 'AI 生成' }}
+                        <DwIcon name="heart" />{{ busy ? '生成中…' : 'AI 生成' }}
                     </button>
                     <button type="button" class="cim-btn cim-btn-primary" @click="onSaveView">保存</button>
                 </template>

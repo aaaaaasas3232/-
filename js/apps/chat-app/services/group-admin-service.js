@@ -251,12 +251,13 @@ export async function applyGroupAdminActions({ sdk, user, groupId, mode, actorId
 }
 
 /**
- * 群 prompt 里的「群成员与职务」一段。
+ * 群 prompt 里的「群信息」一段。
  *
- * 内容包含三块：
- *   1. 花名册：谁是群主、谁是管理员、各自的群昵称
- *   2. 称呼规则：有群昵称就叫群昵称
- *   3. 能用的管理 token（只有 AI 自己是群主/管理员时才给，
+ * 内容包含：
+ *   1. 群名称 / 群公告 / 群备注
+ *   2. 花名册：谁是群主、谁是管理员、各自的群昵称
+ *   3. 称呼规则：有群昵称就叫群昵称
+ *   4. 能用的管理 token（只有 AI 自己是群主/管理员时才给，
  *      不然会诱导它输出一堆没权限执行的动作）
  *
  * @param {string} [selfId] 当前正在发言的那个 AI 成员 id
@@ -267,7 +268,16 @@ export function buildGroupAdminPromptBlock({ sdk, user, group, selfId = '' }) {
     const ids = sdk.chatGroups.listMemberIds(group, userId);
     if (!ids.length) return '';
 
-    const lines = ['# 群成员与职务'];
+    const lines = ['# 群信息'];
+    const groupName = String(group.name || '').trim();
+    if (groupName) lines.push(`群名称：${groupName}`);
+    lines.push(`成员人数：${ids.length}`);
+    const announcement = String(group.announcement || '').trim();
+    lines.push(`群公告：${announcement || '（未设置）'}`);
+    const remark = String(group.remark || '').trim();
+    if (remark) lines.push(`群备注：${remark}`);
+    lines.push('');
+    lines.push('# 群成员与职务');
     for (const id of ids) {
         const name = memberName(sdk, group, id, user);
         const roles = [];

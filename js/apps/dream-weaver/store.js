@@ -17,12 +17,13 @@ import {
     loadLibrary, saveLibrary, loadBooks, saveBook, deleteBook,
     listChapters, saveChapter, deleteChapter, migrateLegacyData,
     normalizeBook, normalizeChapter, normalizeMessage, normalizeLibrary,
+    makeBranchAlt, normalizeBranchRecord,
 } from './services/db.js';
 import {
     createDefaultSettings, createDefaultContextConfig,
     DEFAULT_COVER_TONE, MAX_ACTIVE_MODES,
 } from './constants.js';
-import { makeId, isSameId, findById, indexById, debounce, moveItem, countWords } from './utils.js';
+import { makeId, isSameId, findById, indexById, debounce, moveItem, countWords, toPlain } from './utils.js';
 
 // ============================================================
 // 状态
@@ -582,15 +583,35 @@ export function removeMessage(chapterId, messageId) {
     const chapter = findById(STATE.chapters, chapterId);
     if (!chapter) return false;
     chapter.messages = chapter.messages.filter((m) => !isSameId(m.id, messageId));
-    // 分支是挂在 messageId 上的,消息没了分支也要清,否则成孤儿数据
-    if (chapter.branches[messageId]) {
+    // 这条文段自己的分叉清掉;别人路上 tail 里若还指着它,也一并摘掉
+    if (chapter.branches) {
         const next = { ...chapter.branches };
         delete next[messageId];
+        delete next[String(messageId)];
         chapter.branches = next;
     }
+    stripMessageFromTails(chapter, messageId);
     chapter.updatedAt = Date.now();
     persistChapter(chapter.id);
     return true;
+}
+
+/**
+ * 丢掉某条之后的全部消息。重 roll 中间一段时,后面那些回复是接着旧稿写的,
+ * 留着会和新政文对不上。
+ *
+ * 那些文段的分支记录不要删 —— 已经打进未激活那路的 tail,切回去还要用。
+ */
+export function removeMessagesAfter(chapterId, messageId) {
+    const chapter = findById(STATE.chapters, chapterId);
+    if (!chapter) return 0;
+    const index = chapter.messages.findIndex((m) => isSameId(m.id, messageId));
+    if (index < 0 || index >= chapter.messages.length - 1) return 0;
+    const dropped = chapter.messages.slice(index + 1);
+    chapter.messages = chapter.messages.slice(0, index + 1);
+    chapter.updatedAt = Date.now();
+    persistChapter(chapter.id);
+    return dropped.length;
 }
 
 export function toggleMessageFavorite(chapterId, messageId) {
@@ -624,27 +645,74 @@ export function toggleMessageFavorite(chapterId, messageId) {
 
 // ── 分支 ───────────────────────────────────
 
+function getChapterBranch(chapter, messageId) {
+    if (!chapter.branches || typeof chapter.branches !== 'object') {
+        chapter.branches = {};
+    }
+    const key = String(messageId);
+    const current = chapter.branches[key];
+    if (current && Array.isArray(current.alternatives) && current.alternatives.every((a) => a && a.id)) {
+        return current;
+    }
+    const next = normalizeBranchRecord(current);
+    chapter.branches = { ...chapter.branches, [key]: next };
+    return next;
+}
+
+function snapshotTail(chapter, messageIndex) {
+    const rest = chapter.messages.slice(messageIndex + 1);
+    return toPlain(rest.map((m) => normalizeMessage({ ...m, pending: false, error: '' }))) || [];
+}
+
+function stripMessageFromTails(chapter, messageId) {
+    const branches = chapter.branches || {};
+    for (const branch of Object.values(branches)) {
+        for (const alt of branch.alternatives || []) {
+            if (!Array.isArray(alt.tail) || !alt.tail.length) continue;
+            alt.tail = alt.tail.filter((m) => !isSameId(m.id, messageId));
+        }
+    }
+}
+
+function resolveAltIndex(branch, altIdOrIndex) {
+    if (typeof altIdOrIndex === 'number' && Number.isFinite(altIdOrIndex)) {
+        return altIdOrIndex;
+    }
+    return branch.alternatives.findIndex((a) => isSameId(a.id, altIdOrIndex));
+}
+
 /**
- * 把某条消息的当前内容存成一个候选,为重 roll 腾位置。
- * 返回这条消息的分支记录。
+ * 把当前这一路存进对应版本(正文 + 后面的文段),为重 roll / 建分支点腾位置。
  */
 export function pushBranch(chapterId, messageId) {
     const chapter = findById(STATE.chapters, chapterId);
-    const message = findById(chapter?.messages, messageId);
-    if (!message) return null;
+    const index = indexById(chapter?.messages, messageId);
+    if (index < 0) return null;
+    const message = chapter.messages[index];
+    const branch = getChapterBranch(chapter, messageId);
+    const tail = snapshotTail(chapter, index);
+    // 旧存档没有 tail。第一次记下这一路时,把当前后面的文段补到还空着的版本上,
+    // 免得切到旧版本把后面整段抹掉。
+    for (const alt of branch.alternatives) {
+        if (!(alt.tail || []).length) alt.tail = tail;
+    }
 
-    const existing = chapter.branches[messageId];
-    const branch = existing
-        ? { ...existing }
-        : { currentIndex: 0, alternatives: [{ content: message.content, createdAt: message.timestamp }] };
-
-    // 当前内容如果还没在候选里(比如用户手动编辑过),先存进去
-    if (!branch.alternatives.some((alt) => alt.content === message.content)) {
-        branch.alternatives = [...branch.alternatives, { content: message.content, createdAt: Date.now() }];
+    const existingIdx = branch.alternatives.findIndex((a) => a.content === message.content);
+    if (existingIdx >= 0) {
+        branch.currentIndex = existingIdx;
+        branch.alternatives[existingIdx].tail = tail;
+    } else {
+        const alt = makeBranchAlt({
+            content: message.content,
+            createdAt: message.timestamp || Date.now(),
+            tail,
+        });
+        branch.alternatives = [...branch.alternatives, alt];
         branch.currentIndex = branch.alternatives.length - 1;
     }
 
-    chapter.branches = { ...chapter.branches, [messageId]: branch };
+    chapter.branches = { ...chapter.branches, [String(messageId)]: branch };
+    chapter.updatedAt = Date.now();
     persistChapter(chapter.id);
     return branch;
 }
@@ -654,35 +722,121 @@ export function commitBranch(chapterId, messageId, content) {
     const message = findById(chapter?.messages, messageId);
     if (!message) return null;
 
-    const branch = chapter.branches[messageId] || { currentIndex: 0, alternatives: [] };
-    const alternatives = [...branch.alternatives, { content, createdAt: Date.now() }];
-    chapter.branches = {
-        ...chapter.branches,
-        [messageId]: { currentIndex: alternatives.length - 1, alternatives },
-    };
-    message.content = content;
+    const branch = getChapterBranch(chapter, messageId);
+    const text = String(content || '');
+    const index = indexById(chapter.messages, messageId);
+    const tail = index >= 0 ? snapshotTail(chapter, index) : [];
+    const existingIdx = branch.alternatives.findIndex((a) => a.content === text);
+    if (existingIdx >= 0) {
+        branch.currentIndex = existingIdx;
+        branch.alternatives[existingIdx].tail = tail;
+    } else {
+        branch.alternatives = [...branch.alternatives, makeBranchAlt({ content: text, tail })];
+        branch.currentIndex = branch.alternatives.length - 1;
+    }
+    message.content = text;
+    chapter.branches = { ...chapter.branches, [String(messageId)]: branch };
     chapter.updatedAt = Date.now();
     persistChapter(chapter.id);
-    return chapter.branches[messageId];
+    return branch;
 }
 
-export function switchBranch(chapterId, messageId, index) {
+/**
+ * 切到另一路:先把当前正文和后面的文段存回当前版本,再恢复目标版本。
+ * @param {string|number} altIdOrIndex
+ */
+export function switchBranch(chapterId, messageId, altIdOrIndex) {
+    const chapter = findById(STATE.chapters, chapterId);
+    const index = indexById(chapter?.messages, messageId);
+    if (index < 0) return false;
+    const message = chapter.messages[index];
+    const branch = getChapterBranch(chapter, messageId);
+    const nextIndex = resolveAltIndex(branch, altIdOrIndex);
+    const target = branch.alternatives[nextIndex];
+    if (!target) return false;
+    if (nextIndex === branch.currentIndex) return true;
+
+    const usesTail = branch.alternatives.some((a) => (a.tail || []).length > 0);
+    const cur = branch.alternatives[branch.currentIndex];
+    if (cur) {
+        cur.content = message.content;
+        if (usesTail) cur.tail = snapshotTail(chapter, index);
+    }
+
+    message.content = target.content;
+    message.pending = false;
+    message.error = '';
+    if (usesTail) {
+        const keep = chapter.messages.slice(0, index + 1);
+        const restored = (target.tail || []).map((m) => normalizeMessage({ ...m, pending: false, error: '' }));
+        chapter.messages = [...keep, ...restored];
+    }
+    branch.currentIndex = nextIndex;
+    chapter.updatedAt = Date.now();
+    persistChapter(chapter.id);
+    return true;
+}
+
+export function renameBranchAlt(chapterId, messageId, altId, name) {
+    const chapter = findById(STATE.chapters, chapterId);
+    if (!chapter) return false;
+    const branch = getChapterBranch(chapter, messageId);
+    const alt = branch.alternatives.find((a) => isSameId(a.id, altId));
+    if (!alt) return false;
+    alt.name = String(name || '').trim().slice(0, 16);
+    chapter.updatedAt = Date.now();
+    persistChapter(chapter.id);
+    return true;
+}
+
+/**
+ * 删一条岔路。只剩一路时等同删掉这段文段,和编辑器里删气泡同步。
+ */
+export function removeBranchAlt(chapterId, messageId, altId) {
+    const chapter = findById(STATE.chapters, chapterId);
+    if (!chapter) return false;
+    let branch = getChapterBranch(chapter, messageId);
+    const idx = branch.alternatives.findIndex((a) => isSameId(a.id, altId));
+    if (idx < 0) return false;
+
+    if (branch.alternatives.length <= 1) {
+        return removeMessage(chapterId, messageId);
+    }
+
+    if (idx === branch.currentIndex) {
+        const fallback = idx === 0 ? 1 : idx - 1;
+        switchBranch(chapterId, messageId, fallback);
+        branch = getChapterBranch(chapter, messageId);
+    }
+
+    const currentId = branch.alternatives[branch.currentIndex]?.id;
+    branch.alternatives = branch.alternatives.filter((a) => !isSameId(a.id, altId));
+    const nextIndex = branch.alternatives.findIndex((a) => isSameId(a.id, currentId));
+    branch.currentIndex = nextIndex >= 0 ? nextIndex : 0;
+    chapter.branches = { ...chapter.branches, [String(messageId)]: branch };
+    chapter.updatedAt = Date.now();
+    persistChapter(chapter.id);
+    return true;
+}
+
+/** 手动改完正文后,把当前版本的 content 对齐,免得切走再切回来丢改动。 */
+export function syncCurrentAltContent(chapterId, messageId) {
     const chapter = findById(STATE.chapters, chapterId);
     const message = findById(chapter?.messages, messageId);
-    const branch = chapter?.branches?.[messageId];
-    if (!message || !branch) return false;
-    const target = branch.alternatives[index];
-    if (!target) return false;
-    branch.currentIndex = index;
-    message.content = target.content;
-    chapter.updatedAt = Date.now();
+    if (!message || !chapter?.branches?.[messageId]) return false;
+    const branch = getChapterBranch(chapter, messageId);
+    const cur = branch.alternatives[branch.currentIndex];
+    if (!cur) return false;
+    cur.content = message.content;
     persistChapter(chapter.id);
     return true;
 }
 
 export function getBranch(chapterId, messageId) {
     const chapter = findById(STATE.chapters, chapterId);
-    return chapter?.branches?.[messageId] || null;
+    if (!chapter) return null;
+    const raw = chapter.branches?.[messageId];
+    return raw ? normalizeBranchRecord(raw) : null;
 }
 
 // ============================================================
@@ -972,6 +1126,22 @@ export function removeTimelineEvent(bookId, eventId) {
     const book = findById(STATE.books, bookId);
     if (!book) return false;
     book.timelineEvents = book.timelineEvents.filter((e) => !isSameId(e.id, eventId));
+    persistBook(book.id);
+    return true;
+}
+
+/** 用户自己排时间线。delta = -1 上移 / +1 下移,到头就不动。 */
+export function moveTimelineEvent(bookId, eventId, delta) {
+    const book = findById(STATE.books, bookId);
+    if (!book) return false;
+    const list = book.timelineEvents || [];
+    const from = list.findIndex((e) => isSameId(e.id, eventId));
+    const to = from + Number(delta);
+    if (from < 0 || to < 0 || to >= list.length) return false;
+    const next = list.slice();
+    const [item] = next.splice(from, 1);
+    next.splice(to, 0, item);
+    book.timelineEvents = next;
     persistBook(book.id);
     return true;
 }

@@ -5,12 +5,12 @@
  *
  *   .dw-bubble-container                      居中,可整体左右偏移
  *     .dw-message-bubble.user / .ai           **88% 宽**,一角 4px 其余 20px
- *       .dw-bubble-header                     角色标签 · 分支切换 · 时间
+ *       .dw-bubble-header                     角色标签 · 时间
  *       .dw-bubble-content
- *       (底部一行:分支信息 / tokens)
+ *       (底部一行:tokens)
  *     .dw-bubble-actions                      点气泡后从下方浮出的圆角工具条
  *       主排:改 / 重roll / 绑时间 / 收藏 / 复制 / 更多 / 删除
- *       .dw-hidden-action:点「更多」再展开 格式化 / 分支点 / 杀青 / 梗概
+ *       .dw-hidden-action:点「更多」再展开 格式化 / 分支点 / 杀青
  *
  * ★ 注意气泡是**居中 88% 宽**的,不是聊天软件那种左右分列 ——
  *   这是小说编辑器,正文要占满宽度才好读,左右分列会白白浪费两侧空间。
@@ -18,7 +18,7 @@
  *
  * ── 和原版的两处结构性差别(前面几轮已记录,这里重申)────────────
  *   1. 不再双轨存储:只有 `messages` 是真相,不再维护一份 HTML `content`
- *   2. 不再手动操作 DOM:分支切换器由 Vue 重画,不需要「恢复分支切换器」那种补丁函数
+ *   2. 不再手动操作 DOM:分支在「分支管理」的脉络树里切,气泡上不画 2/2
  */
 
 import * as store from '../../store.js';
@@ -43,7 +43,6 @@ const HIDDEN_ACTIONS = [
     { action: 'format', icon: 'format', title: '格式化选择', tone: 'plain', hidden: true },
     { action: 'node', icon: 'branch', title: '建立分支点', tone: 'info', hidden: true },
     { action: 'finale', icon: 'tv', title: '杀青梗模拟', tone: 'warn', hidden: true },
-    { action: 'summary', icon: 'file', title: '生成梗概', tone: 'primary', hidden: true },
 ];
 
 const DELETE_ACTION = { action: 'delete', icon: 'trash', title: '删除', tone: 'danger' };
@@ -63,6 +62,7 @@ const MessageBubble = {
         rules: { type: Array, default: () => [] },
         active: { type: Boolean, default: false },
         moreOpen: { type: Boolean, default: false },
+        selectMode: { type: Boolean, default: false },
     },
     emits: ['action', 'select-text', 'toggle-actions', 'toggle-more'],
     computed: {
@@ -84,12 +84,6 @@ const MessageBubble = {
                 display: this.display,
             });
         },
-        branch() {
-            return this.chapter.branches?.[this.message.id] || null;
-        },
-        branchCount() {
-            return this.branch?.alternatives?.length || 0;
-        },
         words() { return countWords(this.message.content); },
         tokens() { return estimateTokens(this.message.content); },
         actions() {
@@ -99,7 +93,8 @@ const MessageBubble = {
     },
     methods: {
         onMouseUp() {
-            // 选中一段文字后记下来,选区工具条和「从选区建角色」都读它
+            // 平时正文不许选字。选段模式里桌面拖选用这条;手机长按走 editor 的 selectionchange
+            if (!this.selectMode) return;
             const selection = window.getSelection?.();
             const text = String(selection?.toString() || '').trim();
             if (text.length >= 2) {
@@ -113,14 +108,15 @@ const MessageBubble = {
             }
             this.$emit('action', { action, messageId: this.message.id, ...payload });
         },
-        switchBranch(delta) {
-            if (!this.branch) return;
-            const next = this.branch.currentIndex + delta;
-            if (next < 0 || next >= this.branchCount) return;
-            store.switchBranch(this.chapter.id, this.message.id, next);
+        /** 选段模式下点气泡只用来选字 —— 工具条一浮出来就把要选的那几行盖住了 */
+        onBubbleClick() {
+            if (this.selectMode) return;
+            this.$emit('toggle-actions', this.message.id);
         },
-        isFavoriteBtn(action) {
-            return action === 'favorite' && this.message.favorite;
+        isOnBtn(action) {
+            if (action === 'favorite') return Boolean(this.message.favorite);
+            if (action === 'format') return this.selectMode;
+            return false;
         },
     },
     created() {
@@ -137,23 +133,10 @@ const MessageBubble = {
             <div
                 class="dw-message-bubble"
                 :class="[bubbleClass, { 'is-pending': message.pending, 'is-error': !!message.error }]"
-                @click="$emit('toggle-actions', message.id)"
+                @click="onBubbleClick"
             >
                 <div v-if="display.showBubbleHeader !== false" class="dw-bubble-header">
                     <span class="dw-bubble-role">{{ roleLabel }}</span>
-
-                    <span v-if="branchCount > 1" class="dw-msg-branch">
-                        <button type="button" class="dw-msg-branch-btn" :disabled="branch.currentIndex <= 0"
-                                aria-label="上一个版本" @click.stop="switchBranch(-1)">
-                            <DwIcon name="chevronLeft" />
-                        </button>
-                        <span class="dw-msg-branch-count">{{ branch.currentIndex + 1 }}/{{ branchCount }}</span>
-                        <button type="button" class="dw-msg-branch-btn" :disabled="branch.currentIndex >= branchCount - 1"
-                                aria-label="下一个版本" @click.stop="switchBranch(1)">
-                            <DwIcon name="chevronRight" />
-                        </button>
-                    </span>
-
                     <span class="dw-bubble-time">{{ formatClock(message.timestamp) }}</span>
                 </div>
 
@@ -199,7 +182,7 @@ const MessageBubble = {
                     :key="btn.action"
                     type="button"
                     class="dw-bubble-action-btn"
-                    :class="['tone-' + btn.tone, { 'is-on': isFavoriteBtn(btn.action), 'dw-hidden-action': btn.hidden }]"
+                    :class="['tone-' + btn.tone, { 'is-on': isOnBtn(btn.action), 'dw-hidden-action': btn.hidden }]"
                     :title="btn.title"
                     :aria-label="btn.title"
                     @click.stop="act(btn.action)"
@@ -221,10 +204,17 @@ export const DwMessageList = {
         chapter: { type: Object, required: true },
         display: { type: Object, required: true },
         rules: { type: Array, default: () => [] },
+        selectMode: { type: Boolean, default: false },
     },
     emits: ['action', 'select-text'],
     data() {
         return { activeId: '', moreId: '' };
+    },
+    watch: {
+        selectMode(on) {
+            // 进选段模式时把还开着的工具条收掉,它就浮在正文上方
+            if (on) { this.activeId = ''; this.moreId = ''; }
+        },
     },
     computed: {
         messages() { return this.chapter.messages; },
@@ -262,7 +252,7 @@ export const DwMessageList = {
         },
     },
     template: `
-        <div ref="scroller" class="dw-chat-container">
+        <div ref="scroller" class="dw-chat-container" :class="{ 'is-select-mode': selectMode }">
             <header class="dw-chapter-head">
                 <h2 class="dw-chapter-title">{{ chapter.title }}</h2>
                 <p class="dw-chapter-sub">
@@ -288,6 +278,7 @@ export const DwMessageList = {
                 :rules="rules"
                 :active="activeId === message.id"
                 :more-open="moreId === message.id"
+                :select-mode="selectMode"
                 @action="onAction"
                 @select-text="$emit('select-text', $event)"
                 @toggle-actions="onToggleActions"

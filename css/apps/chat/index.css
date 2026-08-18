@@ -4047,6 +4047,21 @@
     color: #FF9500;
 }
 
+.app-shell[data-app-id="chat"] .chat-group .status-hint.chat-header-subtitle--typing,
+.app-shell[data-app-id="chat"] .chat-group .chat-header-subtitle--typing {
+    color: #F4A6CD;
+    font-weight: 600;
+    animation: chatTypingBlink 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .app-shell[data-app-id="chat"] .chat-group .status-hint.chat-header-subtitle--typing,
+    .app-shell[data-app-id="chat"] .chat-group .chat-header-subtitle--typing {
+        animation: none;
+        opacity: 0.75;
+    }
+}
+
 /* ---- 群聊消息区域 ---- */
 .app-shell[data-app-id="chat"] .chat-group .chat-messages {
     flex: 1;
@@ -5965,15 +5980,7 @@
     font-weight: 500;
 }
 
-/* ---- ★ v0.62 群聊连续气泡合并(.consecutive) ----
- *   - 隐藏头像(给位,留 margin)
- *   - 隐藏 sender-name
- *   - 缩小 bubble 顶部 padding 让两条消息视觉贴近
- */
-.app-shell[data-app-id="chat"] .chat-group .message-wrapper.consecutive .avatar {
-    visibility: hidden;
-}
-
+/* ---- 群聊连续气泡：只收发送者名字，头像每条都在 ---- */
 .app-shell[data-app-id="chat"] .chat-group .message-wrapper.consecutive .sender-name {
     display: none;
 }
@@ -6691,7 +6698,8 @@
 }
 
 /* 身份激活时,工具栏底部给一条粉色高亮提示条,让用户明显感知「现在发出去是 AI 身份」 */
-.app-shell[data-app-id="chat"] .chat-private[data-swap-active="1"] .input-toolbar::before {
+.app-shell[data-app-id="chat"] .chat-private[data-swap-active="1"] .input-toolbar::before,
+.app-shell[data-app-id="chat"] .chat-group[data-swap-active="1"] .input-toolbar::before {
     content: "身份转换已开启 · 接下来发出的消息将作为 AI 发送";
     display: block;
     grid-column: 1 / -1;
@@ -6704,6 +6712,37 @@
     margin-bottom: 4px;
     text-align: center;
     font-weight: 500;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="custom"] .toolbar-btn-label {
+    color: #2C4A7A;
+}
+
+.app-shell[data-app-id="chat"] .chat-group[data-swap-active="1"] .toolbar-btn[data-action="custom"] .toolbar-btn-icon,
+.app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="custom"].is-swap-active .toolbar-btn-icon {
+    background: transparent;
+}
+
+.app-shell[data-app-id="chat"] .chat-group[data-swap-active="1"] .toolbar-btn[data-action="custom"] svg,
+.app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="custom"].is-swap-active svg {
+    fill: none;
+    stroke: #EC4899;
+    color: #EC4899;
+    stroke-width: 2;
+}
+
+.app-shell[data-app-id="chat"] .chat-group[data-swap-active="1"] .toolbar-btn[data-action="custom"] .toolbar-btn-label,
+.app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="custom"].is-swap-active .toolbar-btn-label {
+    color: #EC4899;
+}
+
+.app-shell[data-app-id="chat"] .chat-group[data-swap-active="1"] .toolbar-btn[data-action="custom"],
+.app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="custom"].is-swap-active {
+    background: #FFF1F5;
+}
+
+.app-shell[data-app-id="chat"] .chat-group[data-swap-active="1"] .input-toolbar::before {
+    content: "自定义身份已开启 · 接下来将以所选群成员身份发送";
 }
 
 /* ---- 回复预览区域 ---- */
@@ -16130,7 +16169,9 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(91, 142, 201, 0.35);
+    backdrop-filter: blur(14px) saturate(1.2);
+    -webkit-backdrop-filter: blur(14px) saturate(1.2);
     z-index: 9999;
     display: flex;
     align-items: center;
@@ -16185,8 +16226,8 @@
 }
 
 .desc-image-modal-desc {
-    font-size: 12px;
-    color: white;
+    font-size: 13px;
+    color: #2C4A7A;
     line-height: 1.6;
     max-height: 200px;
     overflow-y: auto;
@@ -17081,8 +17122,9 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(4px);
+    background: rgba(91, 142, 201, 0.35);
+    backdrop-filter: blur(14px) saturate(1.2);
+    -webkit-backdrop-filter: blur(14px) saturate(1.2);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -17244,6 +17286,63 @@
     .location-card-modal {
         width: 90%;
     }
+}
+
+.app-shell[data-app-id="chat"] .desc-image-detail-modal.ac-overlay,
+.app-shell[data-app-id="chat"] .location-card-detail-modal.ac-overlay {
+    background: rgba(91, 142, 201, 0.35);
+    backdrop-filter: blur(14px) saturate(1.2);
+    -webkit-backdrop-filter: blur(14px) saturate(1.2);
+}
+
+.app-shell[data-app-id="chat"] .desc-image-detail-modal .ac-modal-footer,
+.app-shell[data-app-id="chat"] .location-card-detail-modal .ac-modal-footer {
+    justify-content: center;
+    gap: 14px;
+}
+
+.app-shell[data-app-id="chat"] .desc-image-detail-modal .desc-image-modal-content {
+    padding: 12px 0 0;
+}
+
+.app-shell[data-app-id="chat"] .location-card-detail-modal .location-card-modal-content {
+    margin: 8px 0 0;
+    padding: 10px 0 0;
+    background: transparent;
+}
+
+.app-shell[data-app-id="chat"] .card-detail-icon-btn {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: 12px;
+    border: 1.5px solid #5b8ec9;
+    background: #E8F2FF;
+    color: #5b8ec9;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: none;
+}
+
+.app-shell[data-app-id="chat"] .card-detail-icon-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: #5b8ec9;
+}
+
+.app-shell[data-app-id="chat"] .card-detail-icon-btn:hover {
+    background: #D6E8FF;
+}
+
+.app-shell[data-app-id="chat"] .card-detail-icon-btn:active {
+    transform: scale(0.96);
+}
+
+.app-shell[data-app-id="chat"] .card-detail-icon-btn.is-on {
+    background: #D6E4FF;
 }
  /* ✅ 地点卡片弹窗样式 */
 /* chat-app 地点选择弹窗样式  */

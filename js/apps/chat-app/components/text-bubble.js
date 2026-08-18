@@ -13,6 +13,7 @@
  */
 
 import { escapeHtml } from '@/src/core/escape.js';
+import { resolveBubbleAvatar } from '../aiMeta.js';
 import { renderMessageActions, renderSelectButton, renderAvatar, renderReplyQuote, renderTime } from './message-actions.js';
 
 /**
@@ -78,17 +79,8 @@ export function renderTextBubble(msg, contact = {}, options = {}) {
         showSendToAi: options.showSendToAi || false,
     });
     const selectBtnHtml = renderSelectButton(msg.id, actionsCtx);
-    // ★ v0.31 chat-page 把 ai 实时 avatar / avatarBg 塞进 contact,
-    //   用实时社媒头像替换旧的「派生首字母 + fallback 色」逻辑
-    // ★ v0.32 self 也支持:userAvatar / userAvatarBg 从 options 传入
-    //   (chat-page 计算 user 的 socialProfiles.chat.avatar 后塞 options)
-    const aiAvatar = !isUser ? (contact?.avatar || '') : '';
-    const aiAvatarBg = !isUser ? (contact?.avatarBg || '') : '';
-    const userAvatar = isUser ? (options.userAvatar || '') : '';
-    const userAvatarBg = isUser ? (options.userAvatarBg || '') : '';
-    const selfAvatar = userAvatar;
-    const selfAvatarBg = userAvatarBg;
-    const avatarHtml = renderAvatar(isUser, msg.senderName, aiAvatarBg || selfAvatarBg || null, aiAvatar || selfAvatar);
+    const bubbleAv = resolveBubbleAvatar(msg, contact, options);
+    const avatarHtml = renderAvatar(isUser, msg.senderName, bubbleAv.bg, bubbleAv.url);
     const timeHtml = renderTime(msg.time);
 
     return `

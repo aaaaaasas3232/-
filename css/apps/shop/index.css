@@ -1540,10 +1540,7 @@
     align-items: center;
     gap: 9px;
     padding: 11px 16px;
-    /* 底栏已经用 --app-safe-bottom 让过一次指示条了，
-       但详情页盖在 tab 栏之上，所以这里要自己让 */
-    padding-bottom: calc(14px + var(--app-safe-bottom, 0px));
-    border-top: 1px solid var(--sp-line);
+
     background: var(--sp-elevated);
 }
 
@@ -2453,12 +2450,23 @@
 }
 
 .app-shell[data-app-id="shop"] .sp-theater__summary {
+    display: block;
+    width: 100%;
     margin: 0;
     padding: 11px 13px;
+    border: 1px solid transparent;
     border-radius: 10px;
     background: var(--sp-surface-2);
-    font-size: 12.5px;
-    line-height: 1.75;
     color: var(--sp-text-2);
+    font-size: 12.5px;
+    font-family: inherit;
+    line-height: 1.75;
+    resize: none;
+    outline: none;
 }
+.app-shell[data-app-id="shop"] .sp-theater__summary:focus {
+    border-color: var(--sp-primary);
+    background: var(--sp-surface);
+}
+.app-shell[data-app-id="shop"] .sp-theater__summary:disabled { opacity: 0.7; }
 

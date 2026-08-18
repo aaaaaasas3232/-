@@ -369,7 +369,8 @@
 }
 
 /* 身份激活时,工具栏底部给一条粉色高亮提示条,让用户明显感知「现在发出去是 AI 身份」 */
-.app-shell[data-app-id="chat"] .chat-private[data-swap-active="1"] .input-toolbar::before {
+.app-shell[data-app-id="chat"] .chat-private[data-swap-active="1"] .input-toolbar::before,
+.app-shell[data-app-id="chat"] .chat-group[data-swap-active="1"] .input-toolbar::before {
     content: "身份转换已开启 · 接下来发出的消息将作为 AI 发送";
     display: block;
     grid-column: 1 / -1;
@@ -382,6 +383,37 @@
     margin-bottom: 4px;
     text-align: center;
     font-weight: 500;
+}
+
+.app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="custom"] .toolbar-btn-label {
+    color: #2C4A7A;
+}
+
+.app-shell[data-app-id="chat"] .chat-group[data-swap-active="1"] .toolbar-btn[data-action="custom"] .toolbar-btn-icon,
+.app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="custom"].is-swap-active .toolbar-btn-icon {
+    background: transparent;
+}
+
+.app-shell[data-app-id="chat"] .chat-group[data-swap-active="1"] .toolbar-btn[data-action="custom"] svg,
+.app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="custom"].is-swap-active svg {
+    fill: none;
+    stroke: #EC4899;
+    color: #EC4899;
+    stroke-width: 2;
+}
+
+.app-shell[data-app-id="chat"] .chat-group[data-swap-active="1"] .toolbar-btn[data-action="custom"] .toolbar-btn-label,
+.app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="custom"].is-swap-active .toolbar-btn-label {
+    color: #EC4899;
+}
+
+.app-shell[data-app-id="chat"] .chat-group[data-swap-active="1"] .toolbar-btn[data-action="custom"],
+.app-shell[data-app-id="chat"] .chat-group .toolbar-btn[data-action="custom"].is-swap-active {
+    background: #FFF1F5;
+}
+
+.app-shell[data-app-id="chat"] .chat-group[data-swap-active="1"] .input-toolbar::before {
+    content: "自定义身份已开启 · 接下来将以所选群成员身份发送";
 }
 
 /* ---- 回复预览区域 ---- */

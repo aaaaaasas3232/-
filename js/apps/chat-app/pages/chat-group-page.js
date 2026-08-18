@@ -7,9 +7,8 @@
  *
  * 群聊特有差异:
  *   - 群头像(九宫格拼接)
- *   - 非用户消息显示「发送者名字」(在 bubble 上方)
- *   - 连续气泡合并:同一个 AI 连发的两条消息,第二条隐藏头像 / 名字(对齐微信/QQ 习惯)
- *   - 工具栏为 6 个按钮(图片/语音/@成员/公告/成员/游戏)
+ *   - 每条消息都显示发送者头像，气泡上方不写发送者名字
+ *   - 工具栏：图片 / 语音 / 自定义 / 位置 / 红包 / 转账 / @成员 / 公告 / 成员 / 收藏
  *   - 发送消息走 sdk.chatMessages.add(标 conversationType='group') + sdk.chatGroups.updateLastMessage
  *
  * v0.49 表情包库绑定贯通:
@@ -25,8 +24,9 @@ import { escapeHtml } from '@/src/core/escape.js';
 import { renderMessage } from '../components/message-renderer.js';
 import { renderTextBubble } from '../components/text-bubble.js';
 import { renderEmojiPickerPanel } from '../components/emoji-picker-panel.js';
-import { getAiMeta, resolveAiAvatar, resolveUserAvatar, DEFAULT_AI_AVATAR_BG } from '../aiMeta.js';
+import { getAiMeta, resolveAiAvatar, resolveUserAvatar, withUserInGroupMembers, DEFAULT_AI_AVATAR_BG } from '../aiMeta.js';
 import { getRunningGame, GAME_META } from '../games/index.js';
+import { getGroupSendAsId } from '../services/group-send-identity.js';
 
 /**
  * 解析 SDK chatMessages.add 期望的 aiPersonId / mode / conversationType 字段。
@@ -107,21 +107,25 @@ function renderRunningGameBar(groupId) {
  * 渲染群头像 (九宫格拼接)
  */
 function renderGroupAvatar(members, size = 42) {
-    const gridSize = Math.min(members.length, 4);
-    const cellSize = size / 2;
+    const list = withUserInGroupMembers(members);
+    const gridSize = Math.min(list.length, 4);
     const gap = 1;
 
     let cellsHtml = '';
     for (let i = 0; i < 4; i++) {
         if (i < gridSize) {
-            const member = members[i];
-            const meta = getMemberMeta(member.id || member.aiPersonId, members);
-            const char = (meta.nickname || '?').charAt(0);
-            const bg = meta.avatarBg || DEFAULT_AI_AVATAR_BG;
-            const inner = meta.avatar
-                ? `<img src="${escapeHtml(meta.avatar)}" alt="" style="width:100%;height:100%;object-fit:cover;" />`
+            const member = list[i];
+            const isUser = !!(member.isUser || member.kind === 'user');
+            const meta = isUser ? null : getMemberMeta(member.id || member.aiPersonId, list);
+            const live = isUser ? resolveUserAvatar() : null;
+            const name = member.name || member.nickname || meta?.nickname || (isUser ? '我' : '?');
+            const char = (name || '?').charAt(0);
+            const bg = member.avatarBg || meta?.avatarBg || live?.bg || DEFAULT_AI_AVATAR_BG;
+            const url = member.avatar || meta?.avatar || live?.url || '';
+            const inner = url
+                ? `<img src="${escapeHtml(url)}" alt="" style="width:100%;height:100%;object-fit:cover;" />`
                 : escapeHtml(char);
-            cellsHtml += `<div style="background:${bg};display:flex;align-items:center;justify-content:center;font-size:${size * 0.24}px;color:white;font-weight:500;">${inner}</div>`;
+            cellsHtml += `<div style="background:${escapeHtml(bg)};display:flex;align-items:center;justify-content:center;font-size:${size * 0.24}px;color:white;font-weight:500;">${inner}</div>`;
         } else {
             cellsHtml += `<div style="background:#E8E8E8;"></div>`;
         }
@@ -137,28 +141,17 @@ function renderGroupAvatar(members, size = 42) {
 /**
  * 群聊文本消息气泡:
  *   - 跟私聊 text-bubble 同结构(复用 message-renderer 体系)
- *   - 群聊额外:非 user 消息上方显示 sender-name
- *   - 群聊额外:连续消息合并头像/名字(由 CSS class .consecutive 控制)
- *
- * 直接 renderTextBubble 即可,再加 senderName 顶部 + consecutive class。
+ *   - 每条都画出发送者头像，气泡上方不写名字
  */
 function renderGroupTextBubble(msg, ctx = {}) {
     const isUser = msg.sender === 'user';
     const memberMeta = !isUser ? getMemberMeta(msg.senderId, ctx.fallbackMembers || []) : null;
     const senderLabel = isUser ? '我' : (msg.senderName || memberMeta?.nickname || msg.senderId || '未知');
 
-    // ★ 决定是否需要「发送者名字条」
-    //   showSenderName: true 表示「这是新一段对话的第一条」,需要显示名字 + 头像
-    //   false: 上一条是同一发送者,合并
-    const showSenderName = ctx.showSenderName !== false;
-    const senderNameHtml = showSenderName && !isUser
-        ? `<div class="sender-name">${escapeHtml(senderLabel)}</div>`
-        : '';
-
     // ★ 用 renderTextBubble 渲染主体(复用私聊渲染器,保证一致性)
     //   注意:群聊场景下 aiPersonId 必须传 groupId(不是 senderId),action 按钮的 payload 才能正确定位会话
     const aiPersonId = ctx.groupId || msg.conversationId || '';
-    const inner = renderTextBubble(msg, {
+    return renderTextBubble(msg, {
         name: senderLabel,
         avatar: memberMeta?.avatar || '',
         avatarBg: memberMeta?.avatarBg || DEFAULT_AI_AVATAR_BG,
@@ -168,46 +161,36 @@ function renderGroupTextBubble(msg, ctx = {}) {
         mode: msg.mode || ctx.mode || 'calendar',
         userAvatar: ctx.userAvatar,
         userAvatarBg: ctx.userAvatarBg,
-        // ★ v0.72 群聊标识:让重roll 按钮 action 知道是 group,重roll 时走对应分支
         conversationType: 'group',
-        // ★ v0.85 群聊时显示"发送给AI"按钮
         showSendToAi: true,
     });
+}
 
-    // ★ 注入 group 上下文:
-    //   1. 添加 senderNameHtml(在 message-content 之前)
-    //   2. 给 message-wrapper 加 .consecutive(隐藏头像/名字)
-    //   3. 加 data-sender-id 让 CSS / JS 都能定位发送者
-    let wrapped = inner;
-    if (senderNameHtml) {
-        // 把 senderNameHtml 插入到 .message-content 内的 .reply-quote 之前
-        wrapped = wrapped.replace(
-            /<div class="message-content">\s*<div class="reply-quote">/,
-            `<div class="message-content">${senderNameHtml}<div class="reply-quote">`
-        );
-        // 没有 reply-quote 时(更常见),直接在 .message-content 内顶部塞 senderName
-        if (wrapped.indexOf(senderNameHtml) === -1) {
-            wrapped = wrapped.replace(
-                /<div class="message-content">/,
-                `<div class="message-content">${senderNameHtml}`
-            );
-        }
-    }
-    if (!showSenderName) {
-        wrapped = wrapped.replace(
-            /class="message-wrapper (\w+)"/,
-            `class="message-wrapper $1 consecutive"`
-        );
-    }
-    return wrapped;
+/** 工具栏「图片」落的是 descriptive_image；旧数据 / AI 段可能写成 image 且没有 url。 */
+function isDescriptiveImageMsg(m) {
+    if (!m) return false;
+    if (m.type === 'descriptive_image') return true;
+    if (m.type !== 'image') return false;
+    return !(m.url || m.imageUrl);
+}
+
+function buildGroupBubbleOptions(ctx = {}) {
+    return {
+        aiPersonId: ctx.groupId,
+        mode: ctx.mode,
+        userAvatar: ctx.userAvatar,
+        userAvatarBg: ctx.userAvatarBg,
+        conversationType: 'group',
+        isGroup: true,
+        showSendToAi: true,
+    };
 }
 
 /**
  * 渲染群聊消息列表
  *   - 跟私聊共用 renderMessageList
- *   - 文本/图片/sticker 用 renderGroupTextBubble 加 senderName
+ *   - 文本/真实图片/sticker 用 renderGroupTextBubble
  *   - 其他类型直接复用私聊渲染器
- *   - 连续气泡合并:遍历时检查上一条同 sender + 时间间隔 < 60s → 隐藏头像/名字
  */
 function renderGroupMessageList(messages, ctx = {}) {
     if (!messages || messages.length === 0) {
@@ -216,68 +199,43 @@ function renderGroupMessageList(messages, ctx = {}) {
         return '';
     }
 
+    const groupOpts = buildGroupBubbleOptions(ctx);
     const out = [];
-    let prev = null;
     for (let i = 0; i < messages.length; i++) {
         const m = messages[i];
-        // system 类型不参与合并,也不被前一帧「consecutive」
+        if (!m) continue;
         if (m.type === 'system') {
-            out.push(renderMessage(m, ctx.contact || {}, {
-                aiPersonId: ctx.groupId,
-                mode: ctx.mode,
-            }));
-            prev = null;
+            try {
+                out.push(renderMessage(m, ctx.contact || {}, groupOpts));
+            } catch (err) {
+                console.warn('[chat-group-page] render system message failed', m?.id, err);
+            }
             continue;
         }
 
-        const ts = m.timestamp || 0;
-        const sameAsPrev = prev
-            && prev.sender === m.sender
-            && (ts - (prev.timestamp || 0)) < 60_000
-            && prev.type === m.type;
+        const isPlainMedia = (m.type === 'text' || m.type === 'sticker' || m.type === 'image')
+            && !isDescriptiveImageMsg(m);
 
-        // 文本/图片/sticker 走群聊文本渲染(支持 senderName + consecutive)
-        if (m.type === 'text' || m.type === 'image' || m.type === 'sticker') {
-            out.push(renderGroupTextBubble(m, {
-                ...ctx,
-                showSenderName: !sameAsPrev,
-            }));
-        } else {
-            // 其他类型(voice / location / redpacket / transfer / call_record / chat_record / pat / descriptive_image)
-            // 全部复用 message-renderer,但 contact 需要带 AI 头像信息
-            const aiPersonId = m.sender === 'user' ? '' : (m.senderId || '');
-            const memberMeta = m.sender !== 'user' ? getMemberMeta(m.senderId, ctx.fallbackMembers || []) : null;
-            const bubbleContact = {
-                name: m.senderName || (memberMeta?.nickname || aiPersonId || '未知'),
-                avatar: memberMeta?.avatar || '',
-                avatarBg: memberMeta?.avatarBg || DEFAULT_AI_AVATAR_BG,
-                aiPersonId,
-            };
-            const bubbleHtml = renderMessage(m, bubbleContact, {
-                aiPersonId: ctx.groupId,
-                mode: ctx.mode,
-                userAvatar: ctx.userAvatar,
-                userAvatarBg: ctx.userAvatarBg,
-                isGroup: true,
-            });
-            // 加 sender-name + consecutive
-            let wrapped = bubbleHtml;
-            if (!sameAsPrev && m.sender !== 'user' && (m.senderName || memberMeta?.nickname)) {
-                const label = escapeHtml(m.senderName || memberMeta?.nickname || '');
-                wrapped = wrapped.replace(
-                    /<div class="message-content">/,
-                    `<div class="message-content"><div class="sender-name">${label}</div>`
-                );
+        try {
+            if (isPlainMedia) {
+                out.push(renderGroupTextBubble(m, ctx));
+            } else {
+                const renderMsg = isDescriptiveImageMsg(m) && m.type !== 'descriptive_image'
+                    ? { ...m, type: 'descriptive_image' }
+                    : m;
+                const aiPersonId = m.sender === 'user' ? '' : (m.senderId || '');
+                const memberMeta = m.sender !== 'user' ? getMemberMeta(m.senderId, ctx.fallbackMembers || []) : null;
+                const bubbleContact = {
+                    name: m.senderName || (memberMeta?.nickname || aiPersonId || '未知'),
+                    avatar: memberMeta?.avatar || '',
+                    avatarBg: memberMeta?.avatarBg || DEFAULT_AI_AVATAR_BG,
+                    aiPersonId,
+                };
+                out.push(renderMessage(renderMsg, bubbleContact, groupOpts));
             }
-            if (sameAsPrev) {
-                wrapped = wrapped.replace(
-                    /class="message-wrapper (\w+)"/,
-                    `class="message-wrapper $1 consecutive"`
-                );
-            }
-            out.push(wrapped);
+        } catch (err) {
+            console.warn('[chat-group-page] render message failed', m?.id, m?.type, err);
         }
-        prev = m;
     }
     return out.join('');
 }
@@ -285,9 +243,10 @@ function renderGroupMessageList(messages, ctx = {}) {
 /**
  * 渲染群聊工具栏按钮
  */
-function renderGroupToolbarButton(action, label, iconSvg) {
+function renderGroupToolbarButton(action, label, iconSvg, extraClass = '') {
+    const cls = extraClass ? `toolbar-btn ${extraClass}` : 'toolbar-btn';
     return `
-        <button class="toolbar-btn" data-action="${escapeHtml(action)}">
+        <button class="${cls}" data-action="${escapeHtml(action)}">
             <div class="toolbar-btn-icon">
                 ${iconSvg}
             </div>
@@ -404,7 +363,8 @@ export function renderGroupChatPage(app, groupId) {
     const displayGroup = realGroup || { id: groupId, name: '未知群聊', members: [] };
     const displayMembers = useReal ? realMembers : [];
     const displayName = displayGroup.name || '未知群聊';
-    const displayMemberCount = (displayGroup.members || displayMembers || []).length;
+    const displayMemberCount = window.settingsSdk?.chatGroups?.countMembers?.(displayGroup)
+        ?? ((displayMembers || []).length + (useReal ? 1 : 0));
 
     // ★ v0.80 移除 demo fallback — 没有真实群聊就直接空消息,不展示占位示例
     let displayMessages = realMessages || [];
@@ -585,27 +545,41 @@ export function renderGroupChatPage(app, groupId) {
         : '';
     const replyPreviewStyle = replyingTo ? '' : ' style="display:none"';
 
-    // ★ v0.69 群聊工具栏 — 与私聊对齐(2 行 × 4 列,左右切换页)
-    //   Page 1: 图片 / 语音 / 自定义 / 位置 / 红包 / 转账 / 通话 / 收藏
-    //   Page 2: @成员 / 公告 / 成员 / 名片 / 拍一拍 / 游戏 / 留空 / 留空
-    //   跟私聊完全对齐可发送的 8 种特殊消息类型,群聊独有功能在第二页
+    const sendAsId = getGroupSendAsId(groupId, mode);
+    const sendAsActive = !!sendAsId;
+    let sendAsName = '';
+    if (sendAsActive) {
+        try {
+            sendAsName = sdkForNick?.chatGroups?.resolveMemberName?.(
+                sdkForNick, realGroup, sendAsId, nickUser?.id || '', '',
+            ) || '';
+        } catch (_) {}
+        if (!sendAsName) {
+            const meta = getMemberMeta(sendAsId, displayMembers);
+            sendAsName = meta.nickname || sendAsId;
+        }
+    }
+    const customBtnClass = sendAsActive ? 'is-swap-active' : '';
+
+    // Page 1: 图片 / 语音 / 自定义 / 位置 / 红包 / 转账 / @成员 / 公告
+    // Page 2: 成员 / 收藏
     const page1 = `
         ${renderGroupToolbarButton('image', '图片', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/><polyline points="21 15 16 10 5 21"/></svg>')}
         ${renderGroupToolbarButton('voice', '语音', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>')}
-        ${renderGroupToolbarButton('custom', '自定义', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11h.01"/><path d="M14 6h.01"/><path d="M18 6h.01"/><path d="M6.5 13.1h.01"/><path d="M22 5c0 9-4 12-6 12s-6-3-6-12c0-2 2-3 6-3s6 1 6 3"/><path d="M17.4 9.9c-.8.8-2 .8-2.8 0"/><path d="M10.1 7.1C9 7.2 7.7 7.7 6 8.6c-3.5 2-4.7 3.9-3.7 5.6 4.5 7.8 9.5 8.4 11.2 7.4.9-.5 1.9-2.1 1.9-4.7"/><path d="M9.1 16.5c.3-1.1 1.4-1.7 2.4-1.4"/></svg>')}
+        ${renderGroupToolbarButton('custom', '自定义', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11h.01"/><path d="M14 6h.01"/><path d="M18 6h.01"/><path d="M6.5 13.1h.01"/><path d="M22 5c0 9-4 12-6 12s-6-3-6-12c0-2 2-3 6-3s6 1 6 3"/><path d="M17.4 9.9c-.8.8-2 .8-2.8 0"/><path d="M10.1 7.1C9 7.2 7.7 7.7 6 8.6c-3.5 2-4.7 3.9-3.7 5.6 4.5 7.8 9.5 8.4 11.2 7.4.9-.5 1.9-2.1 1.9-4.7"/><path d="M9.1 16.5c.3-1.1 1.4-1.7 2.4-1.4"/></svg>', customBtnClass)}
         ${renderGroupToolbarButton('location', '位置', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>')}
         ${renderGroupToolbarButton('redpacket', '红包', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 17h3v2a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-3a3.16 3.16 0 0 0 2-2h1a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1h-1a5 5 0 0 0-2-4V3a4 4 0 0 0-3.2 1.6l-.3.4H11a6 6 0 0 0-6 6v1a5 5 0 0 0 2 4v3a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1z"/><path d="M16 10h.01"/><path d="M2 8v1a2 2 0 0 0 2 2h1"/></svg>')}
         ${renderGroupToolbarButton('transfer', '转账', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/></svg>')}
-        ${renderGroupToolbarButton('call', '通话', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>')}
-        ${renderGroupToolbarButton('favorite', '收藏', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>')}
-    `;
-    const page2 = `
         ${renderGroupToolbarButton('mention', '@成员', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/><path d="M12 14v8M8 18h8"/></svg>')}
         ${renderGroupToolbarButton('announcement', '公告', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>')}
+    `;
+    const page2 = `
         ${renderGroupToolbarButton('members', '成员', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>')}
-        ${renderGroupToolbarButton('card', '名片', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><line x1="14" y1="10" x2="18" y2="10" stroke-linecap="round"/><line x1="14" y1="13" x2="18" y2="13" stroke-linecap="round"/></svg>')}
-        ${renderGroupToolbarButton('pat', '拍一拍', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12V6a2 2 0 0 1 2-2h2v8M9 8l8 4-2 6-8-2z"/><path d="M11 8L7 4" stroke-linecap="round"/></svg>')}
-        ${renderGroupToolbarButton('game', '游戏', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M12 6v12M7 10v4M17 10v4" stroke-linecap="round"/></svg>')}
+        ${renderGroupToolbarButton('favorite', '收藏', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>')}
+        <div class="toolbar-btn toolbar-btn--placeholder"></div>
+        <div class="toolbar-btn toolbar-btn--placeholder"></div>
+        <div class="toolbar-btn toolbar-btn--placeholder"></div>
+        <div class="toolbar-btn toolbar-btn--placeholder"></div>
         <div class="toolbar-btn toolbar-btn--placeholder"></div>
         <div class="toolbar-btn toolbar-btn--placeholder"></div>
     `;
@@ -625,7 +599,7 @@ export function renderGroupChatPage(app, groupId) {
     `;
 
     return `
-        <div class="chat-group chat-${mode}${multiSelectActive ? ' multi-select-mode' : ''}" data-group-id="${escapeHtml(groupId)}" data-mode="${escapeHtml(mode)}" data-conversation-type="group" data-conversation-id="${escapeHtml(groupId)}" data-conversation-name="${escapeHtml(displayName)}"${rawMessagesAttr}${chatGroupDataEmoji}>
+        <div class="chat-group chat-${mode}${multiSelectActive ? ' multi-select-mode' : ''}" data-group-id="${escapeHtml(groupId)}" data-mode="${escapeHtml(mode)}" data-conversation-type="group" data-conversation-id="${escapeHtml(groupId)}" data-conversation-name="${escapeHtml(displayName)}"${sendAsActive ? ' data-swap-active="1"' : ''} data-send-as-id="${escapeHtml(sendAsId)}" data-send-as-name="${escapeHtml(sendAsName)}"${rawMessagesAttr}${chatGroupDataEmoji}>
             <!-- 顶部栏 -->
             <div class="chat-header">
                 <div class="chat-header-left">

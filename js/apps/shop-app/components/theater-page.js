@@ -61,6 +61,10 @@ export const SpTheaterPage = {
             const next = String(e.target.value || '').trim();
             if (next && next !== this.t.title) { this.t.title = next; this.dirty = true; }
         },
+        commitSummary(e) {
+            const next = String(e.target.value || '').trim();
+            if (next !== String(this.t.summary || '')) { this.t.summary = next; this.dirty = true; }
+        },
         dropLine(scene, line) {
             scene.lines = scene.lines.filter((l) => l.id !== line.id);
             this.dirty = true;
@@ -136,10 +140,16 @@ export const SpTheaterPage = {
 
                 <p v-if="t.closing" class="sp-theater__closing">{{ t.closing }}</p>
 
-                <sp-section title="概要" sub="给 AI 记住的是这个">
-                    <p v-if="t.summary" class="sp-theater__summary">{{ t.summary }}</p>
-                    <p v-else-if="summarizing" class="sp-panel__note">正在写…</p>
-                    <p v-else class="sp-panel__note">还没生成。概要会进 AI 的上下文，全文不会。</p>
+                <sp-section title="概要" sub="给 AI 记住的是这个，点一下就能改">
+                    <textarea
+                        class="sp-theater__summary"
+                        :value="t.summary"
+                        rows="4"
+                        maxlength="400"
+                        :disabled="summarizing"
+                        :placeholder="summarizing ? '正在写…' : '还没生成。点这里自己写，或按下面生成。'"
+                        @change="commitSummary"
+                    ></textarea>
                     <div class="sp-detail__tools">
                         <sp-btn size="sm" variant="ghost" icon="scroll" :loading="summarizing" @click="makeSummary">
                             {{ t.summary ? '重写概要' : '生成概要' }}

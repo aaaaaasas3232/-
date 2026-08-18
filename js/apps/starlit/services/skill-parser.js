@@ -9,9 +9,10 @@
  * ── 设计原则 ──────────────────────────────────────────────────────
  * 模型总会犯错，所以这里**每一步都能坏**：
  *   - 围栏名写错（starlit / Starlit / sl）→ 都认
+ *   - 围栏和 JSON 写在同一行 / 忘了三个反引号 / 忘了闭合 → 都尽量抠出来
  *   - JSON 尾巴多个逗号 → 修一下再解析
  *   - kind 拼错 / 缺字段 → 丢掉这一块，正文照常显示
- * 绝不能因为一个块坏了就让整条回复消失。
+ * 绝不能因为一个块坏了就让整条回复消失，更不能把 JSON 原文显示成气泡。
  */
 
 import { CARD_TYPES, LINK_KINDS } from '../constants.js';
@@ -25,20 +26,41 @@ const KNOWN_KINDS = new Set([
 
 const LINK_KIND_IDS = new Set(LINK_KINDS.map((k) => k.id));
 
-/** 围栏：```starlit / ```sl / ~~~starlit，大小写随意，语言标记后可以有空格 */
-const FENCE_RE = /(?:```|~~~)[ \t]*(?:starlit|sl|star-lit)[ \t]*\r?\n([\s\S]*?)(?:```|~~~)/gi;
+const FENCE_OPEN_RE = /(?:```|~~~)[ \t]*(?:starlit|sl|star-lit)\b[ \t]*/gi;
+const BARE_LABEL_RE = /(?:```|~~~)?[ \t]*(?:starlit|sl|star-lit)[ \t]*$/i;
 
 /**
  * 宽容 JSON 解析。模型最常犯的两个错：
  *   1. 对象/数组最后多一个逗号
  *   2. 用了中文引号
  */
+/** 模型常在 JSON 字符串里直接回车。标准 JSON 不允许，先把字符串内的裸换行转成 \n。 */
+function escapeRawBreaksInStrings(text) {
+    let out = '';
+    let inStr = false;
+    let esc = false;
+    for (const ch of String(text || '')) {
+        if (inStr) {
+            if (esc) { out += ch; esc = false; continue; }
+            if (ch === '\\') { out += ch; esc = true; continue; }
+            if (ch === '"') { out += ch; inStr = false; continue; }
+            if (ch === '\n') { out += '\\n'; continue; }
+            if (ch === '\r') continue;
+            out += ch;
+            continue;
+        }
+        if (ch === '"') inStr = true;
+        out += ch;
+    }
+    return out;
+}
+
 function looseParse(raw) {
     const text = String(raw || '').trim();
     if (!text) return null;
     try { return JSON.parse(text); } catch (_) { /* 继续修 */ }
 
-    const fixed = text
+    const fixed = escapeRawBreaksInStrings(text)
         .replace(/[“”]/g, '"')
         .replace(/[‘’]/g, "'")
         .replace(/,\s*([}\]])/g, '$1');
@@ -53,6 +75,100 @@ function looseParse(raw) {
     return null;
 }
 
+/** 从 start 起扫一个完整的 {...} 或 [...]，字符串里的括号不算。扫不到返回 null。 */
+function scanJsonValue(text, start) {
+    const first = text[start];
+    if (first !== '{' && first !== '[') return null;
+    let depth = 0;
+    let inStr = false;
+    let esc = false;
+    for (let i = start; i < text.length; i += 1) {
+        const ch = text[i];
+        if (inStr) {
+            if (esc) { esc = false; continue; }
+            if (ch === '\\') { esc = true; continue; }
+            if (ch === '"') inStr = false;
+            continue;
+        }
+        if (ch === '"') { inStr = true; continue; }
+        if (ch === '{' || ch === '[') depth += 1;
+        else if (ch === '}' || ch === ']') {
+            depth -= 1;
+            if (depth === 0) return { raw: text.slice(start, i + 1), end: i + 1 };
+        }
+    }
+    return null;
+}
+
+function skillKind(data) {
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return '';
+    return String(data.kind || '').trim().toLowerCase();
+}
+
+function isSkillObject(data) {
+    return KNOWN_KINDS.has(skillKind(data));
+}
+
+/**
+ * 把一段 payload 里所有技能对象抠出来。
+ * 认：单个对象、对象数组、一个围栏里连续几个对象。
+ * @returns {number} 吸收了几条技能
+ */
+function collectSkills(payload, skills) {
+    let count = 0;
+    const eat = (data) => {
+        if (isSkillObject(data)) {
+            skills.push({ ...data, kind: skillKind(data) });
+            count += 1;
+            return;
+        }
+        if (Array.isArray(data)) data.forEach(eat);
+    };
+
+    const parsed = looseParse(payload);
+    if (parsed) {
+        eat(parsed);
+        if (count) return count;
+    }
+
+    const src = String(payload || '');
+    let i = 0;
+    while (i < src.length) {
+        const ch = src[i];
+        if (ch !== '{' && ch !== '[') { i += 1; continue; }
+        const scanned = scanJsonValue(src, i);
+        if (!scanned) { i += 1; continue; }
+        eat(looseParse(scanned.raw));
+        i = scanned.end;
+    }
+    return count;
+}
+
+function findFences(source) {
+    const out = [];
+    FENCE_OPEN_RE.lastIndex = 0;
+    let m = FENCE_OPEN_RE.exec(source);
+    while (m) {
+        let bodyStart = m.index + m[0].length;
+        if (source[bodyStart] === '\r') bodyStart += 1;
+        if (source[bodyStart] === '\n') bodyStart += 1;
+        const rest = source.slice(bodyStart);
+        const close = rest.search(/(?:```|~~~)/);
+        const bodyEnd = close === -1 ? source.length : bodyStart + close;
+        const fenceEnd = close === -1 ? source.length : bodyStart + close + 3;
+        out.push({ start: m.index, end: fenceEnd, body: source.slice(bodyStart, bodyEnd) });
+        FENCE_OPEN_RE.lastIndex = fenceEnd;
+        m = FENCE_OPEN_RE.exec(source);
+    }
+    return out;
+}
+
+function labelStart(text, jsonStart) {
+    const before = text.slice(0, jsonStart);
+    const m = before.match(BARE_LABEL_RE);
+    return m ? jsonStart - m[0].length : jsonStart;
+}
+
 /**
  * 拆一条回复。
  * @returns {{ text:string, skills:Array<object>, broken:number }}
@@ -62,21 +178,66 @@ export function parseReply(raw) {
     const skills = [];
     let broken = 0;
 
-    const text = source.replace(FENCE_RE, (_all, body) => {
-        const data = looseParse(body);
-        if (!data || typeof data !== 'object') { broken += 1; return ''; }
-        const kind = String(data.kind || '').trim().toLowerCase();
-        if (!KNOWN_KINDS.has(kind)) { broken += 1; return ''; }
-        skills.push({ ...data, kind });
-        return '';
-    });
+    // ① 正规 / 半正规围栏（三个反引号可跟 JSON 写在同一行，也可以忘了闭合）
+    let rest = '';
+    let cursor = 0;
+    for (const fence of findFences(source)) {
+        rest += source.slice(cursor, fence.start);
+        if (!collectSkills(fence.body, skills)) broken += 1;
+        cursor = fence.end;
+    }
+    rest += source.slice(cursor);
+
+    // ② 围栏丢了：`starlit { ... }` 或裸的 `{"kind":"gloss",...}`
+    let cleaned = '';
+    let pos = 0;
+    while (pos < rest.length) {
+        const brace = rest.indexOf('{', pos);
+        const bracket = rest.indexOf('[', pos);
+        const hits = [brace, bracket].filter((n) => n >= 0);
+        if (!hits.length) {
+            cleaned += rest.slice(pos);
+            break;
+        }
+        const start = Math.min(...hits);
+        const scanned = scanJsonValue(rest, start);
+        if (!scanned) {
+            cleaned += rest.slice(pos, start + 1);
+            pos = start + 1;
+            continue;
+        }
+        const before = skills.length;
+        collectSkills(scanned.raw, skills);
+        if (skills.length > before) {
+            cleaned += rest.slice(pos, labelStart(rest, start));
+            pos = scanned.end;
+            continue;
+        }
+        cleaned += rest.slice(pos, scanned.end);
+        pos = scanned.end;
+    }
 
     return {
-        // 去掉围栏之后经常留下一串空行
-        text: text.replace(/\n{3,}/g, '\n\n').trim(),
+        text: cleaned.replace(/\n{3,}/g, '\n\n').trim(),
         skills,
         broken,
     };
+}
+
+/**
+ * 这条气泡是不是技能协议的残骸（围栏名、JSON 碎片、数组续行）。
+ * 用来把已经落盘的坏消息拼回去再解析。
+ */
+export function looksLikeSkillDebris(text) {
+    const s = String(text || '').trim();
+    if (!s) return false;
+    if (/^(?:```|~~~)?\s*(?:starlit|sl|star-lit)\b/i.test(s)) return true;
+    if (/^\{\s*"kind"\s*:/.test(s)) return true;
+    if (/^",/.test(s)) return true;
+    if (/^"\s*[}\]]/.test(s)) return true;
+    if (/"kind"\s*:\s*"(?:gloss|correct|word|concept|code|post|quiz|dict|stuck|objective|reuse|end)"/.test(s)
+        && /(?:```|~~~|starlit|"texts"\s*:)/i.test(s)) return true;
+    return false;
 }
 
 /** 取第一个某类技能 */

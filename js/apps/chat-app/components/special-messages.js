@@ -8,8 +8,9 @@
  *   import { renderVoiceBubble } from './special-messages.js';
  */
 
+import { escapeHtml } from '@/src/core/escape.js';
 import { renderMessageActions, renderSelectButton, renderTime } from './message-actions.js';
-import { DEFAULT_AI_AVATAR_BG, DEFAULT_USER_AVATAR_BG } from '../aiMeta.js';
+import { DEFAULT_AI_AVATAR_BG, DEFAULT_USER_AVATAR_BG, resolveBubbleAvatar } from '../aiMeta.js';
 
 // ============================================
 // SVG 图标
@@ -48,15 +49,9 @@ function generateWaveBars(count = 8) {
 export function renderVoiceBubble(msg, contact = {}, options = {}) {
     const isUser = msg.sender === 'user';
 
-    // ★ v0.45 头像支持真实社媒头像:优先从 options 拿,fallback 到 contact/msg 字段
-    const userAvatarBg = options.userAvatarBg || '';
-    const userAvatar = options.userAvatar || '';
-    const aiAvatarBg = contact?.avatarBg || '';
-    const aiAvatar = contact?.avatar || '';
-    const avatarBg = isUser
-        ? (userAvatarBg || DEFAULT_USER_AVATAR_BG)
-        : (aiAvatarBg || DEFAULT_AI_AVATAR_BG);
-    const avatarUrl = isUser ? userAvatar : aiAvatar;
+    const bubbleAv = resolveBubbleAvatar(msg, contact, options);
+    const avatarBg = bubbleAv.bg || (isUser ? DEFAULT_USER_AVATAR_BG : DEFAULT_AI_AVATAR_BG);
+    const avatarUrl = bubbleAv.url;
     const avatarText = isUser ? '我' : (msg.senderName?.charAt(0) || '?');
     const duration = msg.duration || msg.voiceDuration || 5;
     const voiceContent = msg.voiceContent || '';

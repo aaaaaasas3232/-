@@ -30,6 +30,7 @@ import {
     wrapBlock,
     stripBlock,
     replaceBlock,
+    readBlock,
     hasBlock,
 } from '@/src/core/context-composer.js';
 
@@ -39,6 +40,7 @@ export { sanitizeTag, openTag, closeTag };
 export const wrapPromptBlock = wrapBlock;
 export const stripPromptBlock = stripBlock;
 export const replacePromptBlock = replaceBlock;
+export const readPromptBlock = readBlock;
 export const hasPromptBlock = hasBlock;
 
 /** 卡片 source → 标签名。没命中的用卡片标题兜底。 */
@@ -52,6 +54,9 @@ const SOURCE_TAG_MAP = {
     'ai-moments': 'AI朋友圈',
     'sticker-library': '表情包库',
     'listen-together': '一起听',
+    'shop-live': '四叶草购物',
+    'job-live': '灯塔求职',
+    'chat-preamble': '对话总则',
     // ★ 必须和 chat-ai-service 里 wrapPromptBlock('日记本', …) 用的名字**完全一致**。
     //   不一致的话:pre 里是 <日记本（实时）开始>，而发送前的 strip 找的是
     //   <日记本开始> —— 剪不掉，于是同一段内容被注入两遍，一份过期一份最新，
@@ -59,8 +64,13 @@ const SOURCE_TAG_MAP = {
     'diary': '日记本',
 };
 
-/** 卡片 id → 标签名(优先级高于 source) */
+/**
+ * 卡片 id → 标签名(优先级高于 source)。
+ * 实时块那几条的权威声明在 `live-context-registry.js`,这里是同名副本 ——
+ * 反过来 import 会成环(registry 依赖本文件的 stripPromptBlock)。改名要两边一起改。
+ */
 const ID_TAG_MAP = {
+    'chat-preamble': '对话总则',
     'context-rounds': '当前聊天回合',
     'context-mode': '当前模式',
     'reply-format': '回复格式',
@@ -68,15 +78,20 @@ const ID_TAG_MAP = {
     'ai-moments': 'AI朋友圈',
     'sticker-library': '表情包库',
     'listen-together': '一起听',
+    'shop-live': '四叶草购物',
+    'job-live': '灯塔求职',
     'diary-live': '日记本',
+    'group-info': '群信息',
 };
 
 /**
  * 给一张「当前上下文」卡片推导标签名。
- * @param {{id?:string, source?:string, title?:string}} card
+ * 卡片自己带 `tag` 时以它为准(实时块就是这么传的),其余按 id → source → 标题兜底。
+ * @param {{id?:string, source?:string, title?:string, tag?:string}} card
  */
 export function resolveTagName(card) {
     if (!card) return '提示词';
+    if (card.tag) return sanitizeTag(card.tag);
     const id = String(card.id || '');
     const source = String(card.source || '');
     if (ID_TAG_MAP[id]) return ID_TAG_MAP[id];

@@ -65,6 +65,7 @@ import { SummaryEditModal } from './summary-edit-modal.js';   // ★ v0.61.3 概
 import { MomentShareModal } from './moment-share-modal.js'; // ★ 朋友圈分享弹窗
 import { PREVIEW_TYPES } from './app-prompt-card.js';
 import { DEFAULT_AI_AVATAR_BG } from '../aiMeta.js';
+import { favoriteCardFromContext, shareCardFromContext, isCardFavorited } from '../services/card-detail-actions.js';
 
 /**
  * 颜色预设
@@ -134,27 +135,21 @@ class ChatModalManager {
      * @param {Function} options.onSatisfied - 满意按钮回调
      * @param {Function} options.onShare - 分享按钮回调
      */
-    openLocationCard({ name, address, style = {}, onSatisfied, onShare }) {
+    openLocationCard({ name, address, style = {}, context, onFavorite, onShare, onSatisfied } = {}) {
         const mergedStyle = {
             ...LOCATION_PRESETS.default,
             ...style,
         };
-
+        const ctx = context || {};
         this._dispatch(LocationCardModal, {
             name: name || '位置',
             address: address || '',
+            favorited: isCardFavorited(ctx),
             ...mergedStyle,
         }, {
-            onSatisfied: onSatisfied || (() => {
-                window.__phoneIsland?.notify?.('success', '已确认', '位置已确认');
-            }),
-            onShare: onShare || (() => {
-                if (navigator.share) {
-                    navigator.share({ title: name, text: address });
-                } else {
-                    window.__phoneIsland?.notify?.('info', '分享功能', '复制链接即将开放');
-                }
-            }),
+            onFavorite: onFavorite || (() => favoriteCardFromContext(ctx)),
+            onShare: onShare || (() => shareCardFromContext(ctx)),
+            onSatisfied: onSatisfied || (() => favoriteCardFromContext(ctx)),
         });
     }
 
@@ -169,24 +164,18 @@ class ChatModalManager {
      * @param {Function} options.onFavorite - 收藏回调
      * @param {Function} options.onShare - 分享回调
      */
-    openDescImage({ description, cardColor, textColor, borderColor, onClose, onFavorite, onShare }) {
+    openDescImage({ description, cardColor, textColor, borderColor, context, onClose, onFavorite, onShare } = {}) {
+        const ctx = context || {};
         this._dispatch(DescImageModal, {
             description: description || '',
             cardColor: cardColor || '#FFE4EC',
             textColor: textColor || '#D4728A',
             borderColor: borderColor || '#C0607A',
+            favorited: isCardFavorited(ctx),
         }, {
             onClose: onClose || (() => {}),
-            onFavorite: onFavorite || (() => {
-                window.__phoneIsland?.notify?.('success', '已收藏', '图片已添加到收藏');
-            }),
-            onShare: onShare || (() => {
-                if (navigator.share) {
-                    navigator.share({ title: '图片描述', text: description });
-                } else {
-                    window.__phoneIsland?.notify?.('info', '分享功能', '复制链接即将开放');
-                }
-            }),
+            onFavorite: onFavorite || (() => favoriteCardFromContext(ctx)),
+            onShare: onShare || (() => shareCardFromContext(ctx)),
         });
     }
 
@@ -261,7 +250,7 @@ class ChatModalManager {
      * @param {Function} options.onConfirm - 确认发送回调，参数为 { amount, note }
      * @param {Function} options.onCancel - 取消回调
      */
-    openTransferSend({ onConfirm, onCancel } = {}) {
+    openTransferSend({ title, onConfirm, onCancel } = {}) {
         // ★ v0.67.x 读当前用户余额
         let currentBalance = 0;
         try {
@@ -273,7 +262,7 @@ class ChatModalManager {
             }
         } catch (_) { currentBalance = 0; }
         this._dispatch(TransferSendModal, {
-            title: '转账',
+            title: title || '转账',
             currentBalance,
         }, {
             onConfirm: onConfirm || ((result) => {
@@ -441,24 +430,9 @@ class ChatModalManager {
      * @param {Function} options.onFavorite - 收藏回调
      * @param {Function} options.onShare - 分享回调
      */
-    openDescImageDetail({ description, cardColor, textColor, borderColor, onClose, onFavorite, onShare }) {
-        this._dispatch(DescImageDetailModal, {
-            description: description || '',
-            cardColor: cardColor || '#FFE4EC',
-            textColor: textColor || '#D4728A',
-            borderColor: borderColor || '#C0607A',
-        }, {
-            onClose: onClose || (() => {}),
-            onFavorite: onFavorite || (() => {
-                window.__phoneIsland?.notify?.('success', '已收藏', '图片已添加到收藏');
-            }),
-            onShare: onShare || (() => {
-                if (navigator.share) {
-                    navigator.share({ title: '图片描述', text: description });
-                } else {
-                    window.__phoneIsland?.notify?.('info', '分享功能', '复制链接即将开放');
-                }
-            }),
+    openDescImageDetail({ description, cardColor, textColor, borderColor, context, onClose, onFavorite, onShare } = {}) {
+        return this.openDescImage({
+            description, cardColor, textColor, borderColor, context, onClose, onFavorite, onShare,
         });
     }
 

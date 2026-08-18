@@ -269,6 +269,41 @@ export function refreshEmojiCache() {
 }
 
 /**
+ * 列出这些图组里所有可发表情的名称,按组分好。
+ *
+ * prompt-manager 的「AI 表情包库」卡要用:回复格式那段写着「表情包只能用
+ * 表情包库里已列出的名称」,但在这个函数出现之前**根本没有任何地方列过名称** ——
+ * 卡片正文写的是「详细名称列表已注入到 systemPrompt」,而 pre 就是 systemPrompt,
+ * 里面一个名字都没有。模型只能瞎猜,猜出来的名字在用户历史里找不到,发出去就是空白。
+ *
+ * 名称取 `image.code` —— 和用户自己发表情时落库的 `stickerName || stickerCode`
+ * 是同一个值,AI 照抄就能被 `_stealStickerIfNeeded` 反查到。
+ *
+ * @param {string[]} stickerGroupIds
+ * @returns {Promise<Array<{groupId:string, groupName:string, names:string[]}>>}
+ */
+export async function listBoundStickerNames(stickerGroupIds = []) {
+    const ids = Array.isArray(stickerGroupIds) ? stickerGroupIds.filter(Boolean) : [];
+    if (ids.length === 0) return [];
+    const out = [];
+    for (const groupId of ids) {
+        try {
+            const images = await _loadGroupImages(groupId);
+            const names = images.map((img) => String(img.code || '').trim()).filter(Boolean);
+            if (names.length === 0) continue;
+            out.push({
+                groupId,
+                groupName: images[0]?.groupName || groupId,
+                names,
+            });
+        } catch (err) {
+            console.warn('[emoji-picker] listBoundStickerNames failed', groupId, err);
+        }
+    }
+    return out;
+}
+
+/**
  * ★ v0.49.1 修复:在 renderEmojiPickerPanel 第一次返回 loading HTML 之前,
  *   主动把所有 stickerGroupIds 对应的图组图片元数据加载进 _emojiCache,
  *   加载完调 bridge.syncNow({ force: true }) 触发 framework 重画 detail 页,

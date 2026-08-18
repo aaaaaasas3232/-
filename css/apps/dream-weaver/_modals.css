@@ -83,10 +83,30 @@
 
 .app-shell[data-app-id="dream-weaver"] .dw-modal .ac-btn {
     flex: 1 1 0;
+    border: none;
     border-radius: var(--dw-radius-sm);
     font-family: inherit;
     font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0;
     padding: 10px 0;
+    box-shadow: none;
+    transform: none;
+    transition: background 0.16s var(--dw-ease), color 0.16s var(--dw-ease), opacity 0.16s var(--dw-ease);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-modal .ac-btn:hover,
+.app-shell[data-app-id="dream-weaver"] .dw-modal .ac-btn:active,
+.app-shell[data-app-id="dream-weaver"] .dw-modal .ac-btn:disabled,
+.app-shell[data-app-id="dream-weaver"] .dw-modal .ac-btn:disabled:hover,
+.app-shell[data-app-id="dream-weaver"] .dw-modal .ac-btn:disabled:active {
+    transform: none;
+    box-shadow: none;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-modal .ac-btn:disabled {
+    opacity: 0.42;
+    cursor: not-allowed;
 }
 
 .app-shell[data-app-id="dream-weaver"] .dw-modal .ac-btn-secondary {
@@ -94,9 +114,23 @@
     color: var(--dw-text-secondary);
 }
 
+.app-shell[data-app-id="dream-weaver"] .dw-modal .ac-btn-secondary:hover:not(:disabled) {
+    background: var(--dw-surface-alt);
+    color: var(--dw-text);
+}
+
 .app-shell[data-app-id="dream-weaver"] .dw-modal .ac-btn-primary {
     background: var(--dw-primary);
     color: var(--dw-on-primary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-modal .ac-btn-primary:hover:not(:disabled) {
+    background: var(--dw-primary-light);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-modal .ac-btn-primary:disabled {
+    background: var(--dw-surface-container);
+    color: var(--dw-text-tertiary);
 }
 
 .app-shell[data-app-id="dream-weaver"] .dw-modal .ac-btn-danger {
@@ -104,9 +138,21 @@
     color: var(--dw-on-error);
 }
 
+.app-shell[data-app-id="dream-weaver"] .dw-modal .ac-btn-danger:hover:not(:disabled) {
+    background: var(--dw-error);
+}
+
 .app-shell[data-app-id="dream-weaver"] .dw-modal .ac-close {
     background: var(--dw-surface-alt);
     color: var(--dw-text-secondary);
+    box-shadow: none;
+    transform: none;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-modal .ac-close:hover,
+.app-shell[data-app-id="dream-weaver"] .dw-modal .ac-close:active {
+    transform: none;
+    box-shadow: none;
 }
 
 /* ============================================================
@@ -609,73 +655,218 @@
     color: var(--dw-text-tertiary);
 }
 
-/* ── 分支管理 ────────────────────────── */
+/* ── 分支管理 · 本章脉络树 ────────────────────────── */
 
-.app-shell[data-app-id="dream-weaver"] .dw-branch-list {
-    max-height: 46vh;
+.app-shell[data-app-id="dream-weaver"] .dw-btree {
+    max-height: 52vh;
     overflow-y: auto;
+    padding: 0 2px 2px 0;
 }
 
-.app-shell[data-app-id="dream-weaver"] .dw-branch-item {
-    padding: 10px 0;
-    border-bottom: 1px solid var(--dw-border-light);
-}
-
-.app-shell[data-app-id="dream-weaver"] .dw-branch-item:last-child { border-bottom: none; }
-
-.app-shell[data-app-id="dream-weaver"] .dw-branch-count {
-    margin: 0 0 6px;
+.app-shell[data-app-id="dream-weaver"] .dw-btree-meta {
+    margin: 0 0 4px;
     font-size: 11px;
     color: var(--dw-text-tertiary);
 }
 
-.app-shell[data-app-id="dream-weaver"] .dw-branch-versions {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+.app-shell[data-app-id="dream-weaver"] .dw-btree-hint {
+    margin: 0 0 12px;
+    font-size: 11px;
+    line-height: 1.55;
+    color: var(--dw-text-tertiary);
 }
 
-.app-shell[data-app-id="dream-weaver"] .dw-branch-version {
+.app-shell[data-app-id="dream-weaver"] .dw-btree-nodes {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-btree-node {
+    position: relative;
+    padding: 0 0 10px 14px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-btree-node::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--dw-border);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-btree-node:last-child::before {
+    bottom: auto;
+    height: 10px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-btree-trunk {
     display: flex;
     align-items: flex-start;
-    gap: 8px;
-    padding: 7px 9px;
+    gap: 6px;
+    position: relative;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-btree-dot {
+    position: absolute;
+    left: -13px;
+    top: 5px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--dw-primary);
+    box-shadow: 0 0 0 2px var(--dw-card-bg);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-btree-nodes.is-dim .dw-btree-dot {
+    background: var(--dw-text-tertiary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-btree-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-btree-role {
+    margin: 0;
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    color: var(--dw-text-tertiary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-btree-preview {
+    margin: 1px 0 0;
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--dw-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-btree-nodes.is-dim .dw-btree-preview {
+    color: var(--dw-text-tertiary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-btree-forks {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0 0 0 6px;
+    border-left: 1px dashed var(--dw-border);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-btree-fork {
+    padding: 0 0 8px 8px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-btree-fork:last-child { padding-bottom: 0; }
+
+.app-shell[data-app-id="dream-weaver"] .dw-btree-fork-row {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    min-height: 28px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-btree-fork-pick {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
     border: 1px solid var(--dw-border-light);
     border-radius: var(--dw-radius-sm);
     background: none;
     color: var(--dw-text-secondary);
     font-family: inherit;
-    font-size: 11px;
-    line-height: 1.6;
+    font-size: 12px;
     text-align: left;
     cursor: pointer;
 }
 
-.app-shell[data-app-id="dream-weaver"] .dw-branch-version.active {
+.app-shell[data-app-id="dream-weaver"] .dw-btree-fork-pick.is-on {
     border-color: var(--dw-primary);
     background: var(--dw-primary-hover);
     color: var(--dw-text);
 }
 
-.app-shell[data-app-id="dream-weaver"] .dw-branch-version-index {
+.app-shell[data-app-id="dream-weaver"] .dw-btree-fork-mark {
     flex-shrink: 0;
-    width: 16px;
-    text-align: center;
-    color: var(--dw-text-tertiary);
-    font-variant-numeric: tabular-nums;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    border: 1px solid var(--dw-text-tertiary);
 }
 
-.app-shell[data-app-id="dream-weaver"] .dw-branch-version-text { flex: 1; min-width: 0; }
+.app-shell[data-app-id="dream-weaver"] .dw-btree-fork-pick.is-on .dw-btree-fork-mark {
+    border-color: var(--dw-primary);
+    background: var(--dw-primary);
+}
 
-.app-shell[data-app-id="dream-weaver"] .dw-branch-keep {
-    margin-top: 6px;
+.app-shell[data-app-id="dream-weaver"] .dw-btree-fork-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-btree-fork-sub {
+    flex-shrink: 0;
+    font-size: 10px;
+    color: var(--dw-text-tertiary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-btree-rename {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-btree-rename .dw-input {
+    height: 28px;
+    padding: 0 8px;
+    font-size: 12px;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-btree-confirm {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: var(--dw-radius-sm);
+    background: var(--dw-surface-container);
+    font-size: 11px;
+    color: var(--dw-text-secondary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-btree-confirm-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-btree-confirm-actions button {
     padding: 0;
     border: none;
     background: none;
-    color: var(--dw-primary-light);
     font-family: inherit;
     font-size: 11px;
     cursor: pointer;
+    color: var(--dw-text-secondary);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-btree-confirm-actions .is-danger {
+    color: var(--dw-error);
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-btree-children {
+    display: block;
+    margin-top: 8px;
 }
 
 /* ── 素材列表 ────────────────────────── */

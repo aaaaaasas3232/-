@@ -17,12 +17,13 @@ import { DwModal } from './dw-modal.js';
 import * as store from '../store.js';
 import { SHARED_COMPONENTS } from './shared.js';
 import {
-    COVER_TONES, POV_OPTIONS, VIEWPOINT_OPTIONS, HISTORY_STRATEGIES,
+    COVER_TONES, POV_OPTIONS, VIEWPOINT_OPTIONS,
 } from '../constants.js';
 import { findById, formatRelative, truncate, countWords, formatNumber } from '../utils.js';
 import { resolveCharacterName, buildPrompt } from '../services/prompt-builder.js';
 import { validateRule, testRule, previewRule } from '../services/format-service.js';
 import { estimateTokens } from '@/src/core/context-composer.js';
+import { buildChapterBranchTree, countChapterForks } from '../services/branch-tree.js';
 
 const BASE = { DwModal, ...SHARED_COMPONENTS };
 
@@ -202,13 +203,14 @@ export const DwEditMessageModal = {
     methods: {
         onSave() {
             store.updateMessage(this.payload.chapterId, this.payload.messageId, { content: this.value });
+            store.syncCurrentAltContent(this.payload.chapterId, this.payload.messageId);
             this.$emit('close');
         },
     },
     template: `
         <DwModal class="dw-edit-message-modal" title="编辑这一段" max-width="340px" @close="$emit('close')">
             <DwTextarea v-model="value" :rows="12" placeholder="正文…" />
-            <p class="dw-modal-hint">改完会覆盖当前版本。之前重新生成过的版本仍然保留在版本切换里。</p>
+            <p class="dw-modal-hint">改完会覆盖当前这条。其他分支在「分支管理」里。</p>
             <template #footer>
                 <button type="button" class="ac-btn ac-btn-secondary" @click="$emit('close')">取消</button>
                 <button type="button" class="ac-btn ac-btn-primary" @click="onSave">保存</button>
@@ -564,7 +566,7 @@ export const DwTimelineEventModal = {
     template: `
         <DwModal :title="isEdit ? '编辑事件' : '新事件'" max-width="330px" @close="$emit('close')">
             <DwField label="发生了什么" required><DwInput v-model="title" placeholder="一句话概括" :maxlength="60" /></DwField>
-            <DwField label="故事内时间" hint="写成「2024-03-15」或「第7天」就能自动排序">
+            <DwField label="故事内时间" hint="随便怎么写,只是标签。顺序在时间线面板里自己上下移。">
                 <DwInput v-model="time" placeholder="比如 第三年春" />
             </DwField>
             <DwField label="细节"><DwTextarea v-model="description" :rows="3" /></DwField>
@@ -627,7 +629,6 @@ export const DwInputModesModal = {
         },
     },
     emits: ['close', 'notify'],
-    created() { this.HISTORY_STRATEGIES = HISTORY_STRATEGIES; },
     template: `
         <DwModal class="dw-modes-modal" title="输入模式" max-width="340px" @close="$emit('close')">
             <template v-if="!editing">
@@ -656,12 +657,6 @@ export const DwInputModesModal = {
                 </DwField>
                 <DwField label="输入框提示">
                     <DwInput :model-value="editing.placeholder" @update:model-value="patch('placeholder', $event)" />
-                </DwField>
-                <DwField label="携带多少历史" hint="决定这个模式发送时带多少上文">
-                    <DwSelect :model-value="editing.historyStrategy" :options="HISTORY_STRATEGIES" @update:model-value="patch('historyStrategy', $event)" />
-                </DwField>
-                <DwField v-if="editing.historyStrategy === 'recent_n'" label="N">
-                    <DwSlider :model-value="editing.recentN || 5" :min="1" :max="20" @update:model-value="patch('recentN', $event)" />
                 </DwField>
                 <DwField label="提示词模板" hint="{内容} 会替换成你输入的文字,{min}/{max} 是字数区间">
                     <DwTextarea :model-value="editing.promptTemplate" :rows="6" @update:model-value="patch('promptTemplate', $event)" />
@@ -1279,76 +1274,269 @@ export const DwDisplaySettingsModal = {
 };
 
 // ============================================================
-// 分支管理(原版顶栏分支按钮)
+// 分支管理 · 本章脉络树
 // ============================================================
 
 /**
- * 列出本章所有「重新生成过」的段落,可以切版本、可以只留当前这版。
- *
- * 原版的分支管理是个独立全屏面板(`showBranchManageModal` 12878),
- * 但它列的东西就是这些 —— 收成一个弹窗更好找,也不用再造一套导航。
+ * 递归节点。当前路径是主干;某段有多路时在该点分叉。
+ * 事件全部冒泡给弹窗,改名 / 删除的草稿也只存在弹窗里一份。
+ */
+const DwBranchTreeNodes = {
+    name: 'DwBranchTreeNodes',
+    components: { ...SHARED_COMPONENTS },
+    props: {
+        nodes: { type: Array, default: () => [] },
+        editingKey: { type: String, default: '' },
+        draft: { type: String, default: '' },
+        confirmKey: { type: String, default: '' },
+        dim: { type: Boolean, default: false },
+    },
+    emits: [
+        'update:draft', 'pick', 'rename-start', 'rename-save', 'rename-cancel',
+        'ask-delete', 'confirm-delete', 'cancel-delete',
+    ],
+    methods: {
+        keyOf(node, fork) { return `${node.id}:${fork.id}`; },
+        segKey(node) { return `seg:${node.id}`; },
+    },
+    template: `
+        <ol class="dw-btree-nodes" :class="{ 'is-dim': dim }">
+            <li
+                v-for="node in nodes"
+                :key="node.id"
+                class="dw-btree-node"
+                :class="{ 'has-forks': node.forks.length }"
+            >
+                <div class="dw-btree-trunk">
+                    <span class="dw-btree-dot" aria-hidden="true"></span>
+                    <div class="dw-btree-body">
+                        <p class="dw-btree-role">
+                            {{ node.role }}
+                            <template v-if="node.forks.length"> · {{ node.forks.length }} 路</template>
+                        </p>
+                        <p v-if="!node.forks.length" class="dw-btree-preview">{{ node.preview || '（空）' }}</p>
+                    </div>
+                    <button
+                        v-if="!node.forks.length"
+                        type="button"
+                        class="dw-nav-icon-btn"
+                        aria-label="删除这段"
+                        @click.stop="$emit('ask-delete', { type: 'seg', node })"
+                    ><DwIcon name="trash" /></button>
+                </div>
+
+                <div v-if="confirmKey === segKey(node)" class="dw-btree-confirm">
+                    <span>删掉这段?</span>
+                    <span class="dw-btree-confirm-actions">
+                        <button type="button" @click="$emit('cancel-delete')">取消</button>
+                        <button type="button" class="is-danger" @click="$emit('confirm-delete')">删除</button>
+                    </span>
+                </div>
+
+                <ul v-if="node.forks.length" class="dw-btree-forks">
+                    <li
+                        v-for="fork in node.forks"
+                        :key="fork.id"
+                        class="dw-btree-fork"
+                        :class="{ 'is-on': fork.active, 'is-dim': !fork.active }"
+                    >
+                        <div class="dw-btree-fork-row">
+                            <template v-if="editingKey === keyOf(node, fork)">
+                                <div class="dw-btree-rename">
+                                    <DwInput
+                                        :model-value="draft"
+                                        maxlength="16"
+                                        placeholder="分支名"
+                                        @update:model-value="$emit('update:draft', $event)"
+                                        @enter="$emit('rename-save', { node, fork })"
+                                    />
+                                </div>
+                                <button type="button" class="dw-nav-icon-btn" aria-label="保存名称" @click="$emit('rename-save', { node, fork })">
+                                    <DwIcon name="check" />
+                                </button>
+                                <button type="button" class="dw-nav-icon-btn" aria-label="取消" @click="$emit('rename-cancel')">
+                                    <DwIcon name="close" />
+                                </button>
+                            </template>
+                            <template v-else-if="confirmKey === keyOf(node, fork)">
+                                <div class="dw-btree-confirm">
+                                    <span>{{ fork.active ? '切到旁边再删这一路?' : '删掉这一路?' }}</span>
+                                    <span class="dw-btree-confirm-actions">
+                                        <button type="button" @click="$emit('cancel-delete')">取消</button>
+                                        <button type="button" class="is-danger" @click="$emit('confirm-delete')">删除</button>
+                                    </span>
+                                </div>
+                            </template>
+                            <template v-else>
+                                <button
+                                    type="button"
+                                    class="dw-btree-fork-pick"
+                                    :class="{ 'is-on': fork.active }"
+                                    @click="$emit('pick', { node, fork })"
+                                >
+                                    <span class="dw-btree-fork-mark" aria-hidden="true"></span>
+                                    <span class="dw-btree-fork-name">{{ fork.name }}</span>
+                                    <span v-if="!fork.active && fork.tailCount" class="dw-btree-fork-sub">{{ fork.tailCount }} 段</span>
+                                </button>
+                                <button type="button" class="dw-nav-icon-btn" aria-label="改名" @click.stop="$emit('rename-start', { node, fork })">
+                                    <DwIcon name="edit" />
+                                </button>
+                                <button type="button" class="dw-nav-icon-btn" aria-label="删除分支" @click.stop="$emit('ask-delete', { type: 'fork', node, fork })">
+                                    <DwIcon name="trash" />
+                                </button>
+                            </template>
+                        </div>
+                        <DwBranchTreeNodes
+                            v-if="fork.children.length"
+                            class="dw-btree-children"
+                            :nodes="fork.children"
+                            :editing-key="editingKey"
+                            :draft="draft"
+                            :confirm-key="confirmKey"
+                            :dim="!fork.active"
+                            @update:draft="$emit('update:draft', $event)"
+                            @pick="$emit('pick', $event)"
+                            @rename-start="$emit('rename-start', $event)"
+                            @rename-save="$emit('rename-save', $event)"
+                            @rename-cancel="$emit('rename-cancel')"
+                            @ask-delete="$emit('ask-delete', $event)"
+                            @confirm-delete="$emit('confirm-delete')"
+                            @cancel-delete="$emit('cancel-delete')"
+                        />
+                    </li>
+                </ul>
+            </li>
+        </ol>
+    `,
+};
+DwBranchTreeNodes.components.DwBranchTreeNodes = DwBranchTreeNodes;
+
+/**
+ * 本章脉络。分支绑在章上,每段都可以分叉;
+ * 选路 / 删路和编辑器里删文段走同一套 store。
  */
 export const DwBranchManagerModal = {
     name: 'DwBranchManagerModal',
-    components: BASE,
+    components: { ...BASE, DwBranchTreeNodes },
     mixins: [FooterMixin],
+    data() {
+        return { editingKey: '', draft: '', confirmKey: '' };
+    },
     computed: {
         chapter() { return store.getOpenChapter(); },
-        /** 只有候选 > 1 的才算「有分支」 */
-        items() {
-            const chapter = this.chapter;
-            if (!chapter) return [];
-            return Object.entries(chapter.branches || {})
-                .map(([messageId, branch]) => ({
-                    messageId,
-                    branch,
-                    message: findById(chapter.messages, messageId),
-                }))
-                .filter((x) => x.message && (x.branch?.alternatives?.length || 0) > 1);
-        },
+        nodes() { return this.chapter ? buildChapterBranchTree(this.chapter) : []; },
+        segCount() { return this.chapter?.messages?.length || 0; },
+        forkCount() { return countChapterForks(this.chapter?.branches); },
     },
     methods: {
-        preview(text) { return truncate(text, 56); },
-        onSwitch(item, index) {
-            store.switchBranch(this.chapter.id, item.messageId, index);
+        guardBusy() {
+            if (!this.chapter || !store.isGenerating(this.chapter.id)) return false;
+            this.$emit('notify', '这一章还在生成,等它跑完');
+            return true;
         },
-        /** 只保留当前这版,把其他候选丢掉 —— 分支多了列表会很长 */
-        onKeepCurrent(item) {
-            const chapter = this.chapter;
-            const current = item.branch.alternatives[item.branch.currentIndex];
-            chapter.branches = { ...chapter.branches };
-            delete chapter.branches[item.messageId];
-            store.updateMessage(chapter.id, item.messageId, { content: current.content });
-            this.$emit('notify', '已只保留当前版本');
+        onPick(payload) {
+            if (this.guardBusy()) return;
+            const fork = payload?.fork;
+            const node = payload?.node;
+            if (!fork || !node || fork.active) return;
+            store.switchBranch(this.chapter.id, node.id, fork.id);
+            this.editingKey = '';
+            this.confirmKey = '';
+        },
+        onRenameStart(payload) {
+            const fork = payload?.fork;
+            const node = payload?.node;
+            if (!fork || !node) return;
+            this.confirmKey = '';
+            this.editingKey = `${node.id}:${fork.id}`;
+            this.draft = fork.rawName || '';
+            this.$nextTick(() => {
+                const input = this.$el?.querySelector?.('.dw-btree-rename .dw-input');
+                if (input) {
+                    input.focus();
+                    input.select();
+                }
+            });
+        },
+        onRenameSave(payload) {
+            const fork = payload?.fork;
+            const node = payload?.node;
+            if (!fork || !node || !this.chapter) return;
+            store.renameBranchAlt(this.chapter.id, node.id, fork.id, this.draft);
+            this.editingKey = '';
+            this.draft = '';
+            this.$emit('notify', '已记下名字');
+        },
+        onRenameCancel() {
+            this.editingKey = '';
+            this.draft = '';
+        },
+        onAskDelete(payload) {
+            if (this.guardBusy()) return;
+            this.editingKey = '';
+            this.draft = '';
+            if (payload?.type === 'seg' && payload.node) {
+                this.confirmKey = `seg:${payload.node.id}`;
+                return;
+            }
+            if (payload?.node && payload?.fork) {
+                this.confirmKey = `${payload.node.id}:${payload.fork.id}`;
+            }
+        },
+        onConfirmDelete() {
+            if (!this.chapter || !this.confirmKey) return;
+            if (this.guardBusy()) return;
+            if (this.confirmKey.startsWith('seg:')) {
+                store.removeMessage(this.chapter.id, this.confirmKey.slice(4));
+                this.$emit('notify', '已删除这段');
+            } else {
+                const split = this.confirmKey.indexOf(':');
+                const messageId = this.confirmKey.slice(0, split);
+                const altId = this.confirmKey.slice(split + 1);
+                store.removeBranchAlt(this.chapter.id, messageId, altId);
+                this.$emit('notify', '已删除这一路');
+            }
+            this.confirmKey = '';
+        },
+        onCancelDelete() {
+            this.confirmKey = '';
         },
     },
     emits: ['close', 'notify'],
     template: `
-        <DwModal class="dw-list-modal" title="分支管理" max-width="340px" @close="$emit('close')">
+        <DwModal
+            class="dw-list-modal dw-branch-modal"
+            title="分支管理"
+            :subtitle="chapter ? chapter.title : ''"
+            max-width="340px"
+            @close="$emit('close')"
+        >
             <DwEmpty
-                v-if="items.length === 0"
+                v-if="!chapter || segCount === 0"
                 icon-name="branch"
-                title="本章还没有分支"
-                text="对某一段点「重新生成」,旧版本会存成分支,可以随时切回来。"
+                title="这一章还是空的"
+                text="先写下一段。对某一段重新生成,这里就会分出岔路。"
             />
-            <div v-else class="dw-branch-list">
-                <div v-for="item in items" :key="item.messageId" class="dw-branch-item">
-                    <p class="dw-branch-count">{{ item.branch.alternatives.length }} 个版本</p>
-                    <div class="dw-branch-versions">
-                        <button
-                            v-for="(alt, index) in item.branch.alternatives"
-                            :key="index"
-                            type="button"
-                            class="dw-branch-version"
-                            :class="{ active: index === item.branch.currentIndex }"
-                            @click="onSwitch(item, index)"
-                        >
-                            <span class="dw-branch-version-index">{{ index + 1 }}</span>
-                            <span class="dw-branch-version-text">{{ preview(alt.content) }}</span>
-                        </button>
-                    </div>
-                    <button type="button" class="dw-branch-keep" @click="onKeepCurrent(item)">只保留当前这版</button>
-                </div>
+            <div v-else class="dw-btree">
+                <p class="dw-btree-meta">{{ segCount }} 个文段 · {{ forkCount }} 处岔路</p>
+                <p class="dw-btree-hint">
+                    <template v-if="forkCount">点岔路切过去。改名会记住。删掉的路和文段一起去掉。</template>
+                    <template v-else>对某一段重新生成,旧的那路会留在分叉上,可以随时切回来。</template>
+                </p>
+                <DwBranchTreeNodes
+                    :nodes="nodes"
+                    :editing-key="editingKey"
+                    :draft="draft"
+                    :confirm-key="confirmKey"
+                    @update:draft="draft = $event"
+                    @pick="onPick"
+                    @rename-start="onRenameStart"
+                    @rename-save="onRenameSave"
+                    @rename-cancel="onRenameCancel"
+                    @ask-delete="onAskDelete"
+                    @confirm-delete="onConfirmDelete"
+                    @cancel-delete="onCancelDelete"
+                />
             </div>
             <template #footer>
                 <button type="button" class="ac-btn ac-btn-primary" @click="$emit('close')">完成</button>

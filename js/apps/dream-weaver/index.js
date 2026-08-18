@@ -118,6 +118,35 @@ export default function createDreamWeaverApp() {
         topbar: { visible: false },
         nav: { type: 'none' },
 
+        /**
+         * ★ 声明「我会在什么时候占用灵动岛」。
+         *   岛是运行时 API(toolkit.island.show),系统事先不知道会弹什么 ——
+         *   不在这儿声明,「灵动岛与小组件」里就既预览不了也关不掉,
+         *   而且 show() 不带 kind 的话用户那个开关是摆设。
+         */
+        islandKinds: [
+            {
+                id: 'format-select',
+                label: '选段中',
+                desc: '进入选段模式后以迷你岛挂着,提醒正文现在可以拖选。点一下不会展开,长按退出选段。',
+                when: '在正文气泡「更多 → 格式化选择」里进入选段模式时',
+                sizes: ['mini'],
+                previewPayload: { title: '选段中', message: '拖选正文里的一段,松手就出操作条 · 长按退出' },
+            },
+        ],
+
+        notifyKinds: [
+            {
+                id: 'action',
+                label: '操作提示',
+                desc: '复制、收藏、保存、生成结果这类短提示,只走灵动岛,页内不再叠一条。',
+                when: '点了复制、收藏、换主题,或一次生成结束之后',
+                type: 'info',
+                title: '梦境编织',
+                message: '已复制',
+            },
+        ],
+
         pages: [{ id: 'home', label: '书架', nav: true }],
         defaultRootPageId: 'home',
 

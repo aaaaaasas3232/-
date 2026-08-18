@@ -33,6 +33,7 @@ import { DwToolsPanel } from './tools-panel.js';
 import * as ai from '../../services/ai-service.js';
 import { resolveCharacterName } from '../../services/prompt-builder.js';
 import { findById, truncate } from '../../utils.js';
+import { icon } from '../../icons.js';
 
 export const DwEditor = {
     name: 'DwEditor',
@@ -46,7 +47,7 @@ export const DwEditor = {
     },
     emits: ['close', 'notify'],
     data() {
-        return { selectionBar: null, quickSettingsVisible: false };
+        return { selectionBar: null, quickSettingsVisible: false, selectMode: false };
     },
     computed: {
         state() { return store.getState(); },
@@ -72,6 +73,7 @@ export const DwEditor = {
          */
         'chapter.id'() {
             this.scrollSoon(false);
+            this.setSelectMode(false);
         },
     },
     methods: {
@@ -139,7 +141,9 @@ export const DwEditor = {
             if (!silent && !target) {
                 target = store.addMessage(chapter.id, { role: 'ai', content: '', pending: true });
             } else if (target) {
+                // 先把当前正文和后面的文段打进这一路,再清后面 —— 否则重 roll 会把旧后续丢掉
                 store.pushBranch(chapter.id, target.id);
+                if (kind === 'reroll') store.removeMessagesAfter(chapter.id, target.id);
                 store.updateMessage(chapter.id, target.id, { content: '', pending: true, error: '' });
             }
 
@@ -266,34 +270,17 @@ export const DwEditor = {
                     break;
 
                 case 'format':
-                    // 「格式化选择」= 提示用户去选中一段。选中后选区工具条会自己冒出来。
-                    this.$emit('notify', '用手指或鼠标选中一段文字,下面会出来操作条');
+                    this.setSelectMode(!this.selectMode);
                     break;
 
                 case 'node':
-                    // 建分支点:把当前内容存成一个候选,之后重 roll 就能在版本间来回切
                     store.pushBranch(chapter.id, messageId);
-                    this.$emit('notify', '已建分支点,重新生成后可以切回这一版');
+                    this.$emit('notify', '已记下这一路,重新生成后可以切回来');
                     break;
 
                 case 'finale':
                     store.openModal('finale', { bookId: this.book.id });
                     break;
-
-                case 'summary': {
-                    const result = await this.runGeneration({
-                        kind: 'summary',
-                        silent: true,
-                        payload: { content: message.content },
-                    });
-                    if (result?.ok) {
-                        store.updateChapter(chapter.id, { summary: result.text, useSummary: true });
-                        this.$emit('notify', '梗概已生成,已加入前情提要');
-                    } else if (result && !result.aborted) {
-                        this.$emit('notify', result.error || '梗概生成失败');
-                    }
-                    break;
-                }
 
                 case 'open-mark':
                     if (segment?.id) {
@@ -310,6 +297,85 @@ export const DwEditor = {
         },
 
         // ── 选区 ──────────────────────────────
+
+        /**
+         * 「格式化选择」不是一次性动作,是一个模式。
+         *
+         * 原来它只弹一句「用手指选中一段文字」,然后**永远不会有下文** ——
+         * 手机壳给 body 上了 `user-select: none`(整机都不许选字,免得拖动桌面时选中一片蓝),
+         * 正文自然也选不中,`getSelection()` 一直是空的。所以要进模式才给正文单独放开,
+         * 同时把「点气泡弹工具条」关掉:不关的话一按下去工具条就浮出来盖住要选的那几行。
+         *
+         * 状态挂在灵动岛上 —— 这个模式会改变点正文的含义,退出前一直生效,
+         * 光靠一句 toast 说完就没了,用户会忘了自己还在选段。
+         */
+        setSelectMode(on) {
+            const next = Boolean(on);
+            if (this.selectMode === next) return;
+            this.selectMode = next;
+            if (next) {
+                this.bindSelectListener();
+                this.showSelectIsland();
+            } else {
+                this.unbindSelectListener();
+                this.clearSelection();
+                this.hideSelectIsland();
+            }
+        },
+        /**
+         * 手机长按出选区时,`mouseup`/`touchend` 往往还是空的 ——
+         * 系统先抬手,再画出那两个拖柄。只听 mouseup 就会「点了格式化选择,拖了,没反应」。
+         * 听 `selectionchange`,选区一稳定就记下来。
+         */
+        bindSelectListener() {
+            if (this._onSelChange) return;
+            this._onSelChange = () => {
+                if (!this.selectMode) return;
+                const selection = window.getSelection?.();
+                const text = String(selection?.toString() || '').trim();
+                if (text.length < 2) return;
+                let node = selection.anchorNode;
+                if (node && node.nodeType !== 1) node = node.parentElement;
+                const bubble = node?.closest?.('[data-bubble-id]');
+                const messageId = bubble?.getAttribute?.('data-bubble-id');
+                if (!messageId) return;
+                this.onSelectText({ text, messageId });
+            };
+            document.addEventListener('selectionchange', this._onSelChange);
+        },
+        unbindSelectListener() {
+            if (!this._onSelChange) return;
+            document.removeEventListener('selectionchange', this._onSelChange);
+            this._onSelChange = null;
+        },
+        showSelectIsland() {
+            this.app?.toolkit?.island?.show?.('mini', {
+                kind: 'format-select',
+                type: 'info',
+                title: '选段中',
+                message: '拖选正文里的一段,松手就出操作条',
+                icon: icon('wand'),
+                // 锁在迷你:点一下不展开,长按才退出。
+                minSize: 'mini',
+                maxSize: 'mini',
+                onClosed: ({ reason } = {}) => {
+                    // 只认用户自己收岛。被别的 App 顶替(replaced)时框架会压栈、过会儿放回来,
+                    // 在那儿退出选段就成了「别人一弹岛,我这边正选着的段就掉了」。
+                    if (reason !== 'userLongPress' && reason !== 'userOutside') return;
+                    // 岛这会儿正在关,别再回头调 dismiss
+                    this._islandClosing = true;
+                    this.setSelectMode(false);
+                    this._islandClosing = false;
+                },
+            });
+        },
+        hideSelectIsland() {
+            if (this._islandClosing) return;
+            const island = this.app?.toolkit?.island;
+            // 只关自己那条 —— 这会儿岛上可能已经是别的 App 的东西了
+            if (island?.getState?.()?.content?.kind === 'format-select') island.dismiss?.();
+        },
+
         onSelectText(selection) {
             store.setSelection(selection);
             this.selectionBar = selection;
@@ -323,6 +389,7 @@ export const DwEditor = {
             const selection = this.selectionBar;
             if (!selection) return;
             const { text, messageId } = selection;
+            this.setSelectMode(false);
             this.clearSelection();
 
             switch (action) {
@@ -472,6 +539,9 @@ export const DwEditor = {
     },
     beforeUnmount() {
         window.removeEventListener('dream-weaver:toggle-quick-settings', this._onToggleQuick);
+        this.unbindSelectListener();
+        // 退出编辑器就把选段岛收走,别让它挂在别人的 App 上面
+        this.setSelectMode(false);
         // 离开编辑器不停止生成 —— 后台生成就是靠这一点。
         // 但要把防抖里挂着的写入立刻落盘,否则最后几秒的内容会丢。
         void store.flushPersist();
@@ -498,10 +568,17 @@ export const DwEditor = {
                 :chapter="chapter"
                 :display="display"
                 :rules="rules"
+                :select-mode="selectMode"
                 @action="onMessageAction"
                 @select-text="onSelectText"
             />
             <DwSpinner v-else label="正在打开…" />
+
+            <!-- 选段模式:还没选中东西时,先把「现在能拖选了」和退出口摆在同一条上 -->
+            <div v-if="selectMode && !selectionBar" class="dw-selection-bar">
+                <span class="dw-selection-tip">选段中 · 拖选正文里的一段</span>
+                <button type="button" class="dw-selection-btn" @click="setSelectMode(false)">退出</button>
+            </div>
 
             <!-- 选区工具条 -->
             <div v-if="selectionBar" class="dw-selection-bar">

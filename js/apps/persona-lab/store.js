@@ -16,12 +16,14 @@
 
 import {
     loadDrafts, saveDraft, deleteDraft,
+    loadQuizSets, saveQuizSet, deleteQuizSet, normalizeQuizSet,
     normalizeDraft, normalizeMessage, normalizeLogEntry,
 } from './services/db.js';
 import { normalizeCardText, readName } from './services/card-schema.js';
-import { getQuestion, countQuestions } from './question-bank.js';
+import { parseQuizText } from './services/quiz-format.js';
+import { getQuestion, countQuestions, matchOption, registerCustomSets } from './question-bank.js';
 import { LOG_LIMIT, UNTITLED, STARTER_TEXT } from './constants.js';
-import { makeId, isSameId, findById, indexById, pickTone } from './utils.js';
+import { makeId, isSameId, findById, indexById, pickTone, toPlain } from './utils.js';
 
 const TONES = ['rose', 'blush', 'plum', 'sand', 'sage', 'sky'];
 
@@ -38,6 +40,9 @@ const STATE = makeReactive({
 
     drafts: [],
     openDraftId: null,
+
+    /** 用户导入的题库。内置那几套是常量,不进这里。 */
+    customSets: [],
 
     // ── 工作台 UI ───────────────────────────
     wbTab: 'ask',
@@ -75,11 +80,24 @@ export function getOpenDraft() {
     return findById(STATE.drafts, STATE.openDraftId);
 }
 
-/** 当前这道测题(题库没开时返回 null)。工作台顶部、prompt 都读它。 */
+/**
+ * 当前这道测题(题库没开时返回 null)。工作台顶部、prompt 都读它。
+ *
+ * `pickIndex` 是「她的回答落到了第几个选项」:
+ *   -1 = 还没答,或这题没有选项
+ *   答过且有选项时一定落在某一项上。
+ */
 export function getCurrentQuiz(draft = getOpenDraft()) {
     if (!draft?.quiz?.setId) return null;
-    const q = getQuestion(draft.quiz.setId, draft.quiz.index, draft.quiz.answers);
+    const q = getQuestion(draft.quiz.setId, draft.quiz.index, draft.quiz.picks);
     if (!q) return null;
+    const answer = draft.quiz.answers?.[draft.quiz.index] || '';
+    let pick = draft.quiz.picks?.[draft.quiz.index] || '';
+    let pickIndex = pick ? q.options.indexOf(pick) : -1;
+    if (pickIndex < 0 && answer && q.options.length) {
+        pickIndex = matchOption(answer, q.options);
+        pick = pickIndex >= 0 ? q.options[pickIndex] : '';
+    }
     return {
         setId: draft.quiz.setId,
         setName: q.setName,
@@ -87,7 +105,9 @@ export function getCurrentQuiz(draft = getOpenDraft()) {
         total: q.total,
         question: q.question,
         options: q.options,
-        answer: draft.quiz.answers[draft.quiz.index] || '',
+        answer,
+        pick,
+        pickIndex,
     };
 }
 
@@ -148,6 +168,12 @@ export async function hydrate(app) {
     _hydrating = true;
     try {
         STATE.drafts = await loadDrafts(_app);
+        // 题库读失败不该把草稿一起带走 —— 单独 try(AGENTS §10「串行 await 里一个抛错带走全部」)
+        try {
+            syncCustomSets(await loadQuizSets(_app));
+        } catch (err) {
+            console.warn('[persona-lab/store] 自定义题库加载失败', err);
+        }
         STATE.error = '';
     } catch (err) {
         console.error('[persona-lab/store] hydrate 失败', err);
@@ -327,7 +353,7 @@ export function clearMessages(draftId) {
 export function startQuiz(draftId, setId) {
     const draft = findById(STATE.drafts, draftId);
     if (!draft) return null;
-    draft.quiz = { setId: String(setId || ''), index: 0, answers: {} };
+    draft.quiz = { setId: String(setId || ''), index: 0, answers: {}, picks: {} };
     touch(draft);
     return draft.quiz;
 }
@@ -335,7 +361,7 @@ export function startQuiz(draftId, setId) {
 export function stopQuiz(draftId) {
     const draft = findById(STATE.drafts, draftId);
     if (!draft) return;
-    draft.quiz = { setId: '', index: 0, answers: {} };
+    draft.quiz = { setId: '', index: 0, answers: {}, picks: {} };
     touch(draft);
 }
 
@@ -343,6 +369,7 @@ export function stopQuiz(draftId) {
 export function stepQuiz(draftId, delta) {
     const draft = findById(STATE.drafts, draftId);
     if (!draft?.quiz?.setId) return false;
+    ensureQuizPick(draft);
     const total = countQuestions(draft.quiz.setId);
     const next = draft.quiz.index + delta;
     if (next < 0 || next >= total) return false;
@@ -351,14 +378,132 @@ export function stepQuiz(draftId, delta) {
     return true;
 }
 
-export function recordQuizAnswer(draftId, answer) {
-    const draft = findById(STATE.drafts, draftId);
-    if (!draft?.quiz?.setId) return;
+/** 旧答没有 picks 时补上,翻题进擂台下一轮才不会把选过的丢掉。 */
+function ensureQuizPick(draft) {
+    const answer = draft.quiz.answers?.[draft.quiz.index] || '';
+    if (!answer || draft.quiz.picks?.[draft.quiz.index]) return;
+    const current = getQuestion(draft.quiz.setId, draft.quiz.index, draft.quiz.picks);
+    const options = current?.options || [];
+    const pickIndex = matchOption(answer, options);
+    if (pickIndex < 0) return;
     draft.quiz = {
         ...draft.quiz,
-        answers: { ...draft.quiz.answers, [draft.quiz.index]: String(answer || '') },
+        picks: { ...draft.quiz.picks, [draft.quiz.index]: options[pickIndex] },
+    };
+}
+
+/**
+ * 记下她对这一题的回答。
+ *
+ * ★ 除了原话,还要算出这段话**落到了哪个选项** —— 用户看到的「已答」必须
+ *   能说出她选的是哪一个,而擂台赛的下一轮对阵也是按它算的。
+ *   有选项时答了就一定写入 picks。
+ *
+ * @returns {{ pick:string, pickIndex:number }}
+ */
+export function recordQuizAnswer(draftId, answer) {
+    const draft = findById(STATE.drafts, draftId);
+    if (!draft?.quiz?.setId) return { pick: '', pickIndex: -1 };
+
+    const text = String(answer || '');
+    const current = getQuestion(draft.quiz.setId, draft.quiz.index, draft.quiz.picks);
+    const options = current?.options || [];
+    const pickIndex = matchOption(text, options);
+    const pick = pickIndex >= 0 ? options[pickIndex] : '';
+
+    const picks = { ...draft.quiz.picks };
+    if (pick) picks[draft.quiz.index] = pick;
+    else delete picks[draft.quiz.index];
+
+    draft.quiz = {
+        ...draft.quiz,
+        answers: { ...draft.quiz.answers, [draft.quiz.index]: text },
+        picks,
     };
     touch(draft);
+    return { pick, pickIndex };
+}
+
+// ============================================================
+// 自定义题库
+// ============================================================
+
+/**
+ * STATE 和 question-bank 的运行时注册表**一起**更新。
+ *
+ * 分开写就会出现「抽屉里已经删了、正在做的那套还在出题」——
+ * 两边的读者不同(UI 读 STATE,`getQuestion` 读注册表),但真相只有一份。
+ */
+function syncCustomSets(list) {
+    STATE.customSets = Array.isArray(list) ? list : [];
+    registerCustomSets(toPlain(STATE.customSets) || []);
+}
+
+export function listCustomSets() {
+    return STATE.customSets;
+}
+
+/**
+ * 把一段文本导成题库。
+ *
+ * 同名的**覆盖**而不是并排放两套:用户改完格式重贴一次是常态,
+ * 每次都新建的话抽屉里很快会有五套「童年底色」,而且分不出哪套是新的。
+ *
+ * @returns {{ ok:boolean, added:number, replaced:number, questions:number, notes:string[], error?:string }}
+ */
+export async function importQuizSets(text) {
+    const { sets, notes } = parseQuizText(text);
+    if (!sets.length) {
+        return {
+            ok: false,
+            added: 0,
+            replaced: 0,
+            questions: 0,
+            notes,
+            error: '没解析出题目。先照格式说明改一遍，「题库：」「问：」「选：」这三个键要有。',
+        };
+    }
+
+    const next = [...STATE.customSets];
+    let added = 0;
+    let replaced = 0;
+    let questions = 0;
+
+    for (const parsed of sets) {
+        const at = next.findIndex((s) => s.name === parsed.name);
+        const record = normalizeQuizSet({
+            ...parsed,
+            id: at >= 0 ? next[at].id : makeId('quiz'),
+            createdAt: at >= 0 ? next[at].createdAt : Date.now(),
+            updatedAt: Date.now(),
+        });
+        questions += record.kind === 'ladder'
+            ? Math.min(record.rounds, Math.max(0, record.pool.length - 1))
+            : record.questions.length;
+        if (at >= 0) {
+            next[at] = record;
+            replaced += 1;
+        } else {
+            next.unshift(record);
+            added += 1;
+        }
+        await saveQuizSet(_app, record);
+    }
+
+    syncCustomSets(next);
+    return { ok: true, added, replaced, questions, notes };
+}
+
+export async function removeCustomSet(setId) {
+    const id = String(setId || '');
+    if (!id) return false;
+    syncCustomSets(STATE.customSets.filter((s) => !isSameId(s.id, id)));
+    // 正在用这套题的草稿要收起来,否则题干还挂在输入框上面,翻页却没反应
+    for (const draft of STATE.drafts) {
+        if (isSameId(draft.quiz?.setId, id)) stopQuiz(draft.id);
+    }
+    await deleteQuizSet(_app, id);
+    return true;
 }
 
 // ============================================================

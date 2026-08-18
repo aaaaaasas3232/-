@@ -12,7 +12,7 @@
  */
 
 import { renderMessageActions, renderSelectButton, renderTime } from './message-actions.js';
-import { DEFAULT_AI_AVATAR_BG, DEFAULT_USER_AVATAR_BG } from '../aiMeta.js';
+import { DEFAULT_AI_AVATAR_BG, DEFAULT_USER_AVATAR_BG, resolveBubbleAvatar } from '../aiMeta.js';
 import { createContentCardAction } from '@/src/core/actions.js';
 import { escapeHtml } from '@/src/core/escape.js';
 
@@ -127,6 +127,10 @@ export function renderShareCardBody(kind, data = {}, opts = {}) {
         case 'transfer': {
             const received = !!d.received;
             const note = escapeHtml(d.note || '转账');
+            const toName = escapeHtml(String(d.toName || '').trim());
+            const noteLine = toName
+                ? (d.note && d.note !== '转账' ? `${note} · 转给 ${toName}` : `转给 ${toName}`)
+                : note;
             const amount = Number(d.amount);
             const amountText = Number.isFinite(amount) ? `¥${amount.toFixed(2)}` : '¥0.00';
             const statusText = received ? '已收款' : '待收款';
@@ -141,7 +145,7 @@ export function renderShareCardBody(kind, data = {}, opts = {}) {
                 </div>
                 <div class="transfer-info">
                     <div class="transfer-amount">${amountText}</div>
-                    <div class="transfer-note">${note}</div>
+                    <div class="transfer-note">${noteLine}</div>
                 </div>
             </div>
             <div class="transfer-footer">
@@ -260,15 +264,9 @@ export function renderLocationBubble(msg, contact = {}, options = {}) {
     const lc = msg.locationCard || {};
     const isUser = msg.sender === 'user';
 
-    // ★ v0.45 头像支持真实社媒头像:优先从 options 拿,fallback 到 contact/msg 字段
-    const userAvatarBg = options.userAvatarBg || '';
-    const userAvatar = options.userAvatar || '';
-    const aiAvatarBg = contact?.avatarBg || '';
-    const aiAvatar = contact?.avatar || '';
-    const avatarBg = isUser
-        ? (userAvatarBg || DEFAULT_USER_AVATAR_BG)
-        : (aiAvatarBg || DEFAULT_AI_AVATAR_BG);
-    const avatarUrl = isUser ? userAvatar : aiAvatar;
+    const bubbleAv = resolveBubbleAvatar(msg, contact, options);
+    const avatarBg = bubbleAv.bg || (isUser ? DEFAULT_USER_AVATAR_BG : DEFAULT_AI_AVATAR_BG);
+    const avatarUrl = bubbleAv.url;
 
     const bubbleHtml = renderShareCardBody('location', lc, { msgId: msg.id });
 
@@ -298,15 +296,9 @@ export function renderRedpacketBubble(msg, contact = {}, options = {}) {
     const style = rp.style || 'normal';
     const isUser = msg.sender === 'user';
 
-    // ★ v0.45 头像支持真实社媒头像
-    const userAvatarBg = options.userAvatarBg || '';
-    const userAvatar = options.userAvatar || '';
-    const aiAvatarBg = contact?.avatarBg || '';
-    const aiAvatar = contact?.avatar || '';
-    const avatarBg = isUser
-        ? (userAvatarBg || DEFAULT_USER_AVATAR_BG)
-        : (aiAvatarBg || DEFAULT_AI_AVATAR_BG);
-    const avatarUrl = isUser ? userAvatar : aiAvatar;
+    const bubbleAv = resolveBubbleAvatar(msg, contact, options);
+    const avatarBg = bubbleAv.bg || (isUser ? DEFAULT_USER_AVATAR_BG : DEFAULT_AI_AVATAR_BG);
+    const avatarUrl = bubbleAv.url;
 
     // ★ v0.67.x 显示真实发送者名字(代替原来写死的「对方发来红包」)
     //   - 优先用 msg.senderName(聊天消息里有这个字段)
@@ -341,15 +333,9 @@ export function renderTransferBubble(msg, contact = {}, options = {}) {
     const tc = msg.transferCard || {};
     const isUser = msg.sender === 'user';
 
-    // ★ v0.45 头像支持真实社媒头像
-    const userAvatarBg = options.userAvatarBg || '';
-    const userAvatar = options.userAvatar || '';
-    const aiAvatarBg = contact?.avatarBg || '';
-    const aiAvatar = contact?.avatar || '';
-    const avatarBg = isUser
-        ? (userAvatarBg || DEFAULT_USER_AVATAR_BG)
-        : (aiAvatarBg || DEFAULT_AI_AVATAR_BG);
-    const avatarUrl = isUser ? userAvatar : aiAvatar;
+    const bubbleAv = resolveBubbleAvatar(msg, contact, options);
+    const avatarBg = bubbleAv.bg || (isUser ? DEFAULT_USER_AVATAR_BG : DEFAULT_AI_AVATAR_BG);
+    const avatarUrl = bubbleAv.url;
 
     const bubbleHtml = renderShareCardBody('transfer', tc, { msgId: msg.id });
 
@@ -373,6 +359,8 @@ export function renderTransferBubble(msg, contact = {}, options = {}) {
  * @param {string} [avatarUrl] - ★ v0.45 真实头像 URL，有则渲染 img，无则 fallback 首字母
  */
 export function renderShareCardWrapper(msg, bubbleHtml, avatarBg, contact = {}, options = {}, avatarUrl = '') {
+    if (!contact || typeof contact !== 'object') contact = {};
+    if (!options || typeof options !== 'object') options = {};
     const isUser = msg.sender === 'user';
     const avatarText = isUser ? '我' : (msg.senderName?.charAt(0) || '?');
 
@@ -464,15 +452,9 @@ export function renderChatRecordBubble(msg, contact = {}, options = {}) {
     const messages = Array.isArray(record.messages) ? record.messages : [];
     const isUser = msg.sender === 'user';
 
-    // ★ v0.45 头像支持真实社媒头像
-    const userAvatarBg = options.userAvatarBg || '';
-    const userAvatar = options.userAvatar || '';
-    const aiAvatarBg = contact?.avatarBg || '';
-    const aiAvatar = contact?.avatar || '';
-    const avatarBg = isUser
-        ? (userAvatarBg || DEFAULT_USER_AVATAR_BG)
-        : (aiAvatarBg || DEFAULT_AI_AVATAR_BG);
-    const avatarUrl = isUser ? userAvatar : aiAvatar;
+    const bubbleAv = resolveBubbleAvatar(msg, contact, options);
+    const avatarBg = bubbleAv.bg || (isUser ? DEFAULT_USER_AVATAR_BG : DEFAULT_AI_AVATAR_BG);
+    const avatarUrl = bubbleAv.url;
 
     const isSingle = messages.length === 1;
     const title = escapeHtml(record.title || '聊天记录');
@@ -641,14 +623,9 @@ export function renderMomentShareBubble(msg, contact = {}, options = {}) {
     // ★ 朋友圈卡片没有 message-bubble 包装,需要走普通气泡容器
     // 但要保留头像和时间戳,所以直接 return bubbleHtml(由调用方包装或自己渲染)
     // 这里返回带完整 message-wrapper 的 HTML,与 renderShareCardWrapper 行为一致
-    const userAvatarBg = options.userAvatarBg || '';
-    const userAvatar = options.userAvatar || '';
-    const aiAvatarBg = contact?.avatarBg || '';
-    const aiAvatar = contact?.avatar || '';
-    const avatarBg = isUser
-        ? (userAvatarBg || DEFAULT_USER_AVATAR_BG)
-        : (aiAvatarBg || DEFAULT_AI_AVATAR_BG);
-    const avatarUrl = isUser ? userAvatar : aiAvatar;
+    const bubbleAv = resolveBubbleAvatar(msg, contact, options);
+    const avatarBg = bubbleAv.bg || (isUser ? DEFAULT_USER_AVATAR_BG : DEFAULT_AI_AVATAR_BG);
+    const avatarUrl = bubbleAv.url;
 
     return renderShareCardWrapper(msg, bubbleHtml, avatarBg, contact, options, avatarUrl);
 }
@@ -661,11 +638,11 @@ export function renderMomentShareBubble(msg, contact = {}, options = {}) {
 
 function _musicAvatar(msg, contact, options) {
     const isUser = msg.sender === 'user';
-    const avatarBg = isUser
-        ? (options.userAvatarBg || DEFAULT_USER_AVATAR_BG)
-        : (contact?.avatarBg || DEFAULT_AI_AVATAR_BG);
-    const avatarUrl = isUser ? (options.userAvatar || '') : (contact?.avatar || '');
-    return { avatarBg, avatarUrl };
+    const bubbleAv = resolveBubbleAvatar(msg, contact, options);
+    return {
+        avatarBg: bubbleAv.bg || (isUser ? DEFAULT_USER_AVATAR_BG : DEFAULT_AI_AVATAR_BG),
+        avatarUrl: bubbleAv.url,
+    };
 }
 
 function _musicAction(method, payload) {

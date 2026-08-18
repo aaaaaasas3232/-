@@ -16,7 +16,7 @@
  * 梦境编织的 `resolveApiRef` 用的也是这个模式。
  */
 
-import { cardToText, textToCardPatch, readName } from './card-schema.js';
+import { cardToText, textToCardPatch, describePatch, readName } from './card-schema.js';
 import { UNTITLED } from '../constants.js';
 
 // ============================================================
@@ -155,10 +155,22 @@ export async function saveDraftToNook(draft) {
     if (!api) return { ok: false, created: false, error: '找不到人设库' };
 
     const patch = textToCardPatch(draft?.text || '');
-    const fieldCount = Object.keys(patch).length;
-    if (fieldCount === 0) {
+    if (!Object.keys(patch).length) {
         return { ok: false, created: false, error: '正文里没有能识别的人设字段,先写点内容' };
     }
+
+    /**
+     * ★ 报给用户的「几个字段」必须和档案页预览是同一个口径。
+     *
+     *   `Object.keys(patch).length` 数的是**卡上的顶层键**:爱好 / 喜欢 / 讨厌 /
+     *   过敏四个字段都写在 `preferences` 里,记忆写在 `memory.text` 里……
+     *   于是预览说「18 个字段」、存完提示「写入 15 个字段」,用户会以为
+     *   有三个字段没存进去(其实一个没少)。
+     *
+     *   `describePatch` 数的是人设字段本身,和档案页那句 "N / M 个字段有内容"
+     *   同源,所以两处永远对得上。
+     */
+    const fieldCount = describePatch(draft?.text || '').filled;
     if (!String(patch.name || '').trim()) {
         patch.name = readName(draft?.text) || String(draft?.title || '').trim() || UNTITLED;
     }

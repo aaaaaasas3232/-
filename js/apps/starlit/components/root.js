@@ -237,13 +237,18 @@ export function createStarlitRoot() {
             },
             closeCard() { this.s.activeCardId = ''; },
             changeCard(patch) { store.updateCard(this.s.activeCardId, patch); },
-            deleteCard() {
+            /** 详情页和推理墙长按菜单共用这一条删除路径 */
+            deleteCard(cardId) {
+                const id = String(cardId || this.s.activeCardId || '');
+                if (!id) return;
+                const card = this.s.cards.find((c) => String(c.id) === id);
                 store.openModal('confirm', {
                     title: '删掉这张卡？',
-                    text: '挂在它身上的连线也会一起删掉。',
+                    text: `「${card?.title || '这张卡'}」和挂在它身上的连线都会一起删掉。`,
                     okText: '删掉',
                     danger: true,
                     action: 'delete-card',
+                    id,
                 });
             },
             expandCard(payload) {
@@ -269,6 +274,12 @@ export function createStarlitRoot() {
             spreadStack(id) { store.spreadStack(id); },
             closeSpread() { store.closeSpread(); },
             spreadStep(d) { store.spreadStep(d); },
+            /** 长按菜单里的「拉一条线」：不离开墙，直接进入连线状态 */
+            startWallLink(id) {
+                store.beginLink(id);
+                store.showToast('点另一张卡完成连线');
+            },
+            unstackFromWall(id) { store.unstackCard(id); },
             saveWallView() { store.setWallView({}); },
             toggleWallFull() { this.s.wall.full = !this.s.wall.full; },
             editLink(id) {
@@ -299,7 +310,7 @@ export function createStarlitRoot() {
                 const id = this.s.modal?.payload?.id;
                 store.closeModal();
                 if (action === 'delete-topic') store.deleteTopic(id);
-                else if (action === 'delete-card') store.deleteCard(this.s.activeCardId);
+                else if (action === 'delete-card') store.deleteCard(id || this.s.activeCardId);
                 else if (action === 'add-lesson') store.addLesson(payload.value);
                 else if (action === 'edit-link') {
                     if (payload.value?.remove) store.deleteLink(id);
@@ -330,6 +341,10 @@ export function createStarlitRoot() {
             },
             closeTranslation() {
                 store.closeTranslation();
+            },
+            moveBubbleGloss(payload) {
+                if (!payload?.messageId) return;
+                void store.moveBubbleGloss(payload.messageId, payload.x, payload.y);
             },
         },
         template: `
@@ -367,7 +382,7 @@ export function createStarlitRoot() {
                         :state="s" :topic="topic" :lesson="lesson"
                         @back="closeView" @start="startLesson" @send="sendLesson"
                         @end="endLesson" @open-card="openCard" @notes="openReview()"
-                        @translate="onTranslate"
+                        @translate="onTranslate" @move-gloss="moveBubbleGloss"
                     />
                     <SlFlipPage
                         v-else-if="view === 'flip'"
@@ -389,6 +404,7 @@ export function createStarlitRoot() {
                         @new-card="newWallCard" @spread="spreadStack" @spread-close="closeSpread"
                         @spread-step="spreadStep" @save-view="saveWallView"
                         @update-link="editLink" @toggle-full="toggleWallFull"
+                        @link-start="startWallLink" @unstack="unstackFromWall" @delete-card="deleteCard"
                     />
                     <SlTickerPanel
                         v-else-if="view === 'ticker'"

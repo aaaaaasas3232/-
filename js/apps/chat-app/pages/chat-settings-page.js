@@ -8,7 +8,7 @@
  * 功能:
  *   - 头像 + 名字 + 状态
  *   - 三个圆形入口按钮(语音 / 视频 / 朋友圈)
- *   - 设置卡片组:备注 / 置顶 / 免打扰 / 聊天背景 / 拍一拍后缀
+ *   - 设置卡片组:备注 / 置顶 / 聊天背景 / 拍一拍后缀
  *   - AI 设置卡片:上下文长度 / 朋友圈读取 / 回复提示词 / 回复增强 / 关键词触发 / 表情库
  *   - 聊天记录管理:日历视图 / 故事记录
  *   - 互动统计(仅主角色):总消息 / AI 回复 / 聊天天数 / 日均消息
@@ -18,7 +18,7 @@
  */
 
 import { escapeHtml } from '@/src/core/escape.js';
-import { resolveContactDisplay, resolveAiAvatar, DEFAULT_AI_AVATAR_BG } from '../aiMeta.js';
+import { resolveContactDisplay, resolveAiAvatar, renderAvatarHtml, DEFAULT_AI_AVATAR_BG } from '../aiMeta.js';
 import { countPending as countKChainPending } from '../services/k-chain-service.js';
 
 // Demo 联系人数据(与 chat-page.js 共享,后续 Phase 接入 IndexedDB)
@@ -208,10 +208,6 @@ export function renderChatSettingsPage(app, contactId) {
         }
         : baseDemoWithDefaults;
 
-    // ★ v0.71 头像背景:contact.avatarBg (aiMeta 实时) → resolveAiAvatar 默认
-    const avatarColor = contact.avatarBg || resolveAiAvatar(contact.id).bg;
-    const avatarText = (contact.name || '?').charAt(0);
-
     const isMain = contact.type === 'main';
     const isGroup = contact.type === 'group';
 
@@ -319,11 +315,7 @@ export function renderChatSettingsPage(app, contactId) {
     // 顶部:头像 / 名字 / 状态
     const headerHtml = `
         <div class="chat-settings-header">
-            <div class="chat-settings-avatar" data-avatar-color="${escapeHtml(avatarColor)}">
-                ${contact.avatar
-                    ? `<img src="${escapeHtml(contact.avatar)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;" />`
-                    : `<span class="chat-settings-avatar-text">${escapeHtml(avatarText)}</span>`}
-            </div>
+            ${renderAvatarHtml(resolveAiAvatar(aiPersonId), 'chat-settings-avatar')}
             <div class="chat-settings-name">${escapeHtml(contact.name)}</div>
             <div class="chat-settings-status">${escapeHtml(contact.status || '在线')}</div>
         </div>
@@ -382,11 +374,6 @@ export function renderChatSettingsPage(app, contactId) {
                 id: 'set-pinned',
                 label: '置顶聊天',
                 checked: !!contact.isPinned,
-            })}
-            ${renderToggleItem({
-                id: 'set-muted',
-                label: '消息免打扰',
-                checked: !!contact.isMuted,
             })}
             <div class="chat-setting-item" id="set-chat-background"
                 data-app-action='{"action":"appMethod","appId":"chat","method":"openChatBackgroundModal","payload":{"contactId":"${escapeHtml(aiPersonId)}","mode":"${escapeHtml(mode)}"}}'>

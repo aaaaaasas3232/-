@@ -95,7 +95,7 @@ function compactMessageForFavorite(message) {
 
     if (type === 'descriptive_image' || type === 'image') {
         base.imageDescription = message.imageDescription || message.content || '';
-        base.imagePreview = message.imagePreview || '';
+        base.imagePreview = message.imagePreview || base.imageDescription || '';
         base.cardColor = message.cardColor || '';
         base.textColor = message.textColor || '';
     } else if (type === 'location') {
@@ -224,6 +224,7 @@ export function createChatFavoritesApi({ toolkit, cache, events, bump }) {
             mode: mode || 'calendar',
             sourceType,
             conversationId,
+            sourceName: options.contactName || options.sourceName || '',
             messageId: message.id,
             ...compact,
             createdAt: t,

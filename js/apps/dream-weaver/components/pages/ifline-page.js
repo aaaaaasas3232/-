@@ -405,7 +405,7 @@ export const DwIfLinePage = {
             <div class="dw-page-body">
                 <!-- ── 推演 ─────────────────────────── -->
                 <section v-if="seg === 'text'" class="dw-ifline-sec">
-                    <DwSection title="推演设置" icon-name="magic">
+                    <DwSection title="推演设置" icon-name="wand">
                         <DwField label="视角角色">
                             <div class="if-char-selector">
                                 <button type="button" class="if-char-btn" :class="{ active: characterId === 'narrator' }"
@@ -424,7 +424,7 @@ export const DwIfLinePage = {
                     </DwSection>
 
                     <div class="dw-ifline-run">
-                        <DwButton v-if="!busy" variant="primary" icon-name="magic" label="生成 IF 线内容"
+                        <DwButton v-if="!busy" variant="primary" icon-name="wand" label="生成 IF 线内容"
                                   :disabled="!canGenerate" @click="onGenerate" />
                         <DwButton v-else variant="ghost" danger icon-name="stop" label="停止" @click="onStop" />
                         <DwButton variant="ghost" icon-name="plus" label="清空重来" @click="onNewText" />

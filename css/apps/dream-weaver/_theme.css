@@ -323,8 +323,8 @@
     --ac-color-primary: var(--dw-primary);
     --ac-color-primary-dark: var(--dw-primary-dark);
     --ac-color-primary-soft: var(--dw-primary-light);
-    --ac-shadow-primary: var(--dw-primary);
-    --ac-shadow-secondary: var(--dw-surface-alt);
+    --ac-shadow-primary: transparent;
+    --ac-shadow-secondary: transparent;
 }
 
 /* 框架级「上下文预览」组件同样跟着换主题(见 css/core/85-context-preview.css) */

@@ -268,6 +268,18 @@ const key = window.__apiSdk?.apiKeySdk?.listEnabled?.()?.[0]
 - 群聊小游戏：`games/custom-games.js` 上传 JS，`import(blobURL)`，无 import 语句
 - 大量历史动态 `import()`；单文件构建会把字面量动态 import 提升成静态，避免 file:// 404
 
+#### 回复提示词（pre）
+
+`pages/prompt-manager-page.js` 拼出来的 `pre` **就是**发给 AI 的 systemPrompt，`ai-service` 一字不改地用。所以「卡片正文写着某某已注入」这种话在这里是自欺——正文里没有的东西 AI 就是收不到。
+
+- 段落顺序：总纲 → 世界观 / 人设 → 用户自定义 → 记忆概要 → 概要 → 朋友圈 → App 实时 → App prompt → 表情包库 → 回复格式 → 当前模式 → **当前聊天回合（永远最后一段）**。默认序在 `defaultContextRank()`，用户拖过就以 `contextOrder` 为准。`ai-service` 追加完实时块后会把「当前聊天回合」重新搬到末尾
+- 两级开关，都在 `services/prompt-toggles.js`（模块单例 + localStorage，预览端和发送端读同一份）：
+  - **整组**：折叠头上的「关闭 / 启用」，总闸。关掉整组不动组内单卡状态，再打开就是原样
+  - **卡片**：`chat-preamble` 和四张实时卡走 `togglePromptCardInject`；老卡片各有各的 key，没迁移
+- 实时块（一起听 / 四叶草 / 灯塔 / 日记）只在 `services/live-context-registry.js` 声明一次。预览画卡、`ai-service` 发送时剪旧拼新，都读它。**新增一段"发送时现算"的内容就往这里加**，别再在 ai-service 里写第五个 try 块——那样预览里会看不见，用户关不掉
+- 回归：`node --experimental-loader ./__loader-alias.mjs tests/regression/__probe-chat-prompt.mjs`（36 项纯逻辑）、`tests/e2e/__probe-chat-prompt-pre.mjs`（19 项真机，需先 `npm run dev`）；看长相 `tests/e2e/__shot-prompt-manager.mjs`
+- 已知缺口：群聊正常发消息还没接 AI（`chat-group-page` 长按只提示「暂未支持」），所以 `group_<id>` 那份 pre 目前只有重 roll / 请群主安排群务会间接用到成员的私聊 pre
+
 ### 4.3 音乐 · `music`
 
 `js/apps/music-app/`。播放、歌单、歌词、一起听、音乐岛。
@@ -461,6 +473,8 @@ fullscreen 自绘 App 必写四条（否则左右空 14px、指示条被盖、�
 | compact 岛是空黑条 | `show('compact')` 却走了没有模板的 info；短提示请用 `notify()` |
 | 音乐岛被点没 | 没设 `minSize:'mini'` |
 | murmur 没有你的提示词 | register 写在 hydrate |
+| murmur 卡片开关点了、AI 照样收到 | 那段是 `ai-service` 发送时追加的，没走 `live-context-registry` / 没查 `prompt-toggles` |
+| 卡片展开看到 `&amp;lt;` 这种 | 传给 `renderPromptControlCard` 的 `fullContent` 自己先 escape 了一遍，转义只在它内部做 |
 | 桌面有图标点进去空 | 插件已删但桌面没同步（现已会剔除） |
 | 类名把别人挤爆 | 前缀撞了 `.ac-` / `.ox-` / `.wv-` |
 | 退不出 App | 覆盖层 z-index ≥ 6 盖住指示条 |

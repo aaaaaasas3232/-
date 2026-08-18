@@ -494,11 +494,13 @@
     left: 50%;
     z-index: 50;
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: center;
     align-items: center;
     gap: 3px;
-    max-width: 300px;
+    /* left:50% 时绝对定位的可用宽度只剩父级右半边,不写 max-content 会按 ~175px 折成两排 */
+    width: max-content;
+    max-width: none;
     padding: 4px 6px;
     border-radius: 20px;
     background: var(--dw-card-bg);
@@ -653,29 +655,6 @@
     text-indent: 0;
 }
 
-.app-shell[data-app-id="dream-weaver"] .dw-msg-branch {
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
-    padding: 1px 4px;
-    border-radius: var(--dw-radius-pill);
-    background: var(--dw-surface-container);
-}
-
-.app-shell[data-app-id="dream-weaver"] .dw-msg-branch-btn {
-    display: inline-flex;
-    border: none;
-    background: none;
-    color: var(--dw-text-secondary);
-    cursor: pointer;
-    padding: 1px;
-}
-
-.app-shell[data-app-id="dream-weaver"] .dw-msg-branch-btn:disabled { opacity: 0.3; cursor: default; }
-.app-shell[data-app-id="dream-weaver"] .dw-msg-branch-btn svg { width: 12px; height: 12px; }
-
-.app-shell[data-app-id="dream-weaver"] .dw-msg-branch-count { font-variant-numeric: tabular-nums; }
-
 /* ============================================================
    选区工具条
    ============================================================ */
@@ -723,6 +702,44 @@
 
 .app-shell[data-app-id="dream-weaver"] .dw-selection-btn:hover { background: var(--dw-primary-hover); }
 .app-shell[data-app-id="dream-weaver"] .dw-selection-btn--close { color: var(--dw-text-tertiary); font-size: 15px; }
+
+.app-shell[data-app-id="dream-weaver"] .dw-selection-tip {
+    flex: 1;
+    min-width: 0;
+    font-size: 11px;
+    color: var(--dw-text-tertiary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ── 选段模式 ──────────────────────────────────────────────
+   `00-reset-and-phone.css` 给 body 上了 user-select: none(整机都不许选字),
+   它会一路继承到正文里 —— 不在这里显式放开,「格式化选择」永远选不中一个字。
+   只在模式开着时放开,平时保持整机一致的「拖不出蓝块」手感。 */
+
+.app-shell[data-app-id="dream-weaver"] .dw-chat-container.is-select-mode .dw-bubble-content,
+.app-shell[data-app-id="dream-weaver"] .dw-chat-container.is-select-mode .dw-bubble-content * {
+    user-select: text;
+    -webkit-user-select: text;
+    -webkit-touch-callout: default;
+    /* html { touch-action: none } 会把长按选字一并禁掉,这里局部放开 */
+    touch-action: auto;
+    cursor: text;
+}
+
+.app-shell[data-app-id="dream-weaver"] .dw-chat-container.is-select-mode .dw-message-bubble {
+    box-shadow: inset 0 0 0 1px var(--dw-primary);
+}
+
+/* 选段岛在 .phone-screen 上,不在 app-shell 里。只要魔杖,不要 info 默认的蓝底蓝边。
+   底色/边框是框架写在 style 上的,必须 !important 才能盖掉。 */
+.dynamic-island[data-island-kind="format-select"] .dynamic-island-mini-icon-box,
+.dynamic-island[data-island-kind="format-select"] .dynamic-island-medium-icon {
+    background: transparent !important;
+    border-color: transparent !important;
+    color: #FFD54F !important;
+}
 
 /* ============================================================
    输入面板 —— 1:1 复原 .dw-input-panel
@@ -1194,6 +1211,10 @@
 .app-shell[data-app-id="dream-weaver"] .dw-nav-add svg { width: 12px; height: 12px; }
 
 /* ── 上下文面板 ──────────────────────── */
+
+.app-shell[data-app-id="dream-weaver"] .dw-context-panel > .dw-section {
+    margin-top: var(--dw-gap-lg);
+}
 
 .app-shell[data-app-id="dream-weaver"] .dw-context-userturn {
     margin: 8px 0 0;

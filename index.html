@@ -31,17 +31,17 @@
         <link rel="stylesheet" href="/css/apps/app-maker/index.css?v=1" />
         <link rel="stylesheet" href="/css/weather-app.css?v=1" />
         <link rel="stylesheet" href="/css/appstore.css?v=1" />
-        <link rel="stylesheet" href="/css/apps/chat/index.css?v=13" />
+        <link rel="stylesheet" href="/css/apps/chat/index.css?v=16" />
         <link rel="stylesheet" href="/css/apps/chat/_chat-forward.css?v=1" />
         <link rel="stylesheet" href="/css/apps/chat/_chat-forward-modal.css?v=1" />
         <link rel="stylesheet" href="/css/apps/chat/_chat-new-group.css?v=1" />
         <link rel="stylesheet" href="/css/apps/music/index.css?v=1" />
         <link rel="stylesheet" href="/css/apps/cover-designer/index.css?v=1" />
         <link rel="stylesheet" href="/css/apps/relax/index.css?v=7" />
-        <link rel="stylesheet" href="/css/apps/dream-weaver/index.css?v=1" />
+        <link rel="stylesheet" href="/css/apps/dream-weaver/index.css?v=5" />
         <link rel="stylesheet" href="/css/apps/shop/index.css?v=1" />
         <link rel="stylesheet" href="/css/apps/job/index.css?v=1" />
-        <link rel="stylesheet" href="/css/apps/persona-lab/index.css?v=1" />
+        <link rel="stylesheet" href="/css/apps/persona-lab/index.css?v=2" />
         <link rel="stylesheet" href="/css/apps/galgame/index.css?v=1" />
         <link rel="stylesheet" href="/css/apps/bubble-maker/index.css?v=1" />
         <link rel="stylesheet" href="/css/apps/scene-play/index.css?v=1" />
@@ -88,6 +88,7 @@
                         islandMode === 'info' ? 'info' : '',
                         hasIslandTemplate ? 'has-template' : ''
                     ]"
+                    :data-island-kind="islandContent.kind || null"
                     @pointerdown.stop="onIslandPointerDown($event)"
                     @pointerup.stop="onIslandPointerUp($event)"
                     @pointercancel.stop="onIslandPointerCancel($event)"

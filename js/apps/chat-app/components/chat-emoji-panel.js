@@ -94,17 +94,26 @@ export function bindEmojiPanelInteractions(chatRoot, opts = {}) {
                 }
                 const now = Date.now();
                 const msgId = `sticker-${now}`;
-                // ★ v1.0 身份转换模式:swap 开启时用 AI 名字 + sender='ai'
+                // 私聊 swap / 群聊自定义身份：用所选人的名字 + sender='ai'
                 const swapOn = chatRoot.getAttribute('data-swap-active') === '1';
                 const userSenderName = sender?.socialProfiles?.chat?.nickname || sender?.name || '我';
-                const aiSenderName = chatRoot.dataset.conversationName || 'AI';
+                const groupAsId = conversationType === 'group'
+                    ? String(chatRoot.dataset.sendAsId || '').trim()
+                    : '';
+                const aiSenderName = (conversationType === 'group' && groupAsId)
+                    ? (chatRoot.dataset.sendAsName || 'AI')
+                    : (chatRoot.dataset.conversationName || 'AI');
                 const writeSenderName = swapOn ? aiSenderName : userSenderName;
+                const writeSenderId = swapOn
+                    ? (groupAsId || (conversationType === 'group' ? '' : targetId))
+                    : String(sender?.id || '');
                 let saved = null;
                 if (sdk?.chatMessages?.add) {
                     const msgPayload = {
                         id: msgId,
                         sender: swapOn ? 'ai' : 'user',
                         senderName: writeSenderName,
+                        senderId: writeSenderId,
                         type: 'sticker',
                         content: '[表情]',
                         url,
@@ -135,7 +144,8 @@ export function bindEmojiPanelInteractions(chatRoot, opts = {}) {
                         if (swapOn) {
                             try {
                                 const { resolveAiAvatar } = await import('../aiMeta.js');
-                                const aiAv = resolveAiAvatar(targetId);
+                                const avatarId = groupAsId || targetId;
+                                const aiAv = resolveAiAvatar(avatarId);
                                 renderContact = {
                                     name: writeSenderName,
                                     senderName: writeSenderName,

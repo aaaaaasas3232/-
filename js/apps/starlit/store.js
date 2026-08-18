@@ -30,7 +30,7 @@ import * as library from './services/card-library.js';
 import * as layout from './services/graph-layout.js';
 import * as srs from './services/srs.js';
 import * as ticker from './services/ticker.js';
-import { splitBubbles, alignGloss } from './services/bubble-split.js';
+import { resolveLessonBubbles, alignGloss, visualWidth } from './services/bubble-split.js';
 import * as translator from './services/translate-service.js';
 import { registerStarlitPrompts, syncTopicPrompts, unregisterTopicPrompt } from './services/app-prompts.js';
 
@@ -643,6 +643,10 @@ export async function openLesson(lessonId, scene = 'lesson') {
     state.messages = await dbx.listMessages(state._app, lesson.id, scene);
     state._seq = state.messages.reduce((m, x) => Math.max(m, x.seq || 0), 0);
     state.view = scene === 'flip' ? 'flip' : 'lesson';
+    if (scene === 'lesson') {
+        await repairSkillDebrisMessages();
+        await realignTeacherGloss();
+    }
 }
 
 async function pushMessage(patch) {
@@ -702,14 +706,17 @@ export async function teacherSpeak(userText = '') {
 
 /** 把老师的一条回复落成消息 + 卡片 + 词条 + 卡住点 */
 async function consumeTeacherReply(raw) {
-    const topic = activeTopic();
-    const lesson = activeLesson();
     const { text, skills } = parser.parseReply(raw);
+    const createdIds = await applyReplySkills(skills);
+    await pushTeacherBubbles(text, skills, createdIds);
+    if (createdIds.length) syncTicker();
+}
 
-    const gloss = parser.firstSkill(skills, 'gloss');
+/** 技能副作用：批改 / 卡片 / 词典 / 卡住点。返回本轮新建或复用的卡片 id。 */
+async function applyReplySkills(skills, { silentCards = false } = {}) {
+    const lesson = activeLesson();
     const correct = parser.firstSkill(skills, 'correct');
 
-    // 批改：贴在用户上一条消息上，让他直接看到自己那句被改成什么样
     if (correct) {
         for (let i = state.messages.length - 1; i >= 0; i -= 1) {
             if (state.messages[i].role === 'me') {
@@ -724,7 +731,6 @@ async function consumeTeacherReply(raw) {
         }
     }
 
-    // 卡片
     const createdIds = [];
     const drafts = [];
     for (const skill of skills) {
@@ -733,7 +739,7 @@ async function consumeTeacherReply(raw) {
     }
     const { creates, reuses } = library.dedupeDrafts(drafts, state.cards);
     for (const draft of creates) {
-        const card = await createCard(draft, { lessonId: lesson?.id });
+        const card = await createCard(draft, { lessonId: lesson?.id, silent: silentCards });
         if (card) createdIds.push(card.id);
     }
     for (const { card } of reuses) {
@@ -741,7 +747,6 @@ async function consumeTeacherReply(raw) {
         createdIds.push(card.id);
     }
 
-    // 显式的 reuse 块
     for (const skill of parser.allSkills(skills, 'reuse')) {
         const hit = cardById(skill.cardId) || state.cards.find((c) => c.title === skill.title);
         if (hit) {
@@ -750,12 +755,9 @@ async function consumeTeacherReply(raw) {
         }
     }
 
-    // 词典
     for (const skill of parser.allSkills(skills, 'dict')) {
         for (const item of parser.skillToDictDrafts(skill)) await addDictEntry(item, { silent: true });
     }
-
-    // 卡住点 + 目标追加
     for (const skill of parser.allSkills(skills, 'stuck')) {
         const draft = parser.skillToStuckDraft(skill);
         if (draft) await addStuck(draft);
@@ -763,40 +765,145 @@ async function consumeTeacherReply(raw) {
     for (const skill of parser.allSkills(skills, 'objective')) {
         await appendObjective(Number(skill.lessonIndex) || 0, String(skill.text || '').trim(), 'ai');
     }
+    return createdIds;
+}
 
-    /*
-     * 拆气泡。
-     *
-     * ★ 卡片只挂在**最后一个**气泡上 —— 挂在每一个上会让同一张卡
-     *   在聊天里出现好几次，用户以为老师给了三张一样的卡。
-     * ★ 老师按协议用空行分段，本地再按宽度兜一次底（模型不分段时照样能拆）。
-     */
+function teacherBubblePlan(text, skills) {
     const settings = state.profile?.bubble || {};
-    const bodies = splitBubbles(text, {
+    return resolveLessonBubbles(text, parser.glossTexts(parser.firstSkill(skills, 'gloss')), {
         enabled: settings.split !== false,
         maxChars: Number(settings.maxChars) || undefined,
     });
+}
 
+async function pushTeacherBubbles(text, skills, createdIds) {
+    const { bodies, glosses } = teacherBubblePlan(text, skills);
     if (!bodies.length) {
         await pushMessage({
             role: 'teacher',
             text: '（老师这次只给了卡片）',
             cardIds: createdIds,
         });
-    } else {
-        const glosses = alignGloss(bodies, parser.glossTexts(gloss));
-        for (let i = 0; i < bodies.length; i += 1) {
-            const last = i === bodies.length - 1;
-            await pushMessage({
-                role: 'teacher',
-                text: bodies[i],
-                gloss: glosses[i] || '',
-                cardIds: last ? createdIds : [],
-            });
+        return;
+    }
+    for (let i = 0; i < bodies.length; i += 1) {
+        await pushMessage({
+            role: 'teacher',
+            text: bodies[i],
+            gloss: glosses[i] || '',
+            cardIds: i === bodies.length - 1 ? createdIds : [],
+        });
+    }
+}
+
+/**
+ * 把已经落盘的「starlit JSON 碎片气泡」拼回去再解析。
+ * 模型漏围栏时旧课会留下一串 `","xxx` —— 进课就修，不用用户删档。
+ */
+async function repairSkillDebrisMessages() {
+    const msgs = state.messages;
+    let i = 0;
+    while (i < msgs.length) {
+        if (msgs[i].role !== 'teacher' || !parser.looksLikeSkillDebris(msgs[i].text)) {
+            i += 1;
+            continue;
         }
+        let j = i + 1;
+        while (j < msgs.length && msgs[j].role === 'teacher' && parser.looksLikeSkillDebris(msgs[j].text)) {
+            j += 1;
+        }
+
+        const run = msgs.slice(i, j);
+        const joined = run.map((m) => m.text).join('\n');
+        const parsed = parser.parseReply(joined);
+        const { bodies, glosses } = teacherBubblePlan(parsed.text, parsed.skills);
+        if (!parsed.skills.length || !bodies.length) {
+            i = j;
+            continue;
+        }
+
+        const alreadyCarded = run.some((m) => asArray(m.cardIds).length);
+        const createdIds = alreadyCarded ? [] : await applyReplySkills(parsed.skills, { silentCards: true });
+        const lastCards = alreadyCarded
+            ? asArray(run[run.length - 1].cardIds)
+            : createdIds;
+
+        const insertAt = i;
+        for (const old of run) await removeMessage(old.id);
+        const topic = activeTopic();
+        const lesson = activeLesson();
+        for (let k = 0; k < bodies.length; k += 1) {
+            const msg = dbx.makeMessage(state.identity.profileKey, topic.id, lesson.id, {
+                scene: state.scene,
+                seq: nextSeq(),
+                role: 'teacher',
+                text: bodies[k],
+                gloss: glosses[k] || '',
+                cardIds: k === bodies.length - 1 ? lastCards : [],
+            });
+            state.messages.splice(insertAt + k, 0, msg);
+            await dbx.saveMessage(state._app, msg);
+        }
+        if (createdIds.length) syncTicker();
+        i = insertAt + bodies.length;
+    }
+}
+
+/**
+ * 老师一轮回复拆成多泡之后，整段中文经常全堆在第一泡上。
+ * 只修这种「第一泡很长、后面全空」的，两轮对话连在一起时不动。
+ * 语言课里如果某泡完全没有 gloss，用正文顶上，描边才画得出来。
+ */
+async function realignTeacherGloss() {
+    const msgs = state.messages;
+    const isLang = activeTopic()?.mode === MODES.language;
+
+    let i = 0;
+    while (i < msgs.length) {
+        if (msgs[i].role !== 'teacher') {
+            i += 1;
+            continue;
+        }
+        let j = i + 1;
+        while (j < msgs.length && msgs[j].role === 'teacher') j += 1;
+        const run = msgs.slice(i, j);
+        const bodies = run.map((m) => String(m.text || ''));
+        const glosses = run.map((m) => String(m.gloss || '').trim());
+        const dumped = run.length >= 2
+            && glosses[0]
+            && glosses.slice(1).every((g) => !g)
+            && (visualWidth(glosses[0]) > visualWidth(bodies[0]) * 1.5
+                || glosses[0].replace(/\s+/g, '').includes(String(bodies[1] || '').replace(/\s+/g, '')));
+        if (dumped) {
+            const next = alignGloss(bodies, [glosses[0]]);
+            for (let k = 0; k < run.length; k += 1) {
+                const gloss = next[k] || '';
+                if ((run[k].gloss || '') === gloss) continue;
+                run[k].gloss = gloss;
+                await dbx.saveMessage(state._app, run[k]);
+            }
+        }
+        i = j;
     }
 
-    if (createdIds.length) syncTicker();
+    if (!isLang) return;
+    for (const m of msgs) {
+        if (m.role !== 'teacher') continue;
+        if (String(m.gloss || '').trim()) continue;
+        const text = String(m.text || '').trim();
+        if (!text) continue;
+        m.gloss = text;
+        await dbx.saveMessage(state._app, m);
+    }
+}
+
+/** 描边中文被拖走。x/y 是相对默认位置的像素偏移。 */
+export async function moveBubbleGloss(messageId, x, y) {
+    const msg = state.messages.find((m) => sameId(m.id, messageId));
+    if (!msg) return;
+    msg.glossX = Math.round(Number(x) || 0);
+    msg.glossY = Math.round(Number(y) || 0);
+    await dbx.saveMessage(state._app, msg);
 }
 
 export async function sendMessage(text) {
@@ -1123,8 +1230,22 @@ export async function deleteCard(cardId) {
     if (idx === -1) return;
     const [removed] = state.cards.splice(idx, 1);
     state.links = state.links.filter((l) => !sameId(l.from, removed.id) && !sameId(l.to, removed.id));
+    pendingCards.delete(String(removed.id));
     await dbx.purgeCard(state._app, removed.id);
     if (sameId(state.activeCardId, removed.id)) state.activeCardId = '';
+    if (sameId(state.wall.selectedId, removed.id)) state.wall.selectedId = '';
+    if (sameId(state.wall.linkingFrom, removed.id)) state.wall.linkingFrom = '';
+
+    // 堆里只剩一张就散掉，否则墙上会留一张画着「一堆」却摊不开的卡
+    if (removed.stackId) {
+        const rest = stackMembers(removed.stackId);
+        if (rest.length <= 1) {
+            for (const c of rest) { c.stackId = ''; c.stackOrder = 0; persistCard(c); }
+            if (sameId(state.wall.spreadStackId, removed.stackId)) closeSpread();
+        } else if (sameId(state.wall.spreadStackId, removed.stackId)) {
+            state.wall.spreadIndex = clamp(state.wall.spreadIndex, 0, rest.length - 1);
+        }
+    }
     recomputeRegions();
 }
 
@@ -1190,8 +1311,11 @@ export function stackMembers(stackId) {
 
 /** 点一下卡片堆 → 摊开到画面中央 */
 export function spreadStack(stackId) {
+    const members = stackMembers(stackId);
+    if (members.length < 2) { closeSpread(); return; }
     state.wall.spreadStackId = String(stackId || '');
-    state.wall.spreadIndex = 0;
+    // 从最上面那张开始 —— 那正是用户刚才在墙上看到并点下去的那一张
+    state.wall.spreadIndex = members.length - 1;
 }
 
 export function closeSpread() {

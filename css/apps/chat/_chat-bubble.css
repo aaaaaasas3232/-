@@ -1605,15 +1605,7 @@
     font-weight: 500;
 }
 
-/* ---- ★ v0.62 群聊连续气泡合并(.consecutive) ----
- *   - 隐藏头像(给位,留 margin)
- *   - 隐藏 sender-name
- *   - 缩小 bubble 顶部 padding 让两条消息视觉贴近
- */
-.app-shell[data-app-id="chat"] .chat-group .message-wrapper.consecutive .avatar {
-    visibility: hidden;
-}
-
+/* ---- 群聊连续气泡：只收发送者名字，头像每条都在 ---- */
 .app-shell[data-app-id="chat"] .chat-group .message-wrapper.consecutive .sender-name {
     display: none;
 }

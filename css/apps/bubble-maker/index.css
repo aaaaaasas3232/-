@@ -440,7 +440,6 @@
     background: var(--bb-primary);
     border-color: var(--bb-primary);
     color: var(--bb-on-primary);
-    box-shadow: 0 3px 0 var(--bb-btn-shadow);
 }
 
 .app-shell[data-app-id="bubble-maker"] .bb-scroll {
@@ -490,19 +489,16 @@
     font-weight: 600;
     line-height: 1.2;
     cursor: pointer;
-    /* 硬边落影 = 动森那种「按下去会弹」的手感来源,不用渐变 */
-    box-shadow: 0 2px 0 var(--bb-btn-shadow);
-    transition: transform 0.16s var(--bb-bounce), box-shadow 0.16s var(--bb-ease), background 0.16s var(--bb-ease);
+    box-shadow: none;
+    transition: transform 0.16s var(--bb-bounce), background 0.16s var(--bb-ease);
 }
 .app-shell[data-app-id="bubble-maker"] .bb-btn:active:not(:disabled) {
-    transform: translateY(2px);
-    box-shadow: 0 0 0 var(--bb-btn-shadow);
+    transform: scale(0.96);
     background: var(--bb-btn-press);
 }
 .app-shell[data-app-id="bubble-maker"] .bb-btn:disabled {
     opacity: 0.45;
     cursor: not-allowed;
-    box-shadow: none;
 }
 .app-shell[data-app-id="bubble-maker"] .bb-btn--primary {
     background: var(--bb-primary);
@@ -1580,12 +1576,16 @@
     font-size: 12.5px;
     font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 2px 0 var(--bb-btn-shadow);
-    transition: transform 0.16s var(--bb-bounce), box-shadow 0.16s var(--bb-ease);
+    box-shadow: none;
+    transition: transform 0.16s var(--bb-bounce), background 0.16s var(--bb-ease);
+}
+.app-shell[data-app-id="bubble-maker"] .bb-modal .ac-btn:hover,
+.app-shell[data-app-id="bubble-maker"] .bb-modal .ac-btn:active {
+    transform: none;
+    box-shadow: none;
 }
 .app-shell[data-app-id="bubble-maker"] .bb-modal .ac-btn:active {
-    transform: translateY(2px);
-    box-shadow: 0 0 0 var(--bb-btn-shadow);
+    transform: scale(0.97);
 }
 .app-shell[data-app-id="bubble-maker"] .bb-modal .ac-btn-primary {
     background: var(--bb-primary);
